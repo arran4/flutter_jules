@@ -82,21 +82,18 @@ List<T> filterAndSort<T>({
 
       final normalizedField = fieldValue.toLowerCase();
 
-      // Calculate score using LCS
-      final score = longestCommonSubstring(normalizedQuery, normalizedField);
+      // Check if the field actually contains the query
+      if (normalizedField.contains(normalizedQuery)) {
+        // Since we verify strict containment, the longest common substring
+        // (which must be a subset of the field and the query)
+        // is guaranteed to be equal to the query length itself.
+        final score = normalizedQuery.length;
 
-      // We consider it a match if the score is at least 1 (fuzzy)
-      // Or we could enforce stricter filtering if needed.
-      // For now, let's assume if any character matches, we keep it, but sort by quality.
-      // However, usually filters hide completely irrelevant stuff.
-      // Let's stick to: keep if score > 0.
-      if (score > 0) {
         anyMatch = true;
         if (score > maxScore) {
           maxScore = score;
           bestFieldIndex = i;
         } else if (score == maxScore) {
-          // If scores are equal, we prefer the earlier field index
           if (i < bestFieldIndex) {
             bestFieldIndex = i;
           }
