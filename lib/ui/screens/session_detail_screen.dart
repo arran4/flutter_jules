@@ -88,9 +88,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     return Scaffold(
       appBar: AppBar(
         title: Text(widget.session.title ?? 'Session Detail'),
+        leading: const BackButton(),
         actions: [
             IconButton(
-              icon: const Icon(Icons.refresh),
+              icon: const Icon(Icons.replay),
               onPressed: _fetchActivities,
               tooltip: 'Refresh',
             )
