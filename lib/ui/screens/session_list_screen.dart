@@ -7,6 +7,7 @@ import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../widgets/api_viewer.dart';
+import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
@@ -67,70 +68,43 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _createSession() async {
-    String prompt = '';
-
-    await showDialog(
+    final Session? sessionToCreate = await showDialog<Session>(
       context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('New Session'),
-          content: TextField(
-            onChanged: (value) => prompt = value,
-            decoration: const InputDecoration(hintText: "Enter prompt"),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            TextButton(
-              onPressed: () async {
-                Navigator.pop(context);
-                try {
-                  final newSession = Session(
-                    name: '',
-                    id: '',
-                    prompt: prompt,
-                    sourceContext: SourceContext(
-                      source: widget.sourceFilter ?? 'sources/default',
-                      githubRepoContext: GitHubRepoContext(startingBranch: 'main'),
-                    ),
-                  );
-                  final client =
-                      Provider.of<AuthProvider>(context, listen: false).client;
-                  final createdSession = await client.createSession(newSession);
-
-                  if (mounted) {
-                    Provider.of<SessionProvider>(context, listen: false)
-                        .addSession(createdSession);
-                    setState(() {}); // Refresh list
-                  }
-                } catch (e) {
-                  if (mounted) {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text('Error Creating Session'),
-                        content: SingleChildScrollView(
-                          child: SelectableText(e.toString()),
-                        ),
-                        actions: [
-                          TextButton(
-                            onPressed: () => Navigator.pop(context),
-                            child: const Text('Close'),
-                          ),
-                        ],
-                      ),
-                    );
-                  }
-                }
-              },
-              child: const Text('Create'),
-            ),
-          ],
-        );
-      },
+      builder: (context) => NewSessionDialog(sourceFilter: widget.sourceFilter),
     );
+
+    if (sessionToCreate == null) return;
+
+    if (!mounted) return;
+
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final createdSession = await client.createSession(sessionToCreate);
+
+      if (mounted) {
+        Provider.of<SessionProvider>(context, listen: false)
+            .addSession(createdSession);
+        setState(() {}); // Refresh list
+      }
+    } catch (e) {
+      if (mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => AlertDialog(
+            title: const Text('Error Creating Session'),
+            content: SingleChildScrollView(
+              child: SelectableText(e.toString()),
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
+            ],
+          ),
+        );
+      }
+    }
   }
 
   void _showContextMenu(BuildContext context) {
