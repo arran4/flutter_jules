@@ -20,7 +20,7 @@ class SessionListScreen extends StatefulWidget {
 
 class _SessionListScreenState extends State<SessionListScreen> {
   // Local state for searching/filtering
-  bool _groupByStatus = true;
+  late bool _groupByStatus;
   final Set<SessionState> _statusFilters = {};
 
   final TextEditingController _searchController = TextEditingController();
@@ -28,6 +28,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void initState() {
     super.initState();
+    // Use grouped view by default unless a specific source filter is active
+    // This matches user expectation for "Recent Sessions" view when drilling down
+    _groupByStatus = widget.sourceFilter == null;
+
     // Rebuild when search changes
     _searchController.addListener(() {
       setState(() {});
