@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 import '../models.dart';
+import '../models/api_exchange.dart';
 import 'exceptions.dart';
 
 class JulesClient {
@@ -23,6 +24,45 @@ class JulesClient {
         if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
       };
 
+  Future<http.Response> _performRequest(
+    String method,
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    void Function(ApiExchange)? onDebug,
+  }) async {
+    final requestHeaders = headers ?? _headers;
+    final requestBody = body != null ? jsonEncode(body) : '';
+
+    http.Response response;
+    try {
+      if (method == 'GET') {
+        response = await _client.get(url, headers: requestHeaders);
+      } else if (method == 'POST') {
+        response = await _client.post(url, headers: requestHeaders, body: requestBody);
+      } else {
+        throw Exception('Unsupported method: $method');
+      }
+    } catch (e) {
+      // In case of network error, we can't really log a response, but we rethrow
+      rethrow;
+    }
+
+    if (onDebug != null) {
+      onDebug(ApiExchange(
+        method: method,
+        url: url.toString(),
+        requestHeaders: requestHeaders,
+        requestBody: requestBody,
+        statusCode: response.statusCode,
+        responseHeaders: response.headers,
+        responseBody: response.body,
+      ));
+    }
+
+    return response;
+  }
+
   void _handleError(http.Response response) {
     if (response.statusCode == 401) {
       throw InvalidTokenException(response.body);
@@ -37,13 +77,9 @@ class JulesClient {
 
   // --- Sessions ---
 
-  Future<Session> createSession(Session session) async {
+  Future<Session> createSession(Session session, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sessions');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode(session.toJson()),
-    );
+    final response = await _performRequest('POST', url, body: session.toJson(), onDebug: onDebug);
 
     if (response.statusCode == 200) {
       return Session.fromJson(jsonDecode(response.body));
@@ -53,12 +89,9 @@ class JulesClient {
     }
   }
 
-  Future<Session> getSession(String name) async {
+  Future<Session> getSession(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       return Session.fromJson(jsonDecode(response.body));
@@ -68,12 +101,9 @@ class JulesClient {
     }
   }
 
-  Future<List<Session>> listSessions() async {
+  Future<List<Session>> listSessions({void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sessions');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -84,26 +114,18 @@ class JulesClient {
     }
   }
 
-  Future<void> approvePlan(String sessionName) async {
+  Future<void> approvePlan(String sessionName, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:approvePlan');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode({}),
-    );
+    final response = await _performRequest('POST', url, body: {}, onDebug: onDebug);
 
     if (response.statusCode != 200) {
       _handleError(response);
     }
   }
 
-  Future<void> sendMessage(String sessionName, String message) async {
+  Future<void> sendMessage(String sessionName, String message, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:sendMessage');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode({'message': message}),
-    );
+    final response = await _performRequest('POST', url, body: {'message': message}, onDebug: onDebug);
 
     if (response.statusCode != 200) {
       _handleError(response);
@@ -112,12 +134,9 @@ class JulesClient {
 
   // --- Activities ---
 
-  Future<Activity> getActivity(String name) async {
+  Future<Activity> getActivity(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       return Activity.fromJson(jsonDecode(response.body));
@@ -127,12 +146,9 @@ class JulesClient {
     }
   }
 
-  Future<List<Activity>> listActivities(String sessionName) async {
+  Future<List<Activity>> listActivities(String sessionName, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
@@ -145,12 +161,9 @@ class JulesClient {
 
   // --- Sources ---
 
-  Future<Source> getSource(String name) async {
+  Future<Source> getSource(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       return Source.fromJson(jsonDecode(response.body));
@@ -160,12 +173,9 @@ class JulesClient {
     }
   }
 
-  Future<List<Source>> listSources() async {
+  Future<List<Source>> listSources({void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sources');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
