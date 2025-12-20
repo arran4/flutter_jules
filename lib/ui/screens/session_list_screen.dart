@@ -5,7 +5,14 @@ import '../../models.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
-  const SessionListScreen({super.key});
+  final String? sourceFilter;
+  final String? sourceDisplayName;
+
+  const SessionListScreen({
+    super.key,
+    this.sourceFilter,
+    this.sourceDisplayName,
+  });
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -36,7 +43,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final sessions = await client.listSessions();
       if (mounted) {
         setState(() {
-          _sessions = sessions;
+          if (widget.sourceFilter != null) {
+            _sessions = sessions
+                .where((s) => s.sourceContext.source == widget.sourceFilter)
+                .toList();
+          } else {
+            _sessions = sessions;
+          }
         });
       }
     } catch (e) {
@@ -119,7 +132,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sessions'),
+        title: Text(widget.sourceDisplayName != null
+            ? 'Sessions (${widget.sourceDisplayName})'
+            : 'Sessions'),
         actions: [
           IconButton(
             icon: const Icon(Icons.refresh),

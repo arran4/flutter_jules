@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
+import 'session_list_screen.dart';
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -103,6 +104,18 @@ class _SourceListScreenState extends State<SourceListScreen> {
                       title: Text(source.githubRepo?.repo ?? source.name),
                       subtitle: Text(source.githubRepo?.owner ?? ''),
                       leading: const Icon(Icons.code),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SessionListScreen(
+                              sourceFilter: source.name,
+                              sourceDisplayName:
+                                  source.githubRepo?.repo ?? source.name,
+                            ),
+                          ),
+                        );
+                      },
                     );
                   },
                 ),
