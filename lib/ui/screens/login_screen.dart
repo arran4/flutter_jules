@@ -42,9 +42,15 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const Text(
-                'Please provide your API Token to continue.',
+                'Provide your OAuth 2.0 Access Token or API Key.',
                 textAlign: TextAlign.center,
                 style: TextStyle(fontSize: 18),
+              ),
+              const SizedBox(height: 12),
+              const Text(
+                'Note: Use "gcloud auth print-access-token" to get a temporary OAuth token for local testing.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
               DropdownButtonFormField<TokenType>(
@@ -89,7 +95,30 @@ class _LoginScreenState extends State<LoginScreen> {
               const SizedBox(height: 24),
               ElevatedButton(
                 onPressed: _saveToken,
-                child: const Text('Save and Continue'),
+                child: const Text('Connect'),
+              ),
+              const SizedBox(height: 16),
+              const Divider(),
+              const SizedBox(height: 16),
+              const Text(
+                'Alternatively, if you have configured Google Sign-In, you can sign in below.',
+                textAlign: TextAlign.center,
+                style: TextStyle(color: Colors.grey),
+              ),
+              const SizedBox(height: 12),
+              ElevatedButton.icon(
+                onPressed: () {
+                  // TODO: Implement Google Sign-In
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Google Sign-In not yet implemented. Please use the manual token entry.')),
+                  );
+                },
+                icon: const Icon(Icons.login),
+                label: const Text('Sign in with Google'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.white,
+                  foregroundColor: Colors.black,
+                ),
               ),
             ],
           ),

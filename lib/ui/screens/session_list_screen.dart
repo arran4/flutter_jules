@@ -147,10 +147,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           _error!,
                           textAlign: TextAlign.center,
                         ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _fetchSessions,
-                          child: const Text('Retry'),
+                        const SizedBox(height: 24),
+                        Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            ElevatedButton(
+                              onPressed: _fetchSessions,
+                              child: const Text('Retry'),
+                            ),
+                            const SizedBox(width: 16),
+                            OutlinedButton(
+                              onPressed: () {
+                                Provider.of<AuthProvider>(context, listen: false).logout();
+                              },
+                              child: const Text('Change Token'),
+                            ),
+                          ],
                         ),
                       ],
                     ),
