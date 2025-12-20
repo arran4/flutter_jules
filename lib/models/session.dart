@@ -86,13 +86,13 @@ class Session {
       prompt: getStringPropOrThrow(json, 'prompt'),
       sourceContext: getObjectFunctionPropOrThrow(json, 'sourceContext', SourceContext.fromJson),
       title: getStringPropOrDefault(json, 'title', null),
-      requirePlanApproval: getBooleanPropOrDefault(json, 'requirePlanApproval', null),
+      requirePlanApproval: getBooleanPropOrDefault(json, 'requirePlanApproval', false),
       automationMode: getEnumPropOrDefault(json, 'automationMode', AutomationMode.values, AutomationMode.AUTOMATION_MODE_UNSPECIFIED),
       createTime: getStringPropOrDefault(json, 'createTime', null),
       updateTime: getStringPropOrDefault(json, 'updateTime', null),
       state: getEnumPropOrDefault(json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
       url: getStringPropOrDefault(json, 'url', null),
-      outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, null),
+      outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, () => null),
     );
   }
 
