@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
@@ -17,16 +18,40 @@ class SessionListScreen extends StatefulWidget {
 
 class _SessionListScreenState extends State<SessionListScreen> {
   List<Session> _sessions = [];
+  List<Session> _filteredSessions = [];
   bool _isLoading = false;
   String? _error;
+  final TextEditingController _searchController = TextEditingController();
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSessions();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _filteredSessions = filterAndSort(
+        items: _sessions,
+        query: _searchController.text,
+        accessors: [
+          (session) => session.title,
+          (session) => session.name,
+          (session) => session.id,
+          (session) => session.state.toString().split('.').last,
+        ],
+      );
     });
   }
 
@@ -47,6 +72,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       if (mounted) {
         setState(() {
           _sessions = sessions;
+          _onSearchChanged(); // Initialize filtered list
           _lastFetchTime = DateTime.now();
         });
       }
@@ -182,6 +208,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 )
               : Column(
                   children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          labelText: 'Search Sessions',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                    ),
                     if (_lastFetchTime != null)
                       Padding(
                         padding: const EdgeInsets.all(8.0),
