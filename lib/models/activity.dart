@@ -18,7 +18,7 @@ class PlanStep {
       id: getStringPropOrThrow(json, 'id'),
       title: getStringPropOrThrow(json, 'title'),
       description: getStringPropOrThrow(json, 'description'),
-      index: getNumberPropOrThrow(json, 'index').toInt(),
+      index: getNumberPropOrThrow(json, 'index')!.toInt(),
     );
   }
 
@@ -44,7 +44,7 @@ class Plan {
   factory Plan.fromJson(Map<String, dynamic> json) {
     return Plan(
       id: getStringPropOrThrow(json, 'id'),
-      steps: getObjectArrayPropOrDefaultFunction(json, 'steps', PlanStep.fromJson, []),
+      steps: getObjectArrayPropOrDefaultFunction(json, 'steps', PlanStep.fromJson, () => <PlanStep>[]),
       createTime: getStringPropOrThrow(json, 'createTime'),
     );
   }
@@ -184,7 +184,7 @@ class BashOutput {
   factory BashOutput.fromJson(Map<String, dynamic> json) => BashOutput(
         command: getStringPropOrThrow(json, 'command'),
         output: getStringPropOrThrow(json, 'output'),
-        exitCode: getNumberPropOrThrow(json, 'exitCode').toInt(),
+        exitCode: getNumberPropOrThrow(json, 'exitCode')!.toInt(),
       );
   Map<String, dynamic> toJson() => {
         'command': command,
@@ -257,7 +257,7 @@ class Activity {
       description: getStringPropOrThrow(json, 'description'),
       createTime: getStringPropOrThrow(json, 'createTime'),
       originator: getStringPropOrDefault(json, 'originator', null),
-      artifacts: getObjectArrayPropOrDefaultFunction(json, 'artifacts', Artifact.fromJson, null),
+      artifacts: getObjectArrayPropOrDefaultFunction(json, 'artifacts', Artifact.fromJson, () => null),
       agentMessaged: getObjectFunctionPropOrDefault(json, 'agentMessaged', AgentMessaged.fromJson, null),
       userMessaged: getObjectFunctionPropOrDefault(json, 'userMessaged', UserMessaged.fromJson, null),
       planGenerated: getObjectFunctionPropOrDefault(json, 'planGenerated', PlanGenerated.fromJson, null),

@@ -77,7 +77,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, []);
+      return getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, () => <Session>[]);
     } else {
       _handleError(response);
       throw Exception('Unreachable');
@@ -136,7 +136,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, []);
+      return getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, () => <Activity>[]);
     } else {
       _handleError(response);
       throw Exception('Unreachable');
@@ -169,7 +169,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, []);
+      return getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, () => <Source>[]);
     } else {
       _handleError(response);
       throw Exception('Unreachable');

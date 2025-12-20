@@ -80,7 +80,7 @@ class GitHubRepo {
       repo: getStringPropOrThrow(json, 'repo'),
       isPrivate: getBooleanPropOrThrow(json, 'isPrivate'),
       defaultBranch: getObjectFunctionPropOrDefault(json, 'defaultBranch', GitHubBranch.fromJson, null),
-      branches: getObjectArrayPropOrDefaultFunction(json, 'branches', GitHubBranch.fromJson, null),
+      branches: getObjectArrayPropOrDefaultFunction(json, 'branches', GitHubBranch.fromJson, () => null),
     );
   }
 
