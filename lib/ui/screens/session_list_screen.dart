@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
@@ -9,18 +10,50 @@ import '../widgets/api_viewer.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
-  const SessionListScreen({super.key});
+  final String? sourceFilter;
+
+  const SessionListScreen({super.key, this.sourceFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
+  List<Session> _sessions = [];
+  List<Session> _filteredSessions = [];
+  bool _isLoading = false;
+  String? _error;
+  final TextEditingController _searchController = TextEditingController();
+  ApiExchange? _lastExchange;
+  DateTime? _lastFetchTime;
+
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSessions();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _filteredSessions = filterAndSort(
+        items: _sessions,
+        query: _searchController.text,
+        accessors: [
+          (session) => session.title,
+          (session) => session.name,
+          (session) => session.id,
+          (session) => session.state.toString().split('.').last,
+        ],
+      );
     });
   }
 
@@ -30,6 +63,27 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       await Provider.of<SessionProvider>(context, listen: false)
           .fetchSessions(client, force: force);
+      // TODO resolve merge issue I put both in but the above make sthe below partial redundant but there is a difference that needs to be reconciled
+      final sessions = await client.listSessions(
+        onDebug: (exchange) {
+          _lastExchange = exchange;
+        },
+      );
+
+      var displaySessions = sessions;
+      if (widget.sourceFilter != null) {
+        displaySessions = sessions
+            .where((s) => s.sourceContext.source == widget.sourceFilter)
+            .toList();
+      }
+
+      if (mounted) {
+        setState(() {
+          _sessions = displaySessions;
+          _onSearchChanged(); // Initialize filtered list
+          _lastFetchTime = DateTime.now();
+        });
+      }
     } catch (e) {
       // Error handling is managed by the provider, but if we wanted to show a snackbar, we could do it here.
       // The current UI shows error screen if sessions are empty, or maybe a snackbar if not.
@@ -62,7 +116,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     id: '',
                     prompt: prompt,
                     sourceContext: SourceContext(
-                      source: 'sources/default',
+                      source: widget.sourceFilter ?? 'sources/default',
                       githubRepoContext: GitHubRepoContext(startingBranch: 'main'),
                     ),
                   );
@@ -182,17 +236,52 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ),
                           ],
                         ),
+                      ],
+                    ),
+                  ),
+                )
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          labelText: 'Search Sessions',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.search),
+                        ),
                       ),
-                    )
-                  : Column(
-                      children: [
-                        if (lastFetchTime != null)
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              'Last updated: ${DateFormat.Hms().format(lastFetchTime)}',
-                              style: Theme.of(context).textTheme.bodySmall,
-                            ),
+                    ),
+                    if (_lastFetchTime != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _fetchSessions,
+                        child: ListView.builder(
+                  itemCount: _sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = _sessions[index];
+                    final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+
+                    final tile = ListTile(
+                      title: Text(
+                        session.title ?? session.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      subtitle: Text(session.state.toString().split('.').last),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SessionDetailScreen(session: session),
                           ),
                         Expanded(
                           child: RefreshIndicator(

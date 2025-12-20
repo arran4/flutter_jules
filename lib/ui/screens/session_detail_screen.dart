@@ -97,91 +97,130 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    int itemCount;
+    if (_isLoading) {
+      itemCount = 3; // Header, Spinner, Footer
+    } else if (_error != null) {
+      itemCount = 3; // Header, Error, Footer
+    } else {
+      itemCount = _activities.length + 2; // Header, Activities, Footer
+    }
+
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.session.title ?? 'Session Detail'),
+        leading: const BackButton(),
+        title: Text(
+          widget.session.title ?? 'Session Detail',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              onPressed: _fetchActivities,
-              tooltip: 'Refresh',
-            )
-        ],
-      ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Text(
-                    "State: ${widget.session.state.toString().split('.').last}"),
-                Text("Prompt: ${widget.session.prompt}"),
-                if (_lastFetchTime != null)
-                  Text(
-                    'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-          ),
-          const Divider(),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                              const SizedBox(height: 8),
-                              SelectableText(_error!, textAlign: TextAlign.center),
-                              TextButton(onPressed: _fetchActivities, child: const Text("Retry"))
-                            ],
-                          ),
-                        ),
-                      )
-                    : ListView.builder(
-                        itemCount: _activities.length,
-                        itemBuilder: (context, index) {
-                          final activity = _activities[index];
-                          final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
-                          final item = ActivityItem(activity: activity);
-
-                          if (isDevMode) {
-                            return GestureDetector(
-                              onLongPress: () => _showContextMenu(context),
-                              onSecondaryTap: () => _showContextMenu(context),
-                              child: item,
-                            );
-                          } else {
-                            return item;
-                          }
-                        },
-                      ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-                children: [
-                    Expanded(child: TextField(
-                        decoration: const InputDecoration(hintText: "Send message..."),
-                        onSubmitted: (value) {
-                          if (value.isNotEmpty) {
-                            _sendMessage(value);
-                          }
-                        },
-                    )),
-                    if (widget.session.state == SessionState.AWAITING_PLAN_APPROVAL)
-                        ElevatedButton(onPressed: _approvePlan, child: const Text("Approve Plan"))
-                ],
-            ),
+          IconButton(
+            icon: const Icon(Icons.replay),
+            onPressed: _fetchActivities,
+            tooltip: 'Refresh',
           )
         ],
+      ),
+      body: ListView.builder(
+        itemCount: itemCount,
+        itemBuilder: (context, index) {
+          // Header
+          if (index == 0) {
+            return Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                          "State: ${widget.session.state.toString().split('.').last}"),
+                      Text("Prompt: ${widget.session.prompt}"),
+                      if (_lastFetchTime != null)
+                        Text(
+                          'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                    ],
+                  ),
+                ),
+                const Divider(),
+              ],
+            );
+          }
+
+          // Footer (Chat Input)
+          if (index == itemCount - 1) {
+            return Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                children: [
+                  Expanded(
+                    child: TextField(
+                      decoration:
+                          const InputDecoration(hintText: "Send message..."),
+                      onSubmitted: (value) {
+                        if (value.isNotEmpty) {
+                          _sendMessage(value);
+                        }
+                      },
+                    ),
+                  ),
+                  if (widget.session.state ==
+                      SessionState.AWAITING_PLAN_APPROVAL)
+                    ElevatedButton(
+                        onPressed: _approvePlan,
+                        child: const Text("Approve Plan"))
+                ],
+              ),
+            );
+          }
+
+          // Middle Content
+          if (_isLoading) {
+            return const SizedBox(
+              height: 200,
+              child: Center(child: CircularProgressIndicator()),
+            );
+          }
+
+          if (_error != null) {
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 48),
+                    const SizedBox(height: 8),
+                    SelectableText(_error!, textAlign: TextAlign.center),
+                    TextButton(
+                        onPressed: _fetchActivities,
+                        child: const Text("Retry"))
+                  ],
+                ),
+              ),
+            );
+          }
+
+          // Activity Item
+          final activity = _activities[index - 1];
+          final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+          final item = ActivityItem(activity: activity);
+
+          if (isDevMode) {
+            return GestureDetector(
+              onLongPress: () => _showContextMenu(context),
+              onSecondaryTap: () => _showContextMenu(context),
+              child: item,
+            );
+          } else {
+            return item;
+          }
+        },
       ),
     );
   }

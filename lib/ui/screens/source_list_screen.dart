@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
 
@@ -12,14 +13,37 @@ class SourceListScreen extends StatefulWidget {
 
 class _SourceListScreenState extends State<SourceListScreen> {
   List<Source> _sources = [];
+  List<Source> _filteredSources = [];
   bool _isLoading = false;
   String? _error;
+  final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSources();
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  void _onSearchChanged() {
+    setState(() {
+      _filteredSources = filterAndSort(
+        items: _sources,
+        query: _searchController.text,
+        accessors: [
+          (source) => source.githubRepo?.repo,
+          (source) => source.name,
+          (source) => source.githubRepo?.owner,
+        ],
+      );
     });
   }
 
@@ -36,6 +60,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
       if (mounted) {
         setState(() {
           _sources = sources;
+          _onSearchChanged(); // Initialize filtered list
         });
       }
     } catch (e) {
@@ -95,16 +120,42 @@ class _SourceListScreenState extends State<SourceListScreen> {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _sources.length,
-                  itemBuilder: (context, index) {
-                    final source = _sources[index];
-                    return ListTile(
-                      title: Text(source.githubRepo?.repo ?? source.name),
-                      subtitle: Text(source.githubRepo?.owner ?? ''),
-                      leading: const Icon(Icons.code),
-                    );
-                  },
+              : Column(
+                  children: [
+                    Padding(
+                      padding: const EdgeInsets.all(8.0),
+                      child: TextField(
+                        controller: _searchController,
+                        decoration: const InputDecoration(
+                          labelText: 'Search Sources',
+                          border: OutlineInputBorder(),
+                          prefixIcon: Icon(Icons.search),
+                        ),
+                      ),
+                    ),
+                    Expanded(
+                      child: ListView.builder(
+                        itemCount: _filteredSources.length,
+                        itemBuilder: (context, index) {
+                          final source = _filteredSources[index];
+                          return ListTile(
+                            title: Text(source.githubRepo?.repo ?? source.name),
+                            subtitle: Text(source.githubRepo?.owner ?? ''),
+                            leading: const Icon(Icons.code),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SessionListScreen(sourceFilter: source.name),
+                                ),
+                              );
+                            },
+                          );
+                        },
+                      ),
+                    ),
+                  ],
                 ),
     );
   }
