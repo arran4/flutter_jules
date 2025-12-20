@@ -65,6 +65,9 @@ class Session {
   final String? url;
   final List<SessionOutput>? outputs;
   final List<Media>? images;
+  final int? currentStep;
+  final int? totalSteps;
+  final String? currentAction;
 
   Session({
     required this.name,
@@ -80,6 +83,9 @@ class Session {
     this.url,
     this.outputs,
     this.images,
+    this.currentStep,
+    this.totalSteps,
+    this.currentAction,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -97,6 +103,9 @@ class Session {
       url: getStringPropOrDefault(json, 'url', null),
       outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, () => null),
       images: getObjectArrayPropOrDefaultFunction(json, 'images', Media.fromJson, () => null),
+      currentStep: getNumberPropOrDefault<num?>(json, 'currentStep', null)?.toInt(),
+      totalSteps: getNumberPropOrDefault<num?>(json, 'totalSteps', null)?.toInt(),
+      currentAction: getStringPropOrDefault(json, 'currentAction', null),
     );
   }
 
@@ -124,6 +133,9 @@ class Session {
     if (images != null) {
       map['images'] = images!.map((e) => e.toJson()).toList();
     }
+    if (currentStep != null) map['currentStep'] = currentStep;
+    if (totalSteps != null) map['totalSteps'] = totalSteps;
+    if (currentAction != null) map['currentAction'] = currentAction;
     return map;
   }
 }
