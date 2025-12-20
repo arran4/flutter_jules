@@ -270,7 +270,21 @@ class _SourceListScreenState extends State<SourceListScreen> {
                               subtitle: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                  Row(
+                                    children: [
+                                      Text(repo?.owner ?? "Unknown Owner"),
+                                      const SizedBox(width: 4),
+                                      const Icon(Icons.circle, size: 4),
+                                      const SizedBox(width: 4),
+                                      Text(defaultBranch),
+                                      if (branchCount != null) ...[
+                                        const SizedBox(width: 4),
+                                        const Icon(Icons.circle, size: 4),
+                                        const SizedBox(width: 4),
+                                        Text("$branchCount branches"),
+                                      ],
+                                    ],
+                                  ),
                                   const SizedBox(height: 4),
                                   Row(
                                     children: [
