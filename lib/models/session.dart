@@ -1,3 +1,4 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
 import 'enums.dart';
 import 'source.dart';
 
@@ -14,9 +15,9 @@ class PullRequest {
 
   factory PullRequest.fromJson(Map<String, dynamic> json) {
     return PullRequest(
-      url: json['url'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
+      url: getStringPropOrThrow(json, 'url'),
+      title: getStringPropOrThrow(json, 'title'),
+      description: getStringPropOrThrow(json, 'description'),
     );
   }
 
@@ -36,9 +37,7 @@ class SessionOutput {
 
   factory SessionOutput.fromJson(Map<String, dynamic> json) {
     return SessionOutput(
-      pullRequest: json['pullRequest'] != null
-          ? PullRequest.fromJson(json['pullRequest'])
-          : null,
+      pullRequest: getObjectFunctionPropOrDefault(json, 'pullRequest', PullRequest.fromJson, null),
     );
   }
 
@@ -82,28 +81,18 @@ class Session {
 
   factory Session.fromJson(Map<String, dynamic> json) {
     return Session(
-      name: json['name'] as String,
-      id: json['id'] as String,
-      prompt: json['prompt'] as String,
-      sourceContext: SourceContext.fromJson(json['sourceContext']),
-      title: json['title'] as String?,
-      requirePlanApproval: json['requirePlanApproval'] as bool?,
-      automationMode: json['automationMode'] != null
-          ? AutomationMode.values.firstWhere(
-              (e) => e.toString() == 'AutomationMode.${json['automationMode']}',
-              orElse: () => AutomationMode.AUTOMATION_MODE_UNSPECIFIED)
-          : null,
-      createTime: json['createTime'] as String?,
-      updateTime: json['updateTime'] as String?,
-      state: json['state'] != null
-          ? SessionState.values.firstWhere(
-              (e) => e.toString() == 'SessionState.${json['state']}',
-              orElse: () => SessionState.STATE_UNSPECIFIED)
-          : null,
-      url: json['url'] as String?,
-      outputs: (json['outputs'] as List<dynamic>?)
-          ?.map((e) => SessionOutput.fromJson(e))
-          .toList(),
+      name: getStringPropOrThrow(json, 'name'),
+      id: getStringPropOrThrow(json, 'id'),
+      prompt: getStringPropOrThrow(json, 'prompt'),
+      sourceContext: getObjectFunctionPropOrThrow(json, 'sourceContext', SourceContext.fromJson),
+      title: getStringPropOrDefault(json, 'title', null),
+      requirePlanApproval: getBooleanPropOrDefault(json, 'requirePlanApproval', null),
+      automationMode: getEnumPropOrDefault(json, 'automationMode', AutomationMode.values, AutomationMode.AUTOMATION_MODE_UNSPECIFIED),
+      createTime: getStringPropOrDefault(json, 'createTime', null),
+      updateTime: getStringPropOrDefault(json, 'updateTime', null),
+      state: getEnumPropOrDefault(json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
+      url: getStringPropOrDefault(json, 'url', null),
+      outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, null),
     );
   }
 
@@ -130,4 +119,14 @@ class Session {
     }
     return map;
   }
+}
+
+T? getEnumPropOrDefault<T>(Map<String, dynamic> json, String key, List<T> values, T? defaultValue) {
+  if (json[key] == null) {
+      return defaultValue;
+  }
+  return values.firstWhere(
+    (e) => e.toString().split('.').last == json[key],
+    orElse: () => defaultValue as T,
+  );
 }

@@ -1,3 +1,5 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
+
 class GitHubRepoContext {
   final String startingBranch;
 
@@ -5,7 +7,7 @@ class GitHubRepoContext {
 
   factory GitHubRepoContext.fromJson(Map<String, dynamic> json) {
     return GitHubRepoContext(
-      startingBranch: json['startingBranch'] as String,
+      startingBranch: getStringPropOrThrow(json, 'startingBranch'),
     );
   }
 
@@ -27,10 +29,8 @@ class SourceContext {
 
   factory SourceContext.fromJson(Map<String, dynamic> json) {
     return SourceContext(
-      source: json['source'] as String,
-      githubRepoContext: json['githubRepoContext'] != null
-          ? GitHubRepoContext.fromJson(json['githubRepoContext'])
-          : null,
+      source: getStringPropOrThrow(json, 'source'),
+      githubRepoContext: getObjectFunctionPropOrDefault(json, 'githubRepoContext', GitHubRepoContext.fromJson, null),
     );
   }
 
@@ -52,7 +52,7 @@ class GitHubBranch {
 
   factory GitHubBranch.fromJson(Map<String, dynamic> json) {
     return GitHubBranch(
-      displayName: json['displayName'] as String,
+      displayName: getStringPropOrThrow(json, 'displayName'),
     );
   }
 
@@ -76,15 +76,11 @@ class GitHubRepo {
 
   factory GitHubRepo.fromJson(Map<String, dynamic> json) {
     return GitHubRepo(
-      owner: json['owner'] as String,
-      repo: json['repo'] as String,
-      isPrivate: json['isPrivate'] as bool,
-      defaultBranch: json['defaultBranch'] != null
-          ? GitHubBranch.fromJson(json['defaultBranch'])
-          : null,
-      branches: (json['branches'] as List<dynamic>?)
-          ?.map((e) => GitHubBranch.fromJson(e))
-          .toList(),
+      owner: getStringPropOrThrow(json, 'owner'),
+      repo: getStringPropOrThrow(json, 'repo'),
+      isPrivate: getBooleanPropOrThrow(json, 'isPrivate'),
+      defaultBranch: getObjectFunctionPropOrDefault(json, 'defaultBranch', GitHubBranch.fromJson, null),
+      branches: getObjectArrayPropOrDefaultFunction(json, 'branches', GitHubBranch.fromJson, null),
     );
   }
 
@@ -117,11 +113,9 @@ class Source {
 
   factory Source.fromJson(Map<String, dynamic> json) {
     return Source(
-      name: json['name'] as String,
-      id: json['id'] as String,
-      githubRepo: json['githubRepo'] != null
-          ? GitHubRepo.fromJson(json['githubRepo'])
-          : null,
+      name: getStringPropOrThrow(json, 'name'),
+      id: getStringPropOrThrow(json, 'id'),
+      githubRepo: getObjectFunctionPropOrDefault(json, 'githubRepo', GitHubRepo.fromJson, null),
     );
   }
 
