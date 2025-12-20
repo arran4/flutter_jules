@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
 import 'services/session_provider.dart';
+import 'services/source_provider.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -15,6 +16,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SessionProvider()),
+        ChangeNotifierProvider(create: (_) => SourceProvider()),
       ],
       child: const MyApp(),
     ),

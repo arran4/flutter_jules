@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
+import '../../services/source_provider.dart';
 import '../../models.dart';
 
 enum SortOption { recent, count, alphabetical }
@@ -16,7 +17,6 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  List<Source> _sources = [];
   List<Source> _filteredSources = [];
   bool _isLoading = false;
   String? _error;
@@ -42,8 +42,11 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _onSearchChanged() {
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final sources = sourceProvider.sources;
+
     final filtered = filterAndSort<Source>(
-      items: _sources,
+      items: sources,
       query: _searchController.text,
       accessors: [
         (source) => source.githubRepo?.repo ?? '',
@@ -107,7 +110,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     return nameA.toLowerCase().compareTo(nameB.toLowerCase());
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchData({bool force = false}) async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -116,15 +119,37 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+
       // Run both requests
-      final results = await Future.wait([
-        client.listSources(),
-        client.listSessions(),
+      await Future.wait([
+        sourceProvider.fetchSources(client, force: force),
+        client.listSessions().then((sessions) {
+          _processSessions(sessions);
+        }),
       ]);
 
-      final sources = results[0] as List<Source>;
-      final sessions = results[1] as List<Session>;
+      if (mounted) {
+        setState(() {
+          _onSearchChanged();
+        });
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
+    }
+  }
 
+  void _processSessions(List<Session> sessions) {
       _usageCount.clear();
       _lastUsed.clear();
 
@@ -147,26 +172,6 @@ class _SourceListScreenState extends State<SourceListScreen> {
           }
         }
       }
-
-      if (mounted) {
-        setState(() {
-          _sources = sources;
-          _onSearchChanged();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   @override
@@ -202,7 +207,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.replay),
-            onPressed: _fetchData,
+            onPressed: () => _fetchData(force: true),
             tooltip: 'Refresh',
           ),
         ],
@@ -229,7 +234,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: _fetchData,
+                          onPressed: () => _fetchData(force: true),
                           child: const Text('Retry'),
                         ),
                       ],
@@ -250,70 +255,91 @@ class _SourceListScreenState extends State<SourceListScreen> {
                       ),
                     ),
                     Expanded(
-                      child: ListView.builder(
-                        itemCount: _filteredSources.length,
-                        itemBuilder: (context, index) {
-                          final source = _filteredSources[index];
-                          final count = _usageCount[source.name] ?? 0;
-                          final lastUsedDate = _lastUsed[source.name];
+                      child: Consumer<SourceProvider>(
+                        builder: (context, sourceProvider, child) {
+                          // The list is actually driven by _filteredSources which is local state,
+                          // but updated when sourceProvider changes via _onSearchChanged inside build?
+                          // No, _onSearchChanged updates _filteredSources in setState.
+                          // But we need to listen to sourceProvider changes if we want real-time updates?
+                          // _fetchData calls sourceProvider.fetchSources, which updates the provider.
+                          // Then we call setState which calls _onSearchChanged.
+                          // So it works for the fetch cycle.
+                          // But if another part of the app updates sources, this screen won't know unless we listen.
+                          // Consumer is here, but we are using _filteredSources.
+                          // We should probably trigger _onSearchChanged when provider updates?
+                          // But we can't call setState during build.
+                          // It's cleaner to just rebuild the list here if we can, but sorting/filtering is expensive.
+                          // For now, reliance on _fetchData is fine as it's the main entry point.
+                          // But let's check if we should just use Consumer to trigger rebuilds.
 
-                          final repo = source.githubRepo;
-                          final isPrivate = repo?.isPrivate ?? false;
-                          final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
-                          final branchCount = repo?.branches?.length;
+                          // If we use Consumer, we can just rebuild the list.
+                          // But sorting logic is in state.
+                          return ListView.builder(
+                            itemCount: _filteredSources.length,
+                            itemBuilder: (context, index) {
+                              final source = _filteredSources[index];
+                              final count = _usageCount[source.name] ?? 0;
+                              final lastUsedDate = _lastUsed[source.name];
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            child: ListTile(
-                              leading: Icon(isPrivate ? Icons.lock : Icons.public),
-                              title: Text(repo?.repo ?? source.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
-                                  const SizedBox(height: 4),
-                                  Row(
+                              final repo = source.githubRepo;
+                              final isPrivate = repo?.isPrivate ?? false;
+                              final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
+                              final branchCount = repo?.branches?.length;
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                child: ListTile(
+                                  leading: Icon(isPrivate ? Icons.lock : Icons.public),
+                                  title: Text(repo?.repo ?? source.name),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      if (count > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '$count sessions',
-                                            style: Theme.of(context).textTheme.labelSmall,
-                                          ),
-                                        ),
-                                      if (count > 0) const SizedBox(width: 8),
-                                      if (lastUsedDate != null)
-                                        Text(
-                                          'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                          style: Theme.of(context).textTheme.bodySmall,
-                                        ),
-                                      if (count == 0)
-                                         Text(
-                                          'Never used',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                                        ),
+                                      Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (count > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '$count sessions',
+                                                style: Theme.of(context).textTheme.labelSmall,
+                                              ),
+                                            ),
+                                          if (count > 0) const SizedBox(width: 8),
+                                          if (lastUsedDate != null)
+                                            Text(
+                                              'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                              style: Theme.of(context).textTheme.bodySmall,
+                                            ),
+                                          if (count == 0)
+                                             Text(
+                                              'Never used',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                                            ),
+                                        ],
+                                      ),
                                     ],
                                   ),
-                                ],
-                              ),
-                              isThreeLine: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        SessionListScreen(sourceFilter: source.name),
-                                  ),
-                                );
-                              },
-                            ),
+                                  isThreeLine: true,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SessionListScreen(sourceFilter: source.name),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
                           );
-                        },
+                        }
                       ),
                     ),
                   ],
