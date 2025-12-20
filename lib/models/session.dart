@@ -63,6 +63,7 @@ class Session {
   final SessionState? state;
   final String? url;
   final List<SessionOutput>? outputs;
+  final String? image;
 
   Session({
     required this.name,
@@ -77,6 +78,7 @@ class Session {
     this.state,
     this.url,
     this.outputs,
+    this.image,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -93,6 +95,7 @@ class Session {
       state: getEnumPropOrDefault(json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
       url: getStringPropOrDefault(json, 'url', null),
       outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, () => null),
+      image: getStringPropOrDefault(json, 'image', null),
     );
   }
 
@@ -117,6 +120,7 @@ class Session {
     if (outputs != null) {
       map['outputs'] = outputs!.map((e) => e.toJson()).toList();
     }
+    if (image != null) map['image'] = image;
     return map;
   }
 }
