@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
