@@ -141,31 +141,43 @@ class JulesClient {
   }
 
   Future<List<Activity>> listActivities(String sessionName) async {
-    final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final endpointUrl = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
+    var activities = <Activity>[];
+    String? pageToken;
 
-    if (response.statusCode == 200) {
-      try {
-        final json = jsonDecode(response.body);
-        if (json['activities'] != null) {
-          return (json['activities'] as List)
-              .map((e) => Activity.fromJson(e))
-              .toList();
-        } else {
-          return [];
-        }
-      } catch (e) {
-        print('Failed to parse listActivities response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse listActivities response: $e\nBody: ${response.body}');
+    do {
+      final queryParams = <String, String>{};
+      if (pageToken != null) {
+        queryParams['pageToken'] = pageToken;
       }
-    } else {
-      throw Exception('Failed to list activities: ${response.body}');
-    }
+
+      final url = endpointUrl.replace(queryParameters: queryParams);
+
+      final response = await _client.get(
+        url,
+        headers: _headers,
+      );
+
+      if (response.statusCode == 200) {
+        try {
+          final json = jsonDecode(response.body);
+          if (json['activities'] != null) {
+            activities.addAll((json['activities'] as List)
+                .map((e) => Activity.fromJson(e)));
+          }
+          pageToken = json['nextPageToken'];
+        } catch (e) {
+          print('Failed to parse listActivities response: $e');
+          print('Body: ${response.body}');
+          throw Exception(
+              'Failed to parse listActivities response: $e\nBody: ${response.body}');
+        }
+      } else {
+        throw Exception('Failed to list activities: ${response.body}');
+      }
+    } while (pageToken != null);
+
+    return activities;
   }
 
   // --- Sources ---
