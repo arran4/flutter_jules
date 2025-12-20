@@ -29,7 +29,12 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      return Session.fromJson(jsonDecode(response.body));
+      try {
+        return Session.fromJson(jsonDecode(response.body));
+      } catch (e) {
+        throw Exception(
+            'Failed to parse createSession response: $e\nBody: ${response.body}');
+      }
     } else {
       throw Exception('Failed to create session: ${response.body}');
     }
@@ -43,7 +48,12 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      return Session.fromJson(jsonDecode(response.body));
+      try {
+        return Session.fromJson(jsonDecode(response.body));
+      } catch (e) {
+        throw Exception(
+            'Failed to parse getSession response: $e\nBody: ${response.body}');
+      }
     } else {
       throw Exception('Failed to get session: ${response.body}');
     }
@@ -57,13 +67,18 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['sessions'] != null) {
-        return (json['sessions'] as List)
-            .map((e) => Session.fromJson(e))
-            .toList();
-      } else {
-        return [];
+      try {
+        final json = jsonDecode(response.body);
+        if (json['sessions'] != null) {
+          return (json['sessions'] as List)
+              .map((e) => Session.fromJson(e))
+              .toList();
+        } else {
+          return [];
+        }
+      } catch (e) {
+        throw Exception(
+            'Failed to parse listSessions response: $e\nBody: ${response.body}');
       }
     } else {
       throw Exception('Failed to list sessions: ${response.body}');
@@ -106,7 +121,12 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      return Activity.fromJson(jsonDecode(response.body));
+      try {
+        return Activity.fromJson(jsonDecode(response.body));
+      } catch (e) {
+        throw Exception(
+            'Failed to parse getActivity response: $e\nBody: ${response.body}');
+      }
     } else {
       throw Exception('Failed to get activity: ${response.body}');
     }
@@ -120,13 +140,18 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['activities'] != null) {
-        return (json['activities'] as List)
-            .map((e) => Activity.fromJson(e))
-            .toList();
-      } else {
-        return [];
+      try {
+        final json = jsonDecode(response.body);
+        if (json['activities'] != null) {
+          return (json['activities'] as List)
+              .map((e) => Activity.fromJson(e))
+              .toList();
+        } else {
+          return [];
+        }
+      } catch (e) {
+        throw Exception(
+            'Failed to parse listActivities response: $e\nBody: ${response.body}');
       }
     } else {
       throw Exception('Failed to list activities: ${response.body}');
@@ -143,7 +168,12 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      return Source.fromJson(jsonDecode(response.body));
+      try {
+        return Source.fromJson(jsonDecode(response.body));
+      } catch (e) {
+        throw Exception(
+            'Failed to parse getSource response: $e\nBody: ${response.body}');
+      }
     } else {
       throw Exception('Failed to get source: ${response.body}');
     }
@@ -157,13 +187,18 @@ class JulesClient {
     );
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      if (json['sources'] != null) {
-        return (json['sources'] as List)
-            .map((e) => Source.fromJson(e))
-            .toList();
-      } else {
-        return [];
+      try {
+        final json = jsonDecode(response.body);
+        if (json['sources'] != null) {
+          return (json['sources'] as List)
+              .map((e) => Source.fromJson(e))
+              .toList();
+        } else {
+          return [];
+        }
+      } catch (e) {
+        throw Exception(
+            'Failed to parse listSources response: $e\nBody: ${response.body}');
       }
     } else {
       throw Exception('Failed to list sources: ${response.body}');
