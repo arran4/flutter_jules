@@ -32,6 +32,8 @@ class JulesClient {
       try {
         return Session.fromJson(jsonDecode(response.body));
       } catch (e) {
+        print('Failed to parse createSession response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse createSession response: $e\nBody: ${response.body}');
       }
@@ -51,6 +53,8 @@ class JulesClient {
       try {
         return Session.fromJson(jsonDecode(response.body));
       } catch (e) {
+        print('Failed to parse getSession response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse getSession response: $e\nBody: ${response.body}');
       }
@@ -77,6 +81,8 @@ class JulesClient {
           return [];
         }
       } catch (e) {
+        print('Failed to parse listSessions response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse listSessions response: $e\nBody: ${response.body}');
       }
@@ -124,6 +130,8 @@ class JulesClient {
       try {
         return Activity.fromJson(jsonDecode(response.body));
       } catch (e) {
+        print('Failed to parse getActivity response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse getActivity response: $e\nBody: ${response.body}');
       }
@@ -150,6 +158,8 @@ class JulesClient {
           return [];
         }
       } catch (e) {
+        print('Failed to parse listActivities response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse listActivities response: $e\nBody: ${response.body}');
       }
@@ -171,6 +181,8 @@ class JulesClient {
       try {
         return Source.fromJson(jsonDecode(response.body));
       } catch (e) {
+        print('Failed to parse getSource response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse getSource response: $e\nBody: ${response.body}');
       }
@@ -197,6 +209,8 @@ class JulesClient {
           return [];
         }
       } catch (e) {
+        print('Failed to parse listSources response: $e');
+        print('Body: ${response.body}');
         throw Exception(
             'Failed to parse listSources response: $e\nBody: ${response.body}');
       }
