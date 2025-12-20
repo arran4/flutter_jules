@@ -142,6 +142,15 @@ class _SourceListScreenState extends State<SourceListScreen> {
                             title: Text(source.githubRepo?.repo ?? source.name),
                             subtitle: Text(source.githubRepo?.owner ?? ''),
                             leading: const Icon(Icons.code),
+                            onTap: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (context) =>
+                                      SessionListScreen(sourceFilter: source.name),
+                                ),
+                              );
+                            },
                           );
                         },
                       ),

@@ -10,7 +10,9 @@ import '../widgets/api_viewer.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
-  const SessionListScreen({super.key});
+  final String? sourceFilter;
+
+  const SessionListScreen({super.key, this.sourceFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -69,9 +71,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
           _lastExchange = exchange;
         },
       );
+
+      var displaySessions = sessions;
+      if (widget.sourceFilter != null) {
+        displaySessions = sessions
+            .where((s) => s.sourceContext.source == widget.sourceFilter)
+            .toList();
+      }
+
       if (mounted) {
         setState(() {
-          _sessions = sessions;
+          _sessions = displaySessions;
           _onSearchChanged(); // Initialize filtered list
           _lastFetchTime = DateTime.now();
         });
@@ -117,7 +127,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     id: '',
                     prompt: prompt,
                     sourceContext: SourceContext(
-                      source: 'sources/default',
+                      source: widget.sourceFilter ?? 'sources/default',
                       githubRepoContext: GitHubRepoContext(startingBranch: 'main'),
                     ),
                   );
