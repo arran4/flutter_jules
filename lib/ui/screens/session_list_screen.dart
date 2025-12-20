@@ -159,7 +159,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         title: const Text('Sessions'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.replay),
             onPressed: _fetchSessions,
             tooltip: 'Refresh',
           ),
@@ -237,7 +237,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
                     final tile = ListTile(
-                      title: Text(session.title ?? session.name),
+                      title: Text(
+                        session.title ?? session.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       subtitle: Text(session.state.toString().split('.').last),
                       onTap: () {
                         Navigator.push(
