@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/jules_client.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_provider.dart';
 import '../../models.dart';
 import 'session_detail_screen.dart';
 
@@ -11,7 +12,6 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  final JulesClient _client = JulesClient(apiKey: 'YOUR_API_KEY');
   List<Session> _sessions = [];
   bool _isLoading = false;
   String? _error;
@@ -19,28 +19,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchSessions();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchSessions();
+    });
   }
 
   Future<void> _fetchSessions() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final sessions = await _client.listSessions();
-      setState(() {
-        _sessions = sessions;
-      });
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final sessions = await client.listSessions();
+      if (mounted) {
+        setState(() {
+          _sessions = sessions;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -74,7 +84,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       githubRepoContext: GitHubRepoContext(startingBranch: 'main'),
                     ),
                   );
-                  await _client.createSession(newSession);
+                  final client = Provider.of<AuthProvider>(context, listen: false).client;
+                  await client.createSession(newSession);
                   _fetchSessions();
                 } catch (e) {
                    if(mounted) {
@@ -107,7 +118,32 @@ class _SessionListScreenState extends State<SessionListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('Error: $_error'))
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error Loading Sessions',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          _error!,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _fetchSessions,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               : ListView.builder(
                   itemCount: _sessions.length,
                   itemBuilder: (context, index) {

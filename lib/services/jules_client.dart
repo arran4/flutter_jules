@@ -1,22 +1,35 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models.dart';
+import 'exceptions.dart';
 
 class JulesClient {
   final String baseUrl;
-  final String apiKey;
+  final String? apiKey;
   final http.Client _client;
 
   JulesClient({
     this.baseUrl = 'https://jules.googleapis.com',
-    required this.apiKey,
+    this.apiKey,
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
+        if (apiKey != null) 'Authorization': 'Bearer $apiKey',
       };
+
+  void _handleError(http.Response response) {
+    if (response.statusCode == 401) {
+      throw InvalidTokenException(response.body);
+    } else if (response.statusCode == 403) {
+      throw PermissionDeniedException(response.body);
+    } else if (response.statusCode == 404) {
+      throw NotFoundException(response.body);
+    } else {
+      throw ApiException(response.statusCode, response.body);
+    }
+  }
 
   // --- Sessions ---
 
@@ -31,7 +44,8 @@ class JulesClient {
     if (response.statusCode == 200) {
       return Session.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to create session: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -45,7 +59,8 @@ class JulesClient {
     if (response.statusCode == 200) {
       return Session.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get session: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -66,7 +81,8 @@ class JulesClient {
         return [];
       }
     } else {
-      throw Exception('Failed to list sessions: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -79,7 +95,7 @@ class JulesClient {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to approve plan: ${response.body}');
+      _handleError(response);
     }
   }
 
@@ -92,7 +108,7 @@ class JulesClient {
     );
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to send message: ${response.body}');
+      _handleError(response);
     }
   }
 
@@ -108,7 +124,8 @@ class JulesClient {
     if (response.statusCode == 200) {
       return Activity.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get activity: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -129,7 +146,8 @@ class JulesClient {
         return [];
       }
     } else {
-      throw Exception('Failed to list activities: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -145,7 +163,8 @@ class JulesClient {
     if (response.statusCode == 200) {
       return Source.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get source: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
@@ -166,7 +185,8 @@ class JulesClient {
         return [];
       }
     } else {
-      throw Exception('Failed to list sources: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 

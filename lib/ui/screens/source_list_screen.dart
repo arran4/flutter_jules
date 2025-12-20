@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/jules_client.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_provider.dart';
 import '../../models.dart';
 
 class SourceListScreen extends StatefulWidget {
@@ -10,7 +11,6 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  final JulesClient _client = JulesClient(apiKey: 'YOUR_API_KEY');
   List<Source> _sources = [];
   bool _isLoading = false;
   String? _error;
@@ -18,28 +18,38 @@ class _SourceListScreenState extends State<SourceListScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchSources();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchSources();
+    });
   }
 
   Future<void> _fetchSources() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final sources = await _client.listSources();
-      setState(() {
-        _sources = sources;
-      });
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final sources = await client.listSources();
+      if (mounted) {
+        setState(() {
+          _sources = sources;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
 
@@ -58,7 +68,32 @@ class _SourceListScreenState extends State<SourceListScreen> {
       body: _isLoading
           ? const Center(child: CircularProgressIndicator())
           : _error != null
-              ? Center(child: Text('Error: $_error'))
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Error Loading Sources',
+                          style: Theme.of(context).textTheme.titleLarge,
+                        ),
+                        const SizedBox(height: 8),
+                        SelectableText(
+                          _error!,
+                          textAlign: TextAlign.center,
+                        ),
+                        const SizedBox(height: 16),
+                        ElevatedButton(
+                          onPressed: _fetchSources,
+                          child: const Text('Retry'),
+                        ),
+                      ],
+                    ),
+                  ),
+                )
               : ListView.builder(
                   itemCount: _sources.length,
                   itemBuilder: (context, index) {

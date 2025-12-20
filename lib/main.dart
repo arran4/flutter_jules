@@ -1,10 +1,18 @@
 import 'package:flutter/material.dart';
-import 'services/jules_client.dart';
+import 'package:provider/provider.dart';
+import 'services/auth_provider.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/source_list_screen.dart';
+import 'ui/screens/settings_screen.dart';
+import 'ui/screens/login_screen.dart';
 
 void main() {
-  runApp(const MyApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (_) => AuthProvider(),
+      child: const MyApp(),
+    ),
+  );
 }
 
 class MyApp extends StatelessWidget {
@@ -18,7 +26,19 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
-      home: const JulesHomePage(),
+      home: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (auth.isLoading) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (!auth.isAuthenticated) {
+            return const LoginScreen();
+          }
+          return const JulesHomePage();
+        },
+      ),
     );
   }
 }
@@ -36,6 +56,7 @@ class _JulesHomePageState extends State<JulesHomePage> {
   static const List<Widget> _widgetOptions = <Widget>[
     SessionListScreen(),
     SourceListScreen(),
+    SettingsScreen(),
   ];
 
   void _onItemTapped(int index) {
@@ -59,6 +80,10 @@ class _JulesHomePageState extends State<JulesHomePage> {
           BottomNavigationBarItem(
             icon: Icon(Icons.source),
             label: 'Sources',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.settings),
+            label: 'Settings',
           ),
         ],
         currentIndex: _selectedIndex,

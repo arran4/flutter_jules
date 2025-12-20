@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
-import '../../services/jules_client.dart';
+import 'package:provider/provider.dart';
+import '../../services/auth_provider.dart';
 import '../../models.dart';
 import '../widgets/activity_item.dart';
 
@@ -13,7 +14,6 @@ class SessionDetailScreen extends StatefulWidget {
 }
 
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
-  final JulesClient _client = JulesClient(apiKey: 'YOUR_API_KEY');
   List<Activity> _activities = [];
   bool _isLoading = false;
   String? _error;
@@ -21,34 +21,45 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void initState() {
     super.initState();
-    _fetchActivities();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      _fetchActivities();
+    });
   }
 
   Future<void> _fetchActivities() async {
+    if (!mounted) return;
     setState(() {
       _isLoading = true;
       _error = null;
     });
 
     try {
-      final activities = await _client.listActivities(widget.session.name);
-      setState(() {
-        _activities = activities;
-      });
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final activities = await client.listActivities(widget.session.name);
+      if (mounted) {
+        setState(() {
+          _activities = activities;
+        });
+      }
     } catch (e) {
-      setState(() {
-        _error = e.toString();
-      });
+      if (mounted) {
+        setState(() {
+          _error = e.toString();
+        });
+      }
     } finally {
-      setState(() {
-        _isLoading = false;
-      });
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+      }
     }
   }
   
   Future<void> _sendMessage(String message) async {
       try {
-          await _client.sendMessage(widget.session.name, message);
+          final client = Provider.of<AuthProvider>(context, listen: false).client;
+          await client.sendMessage(widget.session.name, message);
           _fetchActivities(); 
       } catch (e) {
           if(mounted) {
@@ -59,7 +70,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   
   Future<void> _approvePlan() async {
       try {
-          await _client.approvePlan(widget.session.name);
+          final client = Provider.of<AuthProvider>(context, listen: false).client;
+          await client.approvePlan(widget.session.name);
           if(mounted) {
             ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Plan Approved")));
           }
@@ -97,7 +109,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             child: _isLoading
                 ? const Center(child: CircularProgressIndicator())
                 : _error != null
-                    ? Center(child: Text('Error: $_error'))
+                    ? Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(16.0),
+                          child: Column(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                              const SizedBox(height: 8),
+                              SelectableText(_error!, textAlign: TextAlign.center),
+                              TextButton(onPressed: _fetchActivities, child: const Text("Retry"))
+                            ],
+                          ),
+                        ),
+                      )
                     : ListView.builder(
                         itemCount: _activities.length,
                         itemBuilder: (context, index) {
