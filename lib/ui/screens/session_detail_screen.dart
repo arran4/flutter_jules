@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
@@ -21,6 +22,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _isLoading = false;
   String? _error;
   ApiExchange? _lastExchange;
+  DateTime? _lastFetchTime;
 
   @override
   void initState() {
@@ -48,6 +50,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (mounted) {
         setState(() {
           _activities = activities;
+          _lastFetchTime = DateTime.now();
         });
       }
     } catch (e) {
@@ -110,11 +113,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                    Text("State: ${widget.session.state.toString().split('.').last}"),
-                    Text("Prompt: ${widget.session.prompt}"),
-                ],
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                    "State: ${widget.session.state.toString().split('.').last}"),
+                Text("Prompt: ${widget.session.prompt}"),
+                if (_lastFetchTime != null)
+                  Text(
+                    'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
             ),
           ),
           const Divider(),
