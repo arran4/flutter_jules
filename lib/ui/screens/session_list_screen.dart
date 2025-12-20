@@ -7,6 +7,7 @@ import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../widgets/api_viewer.dart';
+import '../widgets/model_viewer.dart';
 import '../widgets/foldable_text.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
@@ -108,28 +109,41 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _showContextMenu(BuildContext context) {
+  void _showContextMenu(BuildContext context, {Session? session}) {
     // If we want to show the last exchange for the list call
     final lastExchange =
         Provider.of<SessionProvider>(context, listen: false).lastExchange;
-
-    if (lastExchange == null) return;
 
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('Dev Tools'),
         children: [
-          SimpleDialogOption(
-            onPressed: () {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                builder: (context) => ApiViewer(exchange: lastExchange),
-              );
-            },
-            child: const Text('View Source'),
-          ),
+          if (lastExchange != null)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => ApiViewer(exchange: lastExchange),
+                );
+              },
+              child: const Text('View Source (List API)'),
+            ),
+          if (session != null)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: session.toJson(),
+                    title: 'Session Data',
+                  ),
+                );
+              },
+              child: const Text('View Session Data'),
+            ),
         ],
       ),
     );
@@ -419,13 +433,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   );
                                 },
                                 onLongPress: isDevMode
-                                    ? () => _showContextMenu(context)
+                                    ? () => _showContextMenu(context,
+                                        session: session)
                                     : null,
                               );
 
                               if (isDevMode) {
                                 return GestureDetector(
-                                  onSecondaryTap: () => _showContextMenu(context),
+                                  onSecondaryTap: () => _showContextMenu(
+                                      context,
+                                      session: session),
                                   child: tile,
                                 );
                               } else {
