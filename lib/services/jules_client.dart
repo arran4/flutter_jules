@@ -6,17 +6,20 @@ import 'exceptions.dart';
 class JulesClient {
   final String baseUrl;
   final String? apiKey;
+  final String? oauthToken;
   final http.Client _client;
 
   JulesClient({
     this.baseUrl = 'https://jules.googleapis.com',
     this.apiKey,
+    this.oauthToken,
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        if (apiKey != null) 'Authorization': 'Bearer $apiKey',
+        if (oauthToken != null) 'Authorization': 'Bearer $oauthToken',
+        if (apiKey != null) 'x-goog-api-key': apiKey!,
       };
 
   void _handleError(http.Response response) {
