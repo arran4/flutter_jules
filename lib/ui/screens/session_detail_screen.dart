@@ -6,6 +6,7 @@ import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
+import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 
 class SessionDetailScreen extends StatefulWidget {
@@ -106,6 +107,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       itemCount = _activities.length + 2; // Header, Activities, Footer
     }
 
+    final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+
     return Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
@@ -115,6 +118,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (isDevMode)
+             IconButton(
+               icon: const Icon(Icons.data_object),
+               tooltip: 'View Session Data',
+               onPressed: () {
+                 showDialog(
+                   context: context,
+                   builder: (context) => ModelViewer(
+                     data: widget.session.toJson(),
+                     title: 'Session Data',
+                   ),
+                 );
+               },
+             ),
           IconButton(
             icon: const Icon(Icons.replay),
             onPressed: _fetchActivities,
@@ -208,13 +225,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // Activity Item
           final activity = _activities[index - 1];
-          final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
           final item = ActivityItem(activity: activity);
 
           if (isDevMode) {
             return GestureDetector(
-              onLongPress: () => _showContextMenu(context),
-              onSecondaryTap: () => _showContextMenu(context),
+              onLongPress: () => _showContextMenu(context, activity: activity),
+              onSecondaryTap: () =>
+                  _showContextMenu(context, activity: activity),
               child: item,
             );
           } else {
@@ -225,25 +242,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     );
   }
 
-  void _showContextMenu(BuildContext context) {
-    if (_lastExchange == null) return;
-
+  void _showContextMenu(BuildContext context, {Activity? activity}) {
     showDialog(
       context: context,
       builder: (context) => SimpleDialog(
         title: const Text('Dev Tools'),
         children: [
+          if (_lastExchange != null)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                if (_lastExchange != null) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ApiViewer(exchange: _lastExchange!),
+                  );
+                }
+              },
+              child: const Text('View Source (List API)'),
+            ),
+          if (activity != null)
+            SimpleDialogOption(
+              onPressed: () {
+                Navigator.pop(context);
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: activity.toJson(),
+                    title: 'Activity Data',
+                  ),
+                );
+              },
+              child: const Text('View Activity Data'),
+            ),
           SimpleDialogOption(
             onPressed: () {
               Navigator.pop(context);
-              if (_lastExchange != null) {
-                showDialog(
-                  context: context,
-                  builder: (context) => ApiViewer(exchange: _lastExchange!),
-                );
-              }
+              showDialog(
+                context: context,
+                builder: (context) => ModelViewer(
+                  data: widget.session.toJson(),
+                  title: 'Session Data',
+                ),
+              );
             },
-            child: const Text('View Source'),
+            child: const Text('View Session Data'),
           ),
         ],
       ),
