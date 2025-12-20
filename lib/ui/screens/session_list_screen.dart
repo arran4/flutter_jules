@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/data_provider.dart';
 import '../../models.dart';
 import 'session_detail_screen.dart';
 
@@ -12,46 +13,12 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  List<Session> _sessions = [];
-  bool _isLoading = false;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchSessions();
+      Provider.of<DataProvider>(context, listen: false).fetchSessions();
     });
-  }
-
-  Future<void> _fetchSessions() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sessions = await client.listSessions();
-      if (mounted) {
-        setState(() {
-          _sessions = sessions;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   Future<void> _createSession() async {
@@ -86,7 +53,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   );
                   final client = Provider.of<AuthProvider>(context, listen: false).client;
                   await client.createSession(newSession);
-                  _fetchSessions();
+                  // Force refresh after creating
+                  if (mounted) {
+                    Provider.of<DataProvider>(context, listen: false).fetchSessions(force: true);
+                  }
                 } catch (e) {
                    if(mounted) {
                      showDialog(
@@ -117,21 +87,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sessions'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchSessions,
-            tooltip: 'Refresh',
+    return Consumer<DataProvider>(
+      builder: (context, provider, child) {
+        final sessions = provider.sessions;
+        final isLoading = provider.isSessionsLoading;
+        final error = provider.sessionsError;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Sessions'),
+            actions: [
+               IconButton(
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                onPressed: () => provider.fetchSessions(force: true),
+                tooltip: 'Refresh',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
+          body: Stack(
+            children: [
+              if (sessions.isEmpty && isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (sessions.isEmpty && error != null)
+                Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -145,7 +129,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ),
                         const SizedBox(height: 8),
                         SelectableText(
-                          _error!,
+                          error,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 24),
@@ -153,7 +137,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           mainAxisAlignment: MainAxisAlignment.center,
                           children: [
                             ElevatedButton(
-                              onPressed: _fetchSessions,
+                              onPressed: () => provider.fetchSessions(force: true),
                               child: const Text('Retry'),
                             ),
                             const SizedBox(width: 16),
@@ -169,10 +153,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _sessions.length,
+              else
+                ListView.builder(
+                  itemCount: sessions.length,
                   itemBuilder: (context, index) {
-                    final session = _sessions[index];
+                    final session = sessions[index];
                     return ListTile(
                       title: Text(session.title ?? session.name),
                       subtitle: Text(session.state.toString().split('.').last),
@@ -187,11 +172,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     );
                   },
                 ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _createSession,
-        tooltip: 'Create Session',
-        child: const Icon(Icons.add),
-      ),
+               if (sessions.isNotEmpty && isLoading)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(),
+                ),
+            ],
+          ),
+          floatingActionButton: FloatingActionButton(
+            onPressed: _createSession,
+            tooltip: 'Create Session',
+            child: const Icon(Icons.add),
+          ),
+        );
+      },
     );
   }
 }

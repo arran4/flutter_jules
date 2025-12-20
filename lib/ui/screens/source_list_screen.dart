@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/data_provider.dart';
 import '../../models.dart';
 
 class SourceListScreen extends StatefulWidget {
@@ -11,65 +12,45 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  List<Source> _sources = [];
-  bool _isLoading = false;
-  String? _error;
-
   @override
   void initState() {
     super.initState();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchSources();
+      Provider.of<DataProvider>(context, listen: false).fetchSources();
     });
-  }
-
-  Future<void> _fetchSources() async {
-    if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
-
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sources = await client.listSources();
-      if (mounted) {
-        setState(() {
-          _sources = sources;
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sources'),
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchSources,
-            tooltip: 'Refresh',
+    return Consumer<DataProvider>(
+      builder: (context, provider, child) {
+        final sources = provider.sources;
+        final isLoading = provider.isSourcesLoading;
+        final error = provider.sourcesError;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Sources'),
+            actions: [
+               IconButton(
+                icon: isLoading
+                    ? const SizedBox(
+                        width: 24,
+                        height: 24,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      )
+                    : const Icon(Icons.refresh),
+                onPressed: () => provider.fetchSources(force: true),
+                tooltip: 'Refresh',
+              ),
+            ],
           ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
+          body: Stack(
+            children: [
+              if (sources.isEmpty && isLoading)
+                const Center(child: CircularProgressIndicator())
+              else if (sources.isEmpty && error != null)
+                Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -83,22 +64,23 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         ),
                         const SizedBox(height: 8),
                         SelectableText(
-                          _error!,
+                          error,
                           textAlign: TextAlign.center,
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: _fetchSources,
+                          onPressed: () => provider.fetchSources(force: true),
                           child: const Text('Retry'),
                         ),
                       ],
                     ),
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _sources.length,
+              else
+                ListView.builder(
+                  itemCount: sources.length,
                   itemBuilder: (context, index) {
-                    final source = _sources[index];
+                    final source = sources[index];
                     return ListTile(
                       title: Text(source.githubRepo?.repo ?? source.name),
                       subtitle: Text(source.githubRepo?.owner ?? ''),
@@ -106,6 +88,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
                     );
                   },
                 ),
+               if (sources.isNotEmpty && isLoading)
+                const Positioned(
+                  top: 0,
+                  left: 0,
+                  right: 0,
+                  child: LinearProgressIndicator(),
+                ),
+            ],
+          ),
+        );
+      },
     );
   }
 }
