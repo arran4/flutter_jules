@@ -1,4 +1,6 @@
+import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
@@ -17,7 +19,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   String _prompt = '';
   Source? _selectedSource;
   String? _selectedBranch;
-  String _image = '';
+  String _imageUrl = '';
 
   // Task Mode
   // Options: Question (No Plan), Plan (Verify Plan), Start (Auto)
@@ -97,44 +99,78 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     }
   }
 
-  void _create() async {
-     if (_selectedSource == null) return; // Should not happen if sources loaded
+  Future<void> _create() async {
+    if (_selectedSource == null) return;
 
-     // Map Mode to API fields
-     bool requirePlanApproval = false;
-     AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+    // Handle Image
+    List<Media>? images;
+    if (_imageUrl.isNotEmpty) {
+      try {
+        // Show loading indicator in a dialog if needed, but for now just await
+        final response = await http.get(Uri.parse(_imageUrl));
+        if (response.statusCode == 200) {
+          final bytes = response.bodyBytes;
+          final base64Image = base64Encode(bytes);
+          final mimeType = response.headers['content-type'] ?? 'image/png';
 
-     switch (_selectedModeIndex) {
-       case 0: // Question
-         requirePlanApproval = false;
-         automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-         break;
-       case 1: // Plan
-         requirePlanApproval = true;
-         automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-         break;
-       case 2: // Start
-         requirePlanApproval = false; // Or true? Assume auto-start implies doing it.
-         automationMode = AutomationMode.AUTO_CREATE_PR;
-         break;
-     }
+          images = [
+            Media(data: base64Image, mimeType: mimeType)
+          ];
+        } else {
+           if (mounted) {
+             ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(content: Text('Failed to load image: ${response.statusCode}'))
+             );
+             return;
+           }
+        }
+      } catch (e) {
+         if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+             SnackBar(content: Text('Failed to load image: $e'))
+           );
+           return;
+         }
+      }
+    }
 
-     final newSession = Session(
-        name: '', // Server assigns
-        id: '', // Server assigns
-        prompt: _prompt,
-        sourceContext: SourceContext(
-          source: _selectedSource!.name,
-          githubRepoContext: GitHubRepoContext(
-            startingBranch: _selectedBranch ?? 'main',
-          ),
+    // Map Mode to API fields
+    bool requirePlanApproval = false;
+    AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+
+    switch (_selectedModeIndex) {
+      case 0: // Question
+        requirePlanApproval = false;
+        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+      case 1: // Plan
+        requirePlanApproval = true;
+        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+      case 2: // Start
+        requirePlanApproval = false;
+        automationMode = AutomationMode.AUTO_CREATE_PR;
+        break;
+    }
+
+    final newSession = Session(
+      name: '', // Server assigns
+      id: '', // Server assigns
+      prompt: _prompt,
+      sourceContext: SourceContext(
+        source: _selectedSource!.name,
+        githubRepoContext: GitHubRepoContext(
+          startingBranch: _selectedBranch ?? 'main',
         ),
-        requirePlanApproval: requirePlanApproval,
-        automationMode: automationMode,
-        image: _image.isNotEmpty ? _image : null,
-     );
+      ),
+      requirePlanApproval: requirePlanApproval,
+      automationMode: automationMode,
+      images: images,
+    );
 
-     Navigator.pop(context, newSession);
+    if (mounted) {
+      Navigator.pop(context, newSession);
+    }
   }
 
   @override
@@ -220,7 +256,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 border: OutlineInputBorder(),
                 prefixIcon: Icon(Icons.image),
               ),
-              onChanged: (val) => _image = val,
+              onChanged: (val) => _imageUrl = val,
             ),
             const SizedBox(height: 16),
 
