@@ -174,7 +174,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   itemBuilder: (context, index) {
                     final session = _sessions[index];
                     return ListTile(
-                      title: Text(session.title ?? session.name),
+                      title: Text(
+                        session.title ?? session.name,
+                        maxLines: 1,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                       subtitle: Text(session.state.toString().split('.').last),
                       onTap: () {
                         Navigator.push(

@@ -87,7 +87,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Text(widget.session.title ?? 'Session Detail'),
+        title: Text(
+          widget.session.title ?? 'Session Detail',
+          maxLines: 1,
+          overflow: TextOverflow.ellipsis,
+        ),
         actions: [
             IconButton(
               icon: const Icon(Icons.refresh),
@@ -96,64 +100,67 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             )
         ],
       ),
-      body: Column(
-        children: [
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                    Text("State: ${widget.session.state.toString().split('.').last}"),
-                    Text("Prompt: ${widget.session.prompt}"),
-                ],
-            ),
-          ),
-          const Divider(),
-          Expanded(
-            child: _isLoading
-                ? const Center(child: CircularProgressIndicator())
-                : _error != null
-                    ? Center(
-                        child: Padding(
-                          padding: const EdgeInsets.all(16.0),
-                          child: Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              const Icon(Icons.error_outline, color: Colors.red, size: 48),
-                              const SizedBox(height: 8),
-                              SelectableText(_error!, textAlign: TextAlign.center),
-                              TextButton(onPressed: _fetchActivities, child: const Text("Retry"))
-                            ],
-                          ),
+      body: _isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : _error != null
+              ? Center(
+                  child: Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red, size: 48),
+                        const SizedBox(height: 8),
+                        SelectableText(_error!, textAlign: TextAlign.center),
+                        TextButton(onPressed: _fetchActivities, child: const Text("Retry"))
+                      ],
+                    ),
+                  ),
+                )
+              : ListView.builder(
+                  itemCount: _activities.length + 2, // Header + Activities + Input
+                  itemBuilder: (context, index) {
+                    if (index == 0) {
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text("State: ${widget.session.state.toString().split('.').last}"),
+                            Text("Prompt: ${widget.session.prompt}"),
+                            const Divider(),
+                          ],
                         ),
-                      )
-                    : ListView.builder(
-                        itemCount: _activities.length,
-                        itemBuilder: (context, index) {
-                          final activity = _activities[index];
-                          return ActivityItem(activity: activity);
-                        },
-                      ),
-          ),
-          Padding(
-            padding: const EdgeInsets.all(8.0),
-            child: Row(
-                children: [
-                    Expanded(child: TextField(
-                        decoration: const InputDecoration(hintText: "Send message..."),
-                        onSubmitted: (value) {
-                          if (value.isNotEmpty) {
-                            _sendMessage(value);
-                          }
-                        },
-                    )),
-                    if (widget.session.state == SessionState.AWAITING_PLAN_APPROVAL)
-                        ElevatedButton(onPressed: _approvePlan, child: const Text("Approve Plan"))
-                ],
-            ),
-          )
-        ],
-      ),
+                      );
+                    } else if (index == _activities.length + 1) {
+                      return Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                decoration: const InputDecoration(hintText: "Send message..."),
+                                onSubmitted: (value) {
+                                  if (value.isNotEmpty) {
+                                    _sendMessage(value);
+                                  }
+                                },
+                              ),
+                            ),
+                            if (widget.session.state == SessionState.AWAITING_PLAN_APPROVAL)
+                              ElevatedButton(
+                                onPressed: _approvePlan,
+                                child: const Text("Approve Plan"),
+                              )
+                          ],
+                        ),
+                      );
+                    } else {
+                      final activity = _activities[index - 1];
+                      return ActivityItem(activity: activity);
+                    }
+                  },
+                ),
     );
   }
 }
