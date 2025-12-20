@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
+import '../../services/session_provider.dart';
 import '../../models.dart';
 
 enum SortOption { recent, count, alphabetical }
@@ -16,10 +17,7 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  List<Source> _sources = [];
   List<Source> _filteredSources = [];
-  bool _isLoading = false;
-  String? _error;
   final TextEditingController _searchController = TextEditingController();
 
   final Map<String, int> _usageCount = {};
@@ -42,8 +40,11 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _onSearchChanged() {
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sources = sessionProvider.sources;
+
     final filtered = filterAndSort<Source>(
-      items: _sources,
+      items: sources,
       query: _searchController.text,
       accessors: [
         (source) => source.githubRepo?.repo ?? '',
@@ -107,217 +108,205 @@ class _SourceListScreenState extends State<SourceListScreen> {
     return nameA.toLowerCase().compareTo(nameB.toLowerCase());
   }
 
-  Future<void> _fetchData() async {
+  Future<void> _fetchData({bool force = false}) async {
     if (!mounted) return;
-    setState(() {
-      _isLoading = true;
-      _error = null;
-    });
 
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      // Run both requests
-      final results = await Future.wait([
-        client.listSources(),
-        client.listSessions(),
-      ]);
+    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
 
-      final sources = results[0] as List<Source>;
-      final sessions = results[1] as List<Session>;
+    await Future.wait([
+      sessionProvider.fetchSources(client, force: force),
+      sessionProvider.fetchSessions(client, force: force),
+    ]);
 
-      _usageCount.clear();
-      _lastUsed.clear();
+    if (!mounted) return;
 
-      for (final session in sessions) {
-        final sourceName = session.sourceContext.source;
-        _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
+    final sessions = sessionProvider.sessions;
 
-        DateTime? sessionTime;
-        if (session.updateTime != null) {
-          sessionTime = DateTime.tryParse(session.updateTime!);
-        }
-        if (sessionTime == null && session.createTime != null) {
-          sessionTime = DateTime.tryParse(session.createTime!);
-        }
+    _usageCount.clear();
+    _lastUsed.clear();
 
-        if (sessionTime != null) {
-          final existing = _lastUsed[sourceName];
-          if (existing == null || sessionTime.isAfter(existing)) {
-            _lastUsed[sourceName] = sessionTime;
-          }
-        }
+    for (final session in sessions) {
+      final sourceName = session.sourceContext.source;
+      _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
+
+      DateTime? sessionTime;
+      if (session.updateTime != null) {
+        sessionTime = DateTime.tryParse(session.updateTime!);
+      }
+      if (sessionTime == null && session.createTime != null) {
+        sessionTime = DateTime.tryParse(session.createTime!);
       }
 
-      if (mounted) {
-        setState(() {
-          _sources = sources;
-          _onSearchChanged();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
+      if (sessionTime != null) {
+        final existing = _lastUsed[sourceName];
+        if (existing == null || sessionTime.isAfter(existing)) {
+          _lastUsed[sourceName] = sessionTime;
+        }
       }
     }
+
+    _onSearchChanged();
   }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sources'),
-        actions: [
-          PopupMenuButton<SortOption>(
-            initialValue: _currentSort,
-            icon: const Icon(Icons.sort),
-            tooltip: 'Sort by',
-            onSelected: (SortOption item) {
-              setState(() {
-                _currentSort = item;
-                _onSearchChanged();
-              });
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
-              const PopupMenuItem<SortOption>(
-                value: SortOption.recent,
-                child: Text('Most Recently Used'),
+    return Consumer<SessionProvider>(
+      builder: (context, sessionProvider, child) {
+        final isLoading = sessionProvider.isFetchingSources || sessionProvider.isFetching;
+        final error = sessionProvider.error;
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Sources'),
+            actions: [
+              PopupMenuButton<SortOption>(
+                initialValue: _currentSort,
+                icon: const Icon(Icons.sort),
+                tooltip: 'Sort by',
+                onSelected: (SortOption item) {
+                  setState(() {
+                    _currentSort = item;
+                    _onSearchChanged();
+                  });
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.recent,
+                    child: Text('Most Recently Used'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.count,
+                    child: Text('Usage Count'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.alphabetical,
+                    child: Text('Alphabetical'),
+                  ),
+                ],
               ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.count,
-                child: Text('Usage Count'),
-              ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.alphabetical,
-                child: Text('Alphabetical'),
+              IconButton(
+                icon: const Icon(Icons.replay),
+                onPressed: () => _fetchData(force: true),
+                tooltip: 'Refresh',
               ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.replay),
-            onPressed: _fetchData,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
-          : _error != null
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
+          body: isLoading && _filteredSources.isEmpty
+              ? const Center(child: CircularProgressIndicator())
+              : error != null && _filteredSources.isEmpty
+                  ? Center(
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                            const SizedBox(height: 16),
+                            Text(
+                              'Error Loading Sources',
+                              style: Theme.of(context).textTheme.titleLarge,
+                            ),
+                            const SizedBox(height: 8),
+                            SelectableText(
+                              error,
+                              textAlign: TextAlign.center,
+                            ),
+                            const SizedBox(height: 16),
+                            ElevatedButton(
+                              onPressed: () => _fetchData(force: true),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                  : Column(
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Sources',
-                          style: Theme.of(context).textTheme.titleLarge,
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Search Sources',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                          ),
                         ),
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          _error!,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _fetchData,
-                          child: const Text('Retry'),
+                        if (isLoading)
+                           const LinearProgressIndicator(),
+                        Expanded(
+                          child: ListView.builder(
+                            itemCount: _filteredSources.length,
+                            itemBuilder: (context, index) {
+                              final source = _filteredSources[index];
+                              final count = _usageCount[source.name] ?? 0;
+                              final lastUsedDate = _lastUsed[source.name];
+
+                              final repo = source.githubRepo;
+                              final isPrivate = repo?.isPrivate ?? false;
+                              final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
+                              final branchCount = repo?.branches?.length;
+
+                              return Card(
+                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                child: ListTile(
+                                  leading: Icon(isPrivate ? Icons.lock : Icons.public),
+                                  title: Text(repo?.repo ?? source.name),
+                                  subtitle: Column(
+                                    crossAxisAlignment: CrossAxisAlignment.start,
+                                    children: [
+                                      Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                      const SizedBox(height: 4),
+                                      Row(
+                                        children: [
+                                          if (count > 0)
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                              decoration: BoxDecoration(
+                                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                                borderRadius: BorderRadius.circular(4),
+                                              ),
+                                              child: Text(
+                                                '$count sessions',
+                                                style: Theme.of(context).textTheme.labelSmall,
+                                              ),
+                                            ),
+                                          if (count > 0) const SizedBox(width: 8),
+                                          if (lastUsedDate != null)
+                                            Text(
+                                              'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                              style: Theme.of(context).textTheme.bodySmall,
+                                            ),
+                                          if (count == 0)
+                                             Text(
+                                              'Never used',
+                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                                            ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
+                                  isThreeLine: true,
+                                  onTap: () {
+                                    Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            SessionListScreen(sourceFilter: source.name),
+                                      ),
+                                    );
+                                  },
+                                ),
+                              );
+                            },
+                          ),
                         ),
                       ],
                     ),
-                  ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Search Sources',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: ListView.builder(
-                        itemCount: _filteredSources.length,
-                        itemBuilder: (context, index) {
-                          final source = _filteredSources[index];
-                          final count = _usageCount[source.name] ?? 0;
-                          final lastUsedDate = _lastUsed[source.name];
-
-                          final repo = source.githubRepo;
-                          final isPrivate = repo?.isPrivate ?? false;
-                          final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
-                          final branchCount = repo?.branches?.length;
-
-                          return Card(
-                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                            child: ListTile(
-                              leading: Icon(isPrivate ? Icons.lock : Icons.public),
-                              title: Text(repo?.repo ?? source.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      if (count > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                            borderRadius: BorderRadius.circular(4),
-                                          ),
-                                          child: Text(
-                                            '$count sessions',
-                                            style: Theme.of(context).textTheme.labelSmall,
-                                          ),
-                                        ),
-                                      if (count > 0) const SizedBox(width: 8),
-                                      if (lastUsedDate != null)
-                                        Text(
-                                          'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                          style: Theme.of(context).textTheme.bodySmall,
-                                        ),
-                                      if (count == 0)
-                                         Text(
-                                          'Never used',
-                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                                        ),
-                                    ],
-                                  ),
-                                ],
-                              ),
-                              isThreeLine: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        SessionListScreen(sourceFilter: source.name),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                  ],
-                ),
+        );
+      },
     );
   }
 }

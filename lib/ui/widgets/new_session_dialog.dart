@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/session_provider.dart';
 import '../../models.dart';
 
 class NewSessionDialog extends StatefulWidget {
@@ -26,7 +27,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   int _selectedModeIndex = 0; // 0: Question, 1: Plan, 2: Start
 
   // Data Loading
-  List<Source> _sources = [];
   bool _isLoadingSources = true;
   String? _error;
 
@@ -39,17 +39,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   Future<void> _fetchSources() async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sources = await client.listSources();
+      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+
+      await sessionProvider.fetchSources(client);
 
       if (mounted) {
         setState(() {
-          _sources = sources;
+          final sources = sessionProvider.sources;
           _isLoadingSources = false;
 
           // Pre-select source if filter exists
           if (widget.sourceFilter != null) {
             try {
-              _selectedSource = _sources.firstWhere(
+              _selectedSource = sources.firstWhere(
                 (s) => s.name == widget.sourceFilter,
               );
             } catch (e) {
@@ -59,13 +61,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           }
 
           // Default to first source if none selected
-          if (_selectedSource == null && _sources.isNotEmpty) {
+          if (_selectedSource == null && sources.isNotEmpty) {
              // If no filter, maybe default to 'sources/default' if it exists, or just the first one?
              // Let's try to find 'sources/default' first
              try {
-                _selectedSource = _sources.firstWhere((s) => s.name == 'sources/default');
+                _selectedSource = sources.firstWhere((s) => s.name == 'sources/default');
              } catch (_) {
-                _selectedSource = _sources.first;
+                _selectedSource = sources.first;
              }
           }
 
@@ -266,30 +268,35 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<Source>(
-                    decoration: const InputDecoration(
-                      labelText: 'Repository',
-                      border: OutlineInputBorder(),
-                    ),
-                    value: _selectedSource,
-                    items: _sources.map((s) {
-                      // Use repo name if available, else source ID
-                      final label = s.githubRepo != null
-                          ? '${s.githubRepo!.owner}/${s.githubRepo!.repo}'
-                          : s.name;
-                      return DropdownMenuItem(
-                        value: s,
-                        child: Text(label, overflow: TextOverflow.ellipsis),
+                  child: Consumer<SessionProvider>(
+                    builder: (context, sessionProvider, child) {
+                      final sources = sessionProvider.sources;
+                      return DropdownButtonFormField<Source>(
+                        decoration: const InputDecoration(
+                          labelText: 'Repository',
+                          border: OutlineInputBorder(),
+                        ),
+                        value: _selectedSource,
+                        items: sources.map((s) {
+                          // Use repo name if available, else source ID
+                          final label = s.githubRepo != null
+                              ? '${s.githubRepo!.owner}/${s.githubRepo!.repo}'
+                              : s.name;
+                          return DropdownMenuItem(
+                            value: s,
+                            child: Text(label, overflow: TextOverflow.ellipsis),
+                          );
+                        }).toList(),
+                        onChanged: (widget.sourceFilter != null)
+                            ? null // Disable if source filter is active
+                            : (Source? newValue) {
+                                setState(() {
+                                  _selectedSource = newValue;
+                                  _updateBranchFromSource();
+                                });
+                              },
                       );
-                    }).toList(),
-                    onChanged: (widget.sourceFilter != null)
-                        ? null // Disable if source filter is active
-                        : (Source? newValue) {
-                            setState(() {
-                              _selectedSource = newValue;
-                              _updateBranchFromSource();
-                            });
-                          },
+                    },
                   ),
                 ),
                 const SizedBox(width: 16),

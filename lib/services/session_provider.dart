@@ -5,16 +5,22 @@ import 'jules_client.dart';
 
 class SessionProvider extends ChangeNotifier {
   List<Session> _sessions = [];
+  List<Source> _sources = [];
   bool _isFetching = false;
+  bool _isFetchingSources = false;
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
+  DateTime? _lastSourceFetchTime;
 
   List<Session> get sessions => _sessions;
+  List<Source> get sources => _sources;
   bool get isFetching => _isFetching;
+  bool get isFetchingSources => _isFetchingSources;
   String? get error => _error;
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
+  DateTime? get lastSourceFetchTime => _lastSourceFetchTime;
 
   // Cache duration of 2 minutes
   static const Duration _cacheDuration = Duration(minutes: 2);
@@ -48,6 +54,40 @@ class SessionProvider extends ChangeNotifier {
       _error = e.toString();
     } finally {
       _isFetching = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> fetchSources(JulesClient client, {bool force = false}) async {
+    // Cache duration for sources (e.g. 10 minutes)
+    const sourceCacheDuration = Duration(minutes: 10);
+
+    if (!force &&
+        _sources.isNotEmpty &&
+        _lastSourceFetchTime != null &&
+        DateTime.now().difference(_lastSourceFetchTime!) < sourceCacheDuration) {
+      return;
+    }
+
+    if (_isFetchingSources) return;
+
+    _isFetchingSources = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final sources = await client.listSources(
+        onDebug: (exchange) {
+          _lastExchange = exchange;
+        },
+      );
+      _sources = sources;
+      _lastSourceFetchTime = DateTime.now();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isFetchingSources = false;
       notifyListeners();
     }
   }
