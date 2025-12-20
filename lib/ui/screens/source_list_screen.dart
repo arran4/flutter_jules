@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
+
+enum SortOption { recent, count, alphabetical }
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -19,12 +22,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
   String? _error;
   final TextEditingController _searchController = TextEditingController();
 
+  final Map<String, int> _usageCount = {};
+  final Map<String, DateTime> _lastUsed = {};
+  SortOption _currentSort = SortOption.recent;
+
   @override
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchSources();
+      _fetchData();
     });
   }
 
@@ -35,20 +42,72 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _onSearchChanged() {
+    final filtered = filterAndSort(
+      items: _sources,
+      query: _searchController.text,
+      accessors: [
+        (source) => source.githubRepo?.repo,
+        (source) => source.name,
+        (source) => source.githubRepo?.owner,
+      ],
+    );
+
     setState(() {
-      _filteredSources = filterAndSort(
-        items: _sources,
-        query: _searchController.text,
-        accessors: [
-          (source) => source.githubRepo?.repo,
-          (source) => source.name,
-          (source) => source.githubRepo?.owner,
-        ],
-      );
+      _filteredSources = _sortSources(filtered);
     });
   }
 
-  Future<void> _fetchSources() async {
+  List<Source> _sortSources(List<Source> sources) {
+    // We create a copy to avoid sorting the original list in place if that matters,
+    // though filterAndSort returns a new list usually.
+    final sorted = List<Source>.from(sources);
+    sorted.sort((a, b) {
+      switch (_currentSort) {
+        case SortOption.recent:
+          final lastUsedA = _lastUsed[a.name];
+          final lastUsedB = _lastUsed[b.name];
+          if (lastUsedA == null && lastUsedB == null) {
+            // Fallback to count
+            final countA = _usageCount[a.name] ?? 0;
+            final countB = _usageCount[b.name] ?? 0;
+            if (countA != countB) return countB.compareTo(countA);
+            // Fallback to alphabetical
+            return _compareAlphabetical(a, b);
+          }
+          if (lastUsedA == null) return 1;
+          if (lastUsedB == null) return -1;
+          final cmp = lastUsedB.compareTo(lastUsedA);
+          if (cmp != 0) return cmp;
+          break;
+        case SortOption.count:
+          final countA = _usageCount[a.name] ?? 0;
+          final countB = _usageCount[b.name] ?? 0;
+          final cmp = countB.compareTo(countA);
+          if (cmp != 0) return cmp;
+          // Fallback to recent
+          final lastUsedA = _lastUsed[a.name];
+          final lastUsedB = _lastUsed[b.name];
+          if (lastUsedA != null && lastUsedB != null) {
+             final timeCmp = lastUsedB.compareTo(lastUsedA);
+             if (timeCmp != 0) return timeCmp;
+          }
+          break;
+        case SortOption.alphabetical:
+          // Already handled by default fallthrough
+          break;
+      }
+      return _compareAlphabetical(a, b);
+    });
+    return sorted;
+  }
+
+  int _compareAlphabetical(Source a, Source b) {
+    final nameA = a.githubRepo?.repo ?? a.name;
+    final nameB = b.githubRepo?.repo ?? b.name;
+    return nameA.toLowerCase().compareTo(nameB.toLowerCase());
+  }
+
+  Future<void> _fetchData() async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -57,11 +116,42 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sources = await client.listSources();
+      // Run both requests
+      final results = await Future.wait([
+        client.listSources(),
+        client.listSessions(),
+      ]);
+
+      final sources = results[0] as List<Source>;
+      final sessions = results[1] as List<Session>;
+
+      _usageCount.clear();
+      _lastUsed.clear();
+
+      for (final session in sessions) {
+        final sourceName = session.sourceContext.source;
+        _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
+
+        DateTime? sessionTime;
+        if (session.updateTime != null) {
+          sessionTime = DateTime.tryParse(session.updateTime!);
+        }
+        if (sessionTime == null && session.createTime != null) {
+          sessionTime = DateTime.tryParse(session.createTime!);
+        }
+
+        if (sessionTime != null) {
+          final existing = _lastUsed[sourceName];
+          if (existing == null || sessionTime.isAfter(existing)) {
+            _lastUsed[sourceName] = sessionTime;
+          }
+        }
+      }
+
       if (mounted) {
         setState(() {
           _sources = sources;
-          _onSearchChanged(); // Initialize filtered list
+          _onSearchChanged();
         });
       }
     } catch (e) {
@@ -85,9 +175,34 @@ class _SourceListScreenState extends State<SourceListScreen> {
       appBar: AppBar(
         title: const Text('Sources'),
         actions: [
+          PopupMenuButton<SortOption>(
+            initialValue: _currentSort,
+            icon: const Icon(Icons.sort),
+            tooltip: 'Sort by',
+            onSelected: (SortOption item) {
+              setState(() {
+                _currentSort = item;
+                _onSearchChanged();
+              });
+            },
+            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+              const PopupMenuItem<SortOption>(
+                value: SortOption.recent,
+                child: Text('Most Recently Used'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.count,
+                child: Text('Usage Count'),
+              ),
+              const PopupMenuItem<SortOption>(
+                value: SortOption.alphabetical,
+                child: Text('Alphabetical'),
+              ),
+            ],
+          ),
           IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: _fetchSources,
+            icon: const Icon(Icons.replay),
+            onPressed: _fetchData,
             tooltip: 'Refresh',
           ),
         ],
@@ -114,7 +229,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: _fetchSources,
+                          onPressed: _fetchData,
                           child: const Text('Retry'),
                         ),
                       ],
@@ -139,19 +254,64 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         itemCount: _filteredSources.length,
                         itemBuilder: (context, index) {
                           final source = _filteredSources[index];
-                          return ListTile(
-                            title: Text(source.githubRepo?.repo ?? source.name),
-                            subtitle: Text(source.githubRepo?.owner ?? ''),
-                            leading: const Icon(Icons.code),
-                            onTap: () {
-                              Navigator.push(
-                                context,
-                                MaterialPageRoute(
-                                  builder: (context) =>
-                                      SessionListScreen(sourceFilter: source.name),
-                                ),
-                              );
-                            },
+                          final count = _usageCount[source.name] ?? 0;
+                          final lastUsedDate = _lastUsed[source.name];
+
+                          final repo = source.githubRepo;
+                          final isPrivate = repo?.isPrivate ?? false;
+                          final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
+                          final branchCount = repo?.branches?.length;
+
+                          return Card(
+                            margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                            child: ListTile(
+                              leading: Icon(isPrivate ? Icons.lock : Icons.public),
+                              title: Text(repo?.repo ?? source.name),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                  const SizedBox(height: 4),
+                                  Row(
+                                    children: [
+                                      if (count > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                            borderRadius: BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '$count sessions',
+                                            style: Theme.of(context).textTheme.labelSmall,
+                                          ),
+                                        ),
+                                      if (count > 0) const SizedBox(width: 8),
+                                      if (lastUsedDate != null)
+                                        Text(
+                                          'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                          style: Theme.of(context).textTheme.bodySmall,
+                                        ),
+                                      if (count == 0)
+                                         Text(
+                                          'Never used',
+                                          style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                                        ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                              isThreeLine: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        SessionListScreen(sourceFilter: source.name),
+                                  ),
+                                );
+                              },
+                            ),
                           );
                         },
                       ),
