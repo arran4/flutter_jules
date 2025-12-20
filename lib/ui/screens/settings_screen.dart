@@ -11,12 +11,14 @@ class SettingsScreen extends StatefulWidget {
 
 class _SettingsScreenState extends State<SettingsScreen> {
   late TextEditingController _tokenController;
+  late TokenType _selectedType;
 
   @override
   void initState() {
     super.initState();
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     _tokenController = TextEditingController(text: authProvider.token);
+    _selectedType = authProvider.tokenType;
   }
 
   @override
@@ -27,7 +29,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
 
   void _saveToken() async {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.setToken(_tokenController.text.trim());
+    await authProvider.setToken(_tokenController.text.trim(), _selectedType);
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Token updated successfully')),
@@ -51,12 +53,33 @@ class _SettingsScreenState extends State<SettingsScreen> {
               style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
             ),
             const SizedBox(height: 16),
+            DropdownButtonFormField<TokenType>(
+              value: _selectedType,
+              decoration: const InputDecoration(
+                labelText: 'Token Type',
+                border: OutlineInputBorder(),
+              ),
+              items: TokenType.values.map((type) {
+                return DropdownMenuItem(
+                  value: type,
+                  child: Text(type == TokenType.apiKey ? 'API Key' : 'Access Token'),
+                );
+              }).toList(),
+              onChanged: (value) {
+                if (value != null) {
+                  setState(() {
+                    _selectedType = value;
+                  });
+                }
+              },
+            ),
+            const SizedBox(height: 16),
             TextField(
               controller: _tokenController,
               decoration: const InputDecoration(
                 labelText: 'API Token',
                 border: OutlineInputBorder(),
-                hintText: 'Enter your Bearer token',
+                hintText: 'Enter your token',
               ),
             ),
             const SizedBox(height: 16),
