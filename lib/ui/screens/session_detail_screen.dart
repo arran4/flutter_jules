@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
+import '../../models/api_exchange.dart';
+import '../widgets/api_viewer.dart';
 import '../widgets/activity_item.dart';
 
 class SessionDetailScreen extends StatefulWidget {
@@ -18,6 +21,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   List<Activity> _activities = [];
   bool _isLoading = false;
   String? _error;
+  ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
 
   @override
@@ -37,7 +41,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final activities = await client.listActivities(widget.session.name);
+      final activities = await client.listActivities(
+        widget.session.name,
+        onDebug: (exchange) {
+          _lastExchange = exchange;
+        },
+      );
       if (mounted) {
         setState(() {
           _activities = activities;
@@ -140,7 +149,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         itemCount: _activities.length,
                         itemBuilder: (context, index) {
                           final activity = _activities[index];
-                          return ActivityItem(activity: activity);
+                          final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+                          final item = ActivityItem(activity: activity);
+
+                          if (isDevMode) {
+                            return GestureDetector(
+                              onLongPress: () => _showContextMenu(context),
+                              onSecondaryTap: () => _showContextMenu(context),
+                              child: item,
+                            );
+                          } else {
+                            return item;
+                          }
                         },
                       ),
           ),
@@ -161,6 +181,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 ],
             ),
           )
+        ],
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    if (_lastExchange == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Dev Tools'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context);
+              if (_lastExchange != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ApiViewer(exchange: _lastExchange!),
+                );
+              }
+            },
+            child: const Text('View Source'),
+          ),
         ],
       ),
     );

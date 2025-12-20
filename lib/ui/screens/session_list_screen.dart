@@ -2,7 +2,10 @@ import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
+import '../../models/api_exchange.dart';
+import '../widgets/api_viewer.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
@@ -16,6 +19,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<Session> _sessions = [];
   bool _isLoading = false;
   String? _error;
+  ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
 
   @override
@@ -35,7 +39,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sessions = await client.listSessions();
+      final sessions = await client.listSessions(
+        onDebug: (exchange) {
+          _lastExchange = exchange;
+        },
+      );
       if (mounted) {
         setState(() {
           _sessions = sessions;
@@ -186,22 +194,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       child: RefreshIndicator(
                         onRefresh: _fetchSessions,
                         child: ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          itemCount: _sessions.length,
-                          itemBuilder: (context, index) {
-                            final session = _sessions[index];
-                            return ListTile(
-                              title: Text(session.title ?? session.name),
-                              subtitle: Text(session.state.toString().split('.').last),
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) =>
-                                        SessionDetailScreen(session: session),
-                                  ),
-                                );
-                              },
+                  itemCount: _sessions.length,
+                  itemBuilder: (context, index) {
+                    final session = _sessions[index];
+                    final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+
+                    final tile = ListTile(
+                      title: Text(session.title ?? session.name),
+                      subtitle: Text(session.state.toString().split('.').last),
+                      onTap: () {
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => SessionDetailScreen(session: session),
+                          ),
+                        );
+                      },
+                      onLongPress: isDevMode ? () => _showContextMenu(context) : null,
+                    );
+
+                    if (isDevMode) {
+                      return GestureDetector(
+                        onSecondaryTap: () => _showContextMenu(context),
+                        child: tile,
+                      );
+                    } else {
+                      return tile;
+                    }
+                  },
                             );
                           },
                         ),
@@ -213,6 +233,41 @@ class _SessionListScreenState extends State<SessionListScreen> {
         onPressed: _createSession,
         tooltip: 'Create Session',
         child: const Icon(Icons.add),
+      ),
+    );
+  }
+
+  void _showContextMenu(BuildContext context) {
+    if (_lastExchange == null) return;
+
+    final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+    // We can't easily get the exact position of the tap here without using GestureDetector details,
+    // so we'll just show it in the center or let showMenu handle it if we passed position.
+    // For simplicity with list items, showing a Dialog directly might be better UX for "context menu" on mobile if we can't position it.
+    // However, the requirement says "context menu".
+    // Let's assume we want to show a popup menu.
+    // But showMenu requires position.
+    // Let's use showModalBottomSheet or Dialog for simplicity since we lack position data here easily without wrapping every item in detailed gesture detector.
+    // Actually, let's use a simple Dialog with options as the "Menu".
+
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Dev Tools'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context);
+              if (_lastExchange != null) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ApiViewer(exchange: _lastExchange!),
+                );
+              }
+            },
+            child: const Text('View Source'),
+          ),
+        ],
       ),
     );
   }
