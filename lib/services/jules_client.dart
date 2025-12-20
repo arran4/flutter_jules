@@ -101,13 +101,21 @@ class JulesClient {
     }
   }
 
-  Future<List<Session>> listSessions({void Function(ApiExchange)? onDebug}) async {
-    final url = Uri.parse('$baseUrl/v1alpha/sessions');
+  Future<ListSessionsResponse> listSessions({
+    int? pageSize,
+    String? pageToken,
+    void Function(ApiExchange)? onDebug,
+  }) async {
+    final queryParams = <String, String>{};
+    if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
+    if (pageToken != null) queryParams['pageToken'] = pageToken;
+
+    final url = Uri.parse('$baseUrl/v1alpha/sessions').replace(queryParameters: queryParams);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, () => <Session>[]);
+      return ListSessionsResponse.fromJson(json);
     } else {
       _handleError(response);
       throw Exception('Unreachable');

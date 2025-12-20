@@ -26,6 +26,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   final Set<SessionState> _statusFilters = {};
 
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
@@ -39,6 +40,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
       setState(() {});
     });
 
+    _scrollController.addListener(_onScroll);
+
     // Initial fetch handled by addPostFrameCallback to avoid build issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSessions();
@@ -48,23 +51,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
   }
 
-  Future<void> _fetchSessions({bool force = false}) async {
+  void _onScroll() {
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      _fetchSessions(loadMore: true);
+    }
+  }
+
+  Future<void> _fetchSessions(
+      {bool force = false, bool loadMore = false}) async {
     if (!mounted) return;
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+      final sessionProvider =
+          Provider.of<SessionProvider>(context, listen: false);
 
       // Use the provider to fetch. It updates its own state.
-      await sessionProvider.fetchSessions(client, force: force);
+      await sessionProvider.fetchSessions(client,
+          force: force, loadMore: loadMore);
 
       if (mounted) {
         setState(() {}); // Trigger rebuild to reflect new data
       }
     } catch (e) {
-       // Provider handles error state
+      // Provider handles error state
     }
   }
 
@@ -266,19 +280,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // Determine items for ListView (headers + items)
         final List<ListItem> items = [];
         if (_groupByStatus) {
-           SessionState? lastState;
-           // We might have null states
-           for (var session in displaySessions) {
-             if (session.state != lastState) {
-               items.add(HeaderItem(session.state?.toString().split('.').last ?? 'Unknown'));
-               lastState = session.state;
-             }
-             items.add(SessionItem(session));
-           }
+          SessionState? lastState;
+          // We might have null states
+          for (var session in displaySessions) {
+            if (session.state != lastState) {
+              items.add(HeaderItem(
+                  session.state?.toString().split('.').last ?? 'Unknown'));
+              lastState = session.state;
+            }
+            items.add(SessionItem(session));
+          }
         } else {
-           for (var session in displaySessions) {
-             items.add(SessionItem(session));
-           }
+          for (var session in displaySessions) {
+            items.add(SessionItem(session));
+          }
         }
 
         return Scaffold(
@@ -385,10 +400,52 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ),
                     Expanded(
                       child: RefreshIndicator(
-                        onRefresh: _fetchSessions,
+                        onRefresh: () => _fetchSessions(force: true),
                         child: ListView.builder(
-                          itemCount: items.length,
+                          controller: _scrollController,
+                          itemCount: items.length +
+                              (sessionProvider.hasMore ||
+                                      (isLoading && items.isEmpty)
+                                  ? 1
+                                  : 0),
                           itemBuilder: (context, index) {
+                            if (index >= items.length) {
+                              if (sessionProvider.hasMore) {
+                                // If we have more but filtered list exhausted or just scrolling
+                                if (items.isEmpty) {
+                                  // Explicit button for empty filtered list
+                                  return Padding(
+                                    padding: const EdgeInsets.all(16.0),
+                                    child: Center(
+                                      child: ElevatedButton(
+                                        onPressed: () =>
+                                            _fetchSessions(loadMore: true),
+                                        child: isLoading
+                                            ? const SizedBox(
+                                                width: 20,
+                                                height: 20,
+                                                child:
+                                                    CircularProgressIndicator(
+                                                  strokeWidth: 2,
+                                                ),
+                                              )
+                                            : const Text('Load More History'),
+                                      ),
+                                    ),
+                                  );
+                                } else {
+                                  // Loading indicator at bottom of list
+                                  return const Padding(
+                                    padding: EdgeInsets.all(16.0),
+                                    child: Center(
+                                        child: CircularProgressIndicator()),
+                                  );
+                                }
+                              } else {
+                                return const SizedBox.shrink();
+                              }
+                            }
+
                             final item = items[index];
                             if (item is HeaderItem) {
                               return Container(
