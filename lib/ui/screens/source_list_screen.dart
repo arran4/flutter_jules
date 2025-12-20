@@ -46,9 +46,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
       items: _sources,
       query: _searchController.text,
       accessors: [
-        (source) => source.githubRepo?.repo,
+        (source) => source.githubRepo?.repo ?? '',
         (source) => source.name,
-        (source) => source.githubRepo?.owner,
+        (source) => source.githubRepo?.owner ?? '',
       ],
     );
 
