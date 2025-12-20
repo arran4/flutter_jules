@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../models.dart';
@@ -15,6 +16,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<Session> _sessions = [];
   bool _isLoading = false;
   String? _error;
+  DateTime? _lastFetchTime;
 
   @override
   void initState() {
@@ -37,6 +39,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       if (mounted) {
         setState(() {
           _sessions = sessions;
+          _lastFetchTime = DateTime.now();
         });
       }
     } catch (e) {
@@ -169,23 +172,42 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = _sessions[index];
-                    return ListTile(
-                      title: Text(session.title ?? session.name),
-                      subtitle: Text(session.state.toString().split('.').last),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SessionDetailScreen(session: session),
-                          ),
-                        );
-                      },
-                    );
-                  },
+              : Column(
+                  children: [
+                    if (_lastFetchTime != null)
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Text(
+                          'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                          style: Theme.of(context).textTheme.bodySmall,
+                        ),
+                      ),
+                    Expanded(
+                      child: RefreshIndicator(
+                        onRefresh: _fetchSessions,
+                        child: ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          itemCount: _sessions.length,
+                          itemBuilder: (context, index) {
+                            final session = _sessions[index];
+                            return ListTile(
+                              title: Text(session.title ?? session.name),
+                              subtitle: Text(session.state.toString().split('.').last),
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) =>
+                                        SessionDetailScreen(session: session),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  ],
                 ),
       floatingActionButton: FloatingActionButton(
         onPressed: _createSession,
