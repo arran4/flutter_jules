@@ -11,7 +11,13 @@ class AuthProvider extends ChangeNotifier {
   bool get isLoading => _isLoading;
   bool get isAuthenticated => _token != null;
 
-  JulesClient get client => JulesClient(apiKey: _token);
+  JulesClient get client {
+    if (_token != null && _token!.startsWith('AIza')) {
+      return JulesClient(apiKey: _token);
+    } else {
+      return JulesClient(accessToken: _token);
+    }
+  }
 
   AuthProvider() {
     _loadToken();

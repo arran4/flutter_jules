@@ -89,9 +89,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   _fetchSessions();
                 } catch (e) {
                    if(mounted) {
-                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Failed to create: $e')),
-                    );
+                     showDialog(
+                       context: context,
+                       builder: (context) => AlertDialog(
+                         title: const Text('Error Creating Session'),
+                         content: SingleChildScrollView(
+                           child: SelectableText(e.toString()),
+                         ),
+                         actions: [
+                           TextButton(
+                             onPressed: () => Navigator.pop(context),
+                             child: const Text('Close'),
+                           ),
+                         ],
+                       ),
+                     );
                    }
                 }
               },

@@ -13,7 +13,12 @@ class JulesException implements Exception {
   }
 
   @override
-  String toString() => 'JulesException: $message';
+  String toString() {
+    if (responseBody != null) {
+      return 'JulesException: $message\nResponse: $responseBody';
+    }
+    return 'JulesException: $message';
+  }
 }
 
 class InvalidTokenException extends JulesException {
