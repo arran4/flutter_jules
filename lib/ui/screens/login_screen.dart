@@ -12,6 +12,7 @@ class LoginScreen extends StatefulWidget {
 class _LoginScreenState extends State<LoginScreen> {
   final _tokenController = TextEditingController();
   final _formKey = GlobalKey<FormState>();
+  TokenType _selectedType = TokenType.accessToken;
 
   @override
   void dispose() {
@@ -22,7 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   void _saveToken() async {
     if (_formKey.currentState!.validate()) {
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      await authProvider.setToken(_tokenController.text.trim());
+      await authProvider.setToken(_tokenController.text.trim(), _selectedType);
     }
   }
 
@@ -52,12 +53,37 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
+              DropdownButtonFormField<TokenType>(
+                value: _selectedType,
+                decoration: const InputDecoration(
+                  labelText: 'Token Type',
+                  border: OutlineInputBorder(),
+                ),
+                items: const [
+                  DropdownMenuItem(
+                    value: TokenType.accessToken,
+                    child: Text('OAuth Access Token'),
+                  ),
+                  DropdownMenuItem(
+                    value: TokenType.apiKey,
+                    child: Text('API Key'),
+                  ),
+                ],
+                onChanged: (TokenType? value) {
+                  setState(() {
+                    _selectedType = value!;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
               TextFormField(
                 controller: _tokenController,
-                decoration: const InputDecoration(
-                  labelText: 'Access Token / API Key',
-                  border: OutlineInputBorder(),
-                  hintText: 'ya29... or AIza...',
+                decoration: InputDecoration(
+                  labelText: _selectedType == TokenType.apiKey ? 'API Key' : 'Access Token',
+                  border: const OutlineInputBorder(),
+                  hintText: _selectedType == TokenType.apiKey
+                      ? 'Enter your API Key'
+                      : 'Enter your Bearer token',
                 ),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
