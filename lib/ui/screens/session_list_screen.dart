@@ -409,7 +409,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                 title: FoldableText(
                                   session.title ?? session.prompt,
                                 ),
-                                subtitle: Text(session.state.toString().split('.').last),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    Text(session.state.toString().split('.').last),
+                                    if (session.state == SessionState.IN_PROGRESS &&
+                                        session.currentStep != null &&
+                                        session.totalSteps != null &&
+                                        session.totalSteps! > 0) ...[
+                                      const SizedBox(height: 4),
+                                      LinearProgressIndicator(
+                                        value: session.currentStep! / session.totalSteps!,
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        'Step ${session.currentStep} of ${session.totalSteps}',
+                                        style: Theme.of(context).textTheme.bodySmall,
+                                      ),
+                                    ],
+                                    if (session.state == SessionState.IN_PROGRESS &&
+                                        session.currentAction != null) ...[
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        session.currentAction!,
+                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
+                                      ),
+                                    ],
+                                  ],
+                                ),
                                 onTap: () {
                                   Navigator.push(
                                     context,
