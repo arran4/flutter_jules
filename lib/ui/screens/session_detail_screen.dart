@@ -23,13 +23,26 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
+  late final TextEditingController _textController;
+  late Session _session;
 
   @override
   void initState() {
     super.initState();
+    _session = widget.session;
+    _textController = TextEditingController();
+    _textController.addListener(() {
+      setState(() {});
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchActivities();
     });
+  }
+
+  @override
+  void dispose() {
+    _textController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchActivities() async {
@@ -41,14 +54,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final activities = await client.listActivities(
+
+      // Fetch session details in parallel to update state
+      final sessionFuture = client.getSession(widget.session.name);
+      final activitiesFuture = client.listActivities(
         widget.session.name,
         onDebug: (exchange) {
           _lastExchange = exchange;
         },
       );
+
+      final results = await Future.wait([sessionFuture, activitiesFuture]);
+      final session = results[0] as Session;
+      final activities = results[1] as List<Activity>;
+
       if (mounted) {
         setState(() {
+          _session = session;
           _activities = activities;
           _lastFetchTime = DateTime.now();
         });
@@ -72,6 +94,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       try {
           final client = Provider.of<AuthProvider>(context, listen: false).client;
           await client.sendMessage(widget.session.name, message);
+          _textController.clear();
           _fetchActivities(); 
       } catch (e) {
           if(mounted) {
@@ -110,7 +133,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(
-          widget.session.title ?? 'Session Detail',
+          _session.title ?? 'Session Detail',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
@@ -136,8 +159,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          "State: ${widget.session.state.toString().split('.').last}"),
-                      Text("Prompt: ${widget.session.prompt}"),
+                          "State: ${_session.state.toString().split('.').last}"),
+                      Text("Prompt: ${_session.prompt}"),
                       if (_lastFetchTime != null)
                         Text(
                           'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
@@ -153,12 +176,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // Footer (Chat Input)
           if (index == itemCount - 1) {
+            final hasText = _textController.text.isNotEmpty;
+            final isAwaitingApproval =
+                _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+
+            Widget? actionButton;
+            if (hasText) {
+              actionButton = IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () => _sendMessage(_textController.text),
+                tooltip: 'Send message',
+              );
+            } else if (isAwaitingApproval) {
+              actionButton = ElevatedButton(
+                  onPressed: _approvePlan, child: const Text("Approve Plan"));
+            }
+
             return Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: _textController,
                       decoration:
                           const InputDecoration(hintText: "Send message..."),
                       onSubmitted: (value) {
@@ -168,11 +208,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       },
                     ),
                   ),
-                  if (widget.session.state ==
-                      SessionState.AWAITING_PLAN_APPROVAL)
-                    ElevatedButton(
-                        onPressed: _approvePlan,
-                        child: const Text("Approve Plan"))
+                  if (actionButton != null) actionButton,
                 ],
               ),
             );

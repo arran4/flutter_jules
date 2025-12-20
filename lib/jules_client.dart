@@ -1,221 +1,188 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
-import 'models.dart';
+import 'package:dartobjectutils/dartobjectutils.dart';
+import '../models.dart';
+import '../models/api_exchange.dart';
+import 'exceptions.dart';
 
 class JulesClient {
   final String baseUrl;
-  final String apiKey;
+  final String? apiKey;
+  final String? accessToken;
   final http.Client _client;
 
   JulesClient({
     this.baseUrl = 'https://jules.googleapis.com',
-    required this.apiKey,
+    this.apiKey,
+    this.accessToken,
     http.Client? client,
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
         'Content-Type': 'application/json',
-        'Authorization': 'Bearer $apiKey',
+        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+        if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
       };
+
+  Future<http.Response> _performRequest(
+    String method,
+    Uri url, {
+    Map<String, String>? headers,
+    Object? body,
+    void Function(ApiExchange)? onDebug,
+  }) async {
+    final requestHeaders = headers ?? _headers;
+    final requestBody = body != null ? jsonEncode(body) : '';
+
+    http.Response response;
+    try {
+      if (method == 'GET') {
+        response = await _client.get(url, headers: requestHeaders);
+      } else if (method == 'POST') {
+        response = await _client.post(url, headers: requestHeaders, body: requestBody);
+      } else {
+        throw Exception('Unsupported method: $method');
+      }
+    } catch (e) {
+      // In case of network error, we can't really log a response, but we rethrow
+      rethrow;
+    }
+
+    if (onDebug != null) {
+      onDebug(ApiExchange(
+        method: method,
+        url: url.toString(),
+        requestHeaders: requestHeaders,
+        requestBody: requestBody,
+        statusCode: response.statusCode,
+        responseHeaders: response.headers,
+        responseBody: response.body,
+      ));
+    }
+
+    return response;
+  }
+
+  void _handleError(http.Response response) {
+    if (response.statusCode == 401) {
+      throw InvalidTokenException(response.body);
+    } else if (response.statusCode == 403) {
+      throw PermissionDeniedException(response.body);
+    } else if (response.statusCode == 404) {
+      throw NotFoundException(response.body);
+    } else {
+      throw ApiException(response.statusCode, response.body);
+    }
+  }
 
   // --- Sessions ---
 
-  Future<Session> createSession(Session session) async {
+  Future<Session> createSession(Session session, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sessions');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode(session.toJson()),
-    );
+    final response = await _performRequest('POST', url, body: session.toJson(), onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        return Session.fromJson(jsonDecode(response.body));
-      } catch (e) {
-        print('Failed to parse createSession response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse createSession response: $e\nBody: ${response.body}');
-      }
+      return Session.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to create session: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
-  Future<Session> getSession(String name) async {
+  Future<Session> getSession(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        return Session.fromJson(jsonDecode(response.body));
-      } catch (e) {
-        print('Failed to parse getSession response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse getSession response: $e\nBody: ${response.body}');
-      }
+      return Session.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get session: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
-  Future<List<Session>> listSessions() async {
+  Future<List<Session>> listSessions({void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sessions');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        final json = jsonDecode(response.body);
-        if (json['sessions'] != null) {
-          return (json['sessions'] as List)
-              .map((e) => Session.fromJson(e))
-              .toList();
-        } else {
-          return [];
-        }
-      } catch (e) {
-        print('Failed to parse listSessions response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse listSessions response: $e\nBody: ${response.body}');
-      }
+      final json = jsonDecode(response.body);
+      return getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, () => <Session>[]);
     } else {
-      throw Exception('Failed to list sessions: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
-  Future<void> approvePlan(String sessionName) async {
+  Future<void> approvePlan(String sessionName, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:approvePlan');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode({}),
-    );
+    final response = await _performRequest('POST', url, body: {}, onDebug: onDebug);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to approve plan: ${response.body}');
+      _handleError(response);
     }
   }
 
-  Future<void> sendMessage(String sessionName, String message) async {
+  Future<void> sendMessage(String sessionName, String message, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:sendMessage');
-    final response = await _client.post(
-      url,
-      headers: _headers,
-      body: jsonEncode({'message': message}),
-    );
+    final response = await _performRequest('POST', url, body: {'message': message}, onDebug: onDebug);
 
     if (response.statusCode != 200) {
-      throw Exception('Failed to send message: ${response.body}');
+      _handleError(response);
     }
   }
 
   // --- Activities ---
 
-  Future<Activity> getActivity(String name) async {
+  Future<Activity> getActivity(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        return Activity.fromJson(jsonDecode(response.body));
-      } catch (e) {
-        print('Failed to parse getActivity response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse getActivity response: $e\nBody: ${response.body}');
-      }
+      return Activity.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get activity: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
-  Future<List<Activity>> listActivities(String sessionName) async {
+  Future<List<Activity>> listActivities(String sessionName, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        final json = jsonDecode(response.body);
-        if (json['activities'] != null) {
-          return (json['activities'] as List)
-              .map((e) => Activity.fromJson(e))
-              .toList();
-        } else {
-          return [];
-        }
-      } catch (e) {
-        print('Failed to parse listActivities response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse listActivities response: $e\nBody: ${response.body}');
-      }
+      final json = jsonDecode(response.body);
+      return getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, () => <Activity>[]);
     } else {
-      throw Exception('Failed to list activities: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
   // --- Sources ---
 
-  Future<Source> getSource(String name) async {
+  Future<Source> getSource(String name, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        return Source.fromJson(jsonDecode(response.body));
-      } catch (e) {
-        print('Failed to parse getSource response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse getSource response: $e\nBody: ${response.body}');
-      }
+      return Source.fromJson(jsonDecode(response.body));
     } else {
-      throw Exception('Failed to get source: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
-  Future<List<Source>> listSources() async {
+  Future<List<Source>> listSources({void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/sources');
-    final response = await _client.get(
-      url,
-      headers: _headers,
-    );
+    final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      try {
-        final json = jsonDecode(response.body);
-        if (json['sources'] != null) {
-          return (json['sources'] as List)
-              .map((e) => Source.fromJson(e))
-              .toList();
-        } else {
-          return [];
-        }
-      } catch (e) {
-        print('Failed to parse listSources response: $e');
-        print('Body: ${response.body}');
-        throw Exception(
-            'Failed to parse listSources response: $e\nBody: ${response.body}');
-      }
+      final json = jsonDecode(response.body);
+      return getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, () => <Source>[]);
     } else {
-      throw Exception('Failed to list sources: ${response.body}');
+      _handleError(response);
+      throw Exception('Unreachable');
     }
   }
 
