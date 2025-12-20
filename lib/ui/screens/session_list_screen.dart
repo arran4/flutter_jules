@@ -7,6 +7,7 @@ import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../widgets/api_viewer.dart';
+import '../widgets/foldable_text.dart';
 import 'session_detail_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
@@ -431,10 +432,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
                               final tile = ListTile(
-                                title: Text(
-                                  session.title ?? session.name,
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
+                                title: FoldableText(
+                                  session.title ?? session.prompt,
                                 ),
                                 subtitle: Text(session.state.toString().split('.').last),
                                 onTap: () {
