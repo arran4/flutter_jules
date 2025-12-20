@@ -62,6 +62,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchSources,
+            tooltip: 'Refresh',
           ),
         ],
       ),

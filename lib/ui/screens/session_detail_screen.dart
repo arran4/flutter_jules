@@ -89,7 +89,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       appBar: AppBar(
         title: Text(widget.session.title ?? 'Session Detail'),
         actions: [
-            IconButton(icon: const Icon(Icons.refresh), onPressed: _fetchActivities)
+            IconButton(
+              icon: const Icon(Icons.refresh),
+              onPressed: _fetchActivities,
+              tooltip: 'Refresh',
+            )
         ],
       ),
       body: Column(
