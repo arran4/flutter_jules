@@ -42,7 +42,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _onSearchChanged() {
-    final filtered = filterAndSort(
+    final filtered = filterAndSort<Source>(
       items: _sources,
       query: _searchController.text,
       accessors: [

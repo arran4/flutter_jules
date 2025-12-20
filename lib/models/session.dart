@@ -1,6 +1,7 @@
 import 'package:dartobjectutils/dartobjectutils.dart';
 import 'enums.dart';
 import 'source.dart';
+import 'media.dart';
 
 class PullRequest {
   final String url;
@@ -63,6 +64,7 @@ class Session {
   final SessionState? state;
   final String? url;
   final List<SessionOutput>? outputs;
+  final List<Media>? images;
 
   Session({
     required this.name,
@@ -77,6 +79,7 @@ class Session {
     this.state,
     this.url,
     this.outputs,
+    this.images,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -93,6 +96,7 @@ class Session {
       state: getEnumPropOrDefault(json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
       url: getStringPropOrDefault(json, 'url', null),
       outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, () => null),
+      images: getObjectArrayPropOrDefaultFunction(json, 'images', Media.fromJson, () => null),
     );
   }
 
@@ -116,6 +120,9 @@ class Session {
     if (url != null) map['url'] = url;
     if (outputs != null) {
       map['outputs'] = outputs!.map((e) => e.toJson()).toList();
+    }
+    if (images != null) {
+      map['images'] = images!.map((e) => e.toJson()).toList();
     }
     return map;
   }
