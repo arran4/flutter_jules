@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import 'package:dartobjectutils/dartobjectutils.dart';
 import '../models.dart';
 import 'exceptions.dart';
 
@@ -76,13 +77,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      if (json['sessions'] != null) {
-        return (json['sessions'] as List)
-            .map((e) => Session.fromJson(e))
-            .toList();
-      } else {
-        return [];
-      }
+      return getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, []);
     } else {
       _handleError(response);
       throw Exception('Unreachable');
@@ -141,13 +136,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      if (json['activities'] != null) {
-        return (json['activities'] as List)
-            .map((e) => Activity.fromJson(e))
-            .toList();
-      } else {
-        return [];
-      }
+      return getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, []);
     } else {
       _handleError(response);
       throw Exception('Unreachable');
@@ -180,13 +169,7 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      if (json['sources'] != null) {
-        return (json['sources'] as List)
-            .map((e) => Source.fromJson(e))
-            .toList();
-      } else {
-        return [];
-      }
+      return getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, []);
     } else {
       _handleError(response);
       throw Exception('Unreachable');

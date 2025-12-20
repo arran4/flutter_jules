@@ -1,3 +1,5 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
+
 class PlanStep {
   final String id;
   final String title;
@@ -13,10 +15,10 @@ class PlanStep {
 
   factory PlanStep.fromJson(Map<String, dynamic> json) {
     return PlanStep(
-      id: json['id'] as String,
-      title: json['title'] as String,
-      description: json['description'] as String,
-      index: json['index'] as int,
+      id: getStringPropOrThrow(json, 'id'),
+      title: getStringPropOrThrow(json, 'title'),
+      description: getStringPropOrThrow(json, 'description'),
+      index: getNumberPropOrThrow(json, 'index').toInt(),
     );
   }
 
@@ -41,12 +43,9 @@ class Plan {
 
   factory Plan.fromJson(Map<String, dynamic> json) {
     return Plan(
-      id: json['id'] as String,
-      steps: (json['steps'] as List<dynamic>?)
-              ?.map((e) => PlanStep.fromJson(e))
-              .toList() ??
-          [],
-      createTime: json['createTime'] as String,
+      id: getStringPropOrThrow(json, 'id'),
+      steps: getObjectArrayPropOrDefaultFunction(json, 'steps', PlanStep.fromJson, []),
+      createTime: getStringPropOrThrow(json, 'createTime'),
     );
   }
 
@@ -61,7 +60,7 @@ class AgentMessaged {
   final String agentMessage;
   AgentMessaged({required this.agentMessage});
   factory AgentMessaged.fromJson(Map<String, dynamic> json) =>
-      AgentMessaged(agentMessage: json['agentMessage'] as String);
+      AgentMessaged(agentMessage: getStringPropOrThrow(json, 'agentMessage'));
   Map<String, dynamic> toJson() => {'agentMessage': agentMessage};
 }
 
@@ -69,7 +68,7 @@ class UserMessaged {
   final String userMessage;
   UserMessaged({required this.userMessage});
   factory UserMessaged.fromJson(Map<String, dynamic> json) =>
-      UserMessaged(userMessage: json['userMessage'] as String);
+      UserMessaged(userMessage: getStringPropOrThrow(json, 'userMessage'));
   Map<String, dynamic> toJson() => {'userMessage': userMessage};
 }
 
@@ -77,7 +76,7 @@ class PlanGenerated {
   final Plan plan;
   PlanGenerated({required this.plan});
   factory PlanGenerated.fromJson(Map<String, dynamic> json) =>
-      PlanGenerated(plan: Plan.fromJson(json['plan']));
+      PlanGenerated(plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson));
   Map<String, dynamic> toJson() => {'plan': plan.toJson()};
 }
 
@@ -85,7 +84,7 @@ class PlanApproved {
   final String planId;
   PlanApproved({required this.planId});
   factory PlanApproved.fromJson(Map<String, dynamic> json) =>
-      PlanApproved(planId: json['planId'] as String);
+      PlanApproved(planId: getStringPropOrThrow(json, 'planId'));
   Map<String, dynamic> toJson() => {'planId': planId};
 }
 
@@ -95,8 +94,8 @@ class ProgressUpdated {
   ProgressUpdated({required this.title, required this.description});
   factory ProgressUpdated.fromJson(Map<String, dynamic> json) =>
       ProgressUpdated(
-        title: json['title'] as String,
-        description: json['description'] as String,
+        title: getStringPropOrThrow(json, 'title'),
+        description: getStringPropOrThrow(json, 'description'),
       );
   Map<String, dynamic> toJson() => {'title': title, 'description': description};
 }
@@ -112,7 +111,7 @@ class SessionFailed {
   final String reason;
   SessionFailed({required this.reason});
   factory SessionFailed.fromJson(Map<String, dynamic> json) =>
-      SessionFailed(reason: json['reason'] as String);
+      SessionFailed(reason: getStringPropOrThrow(json, 'reason'));
   Map<String, dynamic> toJson() => {'reason': reason};
 }
 
@@ -129,9 +128,9 @@ class GitPatch {
 
   factory GitPatch.fromJson(Map<String, dynamic> json) {
     return GitPatch(
-      unidiffPatch: json['unidiffPatch'] as String,
-      baseCommitId: json['baseCommitId'] as String,
-      suggestedCommitMessage: json['suggestedCommitMessage'] as String,
+      unidiffPatch: getStringPropOrThrow(json, 'unidiffPatch'),
+      baseCommitId: getStringPropOrThrow(json, 'baseCommitId'),
+      suggestedCommitMessage: getStringPropOrThrow(json, 'suggestedCommitMessage'),
     );
   }
 
@@ -150,10 +149,8 @@ class ChangeSet {
 
   factory ChangeSet.fromJson(Map<String, dynamic> json) {
     return ChangeSet(
-      source: json['source'] as String,
-      gitPatch: json['gitPatch'] != null
-          ? GitPatch.fromJson(json['gitPatch'])
-          : null,
+      source: getStringPropOrThrow(json, 'source'),
+      gitPatch: getObjectFunctionPropOrDefault(json, 'gitPatch', GitPatch.fromJson, null),
     );
   }
 
@@ -169,8 +166,8 @@ class Media {
   final String mimeType;
   Media({required this.data, required this.mimeType});
   factory Media.fromJson(Map<String, dynamic> json) => Media(
-        data: json['data'] as String,
-        mimeType: json['mimeType'] as String,
+        data: getStringPropOrThrow(json, 'data'),
+        mimeType: getStringPropOrThrow(json, 'mimeType'),
       );
   Map<String, dynamic> toJson() => {'data': data, 'mimeType': mimeType};
 }
@@ -185,9 +182,9 @@ class BashOutput {
     required this.exitCode,
   });
   factory BashOutput.fromJson(Map<String, dynamic> json) => BashOutput(
-        command: json['command'] as String,
-        output: json['output'] as String,
-        exitCode: json['exitCode'] as int,
+        command: getStringPropOrThrow(json, 'command'),
+        output: getStringPropOrThrow(json, 'output'),
+        exitCode: getNumberPropOrThrow(json, 'exitCode').toInt(),
       );
   Map<String, dynamic> toJson() => {
         'command': command,
@@ -205,13 +202,9 @@ class Artifact {
 
   factory Artifact.fromJson(Map<String, dynamic> json) {
     return Artifact(
-      changeSet: json['changeSet'] != null
-          ? ChangeSet.fromJson(json['changeSet'])
-          : null,
-      media: json['media'] != null ? Media.fromJson(json['media']) : null,
-      bashOutput: json['bashOutput'] != null
-          ? BashOutput.fromJson(json['bashOutput'])
-          : null,
+      changeSet: getObjectFunctionPropOrDefault(json, 'changeSet', ChangeSet.fromJson, null),
+      media: getObjectFunctionPropOrDefault(json, 'media', Media.fromJson, null),
+      bashOutput: getObjectFunctionPropOrDefault(json, 'bashOutput', BashOutput.fromJson, null),
     );
   }
 
@@ -259,35 +252,19 @@ class Activity {
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     return Activity(
-      name: json['name'] as String,
-      id: json['id'] as String,
-      description: json['description'] as String,
-      createTime: json['createTime'] as String,
-      originator: json['originator'] as String?,
-      artifacts: (json['artifacts'] as List<dynamic>?)
-          ?.map((e) => Artifact.fromJson(e))
-          .toList(),
-      agentMessaged: json['agentMessaged'] != null
-          ? AgentMessaged.fromJson(json['agentMessaged'])
-          : null,
-      userMessaged: json['userMessaged'] != null
-          ? UserMessaged.fromJson(json['userMessaged'])
-          : null,
-      planGenerated: json['planGenerated'] != null
-          ? PlanGenerated.fromJson(json['planGenerated'])
-          : null,
-      planApproved: json['planApproved'] != null
-          ? PlanApproved.fromJson(json['planApproved'])
-          : null,
-      progressUpdated: json['progressUpdated'] != null
-          ? ProgressUpdated.fromJson(json['progressUpdated'])
-          : null,
-      sessionCompleted: json['sessionCompleted'] != null
-          ? SessionCompleted.fromJson(json['sessionCompleted'])
-          : null,
-      sessionFailed: json['sessionFailed'] != null
-          ? SessionFailed.fromJson(json['sessionFailed'])
-          : null,
+      name: getStringPropOrThrow(json, 'name'),
+      id: getStringPropOrThrow(json, 'id'),
+      description: getStringPropOrThrow(json, 'description'),
+      createTime: getStringPropOrThrow(json, 'createTime'),
+      originator: getStringPropOrDefault(json, 'originator', null),
+      artifacts: getObjectArrayPropOrDefaultFunction(json, 'artifacts', Artifact.fromJson, null),
+      agentMessaged: getObjectFunctionPropOrDefault(json, 'agentMessaged', AgentMessaged.fromJson, null),
+      userMessaged: getObjectFunctionPropOrDefault(json, 'userMessaged', UserMessaged.fromJson, null),
+      planGenerated: getObjectFunctionPropOrDefault(json, 'planGenerated', PlanGenerated.fromJson, null),
+      planApproved: getObjectFunctionPropOrDefault(json, 'planApproved', PlanApproved.fromJson, null),
+      progressUpdated: getObjectFunctionPropOrDefault(json, 'progressUpdated', ProgressUpdated.fromJson, null),
+      sessionCompleted: getObjectFunctionPropOrDefault(json, 'sessionCompleted', SessionCompleted.fromJson, null),
+      sessionFailed: getObjectFunctionPropOrDefault(json, 'sessionFailed', SessionFailed.fromJson, null),
     );
   }
 
