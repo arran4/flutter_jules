@@ -125,7 +125,7 @@ class JulesClient {
 
   Future<void> sendMessage(String sessionName, String message, {void Function(ApiExchange)? onDebug}) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:sendMessage');
-    final response = await _performRequest('POST', url, body: {'message': message}, onDebug: onDebug);
+    final response = await _performRequest('POST', url, body: {'prompt': message}, onDebug: onDebug);
 
     if (response.statusCode != 200) {
       _handleError(response);
