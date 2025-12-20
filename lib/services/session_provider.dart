@@ -9,26 +9,33 @@ class SessionProvider extends ChangeNotifier {
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
+  String? _nextPageToken;
 
   List<Session> get sessions => _sessions;
   bool get isFetching => _isFetching;
   String? get error => _error;
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
+  bool get hasMore => _nextPageToken != null;
 
   // Cache duration of 2 minutes
   static const Duration _cacheDuration = Duration(minutes: 2);
 
-  Future<void> fetchSessions(JulesClient client, {bool force = false}) async {
-    // If not forced and we have data and it's fresh, don't fetch
+  Future<void> fetchSessions(JulesClient client,
+      {bool force = false, bool loadMore = false}) async {
+    // If loading more but no next page, return
+    if (loadMore && _nextPageToken == null) return;
+
+    // If not forced/loading more and we have data and it's fresh, don't fetch
     if (!force &&
+        !loadMore &&
         _sessions.isNotEmpty &&
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
       return;
     }
 
-    // If already fetching, don't start another fetch unless forced (which might mean cancel/restart, but simplest is just return)
+    // If already fetching, don't start another fetch unless forced
     if (_isFetching) return;
 
     _isFetching = true;
@@ -36,12 +43,26 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final sessions = await client.listSessions(
+      // If force refresh or initial load, reset paging
+      String? pageToken;
+      if (loadMore) {
+        pageToken = _nextPageToken;
+      }
+
+      final response = await client.listSessions(
+        pageToken: pageToken,
         onDebug: (exchange) {
           _lastExchange = exchange;
         },
       );
-      _sessions = sessions;
+
+      if (loadMore) {
+        _sessions.addAll(response.sessions);
+      } else {
+        _sessions = response.sessions;
+      }
+      _nextPageToken = response.nextPageToken;
+
       _lastFetchTime = DateTime.now();
       _error = null;
     } catch (e) {

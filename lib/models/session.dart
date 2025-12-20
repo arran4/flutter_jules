@@ -149,3 +149,20 @@ T? getEnumPropOrDefault<T>(Map<String, dynamic> json, String key, List<T> values
     orElse: () => defaultValue as T,
   );
 }
+
+class ListSessionsResponse {
+  final List<Session> sessions;
+  final String? nextPageToken;
+
+  ListSessionsResponse({
+    required this.sessions,
+    this.nextPageToken,
+  });
+
+  factory ListSessionsResponse.fromJson(Map<String, dynamic> json) {
+    return ListSessionsResponse(
+      sessions: getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, () => <Session>[]),
+      nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
+    );
+  }
+}
