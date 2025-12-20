@@ -125,7 +125,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         title: const Text('Sessions'),
         actions: [
           IconButton(
-            icon: const Icon(Icons.refresh),
+            icon: const Icon(Icons.replay),
             onPressed: _fetchSessions,
             tooltip: 'Refresh',
           ),
