@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_provider.dart';
+import 'services/dev_mode_provider.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -8,8 +9,11 @@ import 'ui/screens/login_screen.dart';
 
 void main() {
   runApp(
-    ChangeNotifierProvider(
-      create: (_) => AuthProvider(),
+    MultiProvider(
+      providers: [
+        ChangeNotifierProvider(create: (_) => AuthProvider()),
+        ChangeNotifierProvider(create: (_) => DevModeProvider()),
+      ],
       child: const MyApp(),
     ),
   );

@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/dev_mode_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -86,6 +87,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ElevatedButton(
               onPressed: _saveToken,
               child: const Text('Update Token'),
+            ),
+            const Divider(height: 32),
+            const Text(
+              'Developer Options',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
+            SwitchListTile(
+              title: const Text('Dev Mode'),
+              subtitle: const Text('Enable advanced debugging features'),
+              value: Provider.of<DevModeProvider>(context).isDevMode,
+              onChanged: (value) {
+                Provider.of<DevModeProvider>(context, listen: false).toggleDevMode(value);
+              },
             ),
             const Spacer(),
             TextButton(
