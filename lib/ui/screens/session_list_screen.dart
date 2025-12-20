@@ -16,6 +16,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
   bool _isLoading = false;
   String? _error;
 
+  // Filtering
+  Set<SessionState>? _allowedStatuses;
+
+  // Grouping
+  List<String> _groupingLevels = ['Status']; // Default to Status
+
   @override
   void initState() {
     super.initState();
@@ -115,12 +121,221 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  void _showFilterDialog() {
+    final allStatuses =
+        _sessions.map((s) => s.state ?? SessionState.STATE_UNSPECIFIED).toSet();
+    final currentlyAllowed = _allowedStatuses ?? allStatuses;
+
+    final tempAllowed = Set<SessionState>.from(currentlyAllowed);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Filter by Status'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: allStatuses.map((status) {
+                    return CheckboxListTile(
+                      title: Text(status.toString().split('.').last),
+                      value: tempAllowed.contains(status),
+                      onChanged: (bool? value) {
+                        setState(() {
+                          if (value == true) {
+                            tempAllowed.add(status);
+                          } else {
+                            tempAllowed.remove(status);
+                          }
+                        });
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      tempAllowed.addAll(allStatuses);
+                    });
+                  },
+                  child: const Text('Select All'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    setState(() {
+                      tempAllowed.clear();
+                    });
+                  },
+                  child: const Text('Clear All'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    this.setState(() {
+                      _allowedStatuses = tempAllowed;
+                    });
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Apply'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
+  }
+
+  void _showGroupingDialog() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        return SimpleDialog(
+          title: const Text('Group By'),
+          children: [
+            SimpleDialogOption(
+              onPressed: () {
+                setState(() {
+                  _groupingLevels = [];
+                });
+                Navigator.pop(context);
+              },
+              child: Row(
+                children: [
+                  if (_groupingLevels.isEmpty) const Icon(Icons.check),
+                  const SizedBox(width: 8),
+                  const Text('None'),
+                ],
+              ),
+            ),
+            SimpleDialogOption(
+              onPressed: () {
+                setState(() {
+                  _groupingLevels = ['Status'];
+                });
+                Navigator.pop(context);
+              },
+              child: Row(
+                children: [
+                  if (_groupingLevels.contains('Status'))
+                    const Icon(Icons.check),
+                  const SizedBox(width: 8),
+                  const Text('Status'),
+                ],
+              ),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _buildSessionList() {
+    var filtered = _sessions;
+    if (_allowedStatuses != null) {
+      filtered = filtered
+          .where((s) => _allowedStatuses!
+              .contains(s.state ?? SessionState.STATE_UNSPECIFIED))
+          .toList();
+    }
+
+    if (filtered.isEmpty) {
+      return const Center(child: Text("No sessions found"));
+    }
+
+    if (_groupingLevels.contains('Status')) {
+      final grouped = <SessionState, List<Session>>{};
+      for (var s in filtered) {
+        final state = s.state ?? SessionState.STATE_UNSPECIFIED;
+        grouped.putIfAbsent(state, () => []).add(s);
+      }
+
+      final sortedKeys = grouped.keys.toList()
+        ..sort((a, b) => a.index.compareTo(b.index));
+
+      return ListView.builder(
+        itemCount: sortedKeys.length,
+        itemBuilder: (context, index) {
+          final state = sortedKeys[index];
+          final sessions = grouped[state]!;
+          return Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                padding:
+                    const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                color: Theme.of(context).colorScheme.surfaceVariant,
+                width: double.infinity,
+                child: Text(
+                  state.toString().split('.').last,
+                  style: Theme.of(context)
+                      .textTheme
+                      .titleSmall
+                      ?.copyWith(fontWeight: FontWeight.bold),
+                ),
+              ),
+              ...sessions.map((session) => ListTile(
+                    title: Text(session.title ?? session.name),
+                    subtitle: Text(session.state.toString().split('.').last),
+                    onTap: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) =>
+                              SessionDetailScreen(session: session),
+                        ),
+                      );
+                    },
+                  )),
+            ],
+          );
+        },
+      );
+    } else {
+      return ListView.builder(
+        itemCount: filtered.length,
+        itemBuilder: (context, index) {
+          final session = filtered[index];
+          return ListTile(
+            title: Text(session.title ?? session.name),
+            subtitle: Text(session.state.toString().split('.').last),
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => SessionDetailScreen(session: session),
+                ),
+              );
+            },
+          );
+        },
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         title: const Text('Sessions'),
         actions: [
+          IconButton(
+            icon: const Icon(Icons.filter_list),
+            onPressed: _showFilterDialog,
+            tooltip: 'Filter',
+          ),
+          IconButton(
+            icon: const Icon(Icons.group_work),
+            onPressed: _showGroupingDialog,
+            tooltip: 'Group By',
+          ),
           IconButton(
             icon: const Icon(Icons.refresh),
             onPressed: _fetchSessions,
@@ -137,7 +352,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     child: Column(
                       mainAxisAlignment: MainAxisAlignment.center,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
+                        const Icon(Icons.error_outline,
+                            color: Colors.red, size: 60),
                         const SizedBox(height: 16),
                         Text(
                           'Error Loading Sessions',
@@ -159,7 +375,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             const SizedBox(width: 16),
                             OutlinedButton(
                               onPressed: () {
-                                Provider.of<AuthProvider>(context, listen: false).logout();
+                                Provider.of<AuthProvider>(context, listen: false)
+                                    .logout();
                               },
                               child: const Text('Change Token'),
                             ),
@@ -169,24 +386,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                   ),
                 )
-              : ListView.builder(
-                  itemCount: _sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = _sessions[index];
-                    return ListTile(
-                      title: Text(session.title ?? session.name),
-                      subtitle: Text(session.state.toString().split('.').last),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SessionDetailScreen(session: session),
-                          ),
-                        );
-                      },
-                    );
-                  },
-                ),
+              : _buildSessionList(),
       floatingActionButton: FloatingActionButton(
         onPressed: _createSession,
         tooltip: 'Create Session',
