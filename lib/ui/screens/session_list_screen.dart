@@ -19,18 +19,21 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  List<Session> _sessions = [];
-  List<Session> _filteredSessions = [];
-  bool _isLoading = false;
-  String? _error;
+  // Local state for searching/filtering
+  bool _groupByStatus = true;
+  final Set<SessionState> _statusFilters = {};
+
   final TextEditingController _searchController = TextEditingController();
-  ApiExchange? _lastExchange;
-  DateTime? _lastFetchTime;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
+    // Rebuild when search changes
+    _searchController.addListener(() {
+      setState(() {});
+    });
+
+    // Initial fetch handled by addPostFrameCallback to avoid build issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSessions();
     });
@@ -42,51 +45,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
     super.dispose();
   }
 
-  void _onSearchChanged() {
-    setState(() {
-      _filteredSessions = filterAndSort(
-        items: _sessions,
-        query: _searchController.text,
-        accessors: [
-          (session) => session.title,
-          (session) => session.name,
-          (session) => session.id,
-          (session) => session.state.toString().split('.').last,
-        ],
-      );
-    });
-  }
-
   Future<void> _fetchSessions({bool force = false}) async {
     if (!mounted) return;
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      await Provider.of<SessionProvider>(context, listen: false)
-          .fetchSessions(client, force: force);
-      // TODO resolve merge issue I put both in but the above make sthe below partial redundant but there is a difference that needs to be reconciled
-      final sessions = await client.listSessions(
-        onDebug: (exchange) {
-          _lastExchange = exchange;
-        },
-      );
+      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
 
-      var displaySessions = sessions;
-      if (widget.sourceFilter != null) {
-        displaySessions = sessions
-            .where((s) => s.sourceContext.source == widget.sourceFilter)
-            .toList();
-      }
+      // Use the provider to fetch. It updates its own state.
+      await sessionProvider.fetchSessions(client, force: force);
 
       if (mounted) {
-        setState(() {
-          _sessions = displaySessions;
-          _onSearchChanged(); // Initialize filtered list
-          _lastFetchTime = DateTime.now();
-        });
+        setState(() {}); // Trigger rebuild to reflect new data
       }
     } catch (e) {
-      // Error handling is managed by the provider, but if we wanted to show a snackbar, we could do it here.
-      // The current UI shows error screen if sessions are empty, or maybe a snackbar if not.
+       // Provider handles error state
     }
   }
 
@@ -127,6 +99,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   if (mounted) {
                     Provider.of<SessionProvider>(context, listen: false)
                         .addSession(createdSession);
+                    setState(() {}); // Refresh list
                   }
                 } catch (e) {
                   if (mounted) {
@@ -156,6 +129,107 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  void _showContextMenu(BuildContext context) {
+    // If we want to show the last exchange for the list call
+    final lastExchange =
+        Provider.of<SessionProvider>(context, listen: false).lastExchange;
+
+    if (lastExchange == null) return;
+
+    showDialog(
+      context: context,
+      builder: (context) => SimpleDialog(
+        title: const Text('Dev Tools'),
+        children: [
+          SimpleDialogOption(
+            onPressed: () {
+              Navigator.pop(context);
+              showDialog(
+                context: context,
+                builder: (context) => ApiViewer(exchange: lastExchange),
+              );
+            },
+            child: const Text('View Source'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _showFilterDialog() {
+     // Get all unique statuses from the FULL list (not filtered)
+     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+     final allSessions = sessionProvider.sessions;
+     final allStatuses = allSessions.map((s) => s.state).whereType<SessionState>().toSet().toList();
+     allStatuses.sort((a, b) => a.index.compareTo(b.index));
+
+     showDialog(
+       context: context,
+       builder: (context) {
+         // This StatefulBuilder updates the dialog content
+         return StatefulBuilder(
+           builder: (context, setDialogState) {
+             return AlertDialog(
+               title: const Text('Filter by Status'),
+               content: SingleChildScrollView(
+                 child: Column(
+                   mainAxisSize: MainAxisSize.min,
+                   children: allStatuses.map((status) {
+                     return CheckboxListTile(
+                       title: Text(status.toString().split('.').last),
+                       value: _statusFilters.contains(status) || _statusFilters.isEmpty,
+                       onChanged: (bool? value) {
+                         // Update local filter state
+                         setDialogState(() {
+                           if (value == true) {
+                             if (_statusFilters.isEmpty) {
+                               // Start with only this one
+                               _statusFilters.add(status);
+                             } else {
+                               _statusFilters.add(status);
+                             }
+                           } else {
+                             // Unchecking.
+                             if (_statusFilters.isEmpty) {
+                               // "Select All" was implicit. We need to populate with all OTHER statuses.
+                               _statusFilters.addAll(allStatuses);
+                               _statusFilters.remove(status);
+                             } else {
+                               _statusFilters.remove(status);
+                             }
+                           }
+                         });
+
+                         // Update the main screen (underneath the dialog)
+                         // We need to call the main state's setState
+                         setState(() {});
+                       },
+                     );
+                   }).toList(),
+                 ),
+               ),
+               actions: [
+                 TextButton(
+                   onPressed: () {
+                     setDialogState(() {
+                       _statusFilters.clear(); // Clear means "Show All"
+                     });
+                     setState(() {});
+                   },
+                   child: const Text('Clear Filter'),
+                 ),
+                 TextButton(
+                   onPressed: () => Navigator.pop(context),
+                   child: const Text('Done'),
+                 ),
+               ],
+             );
+           }
+         );
+       }
+     );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
@@ -165,34 +239,105 @@ class _SessionListScreenState extends State<SessionListScreen> {
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
 
-        // Show loading spinner in AppBar if refreshing
-        final refreshAction = isLoading
-            ? const Padding(
-                padding: EdgeInsets.all(12.0),
-                child: SizedBox(
-                  width: 24,
-                  height: 24,
-                  child: CircularProgressIndicator(
-                    strokeWidth: 2,
-                    color: Colors.white, // Assuming AppBar is colored, else black
-                  ),
-                ),
-              )
-            : IconButton(
-                icon: const Icon(Icons.refresh), // Keeping Icons.refresh as per user request to change it but I should follow memory guidelines?
-                // Memory says: "Manual refresh actions in AppBars use Icons.replay instead of Icons.refresh."
-                // Wait, previous code used Icons.refresh. I should follow memory guidelines.
-                // Re-reading memory: "Manual refresh actions in AppBars use Icons.replay instead of Icons.refresh."
-                // Okay, I will use Icons.replay.
-                onPressed: () => _fetchSessions(force: true),
-                tooltip: 'Refresh',
-              );
+        // Re-calculating display list in build to ensure reactivity
+        List<Session> displaySessions = sessions;
+        if (widget.sourceFilter != null) {
+          displaySessions = displaySessions.where((s) => s.sourceContext.source == widget.sourceFilter).toList();
+        }
+        if (_statusFilters.isNotEmpty) {
+          displaySessions = displaySessions.where((s) => s.state != null && _statusFilters.contains(s.state)).toList();
+        }
+        // Search
+        if (_searchController.text.isNotEmpty) {
+           displaySessions = filterAndSort(
+            items: displaySessions,
+            query: _searchController.text,
+            accessors: [
+              (session) => session.title,
+              (session) => session.name,
+              (session) => session.id,
+              (session) => session.state.toString().split('.').last,
+            ],
+          );
+        }
+
+        // Sort
+        if (_groupByStatus) {
+           displaySessions.sort((a, b) {
+             // Handle null states if any
+             final stateA = a.state?.index ?? -1;
+             final stateB = b.state?.index ?? -1;
+
+             int cmp = stateA.compareTo(stateB);
+             if (cmp != 0) return cmp;
+
+             // Secondary sort
+             final dateA = DateTime.tryParse(a.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+             final dateB = DateTime.tryParse(b.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+             return dateB.compareTo(dateA);
+           });
+        } else {
+           displaySessions.sort((a, b) {
+             final dateA = DateTime.tryParse(a.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+             final dateB = DateTime.tryParse(b.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
+             return dateB.compareTo(dateA);
+           });
+        }
+
+        // Determine items for ListView (headers + items)
+        final List<ListItem> items = [];
+        if (_groupByStatus) {
+           SessionState? lastState;
+           // We might have null states
+           for (var session in displaySessions) {
+             if (session.state != lastState) {
+               items.add(HeaderItem(session.state?.toString().split('.').last ?? 'Unknown'));
+               lastState = session.state;
+             }
+             items.add(SessionItem(session));
+           }
+        } else {
+           for (var session in displaySessions) {
+             items.add(SessionItem(session));
+           }
+        }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Sessions'),
             actions: [
-              refreshAction,
+               IconButton(
+                icon: Icon(_groupByStatus ? Icons.layers_clear : Icons.layers),
+                tooltip: _groupByStatus ? 'Ungroup' : 'Group by Status',
+                onPressed: () {
+                  setState(() {
+                    _groupByStatus = !_groupByStatus;
+                  });
+                },
+              ),
+              IconButton(
+                icon: const Icon(Icons.filter_list),
+                tooltip: 'Filter',
+                onPressed: _showFilterDialog,
+              ),
+              if (isLoading)
+                const Padding(
+                  padding: EdgeInsets.all(12.0),
+                  child: SizedBox(
+                    width: 24,
+                    height: 24,
+                    child: CircularProgressIndicator(
+                      strokeWidth: 2,
+                      color: Colors.white,
+                    ),
+                  ),
+                )
+              else
+                IconButton(
+                  icon: const Icon(Icons.replay),
+                  onPressed: () => _fetchSessions(force: true),
+                  tooltip: 'Refresh',
+                ),
             ],
           ),
           body: (sessions.isEmpty && isLoading)
@@ -213,7 +358,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ),
                             const SizedBox(height: 8),
                             SelectableText(
-                              error!,
+                              error,
                               textAlign: TextAlign.center,
                             ),
                             const SizedBox(height: 24),
@@ -236,11 +381,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ),
                           ],
                         ),
-                      ],
-                    ),
-                  ),
-                )
-              : Column(
+                      ),
+                    )
+                  : Column(
                   children: [
                     Padding(
                       padding: const EdgeInsets.all(8.0),
@@ -253,11 +396,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ),
                       ),
                     ),
-                    if (_lastFetchTime != null)
+                    if (lastFetchTime != null)
                       Padding(
                         padding: const EdgeInsets.all(8.0),
                         child: Text(
-                          'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                          'Last updated: ${DateFormat.Hms().format(lastFetchTime)}',
                           style: Theme.of(context).textTheme.bodySmall,
                         ),
                       ),
@@ -265,66 +408,60 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       child: RefreshIndicator(
                         onRefresh: _fetchSessions,
                         child: ListView.builder(
-                  itemCount: _sessions.length,
-                  itemBuilder: (context, index) {
-                    final session = _sessions[index];
-                    final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+                          itemCount: items.length,
+                          itemBuilder: (context, index) {
+                            final item = items[index];
+                            if (item is HeaderItem) {
+                              return Container(
+                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
+                                padding: const EdgeInsets.all(8.0),
+                                child: Text(
+                                  item.title,
+                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
+                                    fontWeight: FontWeight.bold,
+                                  ),
+                                ),
+                              );
+                            } else if (item is SessionItem) {
+                              final session = item.session;
+                              final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
-                    final tile = ListTile(
-                      title: Text(
-                        session.title ?? session.name,
-                        maxLines: 1,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                      subtitle: Text(session.state.toString().split('.').last),
-                      onTap: () {
-                        Navigator.push(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => SessionDetailScreen(session: session),
-                          ),
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: () => _fetchSessions(force: true),
-                            child: ListView.builder(
-                              itemCount: sessions.length,
-                              itemBuilder: (context, index) {
-                                final session = sessions[index];
-                                final isDevMode = Provider.of<DevModeProvider>(context)
-                                    .isDevMode;
-
-                                final tile = ListTile(
-                                  title: Text(session.title ?? session.name),
-                                  subtitle: Text(
-                                      session.state.toString().split('.').last),
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            SessionDetailScreen(session: session),
-                                      ),
-                                    );
-                                  },
-                                  onLongPress: isDevMode
-                                      ? () => _showContextMenu(context)
-                                      : null,
-                                );
-
-                                if (isDevMode) {
-                                  return GestureDetector(
-                                    onSecondaryTap: () => _showContextMenu(context),
-                                    child: tile,
+                              final tile = ListTile(
+                                title: Text(
+                                  session.title ?? session.name,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                subtitle: Text(session.state.toString().split('.').last),
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SessionDetailScreen(session: session),
+                                    ),
                                   );
-                                } else {
-                                  return tile;
-                                }
-                              },
-                            ),
-                          ),
+                                },
+                                onLongPress: isDevMode
+                                    ? () => _showContextMenu(context)
+                                    : null,
+                              );
+
+                              if (isDevMode) {
+                                return GestureDetector(
+                                  onSecondaryTap: () => _showContextMenu(context),
+                                  child: tile,
+                                );
+                              } else {
+                                return tile;
+                              }
+                            }
+                            return const SizedBox.shrink();
+                          },
                         ),
-                      ],
+                      ),
                     ),
+                  ],
+                ),
           floatingActionButton: FloatingActionButton(
             onPressed: _createSession,
             tooltip: 'Create Session',
@@ -334,29 +471,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
       },
     );
   }
+}
 
-  void _showContextMenu(BuildContext context) {
-    final lastExchange =
-        Provider.of<SessionProvider>(context, listen: false).lastExchange;
-    if (lastExchange == null) return;
+// Helper classes for mixed list
+abstract class ListItem {}
 
-    showDialog(
-      context: context,
-      builder: (context) => SimpleDialog(
-        title: const Text('Dev Tools'),
-        children: [
-          SimpleDialogOption(
-            onPressed: () {
-              Navigator.pop(context);
-              showDialog(
-                context: context,
-                builder: (context) => ApiViewer(exchange: lastExchange),
-              );
-            },
-            child: const Text('View Source'),
-          ),
-        ],
-      ),
-    );
-  }
+class HeaderItem implements ListItem {
+  final String title;
+  HeaderItem(this.title);
+}
+
+class SessionItem implements ListItem {
+  final Session session;
+  SessionItem(this.session);
 }
