@@ -18,9 +18,9 @@ class SourceListScreen extends StatefulWidget {
 
 class _SourceListScreenState extends State<SourceListScreen> {
   List<Source> _filteredSources = [];
-  bool _isLoading = false;
   String? _error;
   final TextEditingController _searchController = TextEditingController();
+  final ScrollController _scrollController = ScrollController();
 
   final Map<String, int> _usageCount = {};
   final Map<String, DateTime> _lastUsed = {};
@@ -30,20 +30,39 @@ class _SourceListScreenState extends State<SourceListScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
+    _scrollController.addListener(_onScroll);
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchData();
+      _loadInitialData();
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
+    _scrollController.dispose();
     super.dispose();
+  }
+
+  void _onScroll() {
+    // Load more when scrolling near bottom
+    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
+      final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+      if (sourceProvider.hasMorePages && !sourceProvider.isFetching) {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        sourceProvider.loadNextPage(client);
+      }
+    }
   }
 
   void _onSearchChanged() {
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
     final sources = sourceProvider.sources;
+
+    // If user is searching and we have more pages, load them all
+    if (_searchController.text.isNotEmpty && sourceProvider.hasMorePages) {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      sourceProvider.loadAllPages(client);
+    }
 
     final filtered = filterAndSort<Source>(
       items: sources,
@@ -110,49 +129,31 @@ class _SourceListScreenState extends State<SourceListScreen> {
     return nameA.toLowerCase().compareTo(nameB.toLowerCase());
   }
 
-  Future<void> _fetchData({bool force = false}) async {
+  /// Load initial data in background
+  Future<void> _loadInitialData() async {
+    if (!mounted) return;
+
+    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+
+    // Load sources in background
+    sourceProvider.loadInitialPage(client);
+
+    // Load sessions for usage stats
+    await _loadSessions();
+  }
+
+  /// Load sessions for usage statistics
+  Future<void> _loadSessions() async {
     if (!mounted) return;
     setState(() {
-      _isLoading = true;
       _error = null;
     });
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-
-      // Listen for source provider updates to update UI progressively
-      void updateListener() {
-        if (mounted) {
-          setState(() {
-            _onSearchChanged();
-          });
-        }
-      }
-      
-      sourceProvider.addListener(updateListener);
-
-      try {
-        // Run both requests
-        await Future.wait([
-          sourceProvider.fetchSources(client, force: force),
-          client.listSessions().then((response) {
-            _processSessions(response.sessions);
-          }),
-        ]);
-
-        // Show completion snackbar
-        if (mounted && sourceProvider.fetchComplete) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text('Loaded ${sourceProvider.sources.length} sources in ${sourceProvider.totalPages} page${sourceProvider.totalPages != 1 ? 's' : ''}'),
-              duration: const Duration(seconds: 2),
-            ),
-          );
-        }
-      } finally {
-        sourceProvider.removeListener(updateListener);
-      }
+      final response = await client.listSessions();
+      _processSessions(response.sessions);
 
       if (mounted) {
         setState(() {
@@ -165,12 +166,29 @@ class _SourceListScreenState extends State<SourceListScreen> {
           _error = e.toString();
         });
       }
-    } finally {
-      if (mounted) {
-        setState(() {
-          _isLoading = false;
-        });
-      }
+    }
+  }
+
+  /// Refresh all data
+  Future<void> _refreshData() async {
+    if (!mounted) return;
+
+    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+
+    // Refresh sources (keeps old data visible)
+    await Future.wait([
+      sourceProvider.refresh(client),
+      _loadSessions(),
+    ]);
+
+    if (mounted && sourceProvider.initialLoadComplete) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Refreshed ${sourceProvider.sources.length} sources'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
     }
   }
 
@@ -232,39 +250,23 @@ class _SourceListScreenState extends State<SourceListScreen> {
           ),
           IconButton(
             icon: const Icon(Icons.replay),
-            onPressed: () => _fetchData(force: true),
+            onPressed: _refreshData,
             tooltip: 'Refresh',
           ),
         ],
       ),
-      body: _isLoading
-          ? Consumer<SourceProvider>(
-              builder: (context, sourceProvider, child) {
-                if (sourceProvider.isFetching && sourceProvider.currentPage > 0) {
-                  return Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Loading page ${sourceProvider.currentPage}...',
-                          style: Theme.of(context).textTheme.titleMedium,
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          '${sourceProvider.sources.length} sources loaded so far',
-                          style: Theme.of(context).textTheme.bodyMedium,
-                        ),
-                      ],
-                    ),
-                  );
-                }
-                return const Center(child: CircularProgressIndicator());
-              },
-            )
-          : _error != null
-              ? Center(
+      body: Consumer<SourceProvider>(
+        builder: (context, sourceProvider, child) {
+          // Trigger filter update when sources change
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) {
+              _onSearchChanged();
+            }
+          });
+
+          // Show error if initial load failed and no cached data
+          if (_error != null && !sourceProvider.initialLoadComplete && sourceProvider.sources.isEmpty) {
+            return Center(
                   child: Padding(
                     padding: const EdgeInsets.all(16.0),
                     child: Column(
@@ -283,50 +285,95 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         ),
                         const SizedBox(height: 16),
                         ElevatedButton(
-                          onPressed: () => _fetchData(force: true),
+                          onPressed: _refreshData,
                           child: const Text('Retry'),
                         ),
                       ],
                     ),
                   ),
-                )
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Search Sources',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                    Expanded(
-                      child: Consumer<SourceProvider>(
-                        builder: (context, sourceProvider, child) {
-                          // The list is actually driven by _filteredSources which is local state,
-                          // but updated when sourceProvider changes via _onSearchChanged inside build?
-                          // No, _onSearchChanged updates _filteredSources in setState.
-                          // But we need to listen to sourceProvider changes if we want real-time updates?
-                          // _fetchData calls sourceProvider.fetchSources, which updates the provider.
-                          // Then we call setState which calls _onSearchChanged.
-                          // So it works for the fetch cycle.
-                          // But if another part of the app updates sources, this screen won't know unless we listen.
-                          // Consumer is here, but we are using _filteredSources.
-                          // We should probably trigger _onSearchChanged when provider updates?
-                          // But we can't call setState during build.
-                          // It's cleaner to just rebuild the list here if we can, but sorting/filtering is expensive.
-                          // For now, reliance on _fetchData is fine as it's the main entry point.
-                          // But let's check if we should just use Consumer to trigger rebuilds.
+                );
+              }
 
-                          // If we use Consumer, we can just rebuild the list.
-                          // But sorting logic is in state.
-                          return ListView.builder(
-                            itemCount: _filteredSources.length,
-                            itemBuilder: (context, index) {
-                              final source = _filteredSources[index];
+          // Show content with loading indicators
+          return Column(
+            children: [
+              // Refresh indicator at top
+              if (sourceProvider.isRefreshing)
+                const LinearProgressIndicator(
+                  backgroundColor: Colors.transparent,
+                ),
+              // Search bar
+              Padding(
+                padding: const EdgeInsets.all(8.0),
+                child: TextField(
+                  controller: _searchController,
+                  decoration: const InputDecoration(
+                    labelText: 'Search Sources',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.search),
+                  ),
+                ),
+              ),
+              // Loading indicator for initial load
+              if (sourceProvider.isFetching && !sourceProvider.initialLoadComplete)
+                Padding(
+                  padding: const EdgeInsets.all(8.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.center,
+                    children: [
+                      const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
+                      const SizedBox(width: 12),
+                      Text(
+                        'Loading sources...',
+                        style: Theme.of(context).textTheme.bodyMedium,
+                      ),
+                    ],
+                  ),
+                ),
+              // Source list
+              Expanded(
+                child: _filteredSources.isEmpty && sourceProvider.initialLoadComplete
+                    ? Center(
+                        child: Text(
+                          _searchController.text.isEmpty
+                              ? 'No sources available'
+                              : 'No sources match your search',
+                          style: Theme.of(context).textTheme.bodyLarge,
+                        ),
+                      )
+                    : ListView.builder(
+                        controller: _scrollController,
+                        itemCount: _filteredSources.length + (sourceProvider.hasMorePages ? 1 : 0),
+                        itemBuilder: (context, index) {
+                          // Loading indicator at bottom
+                          if (index == _filteredSources.length) {
+                            return Padding(
+                              padding: const EdgeInsets.all(16.0),
+                              child: Center(
+                                child: Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: [
+                                    const SizedBox(
+                                      width: 16,
+                                      height: 16,
+                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Text(
+                                      'Loading more sources...',
+                                      style: Theme.of(context).textTheme.bodyMedium,
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            );
+                          }
+
+                          final source = _filteredSources[index];
                               final count = _usageCount[source.name] ?? 0;
                               final lastUsedDate = _lastUsed[source.name];
 
@@ -384,15 +431,15 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                       ),
                                     );
                                   },
-                                ),
-                              );
+                                  ),
+                                );
                             },
-                          );
-                        }
-                      ),
-                    ),
-                  ],
-                ),
+                          ),
+              ),
+            ],
+          );
+        },
+      ),
     );
   }
 }

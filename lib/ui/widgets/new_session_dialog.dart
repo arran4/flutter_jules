@@ -39,7 +39,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    await sourceProvider.fetchSources(auth.client, force: force);
+    if (force) {
+      await sourceProvider.refresh(auth.client);
+    } else {
+      await sourceProvider.loadInitialPage(auth.client);
+      // If we only loaded first page, maybe we want to search or load more?
+      // For the dropdown, just the first page (usually contains recently used) might be enough,
+      // or we might want to load more if the user scrolls (not easy in DropdownButton).
+      // For now, loadInitialPage is sufficient as it likely covers 20-50 items.
+    }
 
     if (mounted) {
       _initializeSelection(sourceProvider.sources);

@@ -5,27 +5,30 @@ import 'jules_client.dart';
 class SourceProvider extends ChangeNotifier {
   List<Source> _sources = [];
   bool _isFetching = false;
+  bool _isRefreshing = false;
   String? _error;
   DateTime? _lastFetchTime;
   int _currentPage = 0;
-  int _totalPages = 0;
-  bool _fetchComplete = false;
+  bool _hasMorePages = true;
+  String? _nextPageToken;
+  bool _initialLoadComplete = false;
 
   List<Source> get sources => _sources;
   bool get isFetching => _isFetching;
+  bool get isRefreshing => _isRefreshing;
   String? get error => _error;
   DateTime? get lastFetchTime => _lastFetchTime;
   int get currentPage => _currentPage;
-  int get totalPages => _totalPages;
-  bool get fetchComplete => _fetchComplete;
+  bool get hasMorePages => _hasMorePages;
+  bool get initialLoadComplete => _initialLoadComplete;
 
-  // Cache duration (e.g. 5 minutes or longer as requested)
+  // Cache duration
   static const Duration _cacheDuration = Duration(minutes: 5);
 
-  Future<void> fetchSources(JulesClient client, {bool force = false}) async {
-    // If not forced and we have data and it's fresh, don't fetch
-    if (!force &&
-        _sources.isNotEmpty &&
+  /// Load initial page in background (called on app start)
+  Future<void> loadInitialPage(JulesClient client) async {
+    // If we already have cached data that's fresh, don't reload
+    if (_sources.isNotEmpty &&
         _lastFetchTime != null &&
         DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
       return;
@@ -34,41 +37,95 @@ class SourceProvider extends ChangeNotifier {
     if (_isFetching) return;
 
     _isFetching = true;
-    _fetchComplete = false;
     _error = null;
     _currentPage = 0;
-    _totalPages = 0;
+    _hasMorePages = true;
+    _nextPageToken = null;
     notifyListeners();
 
     try {
-      final allSources = <Source>[];
-      String? pageToken;
-      int pageCount = 0;
-      
-      do {
-        final response = await client.listSources(pageToken: pageToken);
-        allSources.addAll(response.sources);
-        pageToken = response.nextPageToken;
-        pageCount++;
-        
-        // Update progress and sources incrementally
-        _currentPage = pageCount;
-        _sources = List.from(allSources); // Create a new list to trigger UI updates
-        notifyListeners();
-        
-      } while (pageToken != null && pageToken.isNotEmpty);
-
-      _totalPages = pageCount;
-      _sources = allSources;
+      final response = await client.listSources();
+      _sources = response.sources;
+      _nextPageToken = response.nextPageToken;
+      _hasMorePages = _nextPageToken != null && _nextPageToken!.isNotEmpty;
+      _currentPage = 1;
       _lastFetchTime = DateTime.now();
+      _initialLoadComplete = true;
       _error = null;
-      _fetchComplete = true;
     } catch (e) {
       _error = e.toString();
-      _fetchComplete = false;
+      _initialLoadComplete = false;
     } finally {
       _isFetching = false;
       notifyListeners();
+    }
+  }
+
+  /// Load next page (on-demand, e.g., when scrolling or searching)
+  Future<void> loadNextPage(JulesClient client) async {
+    if (_isFetching || !_hasMorePages || _nextPageToken == null) return;
+
+    _isFetching = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final response = await client.listSources(pageToken: _nextPageToken);
+      _sources.addAll(response.sources);
+      _nextPageToken = response.nextPageToken;
+      _hasMorePages = _nextPageToken != null && _nextPageToken!.isNotEmpty;
+      _currentPage++;
+      _lastFetchTime = DateTime.now();
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isFetching = false;
+      notifyListeners();
+    }
+  }
+
+  /// Refresh all sources (keeps old data visible during refresh)
+  Future<void> refresh(JulesClient client) async {
+    if (_isRefreshing) return;
+
+    _isRefreshing = true;
+    _error = null;
+    notifyListeners();
+
+    try {
+      final newSources = <Source>[];
+      String? pageToken;
+      int pageCount = 0;
+
+      // Load all pages
+      do {
+        final response = await client.listSources(pageToken: pageToken);
+        newSources.addAll(response.sources);
+        pageToken = response.nextPageToken;
+        pageCount++;
+      } while (pageToken != null && pageToken.isNotEmpty);
+
+      // Only update sources after all pages are loaded
+      _sources = newSources;
+      _currentPage = pageCount;
+      _nextPageToken = null;
+      _hasMorePages = false;
+      _lastFetchTime = DateTime.now();
+      _initialLoadComplete = true;
+      _error = null;
+    } catch (e) {
+      _error = e.toString();
+    } finally {
+      _isRefreshing = false;
+      notifyListeners();
+    }
+  }
+
+  /// Load all remaining pages (e.g., when user searches)
+  Future<void> loadAllPages(JulesClient client) async {
+    while (_hasMorePages && !_isFetching) {
+      await loadNextPage(client);
     }
   }
 }
