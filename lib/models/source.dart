@@ -45,6 +45,23 @@ class SourceContext {
   }
 }
 
+class ListSourcesResponse {
+  final List<Source> sources;
+  final String? nextPageToken;
+
+  ListSourcesResponse({
+    required this.sources,
+    this.nextPageToken,
+  });
+
+  factory ListSourcesResponse.fromJson(Map<String, dynamic> json) {
+    return ListSourcesResponse(
+      sources: getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, () => <Source>[]),
+      nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
+    );
+  }
+}
+
 class GitHubBranch {
   final String displayName;
 
