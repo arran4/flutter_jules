@@ -32,8 +32,15 @@ class SourceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final sources = await client.listSources();
-      _sources = sources;
+      final allSources = <Source>[];
+      String? pageToken;
+      do {
+        final response = await client.listSources(pageToken: pageToken);
+        allSources.addAll(response.sources);
+        pageToken = response.nextPageToken;
+      } while (pageToken != null && pageToken.isNotEmpty);
+
+      _sources = allSources;
       _lastFetchTime = DateTime.now();
       _error = null;
     } catch (e) {

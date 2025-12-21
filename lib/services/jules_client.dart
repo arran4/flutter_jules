@@ -181,13 +181,21 @@ class JulesClient {
     }
   }
 
-  Future<List<Source>> listSources({void Function(ApiExchange)? onDebug}) async {
-    final url = Uri.parse('$baseUrl/v1alpha/sources');
+  Future<ListSourcesResponse> listSources({
+    int? pageSize,
+    String? pageToken,
+    void Function(ApiExchange)? onDebug,
+  }) async {
+    final queryParams = <String, String>{};
+    if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
+    if (pageToken != null) queryParams['pageToken'] = pageToken;
+
+    final url = Uri.parse('$baseUrl/v1alpha/sources').replace(queryParameters: queryParams);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, () => <Source>[]);
+      return ListSourcesResponse.fromJson(json);
     } else {
       _handleError(response);
       throw Exception('Unreachable');
