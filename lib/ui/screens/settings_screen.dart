@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
+import '../../services/settings_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -107,6 +108,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               value: Provider.of<DevModeProvider>(context).enableApiLogging,
               onChanged: (value) {
                 Provider.of<DevModeProvider>(context, listen: false).toggleApiLogging(value);
+              },
+            ),
+            const Divider(),
+            Consumer<SettingsProvider>(
+              builder: (context, settings, child) {
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text('Session Page Size: ${settings.sessionPageSize}',
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Slider(
+                      value: settings.sessionPageSize.toDouble(),
+                      min: 10,
+                      max: 100,
+                      divisions: 9,
+                      label: settings.sessionPageSize.toString(),
+                      onChanged: (double value) {
+                        settings.setSessionPageSize(value.toInt());
+                      },
+                    ),
+                    const Text(
+                      'Higher values load more data but may be slower. API Max is 100.',
+                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                    ),
+                  ],
+                );
               },
             ),
             const Spacer(),

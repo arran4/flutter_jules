@@ -5,6 +5,7 @@ import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../models.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
@@ -70,10 +71,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       final sessionProvider =
           Provider.of<SessionProvider>(context, listen: false);
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
 
       // Use the provider to fetch. It updates its own state.
       await sessionProvider.fetchSessions(client,
-          force: force, loadMore: loadMore);
+          force: force, loadMore: loadMore, pageSize: settings.sessionPageSize);
 
       if (mounted) {
         setState(() {}); // Trigger rebuild to reflect new data
@@ -428,22 +430,33 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                 // If we have more but filtered list exhausted or just scrolling
                                 if (items.isEmpty) {
                                   // Explicit button for empty filtered list
+                                  final pageSize = Provider.of<SettingsProvider>(context, listen: false).sessionPageSize;
                                   return Padding(
                                     padding: const EdgeInsets.all(16.0),
                                     child: Center(
-                                      child: ElevatedButton(
-                                        onPressed: () =>
-                                            _fetchSessions(loadMore: true),
-                                        child: isLoading
-                                            ? const SizedBox(
-                                                width: 20,
-                                                height: 20,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              )
-                                            : const Text('Load More History'),
+                                      child: Column(
+                                        children: [
+                                          Text(
+                                            'Loaded ${sessions.length} sessions total, but none match the current filter.',
+                                            textAlign: TextAlign.center,
+                                            style: const TextStyle(color: Colors.grey),
+                                          ),
+                                          const SizedBox(height: 8),
+                                          ElevatedButton(
+                                            onPressed: () =>
+                                                _fetchSessions(loadMore: true),
+                                            child: isLoading
+                                                ? const SizedBox(
+                                                    width: 20,
+                                                    height: 20,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : Text('Load next $pageSize options'),
+                                          ),
+                                        ],
                                       ),
                                     ),
                                   );

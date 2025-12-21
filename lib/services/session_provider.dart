@@ -22,7 +22,7 @@ class SessionProvider extends ChangeNotifier {
   static const Duration _cacheDuration = Duration(minutes: 2);
 
   Future<void> fetchSessions(JulesClient client,
-      {bool force = false, bool loadMore = false}) async {
+      {bool force = false, bool loadMore = false, int pageSize = 30}) async {
     // If loading more but no next page, return
     if (loadMore && _nextPageToken == null) return;
 
@@ -50,6 +50,7 @@ class SessionProvider extends ChangeNotifier {
       }
 
       final response = await client.listSessions(
+        pageSize: pageSize,
         pageToken: pageToken,
         onDebug: (exchange) {
           _lastExchange = exchange;
