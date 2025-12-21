@@ -19,18 +19,27 @@ class SessionDetailScreen extends StatefulWidget {
 }
 
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
+  late Session _session;
   List<Activity> _activities = [];
   bool _isLoading = false;
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
+  final TextEditingController _messageController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
+    _session = widget.session;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchActivities();
     });
+  }
+
+  @override
+  void dispose() {
+    _messageController.dispose();
+    super.dispose();
   }
 
   Future<void> _fetchActivities() async {
@@ -42,15 +51,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final activities = await client.listActivities(
-        widget.session.name,
-        onDebug: (exchange) {
-          _lastExchange = exchange;
-        },
-      );
+      final results = await Future.wait([
+        client.listActivities(
+          widget.session.name,
+          onDebug: (exchange) {
+            _lastExchange = exchange;
+          },
+        ),
+        client.getSession(widget.session.name),
+      ]);
+
       if (mounted) {
         setState(() {
-          _activities = activities;
+          _activities = results[0] as List<Activity>;
+          _session = results[1] as Session;
           _lastFetchTime = DateTime.now();
         });
       }
@@ -68,32 +82,36 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       }
     }
   }
-  
+
   Future<void> _sendMessage(String message) async {
-      try {
-          final client = Provider.of<AuthProvider>(context, listen: false).client;
-          await client.sendMessage(widget.session.name, message);
-          _fetchActivities(); 
-      } catch (e) {
-          if(mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-          }
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      await client.sendMessage(_session.name, message);
+      _messageController.clear();
+      _fetchActivities();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
       }
+    }
   }
-  
+
   Future<void> _approvePlan() async {
-      try {
-          final client = Provider.of<AuthProvider>(context, listen: false).client;
-          await client.approvePlan(widget.session.name);
-          if(mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Plan Approved")));
-          }
-          _fetchActivities();
-      } catch (e) {
-           if(mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text("Error: $e")));
-           }
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      await client.approvePlan(_session.name);
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(const SnackBar(content: Text("Plan Approved")));
       }
+      _fetchActivities();
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
+    }
   }
 
   @override
@@ -113,25 +131,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(
-          widget.session.title ?? 'Session Detail',
+          _session.title ?? 'Session Detail',
           maxLines: 1,
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
           if (isDevMode)
-             IconButton(
-               icon: const Icon(Icons.data_object),
-               tooltip: 'View Session Data',
-               onPressed: () {
-                 showDialog(
-                   context: context,
-                   builder: (context) => ModelViewer(
-                     data: widget.session.toJson(),
-                     title: 'Session Data',
-                   ),
-                 );
-               },
-             ),
+            IconButton(
+              icon: const Icon(Icons.data_object),
+              tooltip: 'View Session Data',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: _session.toJson(),
+                    title: 'Session Data',
+                  ),
+                );
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.replay),
             onPressed: _fetchActivities,
@@ -153,8 +171,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text(
-                          "State: ${widget.session.state.toString().split('.').last}"),
-                      Text("Prompt: ${widget.session.prompt}"),
+                          "State: ${_session.state.toString().split('.').last}"),
+                      Text("Prompt: ${_session.prompt}"),
                       if (_lastFetchTime != null)
                         Text(
                           'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
@@ -170,14 +188,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // Footer (Chat Input)
           if (index == itemCount - 1) {
+            final hasText = _messageController.text.isNotEmpty;
+            final canApprove =
+                _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+
             return Padding(
               padding: const EdgeInsets.all(8.0),
               child: Row(
                 children: [
                   Expanded(
                     child: TextField(
+                      controller: _messageController,
                       decoration:
                           const InputDecoration(hintText: "Send message..."),
+                      onChanged: (text) => setState(() {}),
                       onSubmitted: (value) {
                         if (value.isNotEmpty) {
                           _sendMessage(value);
@@ -185,11 +209,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       },
                     ),
                   ),
-                  if (widget.session.state ==
-                      SessionState.AWAITING_PLAN_APPROVAL)
+                  const SizedBox(width: 8),
+                  if (hasText)
+                    IconButton(
+                      icon: const Icon(Icons.send),
+                      onPressed: () => _sendMessage(_messageController.text),
+                      tooltip: 'Send Message',
+                    )
+                  else if (canApprove)
                     ElevatedButton(
                         onPressed: _approvePlan,
                         child: const Text("Approve Plan"))
+                  else
+                    const IconButton(
+                      icon: Icon(Icons.send),
+                      onPressed: null,
+                      tooltip: 'Send Message (Empty)',
+                    ),
                 ],
               ),
             );

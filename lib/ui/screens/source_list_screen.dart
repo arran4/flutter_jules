@@ -124,8 +124,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
       // Run both requests
       await Future.wait([
         sourceProvider.fetchSources(client, force: force),
-        client.listSessions().then((sessions) {
-          _processSessions(sessions);
+        client.listSessions().then((response) {
+          _processSessions(response.sessions);
         }),
       ]);
 
