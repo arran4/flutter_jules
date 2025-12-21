@@ -51,20 +51,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final results = await Future.wait([
-        client.listActivities(
+      
+      // Fetch session details first
+      Session? updatedSession;
+      try {
+        updatedSession = await client.getSession(widget.session.name);
+      } catch (e) {
+        throw Exception('Failed to load session details: $e');
+      }
+      
+      // Then fetch activities
+      List<Activity> activities;
+      try {
+        activities = await client.listActivities(
           widget.session.name,
           onDebug: (exchange) {
             _lastExchange = exchange;
           },
-        ),
-        client.getSession(widget.session.name),
-      ]);
+        );
+      } catch (e) {
+        throw Exception('Failed to load conversation history: $e');
+      }
 
       if (mounted) {
         setState(() {
-          _activities = results[0] as List<Activity>;
-          _session = results[1] as Session;
+          _activities = activities;
+          _session = updatedSession!;
           _lastFetchTime = DateTime.now();
         });
       }
