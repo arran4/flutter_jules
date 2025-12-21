@@ -124,8 +124,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
       // Run both requests
       await Future.wait([
         sourceProvider.fetchSources(client, force: force),
-        client.listSessions().then((sessions) {
-          _processSessions(sessions);
+        client.listSessions().then((response) {
+          _processSessions(response.sessions);
         }),
       ]);
 
@@ -285,16 +285,31 @@ class _SourceListScreenState extends State<SourceListScreen> {
                               final isPrivate = repo?.isPrivate ?? false;
                               final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
                               final branchCount = repo?.branches?.length;
+                              final owner = repo?.owner ?? "Unknown Owner";
+
+                              // Masking and Access Info Logic
+                              String titleText = repo?.repo ?? source.name;
+                              String participantsInfo = "Participants: $owner";
+                              String accessInfo = "";
+
+                              if (isPrivate) {
+                                // Mask the title for private forums
+                                titleText = "*****";
+                                // Participants are shown via 'participantsInfo'
+                              } else {
+                                // Public/Normal forum
+                                accessInfo = " • Access: Anyone";
+                              }
 
                               return Card(
                                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                                 child: ListTile(
                                   leading: Icon(isPrivate ? Icons.lock : Icons.public),
-                                  title: Text(repo?.repo ?? source.name),
+                                  title: Text(titleText),
                                   subtitle: Column(
                                     crossAxisAlignment: CrossAxisAlignment.start,
                                     children: [
-                                      Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                      Text('$participantsInfo$accessInfo • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
                                       const SizedBox(height: 4),
                                       Row(
                                         children: [
