@@ -50,36 +50,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     });
 
     try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      
-      // Fetch session details first
-      Session? updatedSession;
-      try {
-        updatedSession = await client.getSession(widget.session.name);
-      } catch (e) {
-        throw Exception('Failed to load session details: $e');
-      }
-      
-      // Then fetch activities
-      List<Activity> activities;
-      try {
-        activities = await client.listActivities(
-          widget.session.name,
-          onDebug: (exchange) {
-            _lastExchange = exchange;
-          },
-        );
-      } catch (e) {
-        throw Exception('Failed to load conversation history: $e');
-      }
-
-      if (mounted) {
-        setState(() {
-          _activities = activities;
-          _session = updatedSession!;
-          _lastFetchTime = DateTime.now();
-        });
-      }
+      // Add timeout to prevent indefinite hanging
+      await Future.any([
+        _performFetchActivities(),
+        Future.delayed(const Duration(seconds: 30)).then((_) {
+          throw Exception('Request timed out after 30 seconds. Please check your connection and try again.');
+        }),
+      ]);
     } catch (e) {
       if (mounted) {
         setState(() {
@@ -92,6 +69,50 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _performFetchActivities() async {
+    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final devMode = Provider.of<DevModeProvider>(context, listen: false);
+    final enableLogging = devMode.enableApiLogging;
+    
+    // Fetch session details first
+    Session? updatedSession;
+    try {
+      if (enableLogging) print('DEBUG: Fetching session details for ${widget.session.name}');
+      updatedSession = await client.getSession(widget.session.name);
+      if (enableLogging) print('DEBUG: Session details fetched successfully');
+    } catch (e) {
+      if (enableLogging) print('DEBUG: Failed to fetch session details: $e');
+      throw Exception('Failed to load session details: $e');
+    }
+    
+    // Then fetch activities
+    List<Activity> activities;
+    try {
+      if (enableLogging) print('DEBUG: Fetching activities for ${widget.session.name}');
+      activities = await client.listActivities(
+        widget.session.name,
+        onDebug: (exchange) {
+          if (enableLogging) {
+            print('DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
+          }
+          _lastExchange = exchange;
+        },
+      );
+      if (enableLogging) print('DEBUG: Activities fetched successfully - count: ${activities.length}');
+    } catch (e) {
+      if (enableLogging) print('DEBUG: Failed to fetch activities: $e');
+      throw Exception('Failed to load conversation history: $e');
+    }
+
+    if (mounted) {
+      setState(() {
+        _activities = activities;
+        _session = updatedSession!;
+        _lastFetchTime = DateTime.now();
+      });
     }
   }
 

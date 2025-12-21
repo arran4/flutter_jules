@@ -101,6 +101,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 Provider.of<DevModeProvider>(context, listen: false).toggleDevMode(value);
               },
             ),
+            SwitchListTile(
+              title: const Text('API Logging'),
+              subtitle: const Text('Log API requests and responses to console'),
+              value: Provider.of<DevModeProvider>(context).enableApiLogging,
+              onChanged: (value) {
+                Provider.of<DevModeProvider>(context, listen: false).toggleApiLogging(value);
+              },
+            ),
             const Spacer(),
             TextButton(
               onPressed: () async {

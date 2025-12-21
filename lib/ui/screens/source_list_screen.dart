@@ -121,13 +121,38 @@ class _SourceListScreenState extends State<SourceListScreen> {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-      // Run both requests
-      await Future.wait([
-        sourceProvider.fetchSources(client, force: force),
-        client.listSessions().then((response) {
-          _processSessions(response.sessions);
-        }),
-      ]);
+      // Listen for source provider updates to update UI progressively
+      void updateListener() {
+        if (mounted) {
+          setState(() {
+            _onSearchChanged();
+          });
+        }
+      }
+      
+      sourceProvider.addListener(updateListener);
+
+      try {
+        // Run both requests
+        await Future.wait([
+          sourceProvider.fetchSources(client, force: force),
+          client.listSessions().then((response) {
+            _processSessions(response.sessions);
+          }),
+        ]);
+
+        // Show completion snackbar
+        if (mounted && sourceProvider.fetchComplete) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: Text('Loaded ${sourceProvider.sources.length} sources in ${sourceProvider.totalPages} page${sourceProvider.totalPages != 1 ? 's' : ''}'),
+              duration: const Duration(seconds: 2),
+            ),
+          );
+        }
+      } finally {
+        sourceProvider.removeListener(updateListener);
+      }
 
       if (mounted) {
         setState(() {
@@ -213,7 +238,31 @@ class _SourceListScreenState extends State<SourceListScreen> {
         ],
       ),
       body: _isLoading
-          ? const Center(child: CircularProgressIndicator())
+          ? Consumer<SourceProvider>(
+              builder: (context, sourceProvider, child) {
+                if (sourceProvider.isFetching && sourceProvider.currentPage > 0) {
+                  return Center(
+                    child: Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(
+                          'Loading page ${sourceProvider.currentPage}...',
+                          style: Theme.of(context).textTheme.titleMedium,
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          '${sourceProvider.sources.length} sources loaded so far',
+                          style: Theme.of(context).textTheme.bodyMedium,
+                        ),
+                      ],
+                    ),
+                  );
+                }
+                return const Center(child: CircularProgressIndicator());
+              },
+            )
           : _error != null
               ? Center(
                   child: Padding(

@@ -227,7 +227,7 @@ class Activity {
   Activity({
     required this.name,
     required this.id,
-    required this.description,
+    this.description = '',
     required this.createTime,
     this.originator,
     this.artifacts,
@@ -244,7 +244,7 @@ class Activity {
     return Activity(
       name: getStringPropOrThrow(json, 'name'),
       id: getStringPropOrThrow(json, 'id'),
-      description: getStringPropOrThrow(json, 'description'),
+      description: getStringPropOrDefault(json, 'description', ''),
       createTime: getStringPropOrThrow(json, 'createTime'),
       originator: getStringPropOrDefault(json, 'originator', null),
       artifacts: getObjectArrayPropOrDefaultFunction(json, 'artifacts', Artifact.fromJson, () => null),

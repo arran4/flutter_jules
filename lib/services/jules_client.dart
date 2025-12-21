@@ -159,8 +159,13 @@ class JulesClient {
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
-      final json = jsonDecode(response.body);
-      return getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, () => <Activity>[]);
+      try {
+        final json = jsonDecode(response.body);
+        final activities = getObjectArrayPropOrDefaultFunction(json, 'activities', Activity.fromJson, () => <Activity>[]);
+        return activities;
+      } catch (e) {
+        throw Exception('Failed to parse activities response: $e\nResponse body: ${response.body}');
+      }
     } else {
       _handleError(response);
       throw Exception('Unreachable');
