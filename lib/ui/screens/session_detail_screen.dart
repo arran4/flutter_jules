@@ -54,7 +54,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       await Future.any([
         _performFetchActivities(),
         Future.delayed(const Duration(seconds: 30)).then((_) {
-          throw Exception('Request timed out after 30 seconds. Please check your connection and try again.');
+          throw Exception(
+              'Request timed out after 30 seconds. Please check your connection and try again.');
         }),
       ]);
     } catch (e) {
@@ -76,32 +77,37 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final client = Provider.of<AuthProvider>(context, listen: false).client;
     final devMode = Provider.of<DevModeProvider>(context, listen: false);
     final enableLogging = devMode.enableApiLogging;
-    
+
     // Fetch session details first
     Session? updatedSession;
     try {
-      if (enableLogging) print('DEBUG: Fetching session details for ${widget.session.name}');
+      if (enableLogging)
+        print('DEBUG: Fetching session details for ${widget.session.name}');
       updatedSession = await client.getSession(widget.session.name);
       if (enableLogging) print('DEBUG: Session details fetched successfully');
     } catch (e) {
       if (enableLogging) print('DEBUG: Failed to fetch session details: $e');
       throw Exception('Failed to load session details: $e');
     }
-    
+
     // Then fetch activities
     List<Activity> activities;
     try {
-      if (enableLogging) print('DEBUG: Fetching activities for ${widget.session.name}');
+      if (enableLogging)
+        print('DEBUG: Fetching activities for ${widget.session.name}');
       activities = await client.listActivities(
         widget.session.name,
         onDebug: (exchange) {
           if (enableLogging) {
-            print('DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
+            print(
+                'DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
           }
           _lastExchange = exchange;
         },
       );
-      if (enableLogging) print('DEBUG: Activities fetched successfully - count: ${activities.length}');
+      if (enableLogging)
+        print(
+            'DEBUG: Activities fetched successfully - count: ${activities.length}');
     } catch (e) {
       if (enableLogging) print('DEBUG: Failed to fetch activities: $e');
       throw Exception('Failed to load conversation history: $e');
@@ -284,8 +290,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     const SizedBox(height: 8),
                     SelectableText(_error!, textAlign: TextAlign.center),
                     TextButton(
-                        onPressed: _fetchActivities,
-                        child: const Text("Retry"))
+                        onPressed: _fetchActivities, child: const Text("Retry"))
                   ],
                 ),
               ),

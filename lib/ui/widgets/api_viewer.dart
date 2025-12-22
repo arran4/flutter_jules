@@ -113,9 +113,7 @@ class ApiViewer extends StatelessWidget {
     return SingleChildScrollView(
       padding: const EdgeInsets.all(8.0),
       child: SelectableText(
-        censoredHeaders.entries
-            .map((e) => '${e.key}: ${e.value}')
-            .join('\n'),
+        censoredHeaders.entries.map((e) => '${e.key}: ${e.value}').join('\n'),
         style: const TextStyle(fontFamily: 'monospace'),
       ),
     );

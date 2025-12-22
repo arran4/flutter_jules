@@ -38,7 +38,8 @@ class SessionOutput {
 
   factory SessionOutput.fromJson(Map<String, dynamic> json) {
     return SessionOutput(
-      pullRequest: getObjectFunctionPropOrDefault(json, 'pullRequest', PullRequest.fromJson, null),
+      pullRequest: getObjectFunctionPropOrDefault(
+          json, 'pullRequest', PullRequest.fromJson, null),
     );
   }
 
@@ -93,18 +94,26 @@ class Session {
       name: getStringPropOrThrow(json, 'name'),
       id: getStringPropOrThrow(json, 'id'),
       prompt: getStringPropOrThrow(json, 'prompt'),
-      sourceContext: getObjectFunctionPropOrThrow(json, 'sourceContext', SourceContext.fromJson),
+      sourceContext: getObjectFunctionPropOrThrow(
+          json, 'sourceContext', SourceContext.fromJson),
       title: getStringPropOrDefault(json, 'title', null),
-      requirePlanApproval: getBooleanPropOrDefault(json, 'requirePlanApproval', false),
-      automationMode: getEnumPropOrDefault(json, 'automationMode', AutomationMode.values, AutomationMode.AUTOMATION_MODE_UNSPECIFIED),
+      requirePlanApproval:
+          getBooleanPropOrDefault(json, 'requirePlanApproval', false),
+      automationMode: getEnumPropOrDefault(json, 'automationMode',
+          AutomationMode.values, AutomationMode.AUTOMATION_MODE_UNSPECIFIED),
       createTime: getStringPropOrDefault(json, 'createTime', null),
       updateTime: getStringPropOrDefault(json, 'updateTime', null),
-      state: getEnumPropOrDefault(json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
+      state: getEnumPropOrDefault(
+          json, 'state', SessionState.values, SessionState.STATE_UNSPECIFIED),
       url: getStringPropOrDefault(json, 'url', null),
-      outputs: getObjectArrayPropOrDefaultFunction(json, 'outputs', SessionOutput.fromJson, () => null),
-      images: getObjectArrayPropOrDefaultFunction(json, 'images', Media.fromJson, () => null),
-      currentStep: getNumberPropOrDefault<num?>(json, 'currentStep', null)?.toInt(),
-      totalSteps: getNumberPropOrDefault<num?>(json, 'totalSteps', null)?.toInt(),
+      outputs: getObjectArrayPropOrDefaultFunction(
+          json, 'outputs', SessionOutput.fromJson, () => null),
+      images: getObjectArrayPropOrDefaultFunction(
+          json, 'images', Media.fromJson, () => null),
+      currentStep:
+          getNumberPropOrDefault<num?>(json, 'currentStep', null)?.toInt(),
+      totalSteps:
+          getNumberPropOrDefault<num?>(json, 'totalSteps', null)?.toInt(),
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
     );
   }
@@ -117,7 +126,8 @@ class Session {
       'sourceContext': sourceContext.toJson(),
     };
     if (title != null) map['title'] = title;
-    if (requirePlanApproval != null) map['requirePlanApproval'] = requirePlanApproval;
+    if (requirePlanApproval != null)
+      map['requirePlanApproval'] = requirePlanApproval;
     if (automationMode != null) {
       map['automationMode'] = automationMode.toString().split('.').last;
     }
@@ -140,9 +150,10 @@ class Session {
   }
 }
 
-T? getEnumPropOrDefault<T>(Map<String, dynamic> json, String key, List<T> values, T? defaultValue) {
+T? getEnumPropOrDefault<T>(
+    Map<String, dynamic> json, String key, List<T> values, T? defaultValue) {
   if (json[key] == null) {
-      return defaultValue;
+    return defaultValue;
   }
   return values.firstWhere(
     (e) => e.toString().split('.').last == json[key],
@@ -161,7 +172,8 @@ class ListSessionsResponse {
 
   factory ListSessionsResponse.fromJson(Map<String, dynamic> json) {
     return ListSessionsResponse(
-      sessions: getObjectArrayPropOrDefaultFunction(json, 'sessions', Session.fromJson, () => <Session>[]),
+      sessions: getObjectArrayPropOrDefaultFunction(
+          json, 'sessions', Session.fromJson, () => <Session>[]),
       nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
     );
   }

@@ -30,7 +30,8 @@ class SourceContext {
   factory SourceContext.fromJson(Map<String, dynamic> json) {
     return SourceContext(
       source: getStringPropOrThrow(json, 'source'),
-      githubRepoContext: getObjectFunctionPropOrDefault(json, 'githubRepoContext', GitHubRepoContext.fromJson, null),
+      githubRepoContext: getObjectFunctionPropOrDefault(
+          json, 'githubRepoContext', GitHubRepoContext.fromJson, null),
     );
   }
 
@@ -56,7 +57,8 @@ class ListSourcesResponse {
 
   factory ListSourcesResponse.fromJson(Map<String, dynamic> json) {
     return ListSourcesResponse(
-      sources: getObjectArrayPropOrDefaultFunction(json, 'sources', Source.fromJson, () => <Source>[]),
+      sources: getObjectArrayPropOrDefaultFunction(
+          json, 'sources', Source.fromJson, () => <Source>[]),
       nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
     );
   }
@@ -96,8 +98,10 @@ class GitHubRepo {
       owner: getStringPropOrThrow(json, 'owner'),
       repo: getStringPropOrThrow(json, 'repo'),
       isPrivate: getBooleanPropOrThrow(json, 'isPrivate'),
-      defaultBranch: getObjectFunctionPropOrDefault(json, 'defaultBranch', GitHubBranch.fromJson, null),
-      branches: getObjectArrayPropOrDefaultFunction(json, 'branches', GitHubBranch.fromJson, () => null),
+      defaultBranch: getObjectFunctionPropOrDefault(
+          json, 'defaultBranch', GitHubBranch.fromJson, null),
+      branches: getObjectArrayPropOrDefaultFunction(
+          json, 'branches', GitHubBranch.fromJson, () => null),
     );
   }
 
@@ -132,7 +136,8 @@ class Source {
     return Source(
       name: getStringPropOrThrow(json, 'name'),
       id: getStringPropOrThrow(json, 'id'),
-      githubRepo: getObjectFunctionPropOrDefault(json, 'githubRepo', GitHubRepo.fromJson, null),
+      githubRepo: getObjectFunctionPropOrDefault(
+          json, 'githubRepo', GitHubRepo.fromJson, null),
     );
   }
 

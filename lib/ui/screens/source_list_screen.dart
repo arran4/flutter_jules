@@ -45,8 +45,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   void _onScroll() {
     // Load more when scrolling near bottom
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200) {
-      final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    if (_scrollController.position.pixels >=
+        _scrollController.position.maxScrollExtent - 200) {
+      final sourceProvider =
+          Provider.of<SourceProvider>(context, listen: false);
       if (sourceProvider.hasMorePages && !sourceProvider.isFetching) {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         sourceProvider.loadNextPage(client);
@@ -110,8 +112,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
           final lastUsedA = _lastUsed[a.name];
           final lastUsedB = _lastUsed[b.name];
           if (lastUsedA != null && lastUsedB != null) {
-             final timeCmp = lastUsedB.compareTo(lastUsedA);
-             if (timeCmp != 0) return timeCmp;
+            final timeCmp = lastUsedB.compareTo(lastUsedA);
+            if (timeCmp != 0) return timeCmp;
           }
           break;
         case SortOption.alphabetical:
@@ -193,28 +195,28 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _processSessions(List<Session> sessions) {
-      _usageCount.clear();
-      _lastUsed.clear();
+    _usageCount.clear();
+    _lastUsed.clear();
 
-      for (final session in sessions) {
-        final sourceName = session.sourceContext.source;
-        _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
+    for (final session in sessions) {
+      final sourceName = session.sourceContext.source;
+      _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
 
-        DateTime? sessionTime;
-        if (session.updateTime != null) {
-          sessionTime = DateTime.tryParse(session.updateTime!);
-        }
-        if (sessionTime == null && session.createTime != null) {
-          sessionTime = DateTime.tryParse(session.createTime!);
-        }
+      DateTime? sessionTime;
+      if (session.updateTime != null) {
+        sessionTime = DateTime.tryParse(session.updateTime!);
+      }
+      if (sessionTime == null && session.createTime != null) {
+        sessionTime = DateTime.tryParse(session.createTime!);
+      }
 
-        if (sessionTime != null) {
-          final existing = _lastUsed[sourceName];
-          if (existing == null || sessionTime.isAfter(existing)) {
-            _lastUsed[sourceName] = sessionTime;
-          }
+      if (sessionTime != null) {
+        final existing = _lastUsed[sourceName];
+        if (existing == null || sessionTime.isAfter(existing)) {
+          _lastUsed[sourceName] = sessionTime;
         }
       }
+    }
   }
 
   @override
@@ -265,34 +267,37 @@ class _SourceListScreenState extends State<SourceListScreen> {
           });
 
           // Show error if initial load failed and no cached data
-          if (_error != null && !sourceProvider.initialLoadComplete && sourceProvider.sources.isEmpty) {
+          if (_error != null &&
+              !sourceProvider.initialLoadComplete &&
+              sourceProvider.sources.isEmpty) {
             return Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.error_outline, color: Colors.red, size: 60),
-                        const SizedBox(height: 16),
-                        Text(
-                          'Error Loading Sources',
-                          style: Theme.of(context).textTheme.titleLarge,
-                        ),
-                        const SizedBox(height: 8),
-                        SelectableText(
-                          _error!,
-                          textAlign: TextAlign.center,
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton(
-                          onPressed: _refreshData,
-                          child: const Text('Retry'),
-                        ),
-                      ],
+              child: Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    const Icon(Icons.error_outline,
+                        color: Colors.red, size: 60),
+                    const SizedBox(height: 16),
+                    Text(
+                      'Error Loading Sources',
+                      style: Theme.of(context).textTheme.titleLarge,
                     ),
-                  ),
-                );
-              }
+                    const SizedBox(height: 8),
+                    SelectableText(
+                      _error!,
+                      textAlign: TextAlign.center,
+                    ),
+                    const SizedBox(height: 16),
+                    ElevatedButton(
+                      onPressed: _refreshData,
+                      child: const Text('Retry'),
+                    ),
+                  ],
+                ),
+              ),
+            );
+          }
 
           // Show content with loading indicators
           return Column(
@@ -315,7 +320,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 ),
               ),
               // Loading indicator for initial load
-              if (sourceProvider.isFetching && !sourceProvider.initialLoadComplete)
+              if (sourceProvider.isFetching &&
+                  !sourceProvider.initialLoadComplete)
                 Padding(
                   padding: const EdgeInsets.all(8.0),
                   child: Row(
@@ -336,7 +342,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 ),
               // Source list
               Expanded(
-                child: _filteredSources.isEmpty && sourceProvider.initialLoadComplete
+                child: _filteredSources.isEmpty &&
+                        sourceProvider.initialLoadComplete
                     ? Center(
                         child: Text(
                           _searchController.text.isEmpty
@@ -347,7 +354,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                       )
                     : ListView.builder(
                         controller: _scrollController,
-                        itemCount: _filteredSources.length + (sourceProvider.hasMorePages ? 1 : 0),
+                        itemCount: _filteredSources.length +
+                            (sourceProvider.hasMorePages ? 1 : 0),
                         itemBuilder: (context, index) {
                           // Loading indicator at bottom
                           if (index == _filteredSources.length) {
@@ -360,12 +368,15 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                     const SizedBox(
                                       width: 16,
                                       height: 16,
-                                      child: CircularProgressIndicator(strokeWidth: 2),
+                                      child: CircularProgressIndicator(
+                                          strokeWidth: 2),
                                     ),
                                     const SizedBox(width: 12),
                                     Text(
                                       'Loading more sources...',
-                                      style: Theme.of(context).textTheme.bodyMedium,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .bodyMedium,
                                     ),
                                   ],
                                 ),
@@ -374,67 +385,83 @@ class _SourceListScreenState extends State<SourceListScreen> {
                           }
 
                           final source = _filteredSources[index];
-                              final count = _usageCount[source.name] ?? 0;
-                              final lastUsedDate = _lastUsed[source.name];
+                          final count = _usageCount[source.name] ?? 0;
+                          final lastUsedDate = _lastUsed[source.name];
 
-                              final repo = source.githubRepo;
-                              final isPrivate = repo?.isPrivate ?? false;
-                              final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
-                              final branchCount = repo?.branches?.length;
+                          final repo = source.githubRepo;
+                          final isPrivate = repo?.isPrivate ?? false;
+                          final defaultBranch =
+                              repo?.defaultBranch?.displayName ?? 'N/A';
+                          final branchCount = repo?.branches?.length;
 
-                              return Card(
-                                margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                child: ListTile(
-                                  leading: Icon(isPrivate ? Icons.lock : Icons.public),
-                                  title: Text(repo?.repo ?? source.name),
-                                  subtitle: Column(
-                                    crossAxisAlignment: CrossAxisAlignment.start,
+                          return Card(
+                            margin: const EdgeInsets.symmetric(
+                                horizontal: 8, vertical: 4),
+                            child: ListTile(
+                              leading:
+                                  Icon(isPrivate ? Icons.lock : Icons.public),
+                              title: Text(repo?.repo ?? source.name),
+                              subtitle: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                      '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                  const SizedBox(height: 4),
+                                  Row(
                                     children: [
-                                      Text('${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
-                                      const SizedBox(height: 4),
-                                      Row(
-                                        children: [
-                                          if (count > 0)
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
-                                              decoration: BoxDecoration(
-                                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                                borderRadius: BorderRadius.circular(4),
-                                              ),
-                                              child: Text(
-                                                '$count sessions',
-                                                style: Theme.of(context).textTheme.labelSmall,
-                                              ),
-                                            ),
-                                          if (count > 0) const SizedBox(width: 8),
-                                          if (lastUsedDate != null)
-                                            Text(
-                                              'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                              style: Theme.of(context).textTheme.bodySmall,
-                                            ),
-                                          if (count == 0)
-                                             Text(
-                                              'Never used',
-                                              style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                                            ),
-                                        ],
-                                      ),
+                                      if (count > 0)
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(
+                                              horizontal: 6, vertical: 2),
+                                          decoration: BoxDecoration(
+                                            color: Theme.of(context)
+                                                .colorScheme
+                                                .surfaceContainerHighest,
+                                            borderRadius:
+                                                BorderRadius.circular(4),
+                                          ),
+                                          child: Text(
+                                            '$count sessions',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .labelSmall,
+                                          ),
+                                        ),
+                                      if (count > 0) const SizedBox(width: 8),
+                                      if (lastUsedDate != null)
+                                        Text(
+                                          'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall,
+                                        ),
+                                      if (count == 0)
+                                        Text(
+                                          'Never used',
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                  fontStyle: FontStyle.italic),
+                                        ),
                                     ],
                                   ),
-                                  isThreeLine: true,
-                                  onTap: () {
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (context) =>
-                                            SessionListScreen(sourceFilter: source.name),
-                                      ),
-                                    );
-                                  },
+                                ],
+                              ),
+                              isThreeLine: true,
+                              onTap: () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (context) => SessionListScreen(
+                                        sourceFilter: source.name),
                                   ),
                                 );
-                            },
-                          ),
+                              },
+                            ),
+                          );
+                        },
+                      ),
               ),
             ],
           );

@@ -64,7 +64,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: TokenType.values.map((type) {
                 return DropdownMenuItem(
                   value: type,
-                  child: Text(type == TokenType.apiKey ? 'API Key' : 'Access Token'),
+                  child: Text(
+                      type == TokenType.apiKey ? 'API Key' : 'Access Token'),
                 );
               }).toList(),
               onChanged: (value) {
@@ -99,7 +100,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Enable advanced debugging features'),
               value: Provider.of<DevModeProvider>(context).isDevMode,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false).toggleDevMode(value);
+                Provider.of<DevModeProvider>(context, listen: false)
+                    .toggleDevMode(value);
               },
             ),
             SwitchListTile(
@@ -107,7 +109,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Log API requests and responses to console'),
               value: Provider.of<DevModeProvider>(context).enableApiLogging,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false).toggleApiLogging(value);
+                Provider.of<DevModeProvider>(context, listen: false)
+                    .toggleApiLogging(value);
               },
             ),
             const Divider(),
@@ -139,7 +142,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Spacer(),
             TextButton(
               onPressed: () async {
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
                 await authProvider.logout();
                 if (mounted) {
                   Navigator.of(context).popUntil((route) => route.isFirst);

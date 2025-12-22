@@ -166,77 +166,80 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _showFilterDialog() {
-     // Get all unique statuses from the FULL list (not filtered)
-     final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
-     final allSessions = sessionProvider.sessions;
-     final allStatuses = allSessions.map((s) => s.state).whereType<SessionState>().toSet().toList();
-     allStatuses.sort((a, b) => a.index.compareTo(b.index));
+    // Get all unique statuses from the FULL list (not filtered)
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final allSessions = sessionProvider.sessions;
+    final allStatuses = allSessions
+        .map((s) => s.state)
+        .whereType<SessionState>()
+        .toSet()
+        .toList();
+    allStatuses.sort((a, b) => a.index.compareTo(b.index));
 
-     showDialog(
-       context: context,
-       builder: (context) {
-         // This StatefulBuilder updates the dialog content
-         return StatefulBuilder(
-           builder: (context, setDialogState) {
-             return AlertDialog(
-               title: const Text('Filter by Status'),
-               content: SingleChildScrollView(
-                 child: Column(
-                   mainAxisSize: MainAxisSize.min,
-                   children: allStatuses.map((status) {
-                     return CheckboxListTile(
-                       title: Text(status.toString().split('.').last),
-                       value: _statusFilters.contains(status) || _statusFilters.isEmpty,
-                       onChanged: (bool? value) {
-                         // Update local filter state
-                         setDialogState(() {
-                           if (value == true) {
-                             if (_statusFilters.isEmpty) {
-                               // Start with only this one
-                               _statusFilters.add(status);
-                             } else {
-                               _statusFilters.add(status);
-                             }
-                           } else {
-                             // Unchecking.
-                             if (_statusFilters.isEmpty) {
-                               // "Select All" was implicit. We need to populate with all OTHER statuses.
-                               _statusFilters.addAll(allStatuses);
-                               _statusFilters.remove(status);
-                             } else {
-                               _statusFilters.remove(status);
-                             }
-                           }
-                         });
+    showDialog(
+        context: context,
+        builder: (context) {
+          // This StatefulBuilder updates the dialog content
+          return StatefulBuilder(builder: (context, setDialogState) {
+            return AlertDialog(
+              title: const Text('Filter by Status'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: allStatuses.map((status) {
+                    return CheckboxListTile(
+                      title: Text(status.toString().split('.').last),
+                      value: _statusFilters.contains(status) ||
+                          _statusFilters.isEmpty,
+                      onChanged: (bool? value) {
+                        // Update local filter state
+                        setDialogState(() {
+                          if (value == true) {
+                            if (_statusFilters.isEmpty) {
+                              // Start with only this one
+                              _statusFilters.add(status);
+                            } else {
+                              _statusFilters.add(status);
+                            }
+                          } else {
+                            // Unchecking.
+                            if (_statusFilters.isEmpty) {
+                              // "Select All" was implicit. We need to populate with all OTHER statuses.
+                              _statusFilters.addAll(allStatuses);
+                              _statusFilters.remove(status);
+                            } else {
+                              _statusFilters.remove(status);
+                            }
+                          }
+                        });
 
-                         // Update the main screen (underneath the dialog)
-                         // We need to call the main state's setState
-                         setState(() {});
-                       },
-                     );
-                   }).toList(),
-                 ),
-               ),
-               actions: [
-                 TextButton(
-                   onPressed: () {
-                     setDialogState(() {
-                       _statusFilters.clear(); // Clear means "Show All"
-                     });
-                     setState(() {});
-                   },
-                   child: const Text('Clear Filter'),
-                 ),
-                 TextButton(
-                   onPressed: () => Navigator.pop(context),
-                   child: const Text('Done'),
-                 ),
-               ],
-             );
-           }
-         );
-       }
-     );
+                        // Update the main screen (underneath the dialog)
+                        // We need to call the main state's setState
+                        setState(() {});
+                      },
+                    );
+                  }).toList(),
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    setDialogState(() {
+                      _statusFilters.clear(); // Clear means "Show All"
+                    });
+                    setState(() {});
+                  },
+                  child: const Text('Clear Filter'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          });
+        });
   }
 
   @override
@@ -251,14 +254,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // Re-calculating display list in build to ensure reactivity
         List<Session> displaySessions = sessions;
         if (widget.sourceFilter != null) {
-          displaySessions = displaySessions.where((s) => s.sourceContext.source == widget.sourceFilter).toList();
+          displaySessions = displaySessions
+              .where((s) => s.sourceContext.source == widget.sourceFilter)
+              .toList();
         }
         if (_statusFilters.isNotEmpty) {
-          displaySessions = displaySessions.where((s) => s.state != null && _statusFilters.contains(s.state)).toList();
+          displaySessions = displaySessions
+              .where((s) => s.state != null && _statusFilters.contains(s.state))
+              .toList();
         }
         // Search
         if (_searchController.text.isNotEmpty) {
-           displaySessions = filterAndSort(
+          displaySessions = filterAndSort(
             items: displaySessions,
             query: _searchController.text,
             accessors: [
@@ -272,25 +279,29 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         // Sort
         if (_groupByStatus) {
-           displaySessions.sort((a, b) {
-             // Handle null states if any
-             final stateA = a.state?.index ?? -1;
-             final stateB = b.state?.index ?? -1;
+          displaySessions.sort((a, b) {
+            // Handle null states if any
+            final stateA = a.state?.index ?? -1;
+            final stateB = b.state?.index ?? -1;
 
-             int cmp = stateA.compareTo(stateB);
-             if (cmp != 0) return cmp;
+            int cmp = stateA.compareTo(stateB);
+            if (cmp != 0) return cmp;
 
-             // Secondary sort
-             final dateA = DateTime.tryParse(a.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-             final dateB = DateTime.tryParse(b.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-             return dateB.compareTo(dateA);
-           });
+            // Secondary sort
+            final dateA = DateTime.tryParse(a.createTime ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = DateTime.tryParse(b.createTime ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            return dateB.compareTo(dateA);
+          });
         } else {
-           displaySessions.sort((a, b) {
-             final dateA = DateTime.tryParse(a.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-             final dateB = DateTime.tryParse(b.createTime ?? '') ?? DateTime.fromMillisecondsSinceEpoch(0);
-             return dateB.compareTo(dateA);
-           });
+          displaySessions.sort((a, b) {
+            final dateA = DateTime.tryParse(a.createTime ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            final dateB = DateTime.tryParse(b.createTime ?? '') ??
+                DateTime.fromMillisecondsSinceEpoch(0);
+            return dateB.compareTo(dateA);
+          });
         }
 
         // Determine items for ListView (headers + items)
@@ -316,7 +327,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           appBar: AppBar(
             title: const Text('Sessions'),
             actions: [
-               IconButton(
+              IconButton(
                 icon: Icon(_groupByStatus ? Icons.layers_clear : Icons.layers),
                 tooltip: _groupByStatus ? 'Ungroup' : 'Group by Status',
                 onPressed: () {
@@ -382,7 +393,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                 const SizedBox(width: 16),
                                 OutlinedButton(
                                   onPressed: () {
-                                    Provider.of<AuthProvider>(context, listen: false)
+                                    Provider.of<AuthProvider>(context,
+                                            listen: false)
                                         .logout();
                                   },
                                   child: const Text('Change Token'),
@@ -394,166 +406,194 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ),
                     )
                   : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Search Sessions',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.search),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Search Sessions',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                          ),
                         ),
-                      ),
-                    ),
-                    if (lastFetchTime != null)
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Text(
-                          'Last updated: ${DateFormat.Hms().format(lastFetchTime)}',
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: () => _fetchSessions(force: true),
-                        child: ListView.builder(
-                          controller: _scrollController,
-                          itemCount: items.length +
-                              (sessionProvider.hasMore ||
-                                      (isLoading && items.isEmpty)
-                                  ? 1
-                                  : 0),
-                          itemBuilder: (context, index) {
-                            if (index >= items.length) {
-                              if (sessionProvider.hasMore) {
-                                // If we have more but filtered list exhausted or just scrolling
-                                if (items.isEmpty) {
-                                  // Explicit button for empty filtered list
-                                  final pageSize = Provider.of<SettingsProvider>(context, listen: false).sessionPageSize;
-                                  return Padding(
-                                    padding: const EdgeInsets.all(16.0),
-                                    child: Center(
-                                      child: Column(
-                                        children: [
-                                          Text(
-                                            'Loaded ${sessions.length} sessions total, but none match the current filter.',
-                                            textAlign: TextAlign.center,
-                                            style: const TextStyle(color: Colors.grey),
+                        if (lastFetchTime != null)
+                          Padding(
+                            padding: const EdgeInsets.all(8.0),
+                            child: Text(
+                              'Last updated: ${DateFormat.Hms().format(lastFetchTime)}',
+                              style: Theme.of(context).textTheme.bodySmall,
+                            ),
+                          ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: () => _fetchSessions(force: true),
+                            child: ListView.builder(
+                              controller: _scrollController,
+                              itemCount: items.length +
+                                  (sessionProvider.hasMore ||
+                                          (isLoading && items.isEmpty)
+                                      ? 1
+                                      : 0),
+                              itemBuilder: (context, index) {
+                                if (index >= items.length) {
+                                  if (sessionProvider.hasMore) {
+                                    // If we have more but filtered list exhausted or just scrolling
+                                    if (items.isEmpty) {
+                                      // Explicit button for empty filtered list
+                                      final pageSize =
+                                          Provider.of<SettingsProvider>(context,
+                                                  listen: false)
+                                              .sessionPageSize;
+                                      return Padding(
+                                        padding: const EdgeInsets.all(16.0),
+                                        child: Center(
+                                          child: Column(
+                                            children: [
+                                              Text(
+                                                'Loaded ${sessions.length} sessions total, but none match the current filter.',
+                                                textAlign: TextAlign.center,
+                                                style: const TextStyle(
+                                                    color: Colors.grey),
+                                              ),
+                                              const SizedBox(height: 8),
+                                              ElevatedButton(
+                                                onPressed: () => _fetchSessions(
+                                                    loadMore: true),
+                                                child: isLoading
+                                                    ? const SizedBox(
+                                                        width: 20,
+                                                        height: 20,
+                                                        child:
+                                                            CircularProgressIndicator(
+                                                          strokeWidth: 2,
+                                                        ),
+                                                      )
+                                                    : Text(
+                                                        'Load next $pageSize options'),
+                                              ),
+                                            ],
                                           ),
-                                          const SizedBox(height: 8),
-                                          ElevatedButton(
-                                            onPressed: () =>
-                                                _fetchSessions(loadMore: true),
-                                            child: isLoading
-                                                ? const SizedBox(
-                                                    width: 20,
-                                                    height: 20,
-                                                    child:
-                                                        CircularProgressIndicator(
-                                                      strokeWidth: 2,
-                                                    ),
-                                                  )
-                                                : Text('Load next $pageSize options'),
+                                        ),
+                                      );
+                                    } else {
+                                      // Loading indicator at bottom of list
+                                      return const Padding(
+                                        padding: EdgeInsets.all(16.0),
+                                        child: Center(
+                                            child: CircularProgressIndicator()),
+                                      );
+                                    }
+                                  } else {
+                                    return const SizedBox.shrink();
+                                  }
+                                }
+
+                                final item = items[index];
+                                if (item is HeaderItem) {
+                                  return Container(
+                                    color: Theme.of(context)
+                                        .colorScheme
+                                        .surfaceContainerHighest,
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: Text(
+                                      item.title,
+                                      style: Theme.of(context)
+                                          .textTheme
+                                          .titleSmall
+                                          ?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                          ),
+                                    ),
+                                  );
+                                } else if (item is SessionItem) {
+                                  final session = item.session;
+                                  final isDevMode =
+                                      Provider.of<DevModeProvider>(context)
+                                          .isDevMode;
+
+                                  final tile = ListTile(
+                                    title: FoldableText(
+                                      session.title ?? session.prompt,
+                                    ),
+                                    subtitle: Column(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.start,
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        Text(session.state
+                                            .toString()
+                                            .split('.')
+                                            .last),
+                                        if (session.state ==
+                                                SessionState.IN_PROGRESS &&
+                                            session.currentStep != null &&
+                                            session.totalSteps != null &&
+                                            session.totalSteps! > 0) ...[
+                                          const SizedBox(height: 4),
+                                          LinearProgressIndicator(
+                                            value: session.currentStep! /
+                                                session.totalSteps!,
+                                          ),
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            'Step ${session.currentStep} of ${session.totalSteps}',
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall,
                                           ),
                                         ],
-                                      ),
+                                        if (session.state ==
+                                                SessionState.IN_PROGRESS &&
+                                            session.currentAction != null) ...[
+                                          const SizedBox(height: 2),
+                                          Text(
+                                            session.currentAction!,
+                                            style: Theme.of(context)
+                                                .textTheme
+                                                .bodySmall
+                                                ?.copyWith(
+                                                    fontStyle:
+                                                        FontStyle.italic),
+                                          ),
+                                        ],
+                                      ],
                                     ),
+                                    onTap: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (context) =>
+                                              SessionDetailScreen(
+                                                  session: session),
+                                        ),
+                                      );
+                                    },
+                                    onLongPress: isDevMode
+                                        ? () => _showContextMenu(context,
+                                            session: session)
+                                        : null,
                                   );
-                                } else {
-                                  // Loading indicator at bottom of list
-                                  return const Padding(
-                                    padding: EdgeInsets.all(16.0),
-                                    child: Center(
-                                        child: CircularProgressIndicator()),
-                                  );
+
+                                  if (isDevMode) {
+                                    return GestureDetector(
+                                      onSecondaryTap: () => _showContextMenu(
+                                          context,
+                                          session: session),
+                                      child: tile,
+                                    );
+                                  } else {
+                                    return tile;
+                                  }
                                 }
-                              } else {
                                 return const SizedBox.shrink();
-                              }
-                            }
-
-                            final item = items[index];
-                            if (item is HeaderItem) {
-                              return Container(
-                                color: Theme.of(context).colorScheme.surfaceContainerHighest,
-                                padding: const EdgeInsets.all(8.0),
-                                child: Text(
-                                  item.title,
-                                  style: Theme.of(context).textTheme.titleSmall?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                  ),
-                                ),
-                              );
-                            } else if (item is SessionItem) {
-                              final session = item.session;
-                              final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
-
-                              final tile = ListTile(
-                                title: FoldableText(
-                                  session.title ?? session.prompt,
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  mainAxisSize: MainAxisSize.min,
-                                  children: [
-                                    Text(session.state.toString().split('.').last),
-                                    if (session.state == SessionState.IN_PROGRESS &&
-                                        session.currentStep != null &&
-                                        session.totalSteps != null &&
-                                        session.totalSteps! > 0) ...[
-                                      const SizedBox(height: 4),
-                                      LinearProgressIndicator(
-                                        value: session.currentStep! / session.totalSteps!,
-                                      ),
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        'Step ${session.currentStep} of ${session.totalSteps}',
-                                        style: Theme.of(context).textTheme.bodySmall,
-                                      ),
-                                    ],
-                                    if (session.state == SessionState.IN_PROGRESS &&
-                                        session.currentAction != null) ...[
-                                      const SizedBox(height: 2),
-                                      Text(
-                                        session.currentAction!,
-                                        style: Theme.of(context).textTheme.bodySmall?.copyWith(fontStyle: FontStyle.italic),
-                                      ),
-                                    ],
-                                  ],
-                                ),
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SessionDetailScreen(session: session),
-                                    ),
-                                  );
-                                },
-                                onLongPress: isDevMode
-                                    ? () => _showContextMenu(context,
-                                        session: session)
-                                    : null,
-                              );
-
-                              if (isDevMode) {
-                                return GestureDetector(
-                                  onSecondaryTap: () => _showContextMenu(
-                                      context,
-                                      session: session),
-                                  child: tile,
-                                );
-                              } else {
-                                return tile;
-                              }
-                            }
-                            return const SizedBox.shrink();
-                          },
+                              },
+                            ),
+                          ),
                         ),
-                      ),
+                      ],
                     ),
-                  ],
-                ),
           floatingActionButton: FloatingActionButton(
             onPressed: _createSession,
             tooltip: 'Create Session',

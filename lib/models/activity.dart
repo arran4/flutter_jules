@@ -45,7 +45,8 @@ class Plan {
   factory Plan.fromJson(Map<String, dynamic> json) {
     return Plan(
       id: getStringPropOrThrow(json, 'id'),
-      steps: getObjectArrayPropOrDefaultFunction(json, 'steps', PlanStep.fromJson, () => <PlanStep>[]),
+      steps: getObjectArrayPropOrDefaultFunction(
+          json, 'steps', PlanStep.fromJson, () => <PlanStep>[]),
       createTime: getStringPropOrThrow(json, 'createTime'),
     );
   }
@@ -76,8 +77,8 @@ class UserMessaged {
 class PlanGenerated {
   final Plan plan;
   PlanGenerated({required this.plan});
-  factory PlanGenerated.fromJson(Map<String, dynamic> json) =>
-      PlanGenerated(plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson));
+  factory PlanGenerated.fromJson(Map<String, dynamic> json) => PlanGenerated(
+      plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson));
   Map<String, dynamic> toJson() => {'plan': plan.toJson()};
 }
 
@@ -131,7 +132,8 @@ class GitPatch {
     return GitPatch(
       unidiffPatch: getStringPropOrThrow(json, 'unidiffPatch'),
       baseCommitId: getStringPropOrThrow(json, 'baseCommitId'),
-      suggestedCommitMessage: getStringPropOrThrow(json, 'suggestedCommitMessage'),
+      suggestedCommitMessage:
+          getStringPropOrThrow(json, 'suggestedCommitMessage'),
     );
   }
 
@@ -151,7 +153,8 @@ class ChangeSet {
   factory ChangeSet.fromJson(Map<String, dynamic> json) {
     return ChangeSet(
       source: getStringPropOrThrow(json, 'source'),
-      gitPatch: getObjectFunctionPropOrDefault(json, 'gitPatch', GitPatch.fromJson, null),
+      gitPatch: getObjectFunctionPropOrDefault(
+          json, 'gitPatch', GitPatch.fromJson, null),
     );
   }
 
@@ -192,9 +195,12 @@ class Artifact {
 
   factory Artifact.fromJson(Map<String, dynamic> json) {
     return Artifact(
-      changeSet: getObjectFunctionPropOrDefault(json, 'changeSet', ChangeSet.fromJson, null),
-      media: getObjectFunctionPropOrDefault(json, 'media', Media.fromJson, null),
-      bashOutput: getObjectFunctionPropOrDefault(json, 'bashOutput', BashOutput.fromJson, null),
+      changeSet: getObjectFunctionPropOrDefault(
+          json, 'changeSet', ChangeSet.fromJson, null),
+      media:
+          getObjectFunctionPropOrDefault(json, 'media', Media.fromJson, null),
+      bashOutput: getObjectFunctionPropOrDefault(
+          json, 'bashOutput', BashOutput.fromJson, null),
     );
   }
 
@@ -214,7 +220,7 @@ class Activity {
   final String createTime;
   final String? originator;
   final List<Artifact>? artifacts;
-  
+
   // Union fields
   final AgentMessaged? agentMessaged;
   final UserMessaged? userMessaged;
@@ -247,14 +253,22 @@ class Activity {
       description: getStringPropOrDefault(json, 'description', ''),
       createTime: getStringPropOrThrow(json, 'createTime'),
       originator: getStringPropOrDefault(json, 'originator', null),
-      artifacts: getObjectArrayPropOrDefaultFunction(json, 'artifacts', Artifact.fromJson, () => null),
-      agentMessaged: getObjectFunctionPropOrDefault(json, 'agentMessaged', AgentMessaged.fromJson, null),
-      userMessaged: getObjectFunctionPropOrDefault(json, 'userMessaged', UserMessaged.fromJson, null),
-      planGenerated: getObjectFunctionPropOrDefault(json, 'planGenerated', PlanGenerated.fromJson, null),
-      planApproved: getObjectFunctionPropOrDefault(json, 'planApproved', PlanApproved.fromJson, null),
-      progressUpdated: getObjectFunctionPropOrDefault(json, 'progressUpdated', ProgressUpdated.fromJson, null),
-      sessionCompleted: getObjectFunctionPropOrDefault(json, 'sessionCompleted', SessionCompleted.fromJson, null),
-      sessionFailed: getObjectFunctionPropOrDefault(json, 'sessionFailed', SessionFailed.fromJson, null),
+      artifacts: getObjectArrayPropOrDefaultFunction(
+          json, 'artifacts', Artifact.fromJson, () => null),
+      agentMessaged: getObjectFunctionPropOrDefault(
+          json, 'agentMessaged', AgentMessaged.fromJson, null),
+      userMessaged: getObjectFunctionPropOrDefault(
+          json, 'userMessaged', UserMessaged.fromJson, null),
+      planGenerated: getObjectFunctionPropOrDefault(
+          json, 'planGenerated', PlanGenerated.fromJson, null),
+      planApproved: getObjectFunctionPropOrDefault(
+          json, 'planApproved', PlanApproved.fromJson, null),
+      progressUpdated: getObjectFunctionPropOrDefault(
+          json, 'progressUpdated', ProgressUpdated.fromJson, null),
+      sessionCompleted: getObjectFunctionPropOrDefault(
+          json, 'sessionCompleted', SessionCompleted.fromJson, null),
+      sessionFailed: getObjectFunctionPropOrDefault(
+          json, 'sessionFailed', SessionFailed.fromJson, null),
     );
   }
 
@@ -273,8 +287,10 @@ class Activity {
     if (userMessaged != null) map['userMessaged'] = userMessaged!.toJson();
     if (planGenerated != null) map['planGenerated'] = planGenerated!.toJson();
     if (planApproved != null) map['planApproved'] = planApproved!.toJson();
-    if (progressUpdated != null) map['progressUpdated'] = progressUpdated!.toJson();
-    if (sessionCompleted != null) map['sessionCompleted'] = sessionCompleted!.toJson();
+    if (progressUpdated != null)
+      map['progressUpdated'] = progressUpdated!.toJson();
+    if (sessionCompleted != null)
+      map['sessionCompleted'] = sessionCompleted!.toJson();
     if (sessionFailed != null) map['sessionFailed'] = sessionFailed!.toJson();
     return map;
   }

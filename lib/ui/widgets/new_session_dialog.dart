@@ -69,21 +69,23 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
       // If already selected, verify it still exists in the list (important for re-fetches)
       if (_selectedSource != null) {
-          try {
-             _selectedSource = sources.firstWhere((s) => s.name == _selectedSource!.name);
-          } catch (_) {
-             // Selected source no longer exists
-             _selectedSource = null;
-          }
+        try {
+          _selectedSource =
+              sources.firstWhere((s) => s.name == _selectedSource!.name);
+        } catch (_) {
+          // Selected source no longer exists
+          _selectedSource = null;
+        }
       }
 
       // Default to first source if none selected
       if (_selectedSource == null && sources.isNotEmpty) {
-         try {
-            _selectedSource = sources.firstWhere((s) => s.name == 'sources/default');
-         } catch (_) {
-            _selectedSource = sources.first;
-         }
+        try {
+          _selectedSource =
+              sources.firstWhere((s) => s.name == 'sources/default');
+        } catch (_) {
+          _selectedSource = sources.first;
+        }
       }
 
       // Set default branch for the selected source if not already set or invalid
@@ -100,8 +102,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final repo = _selectedSource!.githubRepo;
     if (repo == null) {
-       _selectedBranch = 'main';
-       return;
+      _selectedBranch = 'main';
+      return;
     }
 
     List<String> branches = [];
@@ -137,24 +139,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           final base64Image = base64Encode(bytes);
           final mimeType = response.headers['content-type'] ?? 'image/png';
 
-          images = [
-            Media(data: base64Image, mimeType: mimeType)
-          ];
+          images = [Media(data: base64Image, mimeType: mimeType)];
         } else {
-           if (mounted) {
-             ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(content: Text('Failed to load image: ${response.statusCode}'))
-             );
-             return;
-           }
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                content: Text('Failed to load image: ${response.statusCode}')));
+            return;
+          }
         }
       } catch (e) {
-         if (mounted) {
-           ScaffoldMessenger.of(context).showSnackBar(
-             SnackBar(content: Text('Failed to load image: $e'))
-           );
-           return;
-         }
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text('Failed to load image: $e')));
+          return;
+        }
       }
     }
 
@@ -199,185 +197,191 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(
-      builder: (context, sourceProvider, _) {
-        if (sourceProvider.isFetching && sourceProvider.sources.isEmpty) {
-           // Initial load
-           return const AlertDialog(
-            content: SizedBox(
-              height: 100,
-              child: Center(child: CircularProgressIndicator()),
-            ),
-          );
-        }
-
-        if (sourceProvider.error != null && sourceProvider.sources.isEmpty) {
-          return AlertDialog(
-            title: const Text('Error'),
-            content: Text(sourceProvider.error!),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              )
-            ],
-          );
-        }
-
-        final sources = sourceProvider.sources;
-
-        // Determine available branches for the selected source
-        List<String> branches = [];
-        if (_selectedSource != null && _selectedSource!.githubRepo != null && _selectedSource!.githubRepo!.branches != null) {
-          branches = _selectedSource!.githubRepo!.branches!.map((b) => b.displayName).toList();
-        }
-        if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
-          branches.add(_selectedBranch!);
-        }
-        if (branches.isEmpty) branches.add('main');
-
-        return AlertDialog(
-          title: const Text('New Session', style: TextStyle(fontWeight: FontWeight.bold)),
-          scrollable: true,
+    return Consumer<SourceProvider>(builder: (context, sourceProvider, _) {
+      if (sourceProvider.isFetching && sourceProvider.sources.isEmpty) {
+        // Initial load
+        return const AlertDialog(
           content: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.8,
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                // Mode Selection
-                const Text('I want to...', style: TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                     _buildModeChoice(0, 'Ask a Question'),
-                     const SizedBox(width: 8),
-                     _buildModeChoice(1, 'Create a Plan'),
-                     const SizedBox(width: 8),
-                     _buildModeChoice(2, 'Start Coding'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                // Prompt
-                TextField(
-                  autofocus: true,
-                  maxLines: 6,
-                  decoration: const InputDecoration(
-                    labelText: 'Prompt',
-                    hintText: 'Describe what you want to do...',
-                    border: OutlineInputBorder(),
-                    alignLabelWithHint: true,
-                  ),
-                  onChanged: (val) {
-                    setState(() {
-                      _prompt = val;
-                    });
-                  },
-                ),
-                const SizedBox(height: 16),
-
-                // Image Attachment (URL for now)
-                TextField(
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL (Optional)',
-                    hintText: 'https://example.com/image.png',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.image),
-                  ),
-                  onChanged: (val) => _imageUrl = val,
-                ),
-                const SizedBox(height: 16),
-
-                // Context (Source & Branch)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  children: [
-                    const Text('Context', style: TextStyle(fontWeight: FontWeight.bold)),
-                    if (sourceProvider.isFetching)
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2)
-                      )
-                    else
-                      IconButton(
-                        icon: const Icon(Icons.refresh, size: 16),
-                        tooltip: 'Refresh Sources',
-                        padding: EdgeInsets.zero,
-                        constraints: const BoxConstraints(),
-                        onPressed: () => _fetchSources(force: true),
-                      )
-                  ],
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: DropdownButtonFormField<Source>(
-                        decoration: const InputDecoration(
-                          labelText: 'Repository',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: _selectedSource,
-                        items: sources.map((s) {
-                          final label = s.githubRepo != null
-                              ? '${s.githubRepo!.owner}/${s.githubRepo!.repo}'
-                              : s.name;
-                          return DropdownMenuItem(
-                            value: s,
-                            child: Text(label, overflow: TextOverflow.ellipsis),
-                          );
-                        }).toList(),
-                        onChanged: (widget.sourceFilter != null)
-                            ? null
-                            : (Source? newValue) {
-                                setState(() {
-                                  _selectedSource = newValue;
-                                  _updateBranchFromSource();
-                                });
-                              },
-                      ),
-                    ),
-                    const SizedBox(width: 16),
-                    Expanded(
-                      child: DropdownButtonFormField<String>(
-                        decoration: const InputDecoration(
-                          labelText: 'Branch',
-                          border: OutlineInputBorder(),
-                        ),
-                        value: _selectedBranch,
-                        items: branches.map((b) => DropdownMenuItem(
-                          value: b,
-                          child: Text(b, overflow: TextOverflow.ellipsis),
-                        )).toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedBranch = val;
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
+            height: 100,
+            child: Center(child: CircularProgressIndicator()),
           ),
+        );
+      }
+
+      if (sourceProvider.error != null && sourceProvider.sources.isEmpty) {
+        return AlertDialog(
+          title: const Text('Error'),
+          content: Text(sourceProvider.error!),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: (_prompt.isNotEmpty && _selectedSource != null)
-                  ? _create
-                  : null,
-              child: const Text('Create Session'),
-            ),
+              child: const Text('Close'),
+            )
           ],
         );
       }
-    );
+
+      final sources = sourceProvider.sources;
+
+      // Determine available branches for the selected source
+      List<String> branches = [];
+      if (_selectedSource != null &&
+          _selectedSource!.githubRepo != null &&
+          _selectedSource!.githubRepo!.branches != null) {
+        branches = _selectedSource!.githubRepo!.branches!
+            .map((b) => b.displayName)
+            .toList();
+      }
+      if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
+        branches.add(_selectedBranch!);
+      }
+      if (branches.isEmpty) branches.add('main');
+
+      return AlertDialog(
+        title: const Text('New Session',
+            style: TextStyle(fontWeight: FontWeight.bold)),
+        scrollable: true,
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              // Mode Selection
+              const Text('I want to...',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildModeChoice(0, 'Ask a Question'),
+                  const SizedBox(width: 8),
+                  _buildModeChoice(1, 'Create a Plan'),
+                  const SizedBox(width: 8),
+                  _buildModeChoice(2, 'Start Coding'),
+                ],
+              ),
+              const SizedBox(height: 16),
+
+              // Prompt
+              TextField(
+                autofocus: true,
+                maxLines: 6,
+                decoration: const InputDecoration(
+                  labelText: 'Prompt',
+                  hintText: 'Describe what you want to do...',
+                  border: OutlineInputBorder(),
+                  alignLabelWithHint: true,
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    _prompt = val;
+                  });
+                },
+              ),
+              const SizedBox(height: 16),
+
+              // Image Attachment (URL for now)
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Image URL (Optional)',
+                  hintText: 'https://example.com/image.png',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.image),
+                ),
+                onChanged: (val) => _imageUrl = val,
+              ),
+              const SizedBox(height: 16),
+
+              // Context (Source & Branch)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text('Context',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  if (sourceProvider.isFetching)
+                    const SizedBox(
+                        width: 16,
+                        height: 16,
+                        child: CircularProgressIndicator(strokeWidth: 2))
+                  else
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 16),
+                      tooltip: 'Refresh Sources',
+                      padding: EdgeInsets.zero,
+                      constraints: const BoxConstraints(),
+                      onPressed: () => _fetchSources(force: true),
+                    )
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    child: DropdownButtonFormField<Source>(
+                      decoration: const InputDecoration(
+                        labelText: 'Repository',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedSource,
+                      items: sources.map((s) {
+                        final label = s.githubRepo != null
+                            ? '${s.githubRepo!.owner}/${s.githubRepo!.repo}'
+                            : s.name;
+                        return DropdownMenuItem(
+                          value: s,
+                          child: Text(label, overflow: TextOverflow.ellipsis),
+                        );
+                      }).toList(),
+                      onChanged: (widget.sourceFilter != null)
+                          ? null
+                          : (Source? newValue) {
+                              setState(() {
+                                _selectedSource = newValue;
+                                _updateBranchFromSource();
+                              });
+                            },
+                    ),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    child: DropdownButtonFormField<String>(
+                      decoration: const InputDecoration(
+                        labelText: 'Branch',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedBranch,
+                      items: branches
+                          .map((b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(b, overflow: TextOverflow.ellipsis),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedBranch = val;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: (_prompt.isNotEmpty && _selectedSource != null)
+                ? _create
+                : null,
+            child: const Text('Create Session'),
+          ),
+        ],
+      );
+    });
   }
 
   Widget _buildModeChoice(int index, String label) {
@@ -392,10 +396,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         child: Container(
           padding: const EdgeInsets.symmetric(vertical: 12, horizontal: 8),
           decoration: BoxDecoration(
-            color: isSelected ? Theme.of(context).colorScheme.primaryContainer : Theme.of(context).colorScheme.surfaceContainerHighest,
+            color: isSelected
+                ? Theme.of(context).colorScheme.primaryContainer
+                : Theme.of(context).colorScheme.surfaceContainerHighest,
             borderRadius: BorderRadius.circular(8),
             border: Border.all(
-              color: isSelected ? Theme.of(context).colorScheme.primary : Colors.transparent,
+              color: isSelected
+                  ? Theme.of(context).colorScheme.primary
+                  : Colors.transparent,
               width: 2,
             ),
           ),
@@ -405,7 +413,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 label,
                 textAlign: TextAlign.center,
                 style: TextStyle(
-                  color: isSelected ? Theme.of(context).colorScheme.onPrimaryContainer : Theme.of(context).colorScheme.onSurface,
+                  color: isSelected
+                      ? Theme.of(context).colorScheme.onPrimaryContainer
+                      : Theme.of(context).colorScheme.onSurface,
                   fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
                   fontSize: 12,
                 ),
