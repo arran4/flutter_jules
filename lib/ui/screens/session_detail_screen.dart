@@ -81,35 +81,38 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // Fetch session details first
     Session? updatedSession;
     try {
-      if (enableLogging)
-        print('DEBUG: Fetching session details for ${widget.session.name}');
+      // if (enableLogging) {
+      //   debugPrint('DEBUG: Fetching session details for ${widget.session.name}');
+      // }
       updatedSession = await client.getSession(widget.session.name);
-      if (enableLogging) print('DEBUG: Session details fetched successfully');
+      // if (enableLogging) debugPrint('DEBUG: Session details fetched successfully');
     } catch (e) {
-      if (enableLogging) print('DEBUG: Failed to fetch session details: $e');
+      // if (enableLogging) debugPrint('DEBUG: Failed to fetch session details: $e');
       throw Exception('Failed to load session details: $e');
     }
 
     // Then fetch activities
     List<Activity> activities;
     try {
-      if (enableLogging)
-        print('DEBUG: Fetching activities for ${widget.session.name}');
+      // if (enableLogging) {
+      //   debugPrint('DEBUG: Fetching activities for ${widget.session.name}');
+      // }
       activities = await client.listActivities(
         widget.session.name,
         onDebug: (exchange) {
           if (enableLogging) {
-            print(
-                'DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
+            // debugPrint(
+            //     'DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
           }
           _lastExchange = exchange;
         },
       );
-      if (enableLogging)
-        print(
-            'DEBUG: Activities fetched successfully - count: ${activities.length}');
+      // if (enableLogging) {
+      //   debugPrint(
+      //       'DEBUG: Activities fetched successfully - count: ${activities.length}');
+      // }
     } catch (e) {
-      if (enableLogging) print('DEBUG: Failed to fetch activities: $e');
+      // if (enableLogging) debugPrint('DEBUG: Failed to fetch activities: $e');
       throw Exception('Failed to load conversation history: $e');
     }
 

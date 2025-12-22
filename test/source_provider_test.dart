@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:mockito/annotations.dart';
 import 'package:jules_client/services/source_provider.dart';
 import 'package:jules_client/services/jules_client.dart';
 import 'package:jules_client/models/source.dart';

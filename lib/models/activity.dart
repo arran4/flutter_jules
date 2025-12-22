@@ -287,10 +287,12 @@ class Activity {
     if (userMessaged != null) map['userMessaged'] = userMessaged!.toJson();
     if (planGenerated != null) map['planGenerated'] = planGenerated!.toJson();
     if (planApproved != null) map['planApproved'] = planApproved!.toJson();
-    if (progressUpdated != null)
+    if (progressUpdated != null) {
       map['progressUpdated'] = progressUpdated!.toJson();
-    if (sessionCompleted != null)
+    }
+    if (sessionCompleted != null) {
       map['sessionCompleted'] = sessionCompleted!.toJson();
+    }
     if (sessionFailed != null) map['sessionFailed'] = sessionFailed!.toJson();
     return map;
   }

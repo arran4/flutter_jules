@@ -33,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.setToken(_tokenController.text.trim(), _selectedType);
     if (mounted) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Token updated successfully')),
       );
@@ -56,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<TokenType>(
-              value: _selectedType,
+              value: _selectedType, // ignore: deprecated_member_use
               decoration: const InputDecoration(
                 labelText: 'Token Type',
                 border: OutlineInputBorder(),
@@ -146,6 +147,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     Provider.of<AuthProvider>(context, listen: false);
                 await authProvider.logout();
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               },

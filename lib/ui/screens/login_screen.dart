@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               DropdownButtonFormField<TokenType>(
-                value: _selectedType,
+                value: _selectedType, // ignore: deprecated_member_use
                 decoration: const InputDecoration(
                   labelText: 'Token Type',
                   border: OutlineInputBorder(),

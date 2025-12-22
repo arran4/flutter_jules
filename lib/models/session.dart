@@ -126,8 +126,9 @@ class Session {
       'sourceContext': sourceContext.toJson(),
     };
     if (title != null) map['title'] = title;
-    if (requirePlanApproval != null)
+    if (requirePlanApproval != null) {
       map['requirePlanApproval'] = requirePlanApproval;
+    }
     if (automationMode != null) {
       map['automationMode'] = automationMode.toString().split('.').last;
     }

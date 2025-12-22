@@ -63,7 +63,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             (s) => s.name == widget.sourceFilter,
           );
         } catch (e) {
-          print('Source filter ${widget.sourceFilter} not found in list');
+          // print('Source filter ${widget.sourceFilter} not found in list');
         }
       }
 
@@ -322,7 +322,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         labelText: 'Repository',
                         border: OutlineInputBorder(),
                       ),
-                      value: _selectedSource,
+                      value: _selectedSource, // ignore: deprecated_member_use
                       items: sources.map((s) {
                         final label = s.githubRepo != null
                             ? '${s.githubRepo!.owner}/${s.githubRepo!.repo}'
@@ -349,7 +349,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         labelText: 'Branch',
                         border: OutlineInputBorder(),
                       ),
-                      value: _selectedBranch,
+                      value: _selectedBranch, // ignore: deprecated_member_use
                       items: branches
                           .map((b) => DropdownMenuItem(
                                 value: b,

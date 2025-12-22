@@ -1,5 +1,3 @@
-import 'dart:math';
-
 /// Calculates the length of the longest common substring between two strings.
 int longestCommonSubstring(String s1, String s2) {
   if (s1.isEmpty || s2.isEmpty) {
