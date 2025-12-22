@@ -26,9 +26,10 @@ void main() {
         .toList();
 
     expect(activities.length, 1);
-    
+
     final activity = activities[0];
-    expect(activity.name, 'sessions/1611661874528033998/activities/0586f72ed78d42cfbd1d0ce5a0fbd53c');
+    expect(activity.name,
+        'sessions/1611661874528033998/activities/0586f72ed78d42cfbd1d0ce5a0fbd53c');
     expect(activity.id, '0586f72ed78d42cfbd1d0ce5a0fbd53c');
     expect(activity.description, ''); // Should default to empty string
     expect(activity.createTime, '2025-12-20T12:34:53.104126Z');

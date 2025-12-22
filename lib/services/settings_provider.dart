@@ -3,7 +3,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const String _sessionPageSizeKey = 'session_page_size';
-  
+
   int _sessionPageSize = 100;
   bool _isInitialized = false;
 

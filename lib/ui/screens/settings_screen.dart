@@ -33,6 +33,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     await authProvider.setToken(_tokenController.text.trim(), _selectedType);
     if (mounted) {
+      // ignore: use_build_context_synchronously
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Token updated successfully')),
       );
@@ -56,7 +57,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             const SizedBox(height: 16),
             DropdownButtonFormField<TokenType>(
-              value: _selectedType,
+              value: _selectedType, // ignore: deprecated_member_use
               decoration: const InputDecoration(
                 labelText: 'Token Type',
                 border: OutlineInputBorder(),
@@ -64,7 +65,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               items: TokenType.values.map((type) {
                 return DropdownMenuItem(
                   value: type,
-                  child: Text(type == TokenType.apiKey ? 'API Key' : 'Access Token'),
+                  child: Text(
+                      type == TokenType.apiKey ? 'API Key' : 'Access Token'),
                 );
               }).toList(),
               onChanged: (value) {
@@ -99,7 +101,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Enable advanced debugging features'),
               value: Provider.of<DevModeProvider>(context).isDevMode,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false).toggleDevMode(value);
+                Provider.of<DevModeProvider>(context, listen: false)
+                    .toggleDevMode(value);
               },
             ),
             SwitchListTile(
@@ -107,7 +110,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Log API requests and responses to console'),
               value: Provider.of<DevModeProvider>(context).enableApiLogging,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false).toggleApiLogging(value);
+                Provider.of<DevModeProvider>(context, listen: false)
+                    .toggleApiLogging(value);
               },
             ),
             const Divider(),
@@ -139,9 +143,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Spacer(),
             TextButton(
               onPressed: () async {
-                final authProvider = Provider.of<AuthProvider>(context, listen: false);
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
                 await authProvider.logout();
                 if (mounted) {
+                  // ignore: use_build_context_synchronously
                   Navigator.of(context).popUntil((route) => route.isFirst);
                 }
               },

@@ -1,5 +1,3 @@
-import 'dart:math';
-
 /// Calculates the length of the longest common substring between two strings.
 int longestCommonSubstring(String s1, String s2) {
   if (s1.isEmpty || s2.isEmpty) {
@@ -33,9 +31,9 @@ int longestCommonSubstring(String s1, String s2) {
 /// Helper class to store match results for sorting.
 class _MatchResult {
   final int originalIndex;
-  final int score;       // Length of the longest continuous match
-  final int fieldIndex;  // Index of the field where the best match was found
-  final bool matches;    // Whether it matches the filter criteria
+  final int score; // Length of the longest continuous match
+  final int fieldIndex; // Index of the field where the best match was found
+  final bool matches; // Whether it matches the filter criteria
 
   _MatchResult({
     required this.originalIndex,
@@ -110,9 +108,7 @@ List<T> filterAndSort<T>({
   }).toList();
 
   // Filter out non-matching items
-  final filteredIndices = results
-      .where((r) => r.matches)
-      .toList();
+  final filteredIndices = results.where((r) => r.matches).toList();
 
   // Sort
   filteredIndices.sort((a, b) {

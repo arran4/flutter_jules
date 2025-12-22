@@ -54,7 +54,7 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 24),
               DropdownButtonFormField<TokenType>(
-                value: _selectedType,
+                value: _selectedType, // ignore: deprecated_member_use
                 decoration: const InputDecoration(
                   labelText: 'Token Type',
                   border: OutlineInputBorder(),
@@ -79,7 +79,9 @@ class _LoginScreenState extends State<LoginScreen> {
               TextFormField(
                 controller: _tokenController,
                 decoration: InputDecoration(
-                  labelText: _selectedType == TokenType.apiKey ? 'API Key' : 'Access Token',
+                  labelText: _selectedType == TokenType.apiKey
+                      ? 'API Key'
+                      : 'Access Token',
                   border: const OutlineInputBorder(),
                   hintText: _selectedType == TokenType.apiKey
                       ? 'Enter your API Key'
@@ -110,7 +112,9 @@ class _LoginScreenState extends State<LoginScreen> {
                 onPressed: () {
                   // TODO: Implement Google Sign-In
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Google Sign-In not yet implemented. Please use the manual token entry.')),
+                    const SnackBar(
+                        content: Text(
+                            'Google Sign-In not yet implemented. Please use the manual token entry.')),
                   );
                 },
                 icon: const Icon(Icons.login),

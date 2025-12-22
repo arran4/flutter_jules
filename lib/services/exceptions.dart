@@ -6,7 +6,8 @@ class JulesException implements Exception {
   final String? responseBody;
 
   JulesException(this.message, {this.statusCode, this.responseBody}) {
-    developer.log('JulesException: $message (Status: $statusCode)', error: message, stackTrace: StackTrace.current);
+    developer.log('JulesException: $message (Status: $statusCode)',
+        error: message, stackTrace: StackTrace.current);
     if (responseBody != null) {
       developer.log('Response body: $responseBody');
     }
@@ -23,20 +24,24 @@ class JulesException implements Exception {
 
 class InvalidTokenException extends JulesException {
   InvalidTokenException(String responseBody)
-      : super('Invalid API token provided.', statusCode: 401, responseBody: responseBody);
+      : super('Invalid API token provided.',
+            statusCode: 401, responseBody: responseBody);
 }
 
 class PermissionDeniedException extends JulesException {
   PermissionDeniedException(String responseBody)
-      : super('Permission denied.', statusCode: 403, responseBody: responseBody);
+      : super('Permission denied.',
+            statusCode: 403, responseBody: responseBody);
 }
 
 class NotFoundException extends JulesException {
   NotFoundException(String responseBody)
-      : super('Resource not found.', statusCode: 404, responseBody: responseBody);
+      : super('Resource not found.',
+            statusCode: 404, responseBody: responseBody);
 }
 
 class ApiException extends JulesException {
   ApiException(int statusCode, String responseBody)
-      : super('API error occurred.', statusCode: statusCode, responseBody: responseBody);
+      : super('API error occurred.',
+            statusCode: statusCode, responseBody: responseBody);
 }
