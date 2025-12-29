@@ -1,67 +1,83 @@
-# Jules API Client
+# Jules Client
 
-A Flutter-based client application for interacting with the Google Jules API. This application allows users to manage sessions, view sources, and communicate with the Jules agent through a modern, mobile-friendly interface.
+A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.
 
 ## Features
 
-### Authentication
-- **Secure Login:** Supports authentication via API Key or OAuth2 Bearer Token.
-- **Secure Storage:** Uses `flutter_secure_storage` to safely store user credentials.
+### 🔐 Authentication & Security
+- **Flexible Auth:** Supports both **API Key** (`X-Goog-Api-Key`) and **OAuth2 Bearer Token** authentication.
+- **Secure Storage:** Credentials are encrypted and stored safely using `flutter_secure_storage`.
+- **Privacy Masking:** Source titles are automatically masked (e.g., `*****`) for private sources to ensure confidentiality.
 
-### Session Management
-- **List Sessions:** View a paginated list of all active and past sessions.
-- **Filtering & Sorting:** Filter sessions by source and group them by status (e.g., Queued, Running, Completed).
-- **Create Session:** specialized dialog to create new sessions with different modes:
-    - **Question:** Standard query mode.
-    - **Plan:** Requires plan approval.
-    - **Start:** Automation mode (Auto Create PR).
-- **Search:** Client-side search for sessions.
+### 💬 Session Management & Chat
+- **Rich Chat Interface:** Interactive message history with support for text and rich media.
+- **Image Attachments:** Attach images to your prompts via URL. The client handles fetching and embedding them as base64 data.
+- **Smart Creation:** Specialized dialog for creating sessions with specific modes:
+    - **Question:** Standard Q&A.
+    - **Plan:** Enforces a plan approval step (`requirePlanApproval`).
+    - **Start:** Automation mode triggering `AUTO_CREATE_PR`.
+- **Plan Approval:** Built-in UI to review and approve execution plans directly within the chat stream.
+- **Pagination:** Infinite scrolling implementation to seamlessly load session history.
 
-### Chat Interface
-- **Interactive Chat:** Communicate with the agent in a chat-like interface.
-- **Rich Media:** Support for attaching images to messages via URL.
-- **Activity History:** View the full history of interactions and activities within a session.
-- **Plan Approval:** Approve plans directly from the chat interface when required.
+### 📚 Source Exploration
+- **Source Browser:** View and filter available resources the agent can access.
+- **Context Integration:** Start new sessions directly from a source context.
+- **Search:** Client-side filtering with strict substring matching.
 
-### Source Management
-- **View Sources:** Browse available sources that the agent can access.
-- **Privacy:** Visual indicators for private sources (masked titles).
-- **Integration:** Filter sessions directly from the source list.
-
-### Developer Tools (Dev Mode)
-- **Toggleable Mode:** Enable "Dev Mode" in settings to access advanced debugging features.
-- **API Viewer:** Inspect raw HTTP requests and responses for debugging API interactions.
-- **Model Viewer:** View the raw JSON data of session and activity models.
+### 🛠️ Developer Tools (Dev Mode)
+Enabled via the Settings screen, **Dev Mode** unlocks powerful inspection tools:
+- **API Viewer:** Real-time inspection of HTTP requests and responses (headers, bodies, status codes) with sensitive token redaction.
+- **Model Viewer:** Inspect the raw JSON data underlying any Session or Activity object.
+- **Deep Linking:** Long-press on chat items for advanced context actions.
 
 ## Architecture
 
-The application follows a standard Flutter architecture using the Provider pattern for state management.
+The application is built with **Flutter** and follows a scalable, maintainable architecture:
 
-- **State Management:** `Provider` (`MultiProvider` at the root).
-- **Navigation:** Bottom navigation bar switching between Sessions, Sources, and Settings.
-- **Networking:** Custom `JulesClient` wrapper around `http` package.
-- **JSON Parsing:** Robust parsing using `dartobjectutils` to handle API responses safely.
+- **State Management:** **Provider** pattern.
+    - `SessionProvider`: Manages session state, pagination, and implements a **2-minute cache** to optimize network usage.
+    - `AuthProvider`: Handles credential persistence and validation.
+    - `DevModeProvider`: Toggles developer tooling visibility.
+- **Networking:** Custom `JulesClient` service wrapping the `http` package, handling:
+    - Automatic pagination (following `nextPageToken`).
+    - Error handling with detailed logging.
+    - JSON serialization/deserialization.
+- **Data Safety:** Uses `dartobjectutils` for robust, type-safe JSON parsing, preventing runtime crashes due to unexpected API schema changes.
 
-### Key Components
+## Project Structure
 
-- **`lib/main.dart`:** Application entry point and provider setup.
-- **`lib/services/`:**
-    - `jules_client.dart`: Handles all API communication.
-    - `auth_provider.dart`: Manages authentication state.
-    - `session_provider.dart`: Manages session data and pagination.
-- **`lib/ui/screens/`:**
-    - `session_list_screen.dart`: Main dashboard.
-    - `session_detail_screen.dart`: Chat interface.
-    - `source_list_screen.dart`: Source browser.
-- **`lib/models/`:** Data models mirroring the API resources (`Session`, `Source`, `Activity`).
+```text
+lib/
+├── main.dart                 # Application entry point & Provider setup
+├── models.dart               # Export file for all models
+├── services/
+│   ├── jules_client.dart     # Core API client
+│   ├── auth_provider.dart    # Auth state management
+│   └── session_provider.dart # Session business logic & caching
+├── models/                   # Data models (Session, Source, Activity, Media)
+├── ui/
+│   ├── screens/              # Full-screen widgets (SessionList, Detail, Login)
+│   └── widgets/              # Reusable components (ApiViewer, NewSessionDialog)
+└── utils/
+    └── search_helper.dart    # Generic search & filtering logic
+```
 
-## Setup & Running
+## Setup & Development
 
 ### Prerequisites
-- Flutter SDK (Latest Stable)
-- Dart SDK
+
+- **Flutter SDK:** Latest Stable channel.
+- **Dart SDK:** Included with Flutter.
+
+#### Linux Requirements
+If building on Linux, ensure the following system dependencies are installed:
+```bash
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
+```
+*Note: The app requires `uses-material-design: true` in `pubspec.yaml` for correct icon rendering.*
 
 ### Installation
+
 1.  Clone the repository.
 2.  Install dependencies:
     ```bash
@@ -69,26 +85,47 @@ The application follows a standard Flutter architecture using the Provider patte
     ```
 
 ### Running the App
-Run the application on your preferred device or emulator:
+
+**Desktop & Mobile:**
 ```bash
 flutter run
 ```
-For web (headless/server mode):
+
+**Web (Headless/Verification):**
+To run in a headless web environment (e.g., for automated verification):
 ```bash
 flutter run -d web-server --web-port=8080
 ```
 
-### Configuration
-On first launch, you will be prompted to enter your credentials:
-- **API Key:** Standard Google Cloud API Key.
-- **Bearer Token:** OAuth2 token (if required).
+### Building for Release
 
-## Dependencies
+Release artifacts are generated in specific output directories. The CI pipeline automatically renames these for distribution.
 
-- `flutter`: UI Toolkit.
-- `provider`: State management.
-- `http`: Network requests.
-- `flutter_secure_storage`: Secure credential storage.
-- `shared_preferences`: Local settings storage.
-- `intl`: Date and number formatting.
-- `dartobjectutils`: Safe JSON parsing.
+| Platform | Build Command | Output Location |
+|----------|---------------|-----------------|
+| **Windows** | `flutter build windows` | `build/windows/x64/runner/Release` |
+| **Linux** | `flutter build linux` | `build/linux/x64/release/bundle` |
+| **macOS** | `flutter build macos` | `build/macos/Build/Products/Release/jules_client.app` |
+
+### Code Quality & Testing
+
+The project enforces strict code quality standards via CI:
+
+- **Formatting:** Ensure code is formatted correctly.
+    ```bash
+    dart format .
+    ```
+- **Linting:** Analyze code for potential errors.
+    ```bash
+    flutter analyze
+    ```
+- **Testing:** Run unit and widget tests.
+    ```bash
+    flutter test
+    ```
+
+## Configuration
+
+On first launch, the app routes to the Login screen. Credentials (API Key, Bearer Token) are stored securely on the device.
+- To reset credentials, use the **Logout** button in the Settings screen.
+- **Dev Mode** can be toggled in Settings to enable advanced debugging features.
