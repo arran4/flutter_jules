@@ -109,13 +109,20 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               const SizedBox(height: 12),
               ElevatedButton.icon(
-                onPressed: () {
-                  // TODO: Implement Google Sign-In
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                        content: Text(
-                            'Google Sign-In not yet implemented. Please use the manual token entry.')),
-                  );
+                onPressed: () async {
+                  try {
+                    final authProvider =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    await authProvider.signInWithGoogle();
+                  } catch (e) {
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(
+                          content: Text('Google Sign-In failed: $e'),
+                        ),
+                      );
+                    }
+                  }
                 },
                 icon: const Icon(Icons.login),
                 label: const Text('Sign in with Google'),
