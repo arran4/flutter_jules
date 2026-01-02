@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_service.dart';
 import 'jules_client.dart';
 
@@ -6,6 +7,13 @@ enum TokenType { apiKey, accessToken }
 
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
+  final GoogleSignIn _googleSignIn = GoogleSignIn(
+    scopes: [
+      'email',
+      'https://www.googleapis.com/auth/cloud-platform',
+    ],
+  );
+
   String? _token;
   TokenType _tokenType = TokenType.accessToken;
   bool _isLoading = true;
@@ -48,8 +56,35 @@ class AuthProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> signInWithGoogle() async {
+    try {
+      final GoogleSignInAccount? account = await _googleSignIn.signIn();
+      if (account == null) {
+        // User canceled the sign-in
+        return;
+      }
+      final GoogleSignInAuthentication auth = await account.authentication;
+      final String? accessToken = auth.accessToken;
+
+      if (accessToken != null) {
+        await setToken(accessToken, TokenType.accessToken);
+      } else {
+        throw Exception('Failed to obtain access token from Google Sign-In');
+      }
+    } catch (error) {
+      rethrow;
+    }
+  }
+
   Future<void> logout() async {
     await _authService.deleteToken();
+    try {
+      if (await _googleSignIn.isSignedIn()) {
+        await _googleSignIn.signOut();
+      }
+    } catch (_) {
+      // Ignore errors if sign out fails
+    }
     _token = null;
     notifyListeners();
   }

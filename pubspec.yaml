@@ -15,6 +15,7 @@ dependencies:
   provider: ^6.1.1
   dartobjectutils: ^0.1.1
   shared_preferences: ^2.5.4
+  google_sign_in: ^6.2.1
 
 dev_dependencies:
   flutter_test:
