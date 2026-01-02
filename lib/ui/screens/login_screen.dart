@@ -103,7 +103,7 @@ class _LoginScreenState extends State<LoginScreen> {
               const Divider(),
               const SizedBox(height: 16),
               const Text(
-                'Alternatively, if you have configured Google Sign-In, you can sign in below.',
+                'Or sign in with Google',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey),
               ),
