@@ -7,8 +7,11 @@ import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
+import '../../services/source_provider.dart';
 import '../../services/settings_provider.dart';
+import '../../services/cache_service.dart';
 import '../../models.dart';
+import '../../models/cache_metadata.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/new_session_dialog.dart';
@@ -26,63 +29,45 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  // Local state for searching/filtering
   late bool _groupByStatus;
   final Set<SessionState> _statusFilters = {};
-
   final TextEditingController _searchController = TextEditingController();
-  final ScrollController _scrollController = ScrollController();
 
   @override
   void initState() {
     super.initState();
-    // Use grouped view by default unless a specific source filter is active
-    // This matches user expectation for "Recent Sessions" view when drilling down
     _groupByStatus = widget.sourceFilter == null;
-
-    // Rebuild when search changes
     _searchController.addListener(() {
       setState(() {});
     });
 
-    _scrollController.addListener(_onScroll);
-
-    // Initial fetch handled by addPostFrameCallback to avoid build issues
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchSessions();
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.token != null) {
+        // Trigger generic load
+        _fetchSessions();
+        // Background load sources
+        Provider.of<SourceProvider>(context, listen: false)
+            .fetchSources(auth.client, authToken: auth.token);
+      }
     });
   }
 
   @override
   void dispose() {
     _searchController.dispose();
-    _scrollController.dispose();
     super.dispose();
   }
 
-  void _onScroll() {
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      _fetchSessions(loadMore: true);
-    }
-  }
-
-  Future<void> _fetchSessions(
-      {bool force = false, bool loadMore = false}) async {
+  Future<void> _fetchSessions({bool force = false}) async {
     if (!mounted) return;
     try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
       final sessionProvider =
           Provider.of<SessionProvider>(context, listen: false);
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-
-      // Use the provider to fetch. It updates its own state.
-      await sessionProvider.fetchSessions(client,
-          force: force, loadMore: loadMore, pageSize: settings.sessionPageSize);
-
-      if (mounted) {
-        setState(() {}); // Trigger rebuild to reflect new data
-      }
+      
+      await sessionProvider.fetchSessions(auth.client,
+          force: force, authToken: auth.token);
     } catch (e) {
       // Provider handles error state
     }
@@ -95,32 +80,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
 
     if (sessionToCreate == null) return;
-
     if (!mounted) return;
 
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final createdSession = await client.createSession(sessionToCreate);
-
-      if (mounted) {
-        Provider.of<SessionProvider>(context, listen: false)
-            .addSession(createdSession);
-        setState(() {}); // Refresh list
-      }
+      await client.createSession(sessionToCreate);
+      // Trigger refresh
+      _fetchSessions(force: true);
     } catch (e) {
       if (mounted) {
         showDialog(
           context: context,
           builder: (context) => AlertDialog(
             title: const Text('Error Creating Session'),
-            content: SingleChildScrollView(
-              child: SelectableText(e.toString()),
-            ),
+            content: SingleChildScrollView(child: SelectableText(e.toString())),
             actions: [
               TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close')),
             ],
           ),
         );
@@ -129,7 +106,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _showContextMenu(BuildContext context, {Session? session}) {
-    // If we want to show the last exchange for the list call
     final lastExchange =
         Provider.of<SessionProvider>(context, listen: false).lastExchange;
 
@@ -169,10 +145,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _showFilterDialog() {
-    // Get all unique statuses from the FULL list (not filtered)
     final sessionProvider =
         Provider.of<SessionProvider>(context, listen: false);
-    final allSessions = sessionProvider.sessions;
+    final allSessions = sessionProvider.items.map((i) => i.data).toList();
     final allStatuses = allSessions
         .map((s) => s.state)
         .whereType<SessionState>()
@@ -183,7 +158,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
     showDialog(
         context: context,
         builder: (context) {
-          // This StatefulBuilder updates the dialog content
           return StatefulBuilder(builder: (context, setDialogState) {
             return AlertDialog(
               title: const Text('Filter by Status'),
@@ -196,19 +170,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       value: _statusFilters.contains(status) ||
                           _statusFilters.isEmpty,
                       onChanged: (bool? value) {
-                        // Update local filter state
                         setDialogState(() {
                           if (value == true) {
                             if (_statusFilters.isEmpty) {
-                              // Start with only this one
                               _statusFilters.add(status);
                             } else {
                               _statusFilters.add(status);
                             }
                           } else {
-                            // Unchecking.
                             if (_statusFilters.isEmpty) {
-                              // "Select All" was implicit. We need to populate with all OTHER statuses.
                               _statusFilters.addAll(allStatuses);
                               _statusFilters.remove(status);
                             } else {
@@ -216,9 +186,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             }
                           }
                         });
-
-                        // Update the main screen (underneath the dialog)
-                        // We need to call the main state's setState
                         setState(() {});
                       },
                     );
@@ -229,7 +196,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 TextButton(
                   onPressed: () {
                     setDialogState(() {
-                      _statusFilters.clear(); // Clear means "Show All"
+                      _statusFilters.clear();
                     });
                     setState(() {});
                   },
@@ -245,90 +212,85 @@ class _SessionListScreenState extends State<SessionListScreen> {
         });
   }
 
+  void _markAsRead(Session session) {
+     final auth = Provider.of<AuthProvider>(context, listen: false);
+     if (auth.token != null) {
+       Provider.of<SessionProvider>(context, listen: false)
+           .markAsRead(session.id, auth.token!);
+     }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
-        final sessions = sessionProvider.sessions;
-        final isLoading = sessionProvider.isFetching;
+        final cachedItems = sessionProvider.items;
+        final isLoading = sessionProvider.isLoading;
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
 
-        // Re-calculating display list in build to ensure reactivity
-        List<Session> displaySessions = sessions;
+        List<CachedItem<Session>> displayItems = cachedItems;
+
         if (widget.sourceFilter != null) {
-          displaySessions = displaySessions
-              .where((s) => s.sourceContext.source == widget.sourceFilter)
+          displayItems = displayItems
+              .where((i) => i.data.sourceContext.source == widget.sourceFilter)
               .toList();
         }
         if (_statusFilters.isNotEmpty) {
-          displaySessions = displaySessions
-              .where((s) => s.state != null && _statusFilters.contains(s.state))
+          displayItems = displayItems
+              .where((i) => i.data.state != null && _statusFilters.contains(i.data.state))
               .toList();
         }
-        // Search
+        
+        // Searching (Naively filtering cached items)
         if (_searchController.text.isNotEmpty) {
-          displaySessions = filterAndSort(
-            items: displaySessions,
-            query: _searchController.text,
-            accessors: [
-              (session) => session.title,
-              (session) => session.name,
-              (session) => session.id,
-              (session) => session.state.toString().split('.').last,
-            ],
-          );
+           final query = _searchController.text.toLowerCase();
+           displayItems = displayItems.where((i) {
+             final s = i.data;
+             return (s.title?.toLowerCase().contains(query) ?? false) ||
+                    (s.name.toLowerCase().contains(query)) || 
+                    (s.id.toLowerCase().contains(query)) ||
+                    (s.state.toString().toLowerCase().contains(query));
+           }).toList();
         }
 
-        // Sort
+        // Sorting
         if (_groupByStatus) {
-          displaySessions.sort((a, b) {
-            // Handle null states if any
-            final stateA = a.state?.index ?? -1;
-            final stateB = b.state?.index ?? -1;
-
-            int cmp = stateA.compareTo(stateB);
-            if (cmp != 0) return cmp;
-
-            // Secondary sort
-            final dateA = DateTime.tryParse(a.createTime ?? '') ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            final dateB = DateTime.tryParse(b.createTime ?? '') ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            return dateB.compareTo(dateA);
-          });
-        } else {
-          displaySessions.sort((a, b) {
-            final dateA = DateTime.tryParse(a.createTime ?? '') ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            final dateB = DateTime.tryParse(b.createTime ?? '') ??
-                DateTime.fromMillisecondsSinceEpoch(0);
-            return dateB.compareTo(dateA);
-          });
+           displayItems.sort((a, b) {
+             final stateA = a.data.state?.index ?? -1;
+             final stateB = b.data.state?.index ?? -1;
+             int cmp = stateA.compareTo(stateB);
+             
+             if (cmp != 0) return cmp;
+             
+             return b.metadata.lastRetrieved.compareTo(a.metadata.lastRetrieved);
+           });
         }
 
-        // Determine items for ListView (headers + items)
-        final List<ListItem> items = [];
+        final List<ListItem> listItems = [];
         if (_groupByStatus) {
           SessionState? lastState;
-          // We might have null states
-          for (var session in displaySessions) {
-            if (session.state != lastState) {
-              items.add(HeaderItem(
-                  session.state?.toString().split('.').last ?? 'Unknown'));
-              lastState = session.state;
+          for (var item in displayItems) {
+            if (item.data.state != lastState) {
+              listItems.add(HeaderItem(
+                  item.data.state?.toString().split('.').last ?? 'Unknown'));
+              lastState = item.data.state;
             }
-            items.add(SessionItem(session));
+            listItems.add(SessionItem(item));
           }
         } else {
-          for (var session in displaySessions) {
-            items.add(SessionItem(session));
+          for (var item in displayItems) {
+            listItems.add(SessionItem(item));
           }
         }
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Sessions'),
+            bottom: isLoading ? const PreferredSize(
+              preferredSize: Size.fromHeight(4.0),
+              child: LinearProgressIndicator(), 
+            ) : null,
             actions: [
               IconButton(
                 icon: Icon(_groupByStatus ? Icons.layers_clear : Icons.layers),
@@ -344,70 +306,43 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 tooltip: 'Filter',
                 onPressed: _showFilterDialog,
               ),
-              if (isLoading)
-                const Padding(
-                  padding: EdgeInsets.all(12.0),
-                  child: SizedBox(
-                    width: 24,
-                    height: 24,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: Colors.white,
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'settings') {
+                    Navigator.pushNamed(context, '/settings');
+                  } else if (value == 'sources') {
+                    Navigator.pushNamed(context, '/sources_raw');
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings),
+                        SizedBox(width: 8),
+                        Text('Settings'),
+                      ],
                     ),
                   ),
-                )
-              else
-                IconButton(
-                  icon: const Icon(Icons.replay),
-                  onPressed: () => _fetchSessions(force: true),
-                  tooltip: 'Refresh',
-                ),
+                  const PopupMenuItem(
+                    value: 'sources',
+                     child: Row(
+                      children: [
+                        Icon(Icons.source),
+                        SizedBox(width: 8),
+                        Text('Raw Source Data'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
-          body: (sessions.isEmpty && isLoading)
-              ? const Center(child: CircularProgressIndicator())
-              : (sessions.isEmpty && error != null)
-                  ? Center(
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.error_outline,
-                                color: Colors.red, size: 60),
-                            const SizedBox(height: 16),
-                            Text(
-                              'Error Loading Sessions',
-                              style: Theme.of(context).textTheme.titleLarge,
-                            ),
-                            const SizedBox(height: 8),
-                            SelectableText(
-                              error,
-                              textAlign: TextAlign.center,
-                            ),
-                            const SizedBox(height: 24),
-                            Row(
-                              mainAxisAlignment: MainAxisAlignment.center,
-                              children: [
-                                ElevatedButton(
-                                  onPressed: () => _fetchSessions(force: true),
-                                  child: const Text('Retry'),
-                                ),
-                                const SizedBox(width: 16),
-                                OutlinedButton(
-                                  onPressed: () {
-                                    Provider.of<AuthProvider>(context,
-                                            listen: false)
-                                        .logout();
-                                  },
-                                  child: const Text('Change Token'),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    )
+          body: (cachedItems.isEmpty && isLoading)
+              ? const Center(child: Text("Loading sessions..."))
+              : (cachedItems.isEmpty && error != null)
+                  ? Center(child: Text('Error: $error'))
                   : Column(
                       children: [
                         Padding(
@@ -422,78 +357,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ),
                         ),
                         if (lastFetchTime != null)
-                          Padding(
-                            padding: const EdgeInsets.all(8.0),
-                            child: Text(
-                              'Last updated: ${DateFormat.Hms().format(lastFetchTime)}',
-                              style: Theme.of(context).textTheme.bodySmall,
+                           Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime!)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
                             ),
-                          ),
+                           ),
                         Expanded(
                           child: RefreshIndicator(
                             onRefresh: () => _fetchSessions(force: true),
                             child: ListView.builder(
-                              controller: _scrollController,
-                              itemCount: items.length +
-                                  (sessionProvider.hasMore ||
-                                          (isLoading && items.isEmpty)
-                                      ? 1
-                                      : 0),
+                              itemCount: listItems.length,
                               itemBuilder: (context, index) {
-                                if (index >= items.length) {
-                                  if (sessionProvider.hasMore) {
-                                    // If we have more but filtered list exhausted or just scrolling
-                                    if (items.isEmpty) {
-                                      // Explicit button for empty filtered list
-                                      final pageSize =
-                                          Provider.of<SettingsProvider>(context,
-                                                  listen: false)
-                                              .sessionPageSize;
-                                      return Padding(
-                                        padding: const EdgeInsets.all(16.0),
-                                        child: Center(
-                                          child: Column(
-                                            children: [
-                                              Text(
-                                                'Loaded ${sessions.length} sessions total, but none match the current filter.',
-                                                textAlign: TextAlign.center,
-                                                style: const TextStyle(
-                                                    color: Colors.grey),
-                                              ),
-                                              const SizedBox(height: 8),
-                                              ElevatedButton(
-                                                onPressed: () => _fetchSessions(
-                                                    loadMore: true),
-                                                child: isLoading
-                                                    ? const SizedBox(
-                                                        width: 20,
-                                                        height: 20,
-                                                        child:
-                                                            CircularProgressIndicator(
-                                                          strokeWidth: 2,
-                                                        ),
-                                                      )
-                                                    : Text(
-                                                        'Load next $pageSize options'),
-                                              ),
-                                            ],
-                                          ),
-                                        ),
-                                      );
-                                    } else {
-                                      // Loading indicator at bottom of list
-                                      return const Padding(
-                                        padding: EdgeInsets.all(16.0),
-                                        child: Center(
-                                            child: CircularProgressIndicator()),
-                                      );
-                                    }
-                                  } else {
-                                    return const SizedBox.shrink();
-                                  }
-                                }
+                                final item = listItems[index];
 
-                                final item = items[index];
                                 if (item is HeaderItem) {
                                   return Container(
                                     color: Theme.of(context)
@@ -505,24 +386,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       style: Theme.of(context)
                                           .textTheme
                                           .titleSmall
-                                          ?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                          ),
+                                          ?.copyWith(fontWeight: FontWeight.bold),
                                     ),
                                   );
                                 } else if (item is SessionItem) {
-                                  final session = item.session;
-                                  final isDevMode =
-                                      Provider.of<DevModeProvider>(context)
-                                          .isDevMode;
+                                  final cachedItem = item.cachedItem;
+                                  final session = cachedItem.data;
+                                  final metadata = cachedItem.metadata;
+                                  final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
                                   return Card(
                                     margin: const EdgeInsets.symmetric(
                                         horizontal: 8, vertical: 4),
-                                    elevation: 2,
                                     child: InkWell(
-                                      borderRadius: BorderRadius.circular(12),
                                       onTap: () {
+                                        _markAsRead(session);
                                         Navigator.push(
                                             context,
                                             MaterialPageRoute(
@@ -531,35 +409,63 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         session: session)));
                                       },
                                       onLongPress: () {
-                                        if (isDevMode) {
-                                          _showContextMenu(context,
-                                              session: session);
-                                        } else {
-                                          showDialog(
-                                              context: context,
-                                              builder: (_) =>
-                                                  SessionPreviewModal(
-                                                      session: session));
-                                        }
+                                         if (isDevMode) {
+                                           _showContextMenu(context, session: session);
+                                         }
                                       },
                                       child: Padding(
                                         padding: const EdgeInsets.all(12),
                                         child: Column(
-                                          crossAxisAlignment:
-                                              CrossAxisAlignment.start,
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Row(children: [
                                               Expanded(
-                                                  child: Text(
-                                                      session.title ??
-                                                          session.prompt,
-                                                      maxLines: 1,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
-                                                      style: const TextStyle(
-                                                          fontWeight:
-                                                              FontWeight.bold,
-                                                          fontSize: 16))),
+                                                  child: Row(
+                                                children: [
+                                                  if (metadata.isNew)
+                                                    Container(
+                                                      margin: const EdgeInsets.only(right: 6),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.green,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    ),
+                                                  if (metadata.isUpdated && !metadata.isNew)
+                                                     Container(
+                                                      margin: const EdgeInsets.only(right: 6),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.amber,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text('UPDATED', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    ),
+                                                  if (metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
+                                                     Container(
+                                                      margin: const EdgeInsets.only(right: 6),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.blueAccent,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: const Text('UNREAD', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    ),
+                                                  
+                                                  Expanded(
+                                                    child: Text(
+                                                        session.title ??
+                                                            session.prompt,
+                                                        maxLines: 1,
+                                                        overflow:
+                                                            TextOverflow.ellipsis,
+                                                        style: TextStyle(
+                                                            fontWeight: (metadata.isUnread) ? FontWeight.bold : FontWeight.normal,
+                                                            fontSize: 16)),
+                                                  ),
+                                                ],
+                                              )),
                                               if (session.outputs != null &&
                                                   session.outputs!.any((o) =>
                                                       o.pullRequest != null))
@@ -578,73 +484,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         Uri.parse(pr.url));
                                                   },
                                                 ),
-                                              IconButton(
-                                                icon: const Icon(
-                                                    Icons.info_outline,
-                                                    color: Colors.grey),
-                                                tooltip: 'Preview',
-                                                onPressed: () => showDialog(
-                                                    context: context,
-                                                    builder: (_) =>
-                                                        SessionPreviewModal(
-                                                            session: session)),
-                                              ),
                                             ]),
                                             const SizedBox(height: 8),
-                                            SessionMetaPills(
-                                                session: session,
-                                                compact: true),
-                                            if (session.state ==
-                                                    SessionState.IN_PROGRESS &&
-                                                session.totalSteps != null &&
-                                                session.totalSteps! > 0) ...[
-                                              const SizedBox(height: 12),
-                                              Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  children: [
-                                                    LinearProgressIndicator(
-                                                        value: session
-                                                                .currentStep! /
-                                                            session
-                                                                .totalSteps!,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(2)),
-                                                    const SizedBox(height: 4),
-                                                    Row(
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .spaceBetween,
-                                                        children: [
-                                                          Text(
-                                                              "Step ${session.currentStep} of ${session.totalSteps}",
-                                                              style: Theme.of(
-                                                                      context)
-                                                                  .textTheme
-                                                                  .bodySmall),
-                                                          if (session.currentAction !=
-                                                              null)
-                                                            Expanded(
-                                                                child: Text(
-                                                                    session
-                                                                        .currentAction!,
-                                                                    textAlign:
-                                                                        TextAlign
-                                                                            .right,
-                                                                    overflow:
-                                                                        TextOverflow
-                                                                            .ellipsis,
-                                                                    style: Theme.of(
-                                                                            context)
-                                                                        .textTheme
-                                                                        .bodySmall
-                                                                        ?.copyWith(
-                                                                            fontStyle:
-                                                                                FontStyle.italic)))
-                                                        ])
-                                                  ])
-                                            ]
+                                            SessionMetaPills(session: session, compact: true),
+                                            // Progress bar if running
+                                             if (session.state == SessionState.IN_PROGRESS && session.totalSteps != null && session.totalSteps! > 0)
+                                              Padding(
+                                                padding: const EdgeInsets.only(top: 8.0),
+                                                child: LinearProgressIndicator(
+                                                  value: session.currentStep! / session.totalSteps!,
+                                                ),
+                                              ),
                                           ],
                                         ),
                                       ),
@@ -660,7 +510,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
           floatingActionButton: FloatingActionButton(
             onPressed: _createSession,
-            tooltip: 'Create Session',
             child: const Icon(Icons.add),
           ),
         );
@@ -669,7 +518,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 }
 
-// Helper classes for mixed list
 abstract class ListItem {}
 
 class HeaderItem implements ListItem {
@@ -678,6 +526,6 @@ class HeaderItem implements ListItem {
 }
 
 class SessionItem implements ListItem {
-  final Session session;
-  SessionItem(this.session);
+  final CachedItem<Session> cachedItem;
+  SessionItem(this.cachedItem);
 }

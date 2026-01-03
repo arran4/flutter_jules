@@ -5,7 +5,10 @@ import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
+import '../../services/session_provider.dart'; // Needed for stats
 import '../../models.dart';
+import '../../models/cache_metadata.dart'; // For CachedItem
+import '../../services/cache_service.dart'; // For CachedItem type if needed
 
 enum SortOption { recent, count, alphabetical }
 
@@ -17,7 +20,7 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  List<Source> _filteredSources = [];
+  List<CachedItem<Source>> _filteredSources = [];
   String? _error;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
@@ -30,7 +33,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    _scrollController.addListener(_onScroll);
+    
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -43,36 +46,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
     super.dispose();
   }
 
-  void _onScroll() {
-    // Load more when scrolling near bottom
-    if (_scrollController.position.pixels >=
-        _scrollController.position.maxScrollExtent - 200) {
-      final sourceProvider =
-          Provider.of<SourceProvider>(context, listen: false);
-      if (sourceProvider.hasMorePages && !sourceProvider.isFetching) {
-        final client = Provider.of<AuthProvider>(context, listen: false).client;
-        sourceProvider.loadNextPage(client);
-      }
-    }
-  }
-
   void _onSearchChanged() {
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sources = sourceProvider.sources;
+    final sources = sourceProvider.items;
 
-    // If user is searching and we have more pages, load them all
-    if (_searchController.text.isNotEmpty && sourceProvider.hasMorePages) {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      sourceProvider.loadAllPages(client);
-    }
-
-    final filtered = filterAndSort<Source>(
+    final filtered = filterAndSort<CachedItem<Source>>(
       items: sources,
       query: _searchController.text,
       accessors: [
-        (source) => source.githubRepo?.repo ?? '',
-        (source) => source.name,
-        (source) => source.githubRepo?.owner ?? '',
+        (item) => item.data.githubRepo?.repo ?? '',
+        (item) => item.data.name,
+        (item) => item.data.githubRepo?.owner ?? '',
       ],
     );
 
@@ -81,21 +65,20 @@ class _SourceListScreenState extends State<SourceListScreen> {
     });
   }
 
-  List<Source> _sortSources(List<Source> sources) {
-    // We create a copy to avoid sorting the original list in place if that matters,
-    // though filterAndSort returns a new list usually.
-    final sorted = List<Source>.from(sources);
+  List<CachedItem<Source>> _sortSources(List<CachedItem<Source>> sources) {
+    final sorted = List<CachedItem<Source>>.from(sources);
     sorted.sort((a, b) {
+      final nameA = a.data.name;
+      final nameB = b.data.name;
+      
       switch (_currentSort) {
         case SortOption.recent:
-          final lastUsedA = _lastUsed[a.name];
-          final lastUsedB = _lastUsed[b.name];
+          final lastUsedA = _lastUsed[nameA];
+          final lastUsedB = _lastUsed[nameB];
           if (lastUsedA == null && lastUsedB == null) {
-            // Fallback to count
-            final countA = _usageCount[a.name] ?? 0;
-            final countB = _usageCount[b.name] ?? 0;
+            final countA = _usageCount[nameA] ?? 0;
+            final countB = _usageCount[nameB] ?? 0;
             if (countA != countB) return countB.compareTo(countA);
-            // Fallback to alphabetical
             return _compareAlphabetical(a, b);
           }
           if (lastUsedA == null) return 1;
@@ -104,20 +87,19 @@ class _SourceListScreenState extends State<SourceListScreen> {
           if (cmp != 0) return cmp;
           break;
         case SortOption.count:
-          final countA = _usageCount[a.name] ?? 0;
-          final countB = _usageCount[b.name] ?? 0;
+          final countA = _usageCount[nameA] ?? 0;
+          final countB = _usageCount[nameB] ?? 0;
           final cmp = countB.compareTo(countA);
           if (cmp != 0) return cmp;
-          // Fallback to recent
-          final lastUsedA = _lastUsed[a.name];
-          final lastUsedB = _lastUsed[b.name];
+          
+          final lastUsedA = _lastUsed[nameA];
+          final lastUsedB = _lastUsed[nameB];
           if (lastUsedA != null && lastUsedB != null) {
             final timeCmp = lastUsedB.compareTo(lastUsedA);
             if (timeCmp != 0) return timeCmp;
           }
           break;
         case SortOption.alphabetical:
-          // Already handled by default fallthrough
           break;
       }
       return _compareAlphabetical(a, b);
@@ -125,76 +107,34 @@ class _SourceListScreenState extends State<SourceListScreen> {
     return sorted;
   }
 
-  int _compareAlphabetical(Source a, Source b) {
-    final nameA = a.githubRepo?.repo ?? a.name;
-    final nameB = b.githubRepo?.repo ?? b.name;
+  int _compareAlphabetical(CachedItem<Source> a, CachedItem<Source> b) {
+    final nameA = a.data.githubRepo?.repo ?? a.data.name;
+    final nameB = b.data.githubRepo?.repo ?? b.data.name;
     return nameA.toLowerCase().compareTo(nameB.toLowerCase());
   }
 
-  /// Load initial data in background
   Future<void> _loadInitialData() async {
     if (!mounted) return;
 
-    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    // Load sources in background
-    sourceProvider.loadInitialPage(client);
-
-    // Load sessions for usage stats
-    await _loadSessions();
-  }
-
-  /// Load sessions for usage statistics
-  Future<void> _loadSessions() async {
-    if (!mounted) return;
-    setState(() {
-      _error = null;
-    });
-
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final response = await client.listSessions();
-      _processSessions(response.sessions);
-
-      if (mounted) {
-        setState(() {
-          _onSearchChanged();
-        });
-      }
-    } catch (e) {
-      if (mounted) {
-        setState(() {
-          _error = e.toString();
-        });
-      }
+    // Fetch sources if empty, but usually SessionListScreen triggered it. 
+    // Just ensure we have data or are loading.
+    if (sourceProvider.items.isEmpty && !sourceProvider.isLoading) {
+        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
+    
+    // Load usage stats from SessionProvider
+    _processSessions();
+    _onSearchChanged(); // Update filter
   }
 
-  /// Refresh all data
-  Future<void> _refreshData() async {
-    if (!mounted) return;
+  void _processSessions() {
+    // We can get sessions from SessionProvider
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessions = sessionProvider.items.map((i) => i.data).toList();
 
-    final client = Provider.of<AuthProvider>(context, listen: false).client;
-    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-
-    // Refresh sources (keeps old data visible)
-    await Future.wait([
-      sourceProvider.refresh(client),
-      _loadSessions(),
-    ]);
-
-    if (mounted && sourceProvider.initialLoadComplete) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Refreshed ${sourceProvider.sources.length} sources'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
-  }
-
-  void _processSessions(List<Session> sessions) {
     _usageCount.clear();
     _lastUsed.clear();
 
@@ -219,11 +159,34 @@ class _SourceListScreenState extends State<SourceListScreen> {
     }
   }
 
+  Future<void> _refreshData() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+
+    await Future.wait([
+      sourceProvider.fetchSources(auth.client, authToken: auth.token),
+      sessionProvider.fetchSessions(auth.client, authToken: auth.token, force: true) // Also refresh stats
+    ]);
+    
+    _processSessions();
+    _onSearchChanged();
+    
+    if (mounted) {
+       ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Refreshed ${sourceProvider.items.length} sources'),
+          duration: const Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Sources'),
+        title: const Text('Sources (Raw Data)'),
         actions: [
           PopupMenuButton<SortOption>(
             initialValue: _currentSort,
@@ -259,55 +222,50 @@ class _SourceListScreenState extends State<SourceListScreen> {
       ),
       body: Consumer<SourceProvider>(
         builder: (context, sourceProvider, child) {
-          // Trigger filter update when sources change
+            
+          // If sources updated (e.g. background fetch finished), update our filtered list
+          // This might cause loop if we setState in build, but only if items changed
           WidgetsBinding.instance.addPostFrameCallback((_) {
-            if (mounted) {
-              _onSearchChanged();
-            }
+             if (mounted && sourceProvider.items.length != (_filteredSources.length) && _searchController.text.isEmpty) {
+                 // Very rough check, better to compare list instances or timestamp
+                 // Just trigger re-filter if idle?
+                 // Or rely on Provider listener?
+                 // The Consumer rebuilds, but _filteredSources is local state relying on _onSearchChanged.
+                 // We should re-run filter when provider notifies.
+                 // _onSearchChanged uses provider.items.
+             }
           });
-
-          // Show error if initial load failed and no cached data
-          if (_error != null &&
-              !sourceProvider.initialLoadComplete &&
-              sourceProvider.sources.isEmpty) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
-                  children: [
-                    const Icon(Icons.error_outline,
-                        color: Colors.red, size: 60),
-                    const SizedBox(height: 16),
-                    Text(
-                      'Error Loading Sources',
-                      style: Theme.of(context).textTheme.titleLarge,
-                    ),
-                    const SizedBox(height: 8),
-                    SelectableText(
-                      _error!,
-                      textAlign: TextAlign.center,
-                    ),
-                    const SizedBox(height: 16),
-                    ElevatedButton(
-                      onPressed: _refreshData,
-                      child: const Text('Retry'),
-                    ),
-                  ],
-                ),
-              ),
+          
+          // Re-run filter on build? Efficient enough?
+          // Instead of local state `_filteredSources`, we could calculate it in build.
+          // Let's do that for simplicity and correctness with Consumer.
+          
+          final sources = sourceProvider.items;
+          var filtered = filterAndSort<CachedItem<Source>>(
+              items: sources,
+              query: _searchController.text,
+              accessors: [
+                (item) => item.data.githubRepo?.repo ?? '',
+                (item) => item.data.name,
+                (item) => item.data.githubRepo?.owner ?? '',
+              ],
             );
+          
+          // Sort
+          final displaySources = _sortSources(filtered);
+
+          if (sourceProvider.isLoading && sources.isEmpty) {
+             return const Center(child: CircularProgressIndicator());
+          }
+          
+          if (sourceProvider.error != null && sources.isEmpty) {
+              return Center(child: Text('Error: ${sourceProvider.error}'));
           }
 
-          // Show content with loading indicators
           return Column(
             children: [
-              // Refresh indicator at top
-              if (sourceProvider.isRefreshing)
-                const LinearProgressIndicator(
-                  backgroundColor: Colors.transparent,
-                ),
-              // Search bar
+               if (sourceProvider.isLoading)
+                const LinearProgressIndicator(),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
@@ -319,72 +277,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
                   ),
                 ),
               ),
-              // Loading indicator for initial load
-              if (sourceProvider.isFetching &&
-                  !sourceProvider.initialLoadComplete)
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      const SizedBox(
-                        width: 16,
-                        height: 16,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      ),
-                      const SizedBox(width: 12),
-                      Text(
-                        'Loading sources...',
-                        style: Theme.of(context).textTheme.bodyMedium,
-                      ),
-                    ],
-                  ),
-                ),
-              // Source list
               Expanded(
-                child: _filteredSources.isEmpty &&
-                        sourceProvider.initialLoadComplete
-                    ? Center(
-                        child: Text(
-                          _searchController.text.isEmpty
-                              ? 'No sources available'
-                              : 'No sources match your search',
-                          style: Theme.of(context).textTheme.bodyLarge,
-                        ),
-                      )
+                child: displaySources.isEmpty
+                    ? Center(child: Text( sources.isEmpty ? 'No sources loaded.' : 'No matches.'))
                     : ListView.builder(
                         controller: _scrollController,
-                        itemCount: _filteredSources.length +
-                            (sourceProvider.hasMorePages ? 1 : 0),
+                        itemCount: displaySources.length,
                         itemBuilder: (context, index) {
-                          // Loading indicator at bottom
-                          if (index == _filteredSources.length) {
-                            return Padding(
-                              padding: const EdgeInsets.all(16.0),
-                              child: Center(
-                                child: Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: [
-                                    const SizedBox(
-                                      width: 16,
-                                      height: 16,
-                                      child: CircularProgressIndicator(
-                                          strokeWidth: 2),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Text(
-                                      'Loading more sources...',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodyMedium,
-                                    ),
-                                  ],
-                                ),
-                              ),
-                            );
-                          }
-
-                          final source = _filteredSources[index];
+                          final item = displaySources[index];
+                          final source = item.data;
+                          
                           final count = _usageCount[source.name] ?? 0;
                           final lastUsedDate = _lastUsed[source.name];
 
@@ -435,15 +337,14 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                               .textTheme
                                               .bodySmall,
                                         ),
-                                      if (count == 0)
-                                        Text(
-                                          'Never used',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                  fontStyle: FontStyle.italic),
-                                        ),
+                                      if (item.metadata.isNew)
+                                         Padding(
+                                           padding: const EdgeInsets.only(left: 8.0),
+                                           child: Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                              color: Colors.green,
+                                              child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10))),
+                                         ),
                                     ],
                                   ),
                                 ],

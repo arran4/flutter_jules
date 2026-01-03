@@ -5,10 +5,11 @@ import 'services/dev_mode_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
 import 'services/settings_provider.dart';
+import 'services/cache_service.dart';
 import 'ui/screens/session_list_screen.dart';
-import 'ui/screens/source_list_screen.dart';
-import 'ui/screens/settings_screen.dart';
 import 'ui/screens/login_screen.dart';
+import 'ui/screens/settings_screen.dart';
+import 'ui/screens/source_list_screen.dart';
 
 void main() {
   runApp(
@@ -16,9 +17,19 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
-        ChangeNotifierProvider(create: (_) => SessionProvider()),
-        ChangeNotifierProvider(create: (_) => SourceProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ProxyProvider<DevModeProvider, CacheService>(
+          update: (_, devMode, __) =>
+              CacheService(isDevMode: devMode.isDevMode),
+        ),
+        ChangeNotifierProxyProvider<CacheService, SessionProvider>(
+          create: (_) => SessionProvider(),
+          update: (_, cache, session) => session!..setCacheService(cache),
+        ),
+        ChangeNotifierProxyProvider<CacheService, SourceProvider>(
+          create: (_) => SourceProvider(),
+          update: (_, cache, source) => source!..setCacheService(cache),
+        ),
       ],
       child: const MyApp(),
     ),
@@ -37,6 +48,10 @@ class MyApp extends StatelessWidget {
         primarySwatch: Colors.blue,
         useMaterial3: true,
       ),
+      routes: {
+        '/settings': (context) => const SettingsScreen(),
+        '/sources_raw': (context) => const SourceListScreen(),
+      },
       home: Consumer<AuthProvider>(
         builder: (context, auth, _) {
           if (auth.isLoading) {
@@ -47,59 +62,8 @@ class MyApp extends StatelessWidget {
           if (!auth.isAuthenticated) {
             return const LoginScreen();
           }
-          return const JulesHomePage();
+          return const SessionListScreen();
         },
-      ),
-    );
-  }
-}
-
-class JulesHomePage extends StatefulWidget {
-  const JulesHomePage({super.key});
-
-  @override
-  State<JulesHomePage> createState() => _JulesHomePageState();
-}
-
-class _JulesHomePageState extends State<JulesHomePage> {
-  int _selectedIndex = 0;
-
-  static const List<Widget> _widgetOptions = <Widget>[
-    SessionListScreen(),
-    SourceListScreen(),
-    SettingsScreen(),
-  ];
-
-  void _onItemTapped(int index) {
-    setState(() {
-      _selectedIndex = index;
-    });
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      body: Center(
-        child: _widgetOptions.elementAt(_selectedIndex),
-      ),
-      bottomNavigationBar: BottomNavigationBar(
-        items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-            icon: Icon(Icons.list),
-            label: 'Sessions',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.source),
-            label: 'Sources',
-          ),
-          BottomNavigationBarItem(
-            icon: Icon(Icons.settings),
-            label: 'Settings',
-          ),
-        ],
-        currentIndex: _selectedIndex,
-        selectedItemColor: Colors.blue,
-        onTap: _onItemTapped,
       ),
     );
   }

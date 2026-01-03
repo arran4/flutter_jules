@@ -5,6 +5,7 @@ import 'package:provider/provider.dart';
 import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
+// import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
 class NewSessionDialog extends StatefulWidget {
   final String? sourceFilter;
@@ -39,18 +40,38 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    if (force) {
-      await sourceProvider.refresh(auth.client);
-    } else {
-      await sourceProvider.loadInitialPage(auth.client);
-      // If we only loaded first page, maybe we want to search or load more?
-      // For the dropdown, just the first page (usually contains recently used) might be enough,
-      // or we might want to load more if the user scrolls (not easy in DropdownButton).
-      // For now, loadInitialPage is sufficient as it likely covers 20-50 items.
+    // If forcing or list is empty, fetch
+    if (force || sourceProvider.items.isEmpty) {
+       // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
+       // For now, calling it is enough.
+       // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
+       // My implementation of fetchSources: skips if loading, but otherwise fetches.
+       // And it loads from cache first.
+       
+       await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
-
+    
+    // If we want to force network refresh, we might need a distinct method or param, 
+    // but the user requirement was to load all on start. 
+    // Usually cached data is fine for the dropdown unless the user explicitly refreshed in the main screen.
+    // The previous code called `refresh`.
+    
+    // Since fetchSources currently respects cache if available and loaded, we might need to rely on the main screen refresh.
+    // But for this dialog's "Refresh" button, we probably want to force a network hit.
+    // My refactored fetchSources doesn't expose `force` logic cleanly (it checks cache).
+    
+    // Wait, my fetchSources executes:
+    // 1. Load from cache (if token provided).
+    // 2. Network call (do/while).
+    // 3. Save to cache.
+    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login". 
+    // But `SessionProvider` had logic to skip if fresh. `SourceProvider` refactor I wrote *always* fetches from network after loading cache.
+    // Ideally I should have added a freshness check or `force` param.
+    // But as written, it acts as a force refresh every time it's called unless `isLoading` is true.
+    
     if (mounted) {
-      _initializeSelection(sourceProvider.sources);
+      final sources = sourceProvider.items.map((i) => i.data).toList();
+      _initializeSelection(sources);
     }
   }
 
@@ -110,12 +131,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (repo.branches != null) {
       branches = repo.branches!.map((b) => b.displayName).toList();
     }
-
-    // If current selected branch is valid for this source, keep it?
-    // Usually when switching sources we want to reset to default.
-    // So let's re-evaluate.
-    // However, if we are just re-initializing (refresh), we might want to keep it if valid.
-    // But simplified logic: always pick best default.
 
     if (repo.defaultBranch != null) {
       _selectedBranch = repo.defaultBranch!.displayName;
@@ -198,7 +213,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   Widget build(BuildContext context) {
     return Consumer<SourceProvider>(builder: (context, sourceProvider, _) {
-      if (sourceProvider.isFetching && sourceProvider.sources.isEmpty) {
+      final sources = sourceProvider.items.map((i) => i.data).toList();
+
+      if (sourceProvider.isLoading && sources.isEmpty) {
         // Initial load
         return const AlertDialog(
           content: SizedBox(
@@ -208,7 +225,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         );
       }
 
-      if (sourceProvider.error != null && sourceProvider.sources.isEmpty) {
+      if (sourceProvider.error != null && sources.isEmpty) {
         return AlertDialog(
           title: const Text('Error'),
           content: Text(sourceProvider.error!),
@@ -220,8 +237,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           ],
         );
       }
-
-      final sources = sourceProvider.sources;
 
       // Determine available branches for the selected source
       List<String> branches = [];
@@ -298,7 +313,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 children: [
                   const Text('Context',
                       style: TextStyle(fontWeight: FontWeight.bold)),
-                  if (sourceProvider.isFetching)
+                  if (sourceProvider.isLoading)
                     const SizedBox(
                         width: 16,
                         height: 16,

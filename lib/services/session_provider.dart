@@ -1,83 +1,113 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
+import '../models/cache_metadata.dart';
 import 'jules_client.dart';
+import 'cache_service.dart';
 
 class SessionProvider extends ChangeNotifier {
-  List<Session> _sessions = [];
-  bool _isFetching = false;
+  List<CachedItem<Session>> _items = [];
+  bool _isLoading = false;
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
-  String? _nextPageToken;
+  CacheService? _cacheService;
 
-  List<Session> get sessions => _sessions;
-  bool get isFetching => _isFetching;
+  List<CachedItem<Session>> get items => _items;
+  bool get isLoading => _isLoading;
   String? get error => _error;
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
-  bool get hasMore => _nextPageToken != null;
 
-  // Cache duration of 2 minutes
-  static const Duration _cacheDuration = Duration(minutes: 2);
+  void setCacheService(CacheService service) {
+    _cacheService = service;
+  }
 
   Future<void> fetchSessions(JulesClient client,
-      {bool force = false, bool loadMore = false, int pageSize = 30}) async {
-    // If loading more but no next page, return
-    if (loadMore && _nextPageToken == null) return;
-
-    // If not forced/loading more and we have data and it's fresh, don't fetch
-    if (!force &&
-        !loadMore &&
-        _sessions.isNotEmpty &&
-        _lastFetchTime != null &&
-        DateTime.now().difference(_lastFetchTime!) < _cacheDuration) {
+      {bool force = false, String? authToken}) async {
+    
+    if (_cacheService == null) {
+      _error = "Cache service not initialized";
+      notifyListeners();
       return;
     }
+    
+    // 1. Load from cache immediately
+    if (authToken != null) {
+       _items = await _cacheService!.loadSessions(authToken);
+       // Sort by retrieve time or create time? 
+       // Usually newest first. Session doesn't have reliable date always?
+       // Let's sort by metadata.lastRetrieved desc or Session.createTime if avaiable
+       _sortItems();
+       notifyListeners();
+    }
 
-    // If already fetching, don't start another fetch unless forced
-    if (_isFetching) return;
+    if (_isLoading) return;
 
-    _isFetching = true;
+    _isLoading = true;
     _error = null;
     notifyListeners();
 
     try {
-      // If force refresh or initial load, reset paging
+      List<Session> allSessions = [];
       String? pageToken;
-      if (loadMore) {
-        pageToken = _nextPageToken;
-      }
+      
+      // Load all sessions
+      do {
+        final response = await client.listSessions(
+          pageSize: 100, // Fetch larger chunks
+          pageToken: pageToken,
+          onDebug: (exchange) {
+            _lastExchange = exchange;
+          },
+        );
+        
+        allSessions.addAll(response.sessions);
+        pageToken = response.nextPageToken;
+        
+      } while (pageToken != null);
 
-      final response = await client.listSessions(
-        pageSize: pageSize,
-        pageToken: pageToken,
-        onDebug: (exchange) {
-          _lastExchange = exchange;
-        },
-      );
-
-      if (loadMore) {
-        _sessions.addAll(response.sessions);
+      if (authToken != null) {
+        await _cacheService!.saveSessions(authToken, allSessions);
+        _items = await _cacheService!.loadSessions(authToken);
+        _sortItems();
       } else {
-        _sessions = response.sessions;
+        // Fallback if no token (shouldn't happen if fetching worked)
       }
-      _nextPageToken = response.nextPageToken;
 
       _lastFetchTime = DateTime.now();
       _error = null;
     } catch (e) {
       _error = e.toString();
     } finally {
-      _isFetching = false;
+      _isLoading = false;
       notifyListeners();
     }
   }
 
-  // Method to manually update local list if needed (e.g. after creation)
-  // Or simply force refresh.
-  void addSession(Session session) {
-    _sessions.insert(0, session);
-    notifyListeners();
+  void _sortItems() {
+    _items.sort((a, b) {
+      // Sort by createTime if possible, otherwise lastRetrieved
+      // Assuming ISO string for createTime
+      if (a.data.createTime != null && b.data.createTime != null) {
+         return b.data.createTime!.compareTo(a.data.createTime!);
+      }
+      return b.metadata.lastRetrieved.compareTo(a.metadata.lastRetrieved);
+    });
+  }
+
+  Future<void> markAsRead(String sessionId, String authToken) async {
+    if (_cacheService != null) {
+      await _cacheService!.markSessionAsRead(authToken, sessionId);
+      final index = _items.indexWhere((item) => item.data.id == sessionId);
+      if (index != -1) {
+        final item = _items[index];
+        _items[index] = CachedItem(
+          item.data, 
+          item.metadata.copyWith(lastOpened: DateTime.now())
+        );
+        notifyListeners();
+      }
+    }
   }
 }
