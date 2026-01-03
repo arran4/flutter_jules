@@ -282,26 +282,37 @@ class _SourceListScreenState extends State<SourceListScreen> {
                   ),
                 ],
               ),
-              if (isDevMode)
-                 PopupMenuButton<String>(
-                  onSelected: (value) {
-                    if (value == 'raw_data') {
-                       _showRawData(context);
-                    }
-                  },
-                  itemBuilder: (context) => [
-                    const PopupMenuItem(
-                      value: 'raw_data',
-                      child: Row(
-                        children: [
-                          Icon(Icons.data_object),
-                          SizedBox(width: 8),
-                          Text('View Raw Data'),
-                        ],
-                      ),
+              PopupMenuButton<String>(
+                onSelected: (value) {
+                  if (value == 'settings') {
+                    Navigator.pushNamed(context, '/settings');
+                  } else if (value == 'raw_data') {
+                     _showRawData(context);
+                  }
+                },
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'raw_data',
+                    child: Row(
+                      children: [
+                        Icon(Icons.data_object),
+                        SizedBox(width: 8),
+                        Text('View Raw Data'),
+                      ],
                     ),
-                  ],
-                ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'settings',
+                    child: Row(
+                      children: [
+                        Icon(Icons.settings),
+                        SizedBox(width: 8),
+                        Text('Settings'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
             ],
           ),
           body: (sources.isEmpty && isLoading)
