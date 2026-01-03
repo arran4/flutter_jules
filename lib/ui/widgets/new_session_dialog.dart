@@ -218,9 +218,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (sourceProvider.isLoading && sources.isEmpty) {
         // Initial load
         return const AlertDialog(
-          content: SizedBox(
-            height: 100,
-            child: Center(child: CircularProgressIndicator()),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              CircularProgressIndicator(),
+              SizedBox(height: 16),
+              Text("Loading available sources..."),
+            ],
           ),
         );
       }
@@ -228,7 +232,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (sourceProvider.error != null && sources.isEmpty) {
         return AlertDialog(
           title: const Text('Error'),
-          content: Text(sourceProvider.error!),
+          content: SelectableText(sourceProvider.error!),
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
@@ -332,7 +336,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
               Row(
                 children: [
                   Expanded(
+                    flex: 3,
                     child: DropdownButtonFormField<Source>(
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Repository',
                         border: OutlineInputBorder(),
@@ -359,7 +365,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                   ),
                   const SizedBox(width: 16),
                   Expanded(
+                    flex: 1,
                     child: DropdownButtonFormField<String>(
+                      isExpanded: true,
                       decoration: const InputDecoration(
                         labelText: 'Branch',
                         border: OutlineInputBorder(),

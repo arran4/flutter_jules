@@ -76,7 +76,8 @@ class CacheService {
     final now = DateTime.now();
 
     for (final session in newSessions) {
-      final file = File(path.join(sessionsDir.path, '${session.id}.json'));
+      final fileName = Uri.encodeComponent(session.id) + '.json';
+      final file = File(path.join(sessionsDir.path, fileName));
       CacheMetadata metadata;
 
       if (await file.exists()) {
@@ -154,7 +155,8 @@ class CacheService {
     final now = DateTime.now();
 
     for (final source in newSources) {
-      final file = File(path.join(sourcesDir.path, '${source.id}.json'));
+      final fileName = Uri.encodeComponent(source.id) + '.json';
+      final file = File(path.join(sourcesDir.path, fileName));
       CacheMetadata metadata;
 
       final newJson = source.toJson();
@@ -226,7 +228,8 @@ class CacheService {
   Future<void> markSessionAsRead(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
     // Might be in sessions or cached_details, but we track metadata in sessions list usually
-    final file = File(path.join(cacheDir.path, 'sessions', '$sessionId.json'));
+    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final file = File(path.join(cacheDir.path, 'sessions', fileName));
     if (await file.exists()) {
       final content = await file.readAsString();
       final json = jsonDecode(content);
@@ -249,7 +252,8 @@ class CacheService {
       await detailsDir.create(recursive: true);
     }
     
-    final file = File(path.join(detailsDir.path, '${session.id}.json'));
+    final fileName = Uri.encodeComponent(session.id) + '.json';
+    final file = File(path.join(detailsDir.path, fileName));
     
     final dataToSave = {
       'session': session.toJson(), // Store full session as well
@@ -263,7 +267,8 @@ class CacheService {
    
   Future<CachedSessionDetails?> loadSessionDetails(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
-    final file = File(path.join(cacheDir.path, 'session_details', '$sessionId.json'));
+    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final file = File(path.join(cacheDir.path, 'session_details', fileName));
     
     if (!await file.exists()) {
       return null;
