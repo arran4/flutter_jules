@@ -6,11 +6,17 @@ import 'model_viewer.dart';
 
 class ActivityItem extends StatelessWidget {
   final Activity activity;
+  final Future<void> Function()? onRefresh;
 
-  const ActivityItem({super.key, required this.activity});
+  const ActivityItem({
+    super.key,
+    required this.activity,
+    this.onRefresh,
+  });
 
   @override
   Widget build(BuildContext context) {
+    // ... (rest of the build method preamble) ...
     String title = "Activity";
     // We will build up the description widget list dynamically or use a main description string
     String? plainDescription;
@@ -21,6 +27,7 @@ class ActivityItem extends StatelessWidget {
     bool isKnownType = false;
 
     if (activity.sessionFailed != null) {
+      // ... (existing logic) ...
       title = "Session Failed";
       plainDescription = activity.sessionFailed!.reason;
       icon = Icons.error;
@@ -153,7 +160,7 @@ class ActivityItem extends StatelessWidget {
             PopupMenuButton<String>(
               icon: const Icon(Icons.more_vert),
               tooltip: 'Options',
-              onSelected: (value) {
+              onSelected: (value) async {
                 if (value == 'raw_data') {
                   showDialog(
                     context: context,
@@ -162,9 +169,24 @@ class ActivityItem extends StatelessWidget {
                       title: 'Activity Data',
                     ),
                   );
+                } else if (value == 'refresh') {
+                  if (onRefresh != null) {
+                    await onRefresh!();
+                  }
                 }
               },
               itemBuilder: (BuildContext context) => <PopupMenuEntry<String>>[
+                if (onRefresh != null)
+                  const PopupMenuItem<String>(
+                    value: 'refresh',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Refresh Activity'),
+                      ],
+                    ),
+                  ),
                 const PopupMenuItem<String>(
                   value: 'raw_data',
                   child: Row(

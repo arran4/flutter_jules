@@ -160,6 +160,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _refreshActivity(Activity activity) async {
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final updatedActivity = await client.getActivity(activity.name);
+      
+      if (!mounted) return;
+
+      setState(() {
+        final index = _activities.indexWhere((a) => a.id == activity.id);
+        if (index != -1) {
+          _activities[index] = updatedActivity;
+        }
+      });
+      
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Activity refreshed")),
+      );
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to refresh activity: $e")),
+        );
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     int itemCount;
@@ -522,7 +548,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // Activity Item
           final activity = _activities[index - 1];
-          final item = ActivityItem(activity: activity);
+          final item = ActivityItem(
+            activity: activity,
+            onRefresh: () => _refreshActivity(activity),
+          );
 
           if (isDevMode) {
             return GestureDetector(
