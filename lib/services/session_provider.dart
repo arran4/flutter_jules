@@ -35,11 +35,13 @@ class SessionProvider extends ChangeNotifier {
     // 1. Load from cache immediately
     if (authToken != null) {
        _items = await _cacheService!.loadSessions(authToken);
-       // Sort by retrieve time or create time? 
-       // Usually newest first. Session doesn't have reliable date always?
-       // Let's sort by metadata.lastRetrieved desc or Session.createTime if avaiable
        _sortItems();
        notifyListeners();
+
+       // If valid cache exists and we are not forcing a refresh, stop here.
+       if (!force && _items.isNotEmpty) {
+         return;
+       }
     }
 
     if (_isLoading) return;
