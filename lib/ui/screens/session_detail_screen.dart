@@ -178,20 +178,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
-          if (isDevMode)
-            IconButton(
-              icon: const Icon(Icons.data_object),
-              tooltip: 'View Session Data',
-              onPressed: () {
-                showDialog(
-                  context: context,
-                  builder: (context) => ModelViewer(
-                    data: _session.toJson(),
-                    title: 'Session Data',
-                  ),
-                );
-              },
-            ),
+          IconButton(
+            icon: const Icon(Icons.data_object),
+            tooltip: 'View Session Data',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (context) => ModelViewer(
+                  data: _session.toJson(),
+                  title: 'Session Data',
+                ),
+              );
+            },
+          ),
           IconButton(
             icon: const Icon(Icons.replay),
             onPressed: _fetchActivities,

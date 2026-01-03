@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models.dart';
 import 'model_viewer.dart';
 
@@ -11,47 +12,64 @@ class ActivityItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     String title = "Activity";
-    String description = activity.description;
+    // We will build up the description widget list dynamically or use a main description string
+    String? plainDescription;
     IconData icon = Icons.info;
     Color? iconColor;
 
-    if (activity.agentMessaged != null) {
-      title = "Agent";
-      description = activity.agentMessaged!.agentMessage;
-      icon = Icons.smart_toy;
-      iconColor = Colors.blue;
-    } else if (activity.userMessaged != null) {
-      title = "User";
-      description = activity.userMessaged!.userMessage;
-      icon = Icons.person;
+    // Determine primary specific type for Icon and Title
+    bool isKnownType = false;
+
+    if (activity.sessionFailed != null) {
+      title = "Session Failed";
+      plainDescription = activity.sessionFailed!.reason;
+      icon = Icons.error;
+      iconColor = Colors.red;
+      isKnownType = true;
+    } else if (activity.sessionCompleted != null) {
+      title = "Session Completed";
+      plainDescription = "The session has been completed successfully.";
+      icon = Icons.flag;
       iconColor = Colors.green;
+      isKnownType = true;
+    } else if (activity.planApproved != null) {
+      title = "Plan Approved";
+      plainDescription = "Plan ID: ${activity.planApproved!.planId}";
+      icon = Icons.check_circle;
+      iconColor = Colors.teal;
+      isKnownType = true;
     } else if (activity.planGenerated != null) {
       title = "Plan Generated";
-      description =
+      plainDescription =
           "Plan with ${activity.planGenerated!.plan.steps.length} steps created.";
       icon = Icons.list_alt;
       iconColor = Colors.orange;
-    } else if (activity.planApproved != null) {
-      title = "Plan Approved";
-      description = "Plan ID: ${activity.planApproved!.planId}";
-      icon = Icons.check_circle;
-      iconColor = Colors.teal;
+      isKnownType = true;
+    } else if (activity.agentMessaged != null) {
+      title = "Agent";
+      plainDescription = activity.agentMessaged!.agentMessage;
+      icon = Icons.smart_toy;
+      iconColor = Colors.blue;
+      isKnownType = true;
+    } else if (activity.userMessaged != null) {
+      title = "User";
+      plainDescription = activity.userMessaged!.userMessage;
+      icon = Icons.person;
+      iconColor = Colors.green;
+      isKnownType = true;
     } else if (activity.progressUpdated != null) {
       title = activity.progressUpdated!.title;
-      description = activity.progressUpdated!.description;
+      // progressUpdated description can be markdown
+      plainDescription = activity.progressUpdated!.description; 
       icon = Icons.update;
       iconColor = Colors.indigo;
-    } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      description = "The session has been completed successfully.";
-      icon = Icons.flag;
-      iconColor = Colors.green;
-    } else if (activity.sessionFailed != null) {
-      title = "Session Failed";
-      description = activity.sessionFailed!.reason;
-      icon = Icons.error;
-      iconColor = Colors.red;
-    } else if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
+      isKnownType = true;
+    }
+
+    // Artifacts handling for Icon/Title if no other specific type
+    if (!isKnownType &&
+        activity.artifacts != null &&
+        activity.artifacts!.isNotEmpty) {
       // Check for BashOutput to determine main icon/title
       final bashArtifact = activity.artifacts!.firstWhere(
         (a) => a.bashOutput != null,
@@ -61,7 +79,8 @@ class ActivityItem extends StatelessWidget {
       if (bashArtifact.bashOutput != null) {
         final bash = bashArtifact.bashOutput!;
         title = "Command Executed";
-        description = "${bash.command}\n${bash.output}";
+        plainDescription = "${bash.command}\n${bash.output}";
+        
         if (bash.exitCode != 0) {
           icon = Icons.dangerous;
           iconColor = Colors.red;
@@ -69,22 +88,25 @@ class ActivityItem extends StatelessWidget {
           icon = Icons.terminal;
           iconColor = Colors.grey;
         }
+        isKnownType = true;
       } else {
         // Fallback for other artifacts (e.g. only ChangeSet)
         title = "Artifacts";
-        description = "${activity.artifacts!.length} items";
+        plainDescription = "${activity.artifacts!.length} items";
         icon = Icons.category;
         iconColor = Colors.blueGrey;
+        isKnownType = true;
       }
-    } else {
-      // Fallback for unsupported/unknown types
+    }
+
+    if (!isKnownType) {
       title = "Unsupported Activity";
-      description = "Type: Unknown\nID: ${activity.id}";
+      plainDescription = "Type: Unknown\nID: ${activity.id}";
       icon = Icons.help_outline;
       iconColor = Colors.amber;
     }
 
-    // Parse timestamp (assuming ISO 8601)
+    // Parse timestamp
     DateTime? timestamp;
     try {
       if (activity.createTime.isNotEmpty) {
@@ -101,18 +123,23 @@ class ActivityItem extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (description.isNotEmpty && activity.artifacts == null) ...[
-              Text(description, maxLines: 3, overflow: TextOverflow.ellipsis),
+            if (plainDescription != null && activity.artifacts == null && activity.progressUpdated == null) ...[
+              Text(plainDescription, maxLines: 3, overflow: TextOverflow.ellipsis),
               const SizedBox(height: 4),
             ],
-            // For artifacts, we might want to show the preview in description/subtitle
-            if (activity.artifacts != null && description.isNotEmpty) ...[
-              Text(description.split('\n').first,
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                  style: const TextStyle(fontFamily: 'monospace')),
-              const SizedBox(height: 4),
+            // Special preview for progress updated (markdown treated as text for preview 3 lines)
+            if (activity.progressUpdated != null) ...[
+               Text(activity.progressUpdated!.description, maxLines: 3, overflow: TextOverflow.ellipsis),
+               const SizedBox(height: 4),
             ],
+             // Special preview for artifacts
+             if (activity.artifacts != null && plainDescription != null && !title.startsWith("Command")) ...[
+                Text(plainDescription.split('\n').first,
+                   maxLines: 1,
+                   overflow: TextOverflow.ellipsis,
+                   style: const TextStyle(fontFamily: 'monospace')),
+                const SizedBox(height: 4),
+             ],
             if (timestamp != null)
               Text(
                 DateFormat.yMMMd().add_jm().format(timestamp.toLocal()),
@@ -154,70 +181,110 @@ class ActivityItem extends StatelessWidget {
           ],
         ),
         children: [
-          Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                if (activity.agentMessaged != null ||
-                    activity.userMessaged != null ||
-                    activity.sessionFailed != null ||
-                    activity.progressUpdated != null ||
-                    icon == Icons.help_outline) ...[
-                  if (description.isNotEmpty) ...[
-                    Text("Description:",
-                        style: Theme.of(context).textTheme.labelLarge),
-                    const SizedBox(height: 4),
-                    SelectableText(description),
-                    const Divider(),
-                  ]
-                ],
-                // Render Artifacts Detail
-                if (activity.artifacts != null) ...[
-                  for (var artifact in activity.artifacts!) ...[
-                    if (artifact.bashOutput != null) ...[
-                      Text("Command:",
-                          style: Theme.of(context).textTheme.labelLarge),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        color: Colors.black12,
-                        child: SelectableText(
-                          artifact.bashOutput!.command,
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                      Text("Output:",
-                          style: Theme.of(context).textTheme.labelLarge),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        color: Colors.black12,
-                        child: SelectableText(
-                          artifact.bashOutput!.output,
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                      ),
-                      if (artifact.bashOutput!.exitCode != 0)
-                        Padding(
-                          padding: const EdgeInsets.only(top: 8.0),
+          SelectionArea(
+            child: Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  // 1. Description / Message / Progress
+                  if (activity.progressUpdated != null) ...[
+                     Text("Update:", style: Theme.of(context).textTheme.labelLarge),
+                     const SizedBox(height: 8),
+                     MarkdownBody(data: activity.progressUpdated!.description),
+                     const Divider(),
+                  ] else if (isKnownType && plainDescription != null && !title.startsWith("Command") && plainDescription != "Artifacts") ...[
+                      Text("Description:", style: Theme.of(context).textTheme.labelLarge),
+                      const SizedBox(height: 4),
+                      SelectableText(plainDescription),
+                      const Divider(),
+                  ],
+                  // 2. Artifacts
+                  if (activity.artifacts != null) ...[
+                    for (var artifact in activity.artifacts!) ...[
+                      // Bash Output
+                      if (artifact.bashOutput != null) ...[
+                        Text("Command:",
+                            style: Theme.of(context).textTheme.labelLarge),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.black12,
                           child: Text(
-                            "Exit Code: ${artifact.bashOutput!.exitCode}",
-                            style: const TextStyle(
-                                color: Colors.red, fontWeight: FontWeight.bold),
+                            artifact.bashOutput!.command,
+                            style: const TextStyle(fontFamily: 'monospace'),
                           ),
                         ),
-                      const Divider(),
-                    ] else if (artifact.changeSet != null) ...[
-                      Text("Change Set:",
-                          style: Theme.of(context).textTheme.labelLarge),
-                      Text("Source: ${artifact.changeSet!.source}"),
-                      const Divider(),
+                        const SizedBox(height: 8),
+                        Text("Output:",
+                            style: Theme.of(context).textTheme.labelLarge),
+                        Container(
+                          width: double.infinity,
+                          padding: const EdgeInsets.all(8),
+                          color: Colors.black12,
+                          child: Text(
+                            artifact.bashOutput!.output,
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
+                        ),
+                        if (artifact.bashOutput!.exitCode != 0)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 8.0),
+                            child: Text(
+                              "Exit Code: ${artifact.bashOutput!.exitCode}",
+                              style: const TextStyle(
+                                  color: Colors.red, fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        const Divider(),
+                      ],
+                      // ChangeSet / GitPatch
+                      if (artifact.changeSet != null) ...[
+                        Text("Change Set:",
+                            style: Theme.of(context).textTheme.labelLarge),
+                        Text("Source: ${artifact.changeSet!.source}"),
+                        if (artifact.changeSet!.gitPatch != null) ...[
+                          const SizedBox(height: 8),
+                          Container(
+                            width: double.infinity,
+                            padding: const EdgeInsets.all(8),
+                            color: Colors.black12,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                Text(
+                                  "Commit Message:",
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                Text(
+                                  artifact.changeSet!.gitPatch!
+                                      .suggestedCommitMessage,
+                                  style: const TextStyle(fontWeight: FontWeight.bold),
+                                ),
+                                const SizedBox(height: 8),
+                                Text(
+                                  "Base Commit: ${artifact.changeSet!.gitPatch!.baseCommitId.substring(0, 8)}...",
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                                const SizedBox(height: 8),
+                                const Text("Patch Preview:"),
+                                Text(
+                                  artifact.changeSet!.gitPatch!.unidiffPatch,
+                                  style: const TextStyle(
+                                      fontFamily: 'monospace', fontSize: 12),
+                                  maxLines: 10,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                              ],
+                            ),
+                          ),
+                        ],
+                        const Divider(),
+                      ]
                     ]
-                  ]
+                  ],
                 ],
-              ],
+              ),
             ),
           ),
         ],
