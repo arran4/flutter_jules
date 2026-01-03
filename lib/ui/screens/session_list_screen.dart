@@ -29,14 +29,12 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  late bool _groupByStatus;
   final Set<SessionState> _statusFilters = {};
   final TextEditingController _searchController = TextEditingController();
 
   @override
   void initState() {
     super.initState();
-    _groupByStatus = widget.sourceFilter == null;
     _searchController.addListener(() {
       setState(() {});
     });
@@ -277,37 +275,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
            }).toList();
         }
 
-        // Sorting
-        if (_groupByStatus) {
-           displayItems.sort((a, b) {
-             final stateA = a.data.state?.index ?? -1;
-             final stateB = b.data.state?.index ?? -1;
-             int cmp = stateA.compareTo(stateB);
-             
-             if (cmp != 0) return cmp;
-             
-             final timeA = _getEffectiveTime(a);
-             final timeB = _getEffectiveTime(b);
-             return timeB.compareTo(timeA);
-           });
-        }
-
-        final List<ListItem> listItems = [];
-        if (_groupByStatus) {
-          SessionState? lastState;
-          for (var item in displayItems) {
-            if (item.data.state != lastState) {
-              listItems.add(HeaderItem(
-                  item.data.state?.toString().split('.').last ?? 'Unknown'));
-              lastState = item.data.state;
-            }
-            listItems.add(SessionItem(item));
-          }
-        } else {
-          for (var item in displayItems) {
-            listItems.add(SessionItem(item));
-          }
-        }
+        // Sorting (ensure time sort)
+        displayItems.sort((a, b) {
+           final timeA = _getEffectiveTime(a);
+           final timeB = _getEffectiveTime(b);
+           return timeB.compareTo(timeA);
+        });
 
         return Scaffold(
           appBar: AppBar(
@@ -317,19 +290,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
               child: LinearProgressIndicator(), 
             ) : null,
             actions: [
-               IconButton(
+              IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
                 onPressed: () => _fetchSessions(force: true),
-              ),
-              IconButton(
-                icon: Icon(_groupByStatus ? Icons.layers_clear : Icons.layers),
-                tooltip: _groupByStatus ? 'Ungroup' : 'Group by Status',
-                onPressed: () {
-                  setState(() {
-                    _groupByStatus = !_groupByStatus;
-                  });
-                },
               ),
               IconButton(
                 icon: const Icon(Icons.filter_list),
@@ -413,26 +377,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           child: RefreshIndicator(
                             onRefresh: () => _fetchSessions(force: true),
                             child: ListView.builder(
-                              itemCount: listItems.length,
+                              itemCount: displayItems.length,
                               itemBuilder: (context, index) {
-                                final item = listItems[index];
-
-                                if (item is HeaderItem) {
-                                  return Container(
-                                    color: Theme.of(context)
-                                        .colorScheme
-                                        .surfaceContainerHighest,
-                                    padding: const EdgeInsets.all(8.0),
-                                    child: Text(
-                                      item.title,
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .titleSmall
-                                          ?.copyWith(fontWeight: FontWeight.bold),
-                                    ),
-                                  );
-                                } else if (item is SessionItem) {
-                                  final cachedItem = item.cachedItem;
+                                  final cachedItem = displayItems[index];
                                   final session = cachedItem.data;
                                   final metadata = cachedItem.metadata;
                                   final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -554,8 +501,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       ),
                                     ),
                                   );
-                                }
-                                return const SizedBox.shrink();
                               },
                             ),
                           ),
@@ -572,14 +517,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 }
 
-abstract class ListItem {}
 
-class HeaderItem implements ListItem {
-  final String title;
-  HeaderItem(this.title);
-}
+// Removed ListItem classes as they are no longer needed
 
-class SessionItem implements ListItem {
-  final CachedItem<Session> cachedItem;
-  SessionItem(this.cachedItem);
-}

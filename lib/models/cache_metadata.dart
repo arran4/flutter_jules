@@ -15,14 +15,19 @@ class CacheMetadata {
   });
   
   // Convenience Getters
-  // "New" if never opened
-  bool get isNew => lastOpened == null; // effectively "Unread" too if we conflate them
   
-  // "Updated" if content changed since last open
+  // "New" (Unread Type A): Never opened.
+  // Matches "Not opened at all".
+  bool get isNew => lastOpened == null;
+  
+  // "Updated" (Unread Type B): Opened before, but content changed since last open.
+  // Matches "Changed since the previous data reset" (assuming reset = open).
+  // AND logic ensures we don't mark read items as updated, nor new items as updated (UI separates them).
   bool get isUpdated => 
-      lastUpdated != null && (lastOpened == null || lastUpdated!.isAfter(lastOpened!));
+      lastOpened != null && lastUpdated != null && lastUpdated!.isAfter(lastOpened!);
   
-  // "Unread" generally means New OR Updated
+  // "Unread": Either never opened (New) OR opened but changed (Updated).
+  // Matches "Changed ... OR not opened at all".
   bool get isUnread => isNew || isUpdated;
 
   factory CacheMetadata.fromJson(Map<String, dynamic> json) {
