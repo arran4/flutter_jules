@@ -382,7 +382,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
                               child: ListTile(
                                 leading:
                                     Icon(isPrivate ? Icons.lock : Icons.public),
-                                title: Text(repo?.repo ?? source.name),
+                                title: Row(
+                                  children: [
+                                    if (isPrivate)
+                                      const Padding(
+                                        padding: EdgeInsets.only(right: 6.0),
+                                        child: Icon(Icons.lock, size: 16, color: Colors.grey),
+                                      ),
+                                    Expanded(child: Text(repo?.repo ?? source.name, overflow: TextOverflow.ellipsis)),
+                                  ],
+                                ),
                                 subtitle: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [

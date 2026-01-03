@@ -441,10 +441,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               label: const Text('Repository'),
                               requestFocusOnTap: true,
                               enableFilter: true,
+                              leadingIcon: (_selectedSource?.githubRepo?.isPrivate == true) 
+                                  ? const Icon(Icons.lock, size: 16) 
+                                  : null,
                               dropdownMenuEntries: sources.map((s) {
+                                final isPrivate = s.githubRepo?.isPrivate ?? false;
                                 return DropdownMenuEntry<Source>(
                                   value: s,
                                   label: _getSourceDisplayLabel(s),
+                                  leadingIcon: isPrivate ? const Icon(Icons.lock, size: 16) : null,
                                 );
                               }).toList(),
                               onSelected: (widget.sourceFilter != null)
