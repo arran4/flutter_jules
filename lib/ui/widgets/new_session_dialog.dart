@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
@@ -33,9 +34,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
+    _loadPreferences();
     // Defer data fetching to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSources();
+    });
+  }
+
+  Future<void> _loadPreferences() async {
+    final prefs = await SharedPreferences.getInstance();
+    if (!mounted) return;
+    setState(() {
+      _selectedModeIndex = prefs.getInt('new_session_last_mode') ?? 0;
+      _autoCreatePr = prefs.getBool('new_session_last_auto_pr') ?? false;
+      // Sources and branches are handled in _initializeSelection after sources are loaded
     });
   }
 
@@ -78,9 +90,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     }
   }
 
-  void _initializeSelection(List<Source> sources) {
+  Future<void> _initializeSelection(List<Source> sources) async {
+    final prefs = await SharedPreferences.getInstance();
+    
+    if (!mounted) return;
+
     setState(() {
-      // Pre-select source if filter exists
+      // Priority 1: Filter provided by widget (e.g. from context)
       if (widget.sourceFilter != null) {
         try {
           _selectedSource = sources.firstWhere(
@@ -91,18 +107,27 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         }
       }
 
-      // If already selected, verify it still exists in the list (important for re-fetches)
+      // Priority 2: Already selected source (if re-fetching)
       if (_selectedSource != null) {
         try {
           _selectedSource =
               sources.firstWhere((s) => s.name == _selectedSource!.name);
         } catch (_) {
-          // Selected source no longer exists
           _selectedSource = null;
         }
       }
+      
+      // Priority 3: Last used source from prefs
+      if (_selectedSource == null) {
+         final lastSource = prefs.getString('new_session_last_source');
+         if (lastSource != null) {
+             try {
+                _selectedSource = sources.firstWhere((s) => s.name == lastSource);
+             } catch (_) {}
+         }
+      }
 
-      // Default to first source if none selected
+      // Priority 4: 'sources/default' or first available
       if (_selectedSource == null && sources.isNotEmpty) {
         try {
           _selectedSource =
@@ -112,12 +137,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         }
       }
 
-      // Set default branch for the selected source if not already set or invalid
-      _updateBranchFromSource();
+      // Set default branch
+      _updateBranchFromSource(prefs: prefs);
     });
   }
 
-  void _updateBranchFromSource() {
+  void _updateBranchFromSource({SharedPreferences? prefs}) {
     // If selected source is null, clear branch
     if (_selectedSource == null) {
       _selectedBranch = 'main';
@@ -134,8 +159,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (repo.branches != null) {
       branches = repo.branches!.map((b) => b.displayName).toList();
     }
+    
+    // Try to restore last used branch for this source if available
+    String? restoredBranch;
+    if (prefs != null) {
+       // We can store per-source branch or just global last branch. 
+       // Storing global last branch might be confusing if switching sources.
+       // Let's store global for now as user typically works on one context.
+       final lastBranch = prefs.getString('new_session_last_branch');
+       if (lastBranch != null && branches.contains(lastBranch)) {
+         restoredBranch = lastBranch;
+       }
+    }
 
-    if (repo.defaultBranch != null) {
+    if (restoredBranch != null) {
+      _selectedBranch = restoredBranch;
+    } else if (repo.defaultBranch != null) {
       _selectedBranch = repo.defaultBranch!.displayName;
     } else if (branches.isNotEmpty) {
       _selectedBranch = branches.first;
@@ -146,6 +185,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _create() async {
     if (_selectedSource == null) return;
+
+    // Save preferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+    await prefs.setString('new_session_last_source', _selectedSource!.name);
+    if (_selectedBranch != null) {
+      prefs.setString('new_session_last_branch', _selectedBranch!);
+    }
+    await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
     // Handle Image
     List<Media>? images;
