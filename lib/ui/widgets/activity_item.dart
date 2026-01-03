@@ -215,6 +215,16 @@ class ActivityItem extends StatelessWidget {
                      const SizedBox(height: 8),
                      MarkdownBody(data: activity.progressUpdated!.description),
                      const Divider(),
+                  ] else if (activity.agentMessaged != null) ...[
+                     Text("Message:", style: Theme.of(context).textTheme.labelLarge),
+                     const SizedBox(height: 8),
+                     MarkdownBody(data: activity.agentMessaged!.agentMessage),
+                     const Divider(),
+                  ] else if (activity.userMessaged != null) ...[
+                     Text("Message:", style: Theme.of(context).textTheme.labelLarge),
+                     const SizedBox(height: 8),
+                     MarkdownBody(data: activity.userMessaged!.userMessage),
+                     const Divider(),
                   ] else if (isKnownType && plainDescription != null && !title.startsWith("Command") && plainDescription != "Artifacts") ...[
                       Text("Description:", style: Theme.of(context).textTheme.labelLarge),
                       const SizedBox(height: 4),

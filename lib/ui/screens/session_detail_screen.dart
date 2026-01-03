@@ -323,7 +323,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               AnimatedCrossFade(
                                 duration: const Duration(milliseconds: 200),
                                 firstChild: Container(
-                                  constraints: const BoxConstraints(maxHeight: 60),
+                                  height: 60,
+                                  clipBehavior: Clip.hardEdge,
+                                  decoration: const BoxDecoration(),
                                   foregroundDecoration: BoxDecoration(
                                     gradient: LinearGradient(
                                       begin: Alignment.topCenter,
@@ -335,7 +337,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                       stops: const [0.5, 1.0],
                                     ),
                                   ),
-                                  child: MarkdownBody(data: _session.prompt),
+                                  child: SingleChildScrollView(
+                                    physics: const NeverScrollableScrollPhysics(),
+                                    child: MarkdownBody(data: _session.prompt),
+                                  ),
                                 ),
                                 secondChild: MarkdownBody(data: _session.prompt),
                                 crossFadeState: _isPromptExpanded
