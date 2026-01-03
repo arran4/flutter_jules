@@ -11,9 +11,10 @@ import '../../services/settings_provider.dart';
 import '../../models.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
-import '../widgets/foldable_text.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
+import '../widgets/session_meta_pills.dart';
+import '../widgets/session_preview_modal.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -515,173 +516,140 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       Provider.of<DevModeProvider>(context)
                                           .isDevMode;
 
-                                  final tile = ListTile(
-                                    title: FoldableText(
-                                      session.title ?? session.prompt,
-                                    ),
-                                    subtitle: Column(
-                                      crossAxisAlignment:
-                                          CrossAxisAlignment.start,
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        Text(
-                                          session.sourceContext.source,
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
-                                              ?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                              ),
-                                        ),
-                                        Text(session.state
-                                            .toString()
-                                            .split('.')
-                                            .last),
-                                        if (session.state ==
-                                                SessionState.IN_PROGRESS &&
-                                            session.currentStep != null &&
-                                            session.totalSteps != null &&
-                                            session.totalSteps! > 0) ...[
-                                          const SizedBox(height: 4),
-                                          LinearProgressIndicator(
-                                            value: session.currentStep! /
-                                                session.totalSteps!,
-                                          ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            'Step ${session.currentStep} of ${session.totalSteps}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall,
-                                          ),
-                                        ],
-                                        if (session.state ==
-                                                SessionState.IN_PROGRESS &&
-                                            session.currentAction != null) ...[
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            session.currentAction!,
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall
-                                                ?.copyWith(
-                                                    fontStyle:
-                                                        FontStyle.italic),
-                                          ),
-                                        ],
-                                      ],
-                                    ),
-                                    trailing: Row(
-                                      mainAxisSize: MainAxisSize.min,
-                                      children: [
-                                        if (session.outputs != null &&
-                                            session.outputs!.any(
-                                                (o) => o.pullRequest != null))
-                                          IconButton(
-                                            icon: const Icon(Icons.merge_type),
-                                            tooltip: 'View Pull Request',
-                                            color: Colors.purple,
-                                            onPressed: () {
-                                              final pr = session.outputs!
-                                                  .firstWhere((o) =>
-                                                      o.pullRequest != null)
-                                                  .pullRequest!;
-                                              launchUrl(Uri.parse(pr.url));
-                                            },
-                                          ),
-                                        PopupMenuButton<String>(
-                                          onSelected: (value) async {
-                                            if (value == 'copy_id') {
-                                              await Clipboard.setData(
-                                                  ClipboardData(
-                                                      text: session.id));
-                                              if (context.mounted) {
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(const SnackBar(
-                                                        content: Text(
-                                                            'Session ID copied')));
-                                              }
-                                            } else if (value == 'open_browser') {
-                                              if (session.url != null) {
-                                                launchUrl(
-                                                    Uri.parse(session.url!));
-                                              }
-                                            } else if (value == 'view_pr') {
-                                              final pr = session.outputs!
-                                                  .firstWhere((o) =>
-                                                      o.pullRequest != null)
-                                                  .pullRequest!;
-                                              launchUrl(Uri.parse(pr.url));
-                                            }
-                                          },
-                                          itemBuilder: (context) => [
-                                            const PopupMenuItem(
-                                              value: 'copy_id',
-                                              child: Row(
-                                                children: [
-                                                  Icon(Icons.copy,
-                                                      color: Colors.grey),
-                                                  SizedBox(width: 8),
-                                                  Text('Copy ID'),
-                                                ],
-                                              ),
-                                            ),
-                                            if (session.url != null)
-                                              const PopupMenuItem(
-                                                value: 'open_browser',
-                                                child: Row(
-                                                  children: [
-                                                    Icon(Icons.open_in_browser,
-                                                        color: Colors.grey),
-                                                    SizedBox(width: 8),
-                                                    Text('Open in Browser'),
-                                                  ],
+                                  return Card(
+                                    margin: const EdgeInsets.symmetric(
+                                        horizontal: 8, vertical: 4),
+                                    elevation: 2,
+                                    child: InkWell(
+                                      borderRadius: BorderRadius.circular(12),
+                                      onTap: () {
+                                        Navigator.push(
+                                            context,
+                                            MaterialPageRoute(
+                                                builder: (_) =>
+                                                    SessionDetailScreen(
+                                                        session: session)));
+                                      },
+                                      onLongPress: () {
+                                        if (isDevMode) {
+                                          _showContextMenu(context,
+                                              session: session);
+                                        } else {
+                                          showDialog(
+                                              context: context,
+                                              builder: (_) =>
+                                                  SessionPreviewModal(
+                                                      session: session));
+                                        }
+                                      },
+                                      child: Padding(
+                                        padding: const EdgeInsets.all(12),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.start,
+                                          children: [
+                                            Row(children: [
+                                              Expanded(
+                                                  child: Text(
+                                                      session.title ??
+                                                          session.prompt,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: const TextStyle(
+                                                          fontWeight:
+                                                              FontWeight.bold,
+                                                          fontSize: 16))),
+                                              if (session.outputs != null &&
+                                                  session.outputs!.any((o) =>
+                                                      o.pullRequest != null))
+                                                IconButton(
+                                                  icon: const Icon(
+                                                      Icons.merge_type),
+                                                  tooltip: 'View Pull Request',
+                                                  color: Colors.purple,
+                                                  onPressed: () {
+                                                    final pr = session.outputs!
+                                                        .firstWhere((o) =>
+                                                            o.pullRequest !=
+                                                            null)
+                                                        .pullRequest!;
+                                                    launchUrl(
+                                                        Uri.parse(pr.url));
+                                                  },
                                                 ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.info_outline,
+                                                    color: Colors.grey),
+                                                tooltip: 'Preview',
+                                                onPressed: () => showDialog(
+                                                    context: context,
+                                                    builder: (_) =>
+                                                        SessionPreviewModal(
+                                                            session: session)),
                                               ),
-                                            if (session.outputs != null &&
-                                                session.outputs!.any((o) =>
-                                                    o.pullRequest != null))
-                                              const PopupMenuItem(
-                                                value: 'view_pr',
-                                                child: Row(
+                                            ]),
+                                            const SizedBox(height: 8),
+                                            SessionMetaPills(
+                                                session: session,
+                                                compact: true),
+                                            if (session.state ==
+                                                    SessionState.IN_PROGRESS &&
+                                                session.totalSteps != null &&
+                                                session.totalSteps! > 0) ...[
+                                              const SizedBox(height: 12),
+                                              Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Icon(Icons.merge_type,
-                                                        color: Colors.purple),
-                                                    SizedBox(width: 8),
-                                                    Text('View Pull Request'),
-                                                  ],
-                                                ),
-                                              ),
+                                                    LinearProgressIndicator(
+                                                        value: session
+                                                                .currentStep! /
+                                                            session
+                                                                .totalSteps!,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(2)),
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                        mainAxisAlignment:
+                                                            MainAxisAlignment
+                                                                .spaceBetween,
+                                                        children: [
+                                                          Text(
+                                                              "Step ${session.currentStep} of ${session.totalSteps}",
+                                                              style: Theme.of(
+                                                                      context)
+                                                                  .textTheme
+                                                                  .bodySmall),
+                                                          if (session.currentAction !=
+                                                              null)
+                                                            Expanded(
+                                                                child: Text(
+                                                                    session
+                                                                        .currentAction!,
+                                                                    textAlign:
+                                                                        TextAlign
+                                                                            .right,
+                                                                    overflow:
+                                                                        TextOverflow
+                                                                            .ellipsis,
+                                                                    style: Theme.of(
+                                                                            context)
+                                                                        .textTheme
+                                                                        .bodySmall
+                                                                        ?.copyWith(
+                                                                            fontStyle:
+                                                                                FontStyle.italic)))
+                                                        ])
+                                                  ])
+                                            ]
                                           ],
                                         ),
-                                      ],
+                                      ),
                                     ),
-                                    onTap: () {
-                                      Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              SessionDetailScreen(
-                                                  session: session),
-                                        ),
-                                      );
-                                    },
-                                    onLongPress: isDevMode
-                                        ? () => _showContextMenu(context,
-                                            session: session)
-                                        : null,
                                   );
-
-                                  if (isDevMode) {
-                                    return GestureDetector(
-                                      onSecondaryTap: () => _showContextMenu(
-                                          context,
-                                          session: session),
-                                      child: tile,
-                                    );
-                                  } else {
-                                    return tile;
-                                  }
                                 }
                                 return const SizedBox.shrink();
                               },
