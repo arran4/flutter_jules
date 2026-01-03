@@ -11,6 +11,7 @@ import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
+import '../widgets/activity_helper.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final Session session;
@@ -321,38 +322,133 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
+    // Group Activities
+    final List<ActivityListItem> groupedItems = [];
+    ActivityGroupWrapper? currentGroup;
+
+    for (var activity in _activities) {
+      final info = ActivityDisplayInfo.fromActivity(activity);
+
+      if (currentGroup != null) {
+        if (currentGroup.info.title == info.title &&
+            currentGroup.info.summary == info.summary &&
+            currentGroup.info.icon == info.icon) {
+          currentGroup.activities.add(activity);
+          continue;
+        } else {
+          groupedItems.add(currentGroup);
+          currentGroup = null;
+        }
+      }
+
+      currentGroup = ActivityGroupWrapper([activity], info);
+    }
+    if (currentGroup != null) {
+      groupedItems.add(currentGroup);
+    }
+
+    // Flatten small groups
+    final List<ActivityListItem> finalItems = [];
+    for (var item in groupedItems) {
+      if (item is ActivityGroupWrapper && item.activities.length < 3) {
+        for (var a in item.activities) {
+          finalItems.add(ActivityItemWrapper(a));
+        }
+      } else {
+        finalItems.add(item);
+      }
+    }
+
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: _activities.length + (hasPr ? 2 : 0),
+      itemCount: finalItems.length + (hasPr ? 2 : 0),
       itemBuilder: (context, index) {
         if (hasPr) {
-          if (index == 0 || index == _activities.length + 1) {
+          if (index == 0 || index == finalItems.length + 1) {
             return _buildPrNotice(context);
           }
         }
 
-        // Map reversed visual index to chronological list (End is Latest/Bottom)
-        // Adjust index if PR exists (skip bottom PR notice at index 0)
-        final int activityIndex = hasPr ? index - 1 : index;
+        final int listIndex = hasPr ? index - 1 : index;
+        final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 
-        // Visual 0 (Bottom) -> List Last
-        final activity = _activities[_activities.length - 1 - activityIndex];
-
-        final item = ActivityItem(
-          activity: activity,
-          onRefresh: () => _refreshActivity(activity),
-        );
-
-        if (isDevMode) {
-          return GestureDetector(
-            onLongPress: () => _showContextMenu(context, activity: activity),
-            onSecondaryTap: () => _showContextMenu(context, activity: activity),
-            child: item,
+        if (itemWrapper is ActivityGroupWrapper) {
+          return _buildGroupItem(itemWrapper, isDevMode);
+        } else if (itemWrapper is ActivityItemWrapper) {
+          final activity = itemWrapper.activity;
+          final item = ActivityItem(
+            activity: activity,
+            onRefresh: () => _refreshActivity(activity),
           );
-        } else {
-          return item;
+
+          if (isDevMode) {
+            return GestureDetector(
+              onLongPress: () => _showContextMenu(context, activity: activity),
+              onSecondaryTap: () =>
+                  _showContextMenu(context, activity: activity),
+              child: item,
+            );
+          } else {
+            return item;
+          }
         }
+        return const SizedBox.shrink();
       },
+    );
+  }
+
+  Widget _buildGroupItem(ActivityGroupWrapper group, bool isDevMode) {
+    DateTime? start;
+    DateTime? end;
+    if (group.activities.isNotEmpty) {
+      try {
+        start = DateTime.parse(group.activities.first.createTime);
+      } catch (_) {}
+      try {
+        end = DateTime.parse(group.activities.last.createTime);
+      } catch (_) {}
+    }
+
+    final count = group.activities.length;
+    final title = group.info.title;
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      child: Card(
+        margin: EdgeInsets.zero,
+        color: Colors.grey.shade50,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(12),
+          side: BorderSide(color: Colors.grey.shade300),
+        ),
+        child: ExpansionTile(
+          shape: const Border(),
+          title: Row(children: [
+            Icon(group.info.icon, color: group.info.iconColor, size: 20),
+            const SizedBox(width: 12),
+            Text("$count x $title",
+                style: const TextStyle(fontWeight: FontWeight.bold)),
+            const Spacer(),
+            if (start != null && end != null)
+              Text(
+                  "${DateFormat.Hms().format(start.toLocal())} - ${DateFormat.Hms().format(end.toLocal())}",
+                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          ]),
+          children: group.activities.map((a) {
+            final item = ActivityItem(
+                activity: a, onRefresh: () => _refreshActivity(a));
+            if (isDevMode) {
+              return GestureDetector(
+                onLongPress: () => _showContextMenu(context, activity: a),
+                onSecondaryTap: () =>
+                    _showContextMenu(context, activity: a),
+                child: item,
+              );
+            }
+            return item;
+          }).toList(),
+        ),
+      ),
     );
   }
 
