@@ -5,6 +5,7 @@ import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
 import '../models/session.dart';
 import '../models/source.dart';
+import '../models/activity.dart';
 import '../models/cache_metadata.dart';
 
 class CachedItem<T> {
@@ -12,6 +13,18 @@ class CachedItem<T> {
   final CacheMetadata metadata;
 
   CachedItem(this.data, this.metadata);
+}
+
+class CachedSessionDetails {
+  final Session session;
+  final List<Activity> activities;
+  final String? sessionUpdateTimeSnapshot;
+
+  CachedSessionDetails({
+    required this.session,
+    required this.activities,
+    this.sessionUpdateTimeSnapshot,
+  });
 }
 
 class CacheService {
@@ -83,22 +96,18 @@ class CacheService {
           metadata = oldMetadata.copyWith(
             lastRetrieved: now,
             lastUpdated: lastUpdated,
-            // Labels preserved by default copyWith behavior if we pass null,
-            // but we didn't implement 'replace' logic, just update logic.
           );
 
         } catch (e) {
            metadata = CacheMetadata(
             firstSeen: now,
             lastRetrieved: now,
-            // lastOpened is null -> isNew
           );
         }
       } else {
         metadata = CacheMetadata(
           firstSeen: now,
           lastRetrieved: now,
-          // lastOpened is null -> isNew
         );
       }
 
@@ -135,7 +144,7 @@ class CacheService {
     return results;
   }
   
-   Future<void> saveSources(String token, List<Source> newSources) async {
+  Future<void> saveSources(String token, List<Source> newSources) async {
     final cacheDir = await _getCacheDirectory(token);
     final sourcesDir = Directory(path.join(cacheDir.path, 'sources'));
     if (!await sourcesDir.exists()) {
@@ -216,6 +225,7 @@ class CacheService {
   
   Future<void> markSessionAsRead(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
+    // Might be in sessions or cached_details, but we track metadata in sessions list usually
     final file = File(path.join(cacheDir.path, 'sessions', '$sessionId.json'));
     if (await file.exists()) {
       final content = await file.readAsString();
@@ -228,6 +238,54 @@ class CacheService {
       
       json['metadata'] = newMetadata.toJson();
       await file.writeAsString(jsonEncode(json));
+    }
+  }
+  
+  // New methods for session details (activities) cache
+  Future<void> saveSessionDetails(String token, Session session, List<Activity> activities) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final detailsDir = Directory(path.join(cacheDir.path, 'session_details'));
+    if (!await detailsDir.exists()) {
+      await detailsDir.create(recursive: true);
+    }
+    
+    final file = File(path.join(detailsDir.path, '${session.id}.json'));
+    
+    final dataToSave = {
+      'session': session.toJson(), // Store full session as well
+      'activities': activities.map((a) => a.toJson()).toList(),
+      'sessionUpdateTimeSnapshot': session.updateTime, // The key linkage
+      'savedAt': DateTime.now().toIso8601String(),
+    };
+    
+    await file.writeAsString(jsonEncode(dataToSave));
+  }
+   
+  Future<CachedSessionDetails?> loadSessionDetails(String token, String sessionId) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final file = File(path.join(cacheDir.path, 'session_details', '$sessionId.json'));
+    
+    if (!await file.exists()) {
+      return null;
+    }
+    
+    try {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+      
+      final session = Session.fromJson(json['session']);
+      final activities = (json['activities'] as List<dynamic>?)
+          ?.map((e) => Activity.fromJson(e))
+          .toList() ?? [];
+      
+      return CachedSessionDetails(
+        session: session,
+        activities: activities,
+        sessionUpdateTimeSnapshot: json['sessionUpdateTimeSnapshot'],
+      );
+    } catch (e) {
+      print("Error loading cached session details: $e");
+      return null;
     }
   }
 }

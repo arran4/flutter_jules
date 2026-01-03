@@ -4,6 +4,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import '../../services/cache_service.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
@@ -77,46 +78,57 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+
   Future<void> _performFetchActivities() async {
-    final client = Provider.of<AuthProvider>(context, listen: false).client;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final client = auth.client;
+    final token = auth.token;
     final devMode = Provider.of<DevModeProvider>(context, listen: false);
     final enableLogging = devMode.enableApiLogging;
+    final cacheService = Provider.of<CacheService>(context, listen: false);
 
-    // Fetch session details first
+    // 1. Check cache first
+    bool validCacheFound = false;
+    if (token != null) {
+      final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
+      if (cachedDetails != null) {
+        // Compare updateTime
+        // If widget.session has no updateTime, we assume we need to fetch.
+        // If cached snapshot matches widget.session.updateTime, we use cache.
+        final listUpdateTime = widget.session.updateTime;
+        final cachedSnapshot = cachedDetails.sessionUpdateTimeSnapshot;
+        
+        if (listUpdateTime != null && listUpdateTime == cachedSnapshot) {
+           if (mounted) {
+             setState(() {
+               _activities = cachedDetails.activities;
+               _session = cachedDetails.session;
+             });
+           }
+           validCacheFound = true;
+           // We can stop here, no need to fetch!
+           return; 
+        }
+      }
+    }
+
+    // 2. Fetch if cache not used
     Session? updatedSession;
     try {
-      // if (enableLogging) {
-      //   debugPrint('DEBUG: Fetching session details for ${widget.session.name}');
-      // }
       updatedSession = await client.getSession(widget.session.name);
-      // if (enableLogging) debugPrint('DEBUG: Session details fetched successfully');
     } catch (e) {
-      // if (enableLogging) debugPrint('DEBUG: Failed to fetch session details: $e');
       throw Exception('Failed to load session details: $e');
     }
 
-    // Then fetch activities
     List<Activity> activities;
     try {
-      // if (enableLogging) {
-      //   debugPrint('DEBUG: Fetching activities for ${widget.session.name}');
-      // }
       activities = await client.listActivities(
         widget.session.name,
         onDebug: (exchange) {
-          if (enableLogging) {
-            // debugPrint(
-            //     'DEBUG: API call - ${exchange.method} ${exchange.url} - Status: ${exchange.statusCode}');
-          }
           _lastExchange = exchange;
         },
       );
-      // if (enableLogging) {
-      //   debugPrint(
-      //       'DEBUG: Activities fetched successfully - count: ${activities.length}');
-      // }
     } catch (e) {
-      // if (enableLogging) debugPrint('DEBUG: Failed to fetch activities: $e');
       throw Exception('Failed to load conversation history: $e');
     }
 
@@ -125,6 +137,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _activities = activities;
         _session = updatedSession!;
       });
+    }
+    
+    // 3. Save to cache
+    if (token != null && updatedSession != null) {
+       await cacheService.saveSessionDetails(token, updatedSession, activities);
     }
   }
 
