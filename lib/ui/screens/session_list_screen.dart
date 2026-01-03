@@ -338,7 +338,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       children: [
                         Icon(Icons.source),
                         SizedBox(width: 8),
-                        Text('Raw Source Data'),
+                        Text('Repositories'),
                       ],
                     ),
                   ),

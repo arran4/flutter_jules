@@ -4,11 +4,13 @@ import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
+import '../../services/dev_mode_provider.dart';
 import '../../services/source_provider.dart';
-import '../../services/session_provider.dart'; // Needed for stats
+import '../../services/session_provider.dart';
 import '../../models.dart';
-import '../../models/cache_metadata.dart'; // For CachedItem
-import '../../services/cache_service.dart'; // For CachedItem type if needed
+import '../../models/cache_metadata.dart';
+import '../../services/cache_service.dart';
+import '../widgets/model_viewer.dart';
 
 enum SortOption { recent, count, alphabetical }
 
@@ -182,192 +184,260 @@ class _SourceListScreenState extends State<SourceListScreen> {
     }
   }
 
+  void _showRawData(BuildContext context) {
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    
+    final sources = sourceProvider.items.map((i) {
+        return {
+           'name': i.data.name,
+           'id': i.data.id,
+           'githubRepo': i.data.githubRepo != null ? {
+               'owner': i.data.githubRepo!.owner,
+               'repo': i.data.githubRepo!.repo,
+               'branches': i.data.githubRepo!.branches?.map((b) => b.displayName).toList(),
+               'defaultBranch': i.data.githubRepo!.defaultBranch?.displayName,
+               'isPrivate': i.data.githubRepo!.isPrivate,
+           } : null,
+           'metadata': {
+              'isNew': i.metadata.isNew,
+              'isUpdated': i.metadata.isUpdated,
+              'lastRetrieved': i.metadata.lastRetrieved.toIso8601String(),
+           }
+        };
+    }).toList();
+
+    showDialog(
+      context: context,
+      builder: (context) => ModelViewer(
+        data: {'sources': sources, 'count': sources.length},
+        title: 'Raw Source Data',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Sources (Raw Data)'),
-        actions: [
-          PopupMenuButton<SortOption>(
-            initialValue: _currentSort,
-            icon: const Icon(Icons.sort),
-            tooltip: 'Sort by',
-            onSelected: (SortOption item) {
-              setState(() {
-                _currentSort = item;
-                _onSearchChanged();
-              });
-            },
-            itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
-              const PopupMenuItem<SortOption>(
-                value: SortOption.recent,
-                child: Text('Most Recently Used'),
+    return Consumer<SourceProvider>(
+      builder: (context, sourceProvider, child) {
+        final sources = sourceProvider.items;
+        final isLoading = sourceProvider.isLoading;
+        final error = sourceProvider.error;
+        final lastFetchTime = sourceProvider.lastFetchTime;
+        final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+
+        // If sources updated (e.g. background fetch finished), update our filtered list
+        WidgetsBinding.instance.addPostFrameCallback((_) {
+           if (mounted && sourceProvider.items.length != (_filteredSources.length) && _searchController.text.isEmpty) {
+              // Trigger re-filter if data changed and we aren't actively searching
+           }
+        });
+        
+        var filtered = filterAndSort<CachedItem<Source>>(
+            items: sources,
+            query: _searchController.text,
+            accessors: [
+              (item) => item.data.githubRepo?.repo ?? '',
+              (item) => item.data.name,
+              (item) => item.data.githubRepo?.owner ?? '',
+            ],
+          );
+        
+        final displaySources = _sortSources(filtered);
+
+        return Scaffold(
+          appBar: AppBar(
+            title: const Text('Repositories'),
+            bottom: isLoading ? const PreferredSize(
+              preferredSize: Size.fromHeight(4.0),
+              child: LinearProgressIndicator(), 
+            ) : null,
+            actions: [
+              IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh',
+                onPressed: _refreshData,
               ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.count,
-                child: Text('Usage Count'),
+              PopupMenuButton<SortOption>(
+                initialValue: _currentSort,
+                icon: const Icon(Icons.sort),
+                tooltip: 'Sort by',
+                onSelected: (SortOption item) {
+                  setState(() {
+                    _currentSort = item;
+                    _onSearchChanged();
+                  });
+                },
+                itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.recent,
+                    child: Text('Most Recently Used'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.count,
+                    child: Text('Usage Count'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.alphabetical,
+                    child: Text('Alphabetical'),
+                  ),
+                ],
               ),
-              const PopupMenuItem<SortOption>(
-                value: SortOption.alphabetical,
-                child: Text('Alphabetical'),
-              ),
+              if (isDevMode)
+                 PopupMenuButton<String>(
+                  onSelected: (value) {
+                    if (value == 'raw_data') {
+                       _showRawData(context);
+                    }
+                  },
+                  itemBuilder: (context) => [
+                    const PopupMenuItem(
+                      value: 'raw_data',
+                      child: Row(
+                        children: [
+                          Icon(Icons.data_object),
+                          SizedBox(width: 8),
+                          Text('View Raw Data'),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
             ],
           ),
-          IconButton(
-            icon: const Icon(Icons.replay),
-            onPressed: _refreshData,
-            tooltip: 'Refresh',
-          ),
-        ],
-      ),
-      body: Consumer<SourceProvider>(
-        builder: (context, sourceProvider, child) {
-            
-          // If sources updated (e.g. background fetch finished), update our filtered list
-          // This might cause loop if we setState in build, but only if items changed
-          WidgetsBinding.instance.addPostFrameCallback((_) {
-             if (mounted && sourceProvider.items.length != (_filteredSources.length) && _searchController.text.isEmpty) {
-                 // Very rough check, better to compare list instances or timestamp
-                 // Just trigger re-filter if idle?
-                 // Or rely on Provider listener?
-                 // The Consumer rebuilds, but _filteredSources is local state relying on _onSearchChanged.
-                 // We should re-run filter when provider notifies.
-                 // _onSearchChanged uses provider.items.
-             }
-          });
-          
-          // Re-run filter on build? Efficient enough?
-          // Instead of local state `_filteredSources`, we could calculate it in build.
-          // Let's do that for simplicity and correctness with Consumer.
-          
-          final sources = sourceProvider.items;
-          var filtered = filterAndSort<CachedItem<Source>>(
-              items: sources,
-              query: _searchController.text,
-              accessors: [
-                (item) => item.data.githubRepo?.repo ?? '',
-                (item) => item.data.name,
-                (item) => item.data.githubRepo?.owner ?? '',
-              ],
-            );
-          
-          // Sort
-          final displaySources = _sortSources(filtered);
-
-          if (sourceProvider.isLoading && sources.isEmpty) {
-             return const Center(child: CircularProgressIndicator());
-          }
-          
-          if (sourceProvider.error != null && sources.isEmpty) {
-              return Center(child: Text('Error: ${sourceProvider.error}'));
-          }
-
-          return Column(
+          body: (sources.isEmpty && isLoading)
+              ? const Center(child: Text("Loading repositories..."))
+              : (sources.isEmpty && error != null)
+                  ? Center(child: Text('Error: $error'))
+                  : Column(
             children: [
-               if (sourceProvider.isLoading)
-                const LinearProgressIndicator(),
               Padding(
                 padding: const EdgeInsets.all(8.0),
                 child: TextField(
                   controller: _searchController,
                   decoration: const InputDecoration(
-                    labelText: 'Search Sources',
+                    labelText: 'Search Repositories',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.search),
                   ),
                 ),
               ),
+              if (lastFetchTime != null)
+                 Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  child: Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)}',
+                      style: Theme.of(context).textTheme.bodySmall,
+                    ),
+                  ),
+                 ),
               Expanded(
-                child: displaySources.isEmpty
-                    ? Center(child: Text( sources.isEmpty ? 'No sources loaded.' : 'No matches.'))
-                    : ListView.builder(
-                        controller: _scrollController,
-                        itemCount: displaySources.length,
-                        itemBuilder: (context, index) {
-                          final item = displaySources[index];
-                          final source = item.data;
-                          
-                          final count = _usageCount[source.name] ?? 0;
-                          final lastUsedDate = _lastUsed[source.name];
+                child: RefreshIndicator(
+                  onRefresh: _refreshData,
+                  child: displaySources.isEmpty
+                      ? ListView(
+                          physics: const AlwaysScrollableScrollPhysics(),
+                          children: [
+                            SizedBox(
+                              height: MediaQuery.of(context).size.height * 0.7,
+                              child: Center(child: Padding(
+                                padding: const EdgeInsets.all(20.0),
+                                child: Text(sources.isEmpty ? 'No repositories found.' : 'No matches found.'),
+                              )),
+                            )
+                          ],
+                        )
+                      : ListView.builder(
+                          physics: const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+                          controller: _scrollController,
+                          itemCount: displaySources.length,
+                          itemBuilder: (context, index) {
+                            final item = displaySources[index];
+                            final source = item.data;
+                            
+                            final count = _usageCount[source.name] ?? 0;
+                            final lastUsedDate = _lastUsed[source.name];
 
-                          final repo = source.githubRepo;
-                          final isPrivate = repo?.isPrivate ?? false;
-                          final defaultBranch =
-                              repo?.defaultBranch?.displayName ?? 'N/A';
-                          final branchCount = repo?.branches?.length;
+                            final repo = source.githubRepo;
+                            final isPrivate = repo?.isPrivate ?? false;
+                            final defaultBranch =
+                                repo?.defaultBranch?.displayName ?? 'N/A';
+                            final branchCount = repo?.branches?.length;
 
-                          return Card(
-                            margin: const EdgeInsets.symmetric(
-                                horizontal: 8, vertical: 4),
-                            child: ListTile(
-                              leading:
-                                  Icon(isPrivate ? Icons.lock : Icons.public),
-                              title: Text(repo?.repo ?? source.name),
-                              subtitle: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                      '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
-                                  const SizedBox(height: 4),
-                                  Row(
-                                    children: [
-                                      if (count > 0)
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(
-                                              horizontal: 6, vertical: 2),
-                                          decoration: BoxDecoration(
-                                            color: Theme.of(context)
-                                                .colorScheme
-                                                .surfaceContainerHighest,
-                                            borderRadius:
-                                                BorderRadius.circular(4),
+                            return Card(
+                              margin: const EdgeInsets.symmetric(
+                                  horizontal: 8, vertical: 4),
+                              child: ListTile(
+                                leading:
+                                    Icon(isPrivate ? Icons.lock : Icons.public),
+                                title: Text(repo?.repo ?? source.name),
+                                subtitle: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                        '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                    const SizedBox(height: 4),
+                                    Row(
+                                      children: [
+                                        if (count > 0)
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                                horizontal: 6, vertical: 2),
+                                            decoration: BoxDecoration(
+                                              color: Theme.of(context)
+                                                  .colorScheme
+                                                  .surfaceContainerHighest,
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            child: Text(
+                                              '$count sessions',
+                                              style: Theme.of(context)
+                                                  .textTheme
+                                                  .labelSmall,
+                                            ),
                                           ),
-                                          child: Text(
-                                            '$count sessions',
+                                        if (count > 0) const SizedBox(width: 8),
+                                        if (lastUsedDate != null)
+                                          Text(
+                                            'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
                                             style: Theme.of(context)
                                                 .textTheme
-                                                .labelSmall,
+                                                .bodySmall,
                                           ),
-                                        ),
-                                      if (count > 0) const SizedBox(width: 8),
-                                      if (lastUsedDate != null)
-                                        Text(
-                                          'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall,
-                                        ),
-                                      if (item.metadata.isNew)
-                                         Padding(
-                                           padding: const EdgeInsets.only(left: 8.0),
-                                           child: Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                              color: Colors.green,
-                                              child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10))),
-                                         ),
-                                    ],
-                                  ),
-                                ],
+                                        if (item.metadata.isNew)
+                                           Padding(
+                                             padding: const EdgeInsets.only(left: 8.0),
+                                             child: Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                color: Colors.green,
+                                                child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10))),
+                                           ),
+                                      ],
+                                    ),
+                                  ],
+                                ),
+                                isThreeLine: true,
+                                onTap: () {
+                                  Navigator.push(
+                                    context,
+                                    MaterialPageRoute(
+                                      builder: (context) => SessionListScreen(
+                                          sourceFilter: source.name),
+                                    ),
+                                  );
+                                },
                               ),
-                              isThreeLine: true,
-                              onTap: () {
-                                Navigator.push(
-                                  context,
-                                  MaterialPageRoute(
-                                    builder: (context) => SessionListScreen(
-                                        sourceFilter: source.name),
-                                  ),
-                                );
-                              },
-                            ),
-                          );
-                        },
-                      ),
+                            );
+                          },
+                        ),
+                ),
               ),
             ],
-          );
-        },
-      ),
+          ),
+        );
+      },
     );
   }
 }
