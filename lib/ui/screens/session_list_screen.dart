@@ -164,7 +164,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: allStatuses.map((status) {
                     return CheckboxListTile(
-                      title: Text(status.toString().split('.').last),
+                      title: Text(status.displayName),
+                      subtitle: Text(status.description, style: const TextStyle(fontSize: 12)),
                       value: _statusFilters.contains(status) ||
                           _statusFilters.isEmpty,
                       onChanged: (bool? value) {

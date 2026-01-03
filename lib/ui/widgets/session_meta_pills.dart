@@ -26,7 +26,7 @@ class SessionMetaPills extends StatelessWidget {
         // STATE Pill
         if (session.state != null)
           _buildChip(
-            label: session.state.toString().split('.').last,
+            label: session.state!.displayName,
             backgroundColor: session.state == SessionState.COMPLETED
                 ? Colors.green.shade50
                 : (session.state == SessionState.FAILED
