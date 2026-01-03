@@ -343,7 +343,6 @@ class _ActivityItemState extends State<ActivityItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            const Divider(),
             if (activity.progressUpdated != null)
                MarkdownBody(data: activity.progressUpdated!.description),
             if (activity.agentMessaged != null)
