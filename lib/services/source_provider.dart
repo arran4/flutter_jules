@@ -20,10 +20,21 @@ class SourceProvider extends ChangeNotifier {
     _cacheService = service;
   }
 
-  Future<void> fetchSources(JulesClient client, {String? authToken}) async {
+  Future<void> fetchSources(JulesClient client, {bool force = false, String? authToken}) async {
+    // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
       _items = await _cacheService!.loadSources(authToken);
       notifyListeners();
+      
+      // If we have data and not forcing, we can check if we should skip fetch
+      // But user requirement says: "until we manually refresh... OR if it sees a source it hasn't seen before"
+      // In the context of "sees a source it hasn't seen before", this usually implies
+      // checking against a known set (e.g. from session list source contexts).
+      // However, strictly "until we manually refresh" implies we should obey 'force'
+      // If not forced and we have items, we stop.
+      if (!force && _items.isNotEmpty) {
+          return;
+      }
     }
 
     if (_isLoading) return;
@@ -56,5 +67,17 @@ class SourceProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  // Helper to ensure a specific source is in the cache/list, triggering refresh if missing.
+  Future<void> ensureSourceAvailable(JulesClient client, String sourceName, {String? authToken}) async {
+     // Check if we already have it
+     final exists = _items.any((item) => item.data.name == sourceName || item.data.id == sourceName);
+     if (!exists) {
+        // Trigger non-forced refresh (actually forced to ensure we get new data, 
+        // but 'force' arg in our fetchSources logic currently acts as "always fetch").
+        // We will call fetchSources with force=true to get latest list which hopefully contains the new source.
+        await fetchSources(client, force: true, authToken: authToken);
+     }
   }
 }
