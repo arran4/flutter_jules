@@ -233,6 +233,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  DateTime _getEffectiveTime(CachedItem<Session> item) {
+    if (item.data.updateTime != null) {
+      return DateTime.parse(item.data.updateTime!);
+    }
+    if (item.data.createTime != null) {
+      return DateTime.parse(item.data.createTime!);
+    }
+    return item.metadata.lastRetrieved;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
@@ -276,7 +286,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
              
              if (cmp != 0) return cmp;
              
-             return b.metadata.lastRetrieved.compareTo(a.metadata.lastRetrieved);
+             final timeA = _getEffectiveTime(a);
+             final timeB = _getEffectiveTime(b);
+             return timeB.compareTo(timeA);
            });
         }
 

@@ -85,14 +85,21 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  DateTime _getEffectiveTime(CachedItem<Session> item) {
+    if (item.data.updateTime != null) {
+      return DateTime.parse(item.data.updateTime!);
+    }
+    if (item.data.createTime != null) {
+      return DateTime.parse(item.data.createTime!);
+    }
+    return item.metadata.lastRetrieved;
+  }
+
   void _sortItems() {
     _items.sort((a, b) {
-      // Sort by createTime if possible, otherwise lastRetrieved
-      // Assuming ISO string for createTime
-      if (a.data.createTime != null && b.data.createTime != null) {
-         return b.data.createTime!.compareTo(a.data.createTime!);
-      }
-      return b.metadata.lastRetrieved.compareTo(a.metadata.lastRetrieved);
+      final timeA = _getEffectiveTime(a);
+      final timeB = _getEffectiveTime(b);
+      return timeB.compareTo(timeA);
     });
   }
 

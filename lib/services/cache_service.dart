@@ -31,11 +31,11 @@ class CacheService {
       if (Platform.isLinux) {
         final xdgCacheHome = Platform.environment['XDG_CACHE_HOME'];
         if (xdgCacheHome != null && xdgCacheHome.isNotEmpty) {
-          baseDir = Directory(path.join(xdgCacheHome, 'jules_client'));
+          baseDir = Directory(path.join(xdgCacheHome, 'flutter_jules_agent'));
         } else {
           final home = Platform.environment['HOME'];
           if (home != null) {
-            baseDir = Directory(path.join(home, '.cache', 'jules_client'));
+            baseDir = Directory(path.join(home, '.cache', 'flutter_jules_agent'));
           } else {
              baseDir = await getApplicationCacheDirectory();
           }
