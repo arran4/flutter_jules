@@ -220,6 +220,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
      }
   }
 
+  void _viewRawData(BuildContext context) {
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessions = sessionProvider.items.map((i) => i.data.toJson()).toList();
+    
+    showDialog(
+      context: context,
+      builder: (context) => ModelViewer(
+        data: {'sessions': sessions, 'count': sessions.length},
+        title: 'Raw Session Data (Reconstructed)',
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<SessionProvider>(
@@ -292,6 +305,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
               child: LinearProgressIndicator(), 
             ) : null,
             actions: [
+               IconButton(
+                icon: const Icon(Icons.refresh),
+                tooltip: 'Refresh',
+                onPressed: () => _fetchSessions(force: true),
+              ),
               IconButton(
                 icon: Icon(_groupByStatus ? Icons.layers_clear : Icons.layers),
                 tooltip: _groupByStatus ? 'Ungroup' : 'Group by Status',
@@ -312,9 +330,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'sources') {
                     Navigator.pushNamed(context, '/sources_raw');
+                  } else if (value == 'raw_data') {
+                     _viewRawData(context);
                   }
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'raw_data',
+                    child: Row(
+                      children: [
+                        Icon(Icons.data_object),
+                        SizedBox(width: 8),
+                        Text('View Raw Data'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'settings',
                     child: Row(
@@ -452,7 +482,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       ),
                                                       child: const Text('UNREAD', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
                                                     ),
-                                                  
+
+                                                  // Render custom labels
+                                                  for (final label in metadata.labels)
+                                                    Container(
+                                                      margin: const EdgeInsets.only(right: 6),
+                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.grey.shade700,
+                                                        borderRadius: BorderRadius.circular(4),
+                                                      ),
+                                                      child: Text(label.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    ),
+
                                                   Expanded(
                                                     child: Text(
                                                         session.title ??
