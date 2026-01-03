@@ -522,6 +522,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                           CrossAxisAlignment.start,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
+                                        Text(
+                                          session.sourceContext.source,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                              ),
+                                        ),
                                         Text(session.state
                                             .toString()
                                             .split('.')
