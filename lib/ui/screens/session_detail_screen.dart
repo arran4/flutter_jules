@@ -188,15 +188,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
-    int itemCount;
-    if (_isLoading) {
-      itemCount = 3; // Header, Spinner, Footer
-    } else if (_error != null) {
-      itemCount = 3; // Header, Error, Footer
-    } else {
-      itemCount = _activities.length + 2; // Header, Activities, Footer
-    }
-
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
     return Scaffold(
@@ -277,298 +268,331 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
         ],
       ),
-      body: ListView.builder(
-        itemCount: itemCount,
-        itemBuilder: (context, index) {
-          // Header
-          if (index == 0) {
-            return SelectionArea(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Padding(
-                    padding: const EdgeInsets.all(16.0),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // State
-                        Row(
-                          children: [
-                            Text("State: ",
-                                style: Theme.of(context).textTheme.labelLarge),
-                            Expanded(
-                              child: MarkdownBody(
-                                data: _session.state
-                                    .toString()
-                                    .split('.')
-                                    .last,
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        // Prompt
-                        Text("Prompt:",
-                            style: Theme.of(context).textTheme.labelLarge),
-                        const SizedBox(height: 4),
-                        InkWell(
-                          onTap: () {
-                            setState(() {
-                              _isPromptExpanded = !_isPromptExpanded;
-                            });
-                          },
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              AnimatedCrossFade(
-                                duration: const Duration(milliseconds: 200),
-                                firstChild: Container(
-                                  height: 60,
-                                  clipBehavior: Clip.hardEdge,
-                                  decoration: const BoxDecoration(),
-                                  foregroundDecoration: BoxDecoration(
-                                    gradient: LinearGradient(
-                                      begin: Alignment.topCenter,
-                                      end: Alignment.bottomCenter,
-                                      colors: [
-                                        Colors.white.withValues(alpha: 0.0),
-                                        Colors.white.withValues(alpha: 0.8), // Assuming light theme background
-                                      ],
-                                      stops: const [0.5, 1.0],
-                                    ),
-                                  ),
-                                  child: SingleChildScrollView(
-                                    physics: const NeverScrollableScrollPhysics(),
-                                    child: MarkdownBody(data: _session.prompt),
-                                  ),
-                                ),
-                                secondChild: MarkdownBody(data: _session.prompt),
-                                crossFadeState: _isPromptExpanded
-                                    ? CrossFadeState.showSecond
-                                    : CrossFadeState.showFirst,
-                              ),
-                              Center(
-                                child: Icon(
-                                  _isPromptExpanded
-                                      ? Icons.keyboard_arrow_up
-                                      : Icons.keyboard_arrow_down,
-                                  color: Colors.grey,
-                                ),
-                              )
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        // Chips / Pills
-                        Wrap(
-                          spacing: 8.0,
-                          runSpacing: 4.0,
-                          children: [
-                            if (_session.automationMode != null)
-                              Chip(
-                                avatar: const Icon(Icons.smart_toy, size: 16),
-                                label: Text("Automation: ${_session.automationMode
-                                    .toString()
-                                    .split('.')
-                                    .last
-                                    .replaceAll('AUTOMATION_MODE_', '')}"),
-                                backgroundColor: Colors.blue.shade50,
-                              ),
-                            if (_session.requirePlanApproval != null)
-                              Chip(
-                                label: Text(_session.requirePlanApproval!
-                                    ? "Approval Required"
-                                    : "No Approval Required"),
-                                avatar: Icon(
-                                  _session.requirePlanApproval!
-                                      ? Icons.check_circle_outline
-                                      : Icons.do_not_disturb_on_outlined,
-                                  size: 16,
-                                ),
-                                backgroundColor: _session.requirePlanApproval!
-                                    ? Colors.orange.shade50
-                                    : Colors.green.shade50,
-                              ),
-                            Chip(
-                              label: Text(_session.sourceContext.source),
-                              avatar: const Icon(Icons.source, size: 16),
-                            ),
-                            if (_session.sourceContext.githubRepoContext
-                                    ?.startingBranch !=
-                                null)
-                              Chip(
-                                label: Text(_session.sourceContext
-                                    .githubRepoContext!.startingBranch),
-                                avatar: const Icon(Icons.call_split, size: 16),
-                              ),
-                          ],
-                        ),
-                        const SizedBox(height: 8),
-                        if (_lastFetchTime != null)
-                          Text(
-                            'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                      ],
-                    ),
-                  ),
-                // PR Output
-                if (_session.outputs != null &&
-                    _session.outputs!.any((o) => o.pullRequest != null)) ...[
-                  for (final output in _session.outputs!
-                      .where((o) => o.pullRequest != null)) ...[
-                    Card(
-                      margin: const EdgeInsets.symmetric(
-                          horizontal: 8.0, vertical: 4.0),
-                      color: Colors.purple.shade50,
-                      child: Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                const Icon(Icons.merge_type,
-                                    color: Colors.purple),
-                                const SizedBox(width: 8),
-                                Expanded(
-                                  child: Text(
-                                    "Pull Request Available",
-                                    style: Theme.of(context)
-                                        .textTheme
-                                        .titleMedium!
-                                        .copyWith(
-                                            color: Colors.purple,
-                                            fontWeight: FontWeight.bold),
-                                  ),
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            Text(
-                              output.pullRequest!.title,
-                              style:
-                                  const TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const SizedBox(height: 4),
-                            Text(output.pullRequest!.description,
-                                maxLines: 3, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 16),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.open_in_new),
-                                label: const Text("Open Pull Request"),
-                                onPressed: () {
-                                  launchUrl(Uri.parse(output.pullRequest!.url));
-                                },
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Colors.purple,
-                                  foregroundColor: Colors.white,
-                                ),
-                              ),
-                            )
-                          ],
-                        ),
+      body: Column(
+        children: [
+          // Permanent Header
+          _buildHeader(context),
+          
+          // Scrollable Activity List
+          Expanded(
+            child: _buildActivityList(isDevMode),
+          ),
+          
+          // Permanent Input Footer
+          _buildInput(context),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityList(bool isDevMode) {
+    if (_isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+    
+    if (_error != null) {
+      return Center(
+          child: Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                const Icon(Icons.error_outline,
+                    color: Colors.red, size: 48),
+                const SizedBox(height: 8),
+                SelectableText(_error!, textAlign: TextAlign.center),
+                TextButton(
+                    onPressed: _fetchActivities, child: const Text("Retry"))
+              ],
+            ),
+          ),
+        );
+    }
+    
+    return ListView.builder(
+      reverse: true, // Start at bottom, visual index 0 is bottom
+      itemCount: _activities.length,
+      itemBuilder: (context, index) {
+        // Map reversed visual index to chronological list (End is Latest/Bottom)
+        // Visual 0 (Bottom) -> List Last
+        final activity = _activities[_activities.length - 1 - index];
+        
+        final item = ActivityItem(
+          activity: activity,
+          onRefresh: () => _refreshActivity(activity),
+        );
+
+        if (isDevMode) {
+          return GestureDetector(
+            onLongPress: () => _showContextMenu(context, activity: activity),
+            onSecondaryTap: () =>
+                _showContextMenu(context, activity: activity),
+            child: item,
+          );
+        } else {
+          return item;
+        }
+      },
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return ConstrainedBox(
+      constraints: BoxConstraints(
+        maxHeight: MediaQuery.sizeOf(context).height * 0.6,
+      ),
+      child: SingleChildScrollView(
+        child: SelectionArea(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(16.0),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                // State
+                Row(
+                  children: [
+                    Text("State: ",
+                        style: Theme.of(context).textTheme.labelLarge),
+                    Expanded(
+                      child: MarkdownBody(
+                        data: _session.state
+                            .toString()
+                            .split('.')
+                            .last,
                       ),
                     ),
                   ],
-                ],
-                const Divider(),
-              ],
-            ),);
-          }
-
-          // Footer (Chat Input)
-          if (index == itemCount - 1) {
-            final hasText = _messageController.text.isNotEmpty;
-            final canApprove =
-                _session.state == SessionState.AWAITING_PLAN_APPROVAL;
-
-            return Padding(
-              padding: const EdgeInsets.all(8.0),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      decoration:
-                          const InputDecoration(hintText: "Send message..."),
-                      onChanged: (text) => setState(() {}),
-                      onSubmitted: (value) {
-                        if (value.isNotEmpty) {
-                          _sendMessage(value);
-                        }
-                      },
-                    ),
+                ),
+                const SizedBox(height: 12),
+                // Prompt
+                Text("Prompt:",
+                    style: Theme.of(context).textTheme.labelLarge),
+                const SizedBox(height: 4),
+                InkWell(
+                  onTap: () {
+                    setState(() {
+                      _isPromptExpanded = !_isPromptExpanded;
+                    });
+                  },
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      AnimatedSize(
+                        duration: const Duration(milliseconds: 300),
+                        curve: Curves.easeInOut,
+                        alignment: Alignment.topLeft,
+                        child: Container(
+                          constraints: BoxConstraints(
+                              maxHeight: _isPromptExpanded
+                                  ? MediaQuery.sizeOf(context).height * 0.4
+                                  : 60),
+                          width: double.infinity,
+                          clipBehavior: _isPromptExpanded
+                              ? Clip.hardEdge // Need clip if scrolling within container
+                              : Clip.hardEdge,
+                          decoration: const BoxDecoration(),
+                          foregroundDecoration: _isPromptExpanded
+                              ? null
+                              : BoxDecoration(
+                                  gradient: LinearGradient(
+                                    begin: Alignment.topCenter,
+                                    end: Alignment.bottomCenter,
+                                    colors: [
+                                      Colors.white
+                                          .withValues(alpha: 0.0),
+                                      Colors.white
+                                          .withValues(alpha: 0.8),
+                                    ],
+                                    stops: const [0.5, 1.0],
+                                  ),
+                                ),
+                          child: SingleChildScrollView(
+                              // Default physics allows scrolling
+                            child: MarkdownBody(data: _session.prompt),
+                          ),
+                        ),
+                      ),
+                      Center(
+                        child: Icon(
+                          _isPromptExpanded
+                              ? Icons.keyboard_arrow_up
+                              : Icons.keyboard_arrow_down,
+                          color: Colors.grey,
+                        ),
+                      )
+                    ],
                   ),
-                  const SizedBox(width: 8),
-                  if (hasText)
-                    IconButton(
-                      icon: const Icon(Icons.send),
-                      onPressed: () => _sendMessage(_messageController.text),
-                      tooltip: 'Send Message',
-                    )
-                  else if (canApprove)
-                    ElevatedButton(
-                        onPressed: _approvePlan,
-                        child: const Text("Approve Plan"))
-                  else
-                    const IconButton(
-                      icon: Icon(Icons.send),
-                      onPressed: null,
-                      tooltip: 'Send Message (Empty)',
-                    ),
-                ],
-              ),
-            );
-          }
-
-          // Middle Content
-          if (_isLoading) {
-            return const SizedBox(
-              height: 200,
-              child: Center(child: CircularProgressIndicator()),
-            );
-          }
-
-          if (_error != null) {
-            return Center(
-              child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.center,
+                ),
+                const SizedBox(height: 12),
+                // Chips / Pills
+                Wrap(
+                  spacing: 8.0,
+                  runSpacing: 4.0,
                   children: [
-                    const Icon(Icons.error_outline,
-                        color: Colors.red, size: 48),
-                    const SizedBox(height: 8),
-                    SelectableText(_error!, textAlign: TextAlign.center),
-                    TextButton(
-                        onPressed: _fetchActivities, child: const Text("Retry"))
+                    if (_session.automationMode != null)
+                      Chip(
+                        avatar: const Icon(Icons.smart_toy, size: 16),
+                        label: Text("Automation: ${_session.automationMode
+                            .toString()
+                            .split('.')
+                            .last
+                            .replaceAll('AUTOMATION_MODE_', '')}"),
+                        backgroundColor: Colors.blue.shade50,
+                      ),
+                    if (_session.requirePlanApproval != null)
+                      Chip(
+                        label: Text(_session.requirePlanApproval!
+                            ? "Approval Required"
+                            : "No Approval Required"),
+                        avatar: Icon(
+                          _session.requirePlanApproval!
+                              ? Icons.check_circle_outline
+                              : Icons.do_not_disturb_on_outlined,
+                          size: 16,
+                        ),
+                        backgroundColor: _session.requirePlanApproval!
+                            ? Colors.orange.shade50
+                            : Colors.green.shade50,
+                      ),
+                    Chip(
+                      label: Text(_session.sourceContext.source),
+                      avatar: const Icon(Icons.source, size: 16),
+                    ),
+                    if (_session.sourceContext.githubRepoContext
+                            ?.startingBranch !=
+                        null)
+                      Chip(
+                        label: Text(_session.sourceContext
+                            .githubRepoContext!.startingBranch),
+                        avatar: const Icon(Icons.call_split, size: 16),
+                      ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                if (_lastFetchTime != null)
+                  Text(
+                    'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+              ],
+            ),
+          ),
+          // PR Output
+          if (_session.outputs != null &&
+              _session.outputs!.any((o) => o.pullRequest != null)) ...[
+            for (final output in _session.outputs!
+                .where((o) => o.pullRequest != null)) ...[
+              Card(
+                margin: const EdgeInsets.symmetric(
+                    horizontal: 8.0, vertical: 4.0),
+                color: Colors.purple.shade50,
+                child: Padding(
+                  padding: const EdgeInsets.all(16.0),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          const Icon(Icons.merge_type,
+                              color: Colors.purple),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              "Pull Request Available",
+                              style: Theme.of(context)
+                                  .textTheme
+                                  .titleMedium!
+                                  .copyWith(
+                                      color: Colors.purple,
+                                      fontWeight: FontWeight.bold),
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        output.pullRequest!.title,
+                        style:
+                            const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(output.pullRequest!.description,
+                          maxLines: 3, overflow: TextOverflow.ellipsis),
+                      const SizedBox(height: 16),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text("Open Pull Request"),
+                          onPressed: () {
+                            launchUrl(Uri.parse(output.pullRequest!.url));
+                          },
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: Colors.purple,
+                            foregroundColor: Colors.white,
+                          ),
+                        ),
+                      )
+                    ],
+                  ),
+                ),
               ),
-            );
-          }
+            ],
+          ],
+          const Divider(),
+        ],
+      ),
+    ),
+   ),
+  );
+  }
 
-          // Activity Item
-          final activity = _activities[index - 1];
-          final item = ActivityItem(
-            activity: activity,
-            onRefresh: () => _refreshActivity(activity),
-          );
+  Widget _buildInput(BuildContext context) {
+    final hasText = _messageController.text.isNotEmpty;
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL;
 
-          if (isDevMode) {
-            return GestureDetector(
-              onLongPress: () => _showContextMenu(context, activity: activity),
-              onSecondaryTap: () =>
-                  _showContextMenu(context, activity: activity),
-              child: item,
-            );
-          } else {
-            return item;
-          }
-        },
+    return SafeArea(
+      top: false,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Row(
+          children: [
+            Expanded(
+              child: TextField(
+                controller: _messageController,
+                decoration:
+                    const InputDecoration(hintText: "Send message..."),
+                onChanged: (text) => setState(() {}),
+                onSubmitted: (value) {
+                  if (value.isNotEmpty) {
+                    _sendMessage(value);
+                  }
+                },
+              ),
+            ),
+            const SizedBox(width: 8),
+            if (hasText)
+              IconButton(
+                icon: const Icon(Icons.send),
+                onPressed: () => _sendMessage(_messageController.text),
+                tooltip: 'Send Message',
+              )
+            else if (canApprove)
+              ElevatedButton(
+                  onPressed: _approvePlan,
+                  child: const Text("Approve Plan"))
+            else
+              const IconButton(
+                icon: Icon(Icons.send),
+                onPressed: null,
+                tooltip: 'Send Message (Empty)',
+              ),
+          ],
+        ),
       ),
     );
   }
