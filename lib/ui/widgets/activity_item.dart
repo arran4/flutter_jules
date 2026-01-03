@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../models.dart';
@@ -91,7 +92,12 @@ class _ActivityItemState extends State<ActivityItem> {
       iconColor = Colors.green;
     } else if (activity.progressUpdated != null) {
       title = activity.progressUpdated!.title;
-      summary = activity.progressUpdated!.description.split('\n').first;
+      summary = activity.progressUpdated!.description;
+      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
+          summary.length < 300 &&
+          !summary.contains('\n')) {
+        isCompactable = true;
+      }
       icon = Icons.update;
       iconColor = Colors.indigo;
     } else if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
@@ -133,11 +139,24 @@ class _ActivityItemState extends State<ActivityItem> {
         icon = Icons.category;
         iconColor = Colors.blueGrey;
       }
+    } else if (activity.sessionCompleted != null) {
+      title = "Session Completed";
+      summary = "Success";
+      icon = Icons.flag;
+      iconColor = Colors.green;
     } else {
-      title = "Unknown";
-      summary = activity.id;
-      icon = Icons.help_outline;
-      iconColor = Colors.amber;
+      if (activity.description.isEmpty) {
+        title = "Empty Activity";
+        summary = "${activity.originator ?? 'Unknown'} • ${activity.id}";
+        isCompactable = true;
+        icon = Icons.crop_square;
+        iconColor = Colors.grey;
+      } else {
+        title = "Unknown";
+        summary = activity.description;
+        icon = Icons.help_outline;
+        iconColor = Colors.amber;
+      }
     }
 
     // Timestamp
@@ -148,115 +167,112 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     } catch (_) {}
 
-    return InkWell(
-      onTap: () {
-        setState(() {
-          _isExpanded = !_isExpanded;
-        });
-      },
-      child: Padding(
-        padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(icon, color: iconColor, size: 20),
-            const SizedBox(width: 12),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
-                      if (timestamp != null) ...[
-                        const SizedBox(width: 8),
-                        Text(
-                          DateFormat.Hms().format(timestamp.toLocal()),
-                          style: Theme.of(context).textTheme.bodySmall,
-                        ),
-                      ]
-                    ],
-                  ),
-                  // If collapsed OR if it's a "summary-only" view (though we default expanded)
-                  // The user said: "when shrunk the view should be different".
-                  // So if NOT expanded, show the summary.
-                  if (!_isExpanded && summary != null)
-                    Padding(
-                      padding: const EdgeInsets.only(top: 4.0),
-                      child: Text(summary, maxLines: 1, overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.bodyMedium!.copyWith(color: Colors.grey[600])),
-                    ),
-                    
-                   // If "Compactable" (one-liner) and Expanded, we might actually show the info here too?
-                   // User: "We could make this almost one line of text".
-                   // If isCompactable, we essentially treat title+summary as the whole thing.
-                   if (isCompactable && _isExpanded && summary != null)
-                     Padding(
-                        padding: const EdgeInsets.only(top: 2.0),
-                        child: Text(summary, style: const TextStyle(fontSize: 13)),
-                     )
-                ],
-              ),
-            ),
-            // Actions
-            Row(
-              mainAxisSize: MainAxisSize.min,
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: iconColor, size: 20),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                if (widget.onRefresh != null)
-                   IconButton(
-                    icon: const Icon(Icons.refresh, size: 18), 
-                    onPressed: () async {
-                       await widget.onRefresh!();
-                    },
-                   ),
-                PopupMenuButton<String>(
-                  icon: const Icon(Icons.more_vert, size: 18),
-                  padding: EdgeInsets.zero,
-                  onSelected: (value) async {
-                    if (value == 'raw_data') {
-                     showDialog(
-                        context: context,
-                        builder: (context) => ModelViewer(
-                          data: widget.activity.toJson(),
-                          title: 'Activity Data',
-                        ),
-                      );
-                    } else if (value == 'refresh') {
-                      if (widget.onRefresh != null) {
-                        await widget.onRefresh!();
-                      }
-                    }
-                  },
-                  itemBuilder: (context) => <PopupMenuEntry<String>>[
-                    if (widget.onRefresh != null)
-                      const PopupMenuItem<String>(
-                        value: 'refresh',
-                        child: Row(
-                          children: [
-                            Icon(Icons.refresh, color: Colors.grey),
-                            SizedBox(width: 8),
-                            Text('Refresh Activity'),
-                          ],
-                        ),
+                Row(
+                  children: [
+                    Text(title,
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    if (timestamp != null) ...[
+                      const SizedBox(width: 8),
+                      Text(
+                        DateFormat.Hms().format(timestamp.toLocal()),
+                        style: Theme.of(context).textTheme.bodySmall,
                       ),
+                    ]
+                  ],
+                ),
+                if (!_isExpanded && summary != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4.0),
+                    child: Text(summary,
+                        maxLines: 10,
+                        overflow: TextOverflow.ellipsis,
+                        style: Theme.of(context)
+                            .textTheme
+                            .bodyMedium!
+                            .copyWith(color: Colors.grey[600])),
+                  ),
+                if (isCompactable && _isExpanded && summary != null)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2.0),
+                    child: Text(summary, style: const TextStyle(fontSize: 13)),
+                  )
+              ],
+            ),
+          ),
+          Row(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (widget.onRefresh != null)
+                IconButton(
+                  icon: const Icon(Icons.refresh, size: 18),
+                  onPressed: () async {
+                    await widget.onRefresh!();
+                  },
+                ),
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.more_vert, size: 18),
+                padding: EdgeInsets.zero,
+                onSelected: (value) async {
+                  if (value == 'raw_data') {
+                    showDialog(
+                      context: context,
+                      builder: (context) => ModelViewer(
+                        data: widget.activity.toJson(),
+                        title: 'Activity Data',
+                      ),
+                    );
+                  } else if (value == 'refresh') {
+                    if (widget.onRefresh != null) {
+                      await widget.onRefresh!();
+                    }
+                  }
+                },
+                itemBuilder: (context) => <PopupMenuEntry<String>>[
+                  if (widget.onRefresh != null)
                     const PopupMenuItem<String>(
-                      value: 'raw_data',
+                      value: 'refresh',
                       child: Row(
                         children: [
-                          Icon(Icons.data_object, color: Colors.grey),
+                          Icon(Icons.refresh, color: Colors.grey),
                           SizedBox(width: 8),
-                          Text('View Raw Data'),
+                          Text('Refresh Activity'),
                         ],
                       ),
                     ),
-                  ],
+                  const PopupMenuItem<String>(
+                    value: 'raw_data',
+                    child: Row(
+                      children: [
+                        Icon(Icons.data_object, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('View Raw Data'),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+              if (!isCompactable)
+                IconButton(
+                  onPressed: () => setState(() => _isExpanded = !_isExpanded),
+                  icon: Icon(
+                      _isExpanded ? Icons.expand_less : Icons.expand_more,
+                      size: 20,
+                      color: Colors.grey),
                 ),
-                if (!isCompactable)
-                  Icon(_isExpanded ? Icons.expand_less : Icons.expand_more, size: 20, color: Colors.grey),
-              ],
-            )
-          ],
-        ),
+            ],
+          )
+        ],
       ),
     );
   }
@@ -277,6 +293,37 @@ class _ActivityItemState extends State<ActivityItem> {
         if (msg.length < 300 && !msg.contains('\n')) {
           return const SizedBox.shrink();
         }
+      }
+    }
+
+    // Check for Empty or Unknown
+    if (activity.agentMessaged == null &&
+        activity.userMessaged == null &&
+        activity.progressUpdated == null &&
+        (activity.artifacts == null || activity.artifacts!.isEmpty) &&
+        activity.planGenerated == null &&
+        activity.planApproved == null &&
+        activity.sessionCompleted == null &&
+        activity.sessionFailed == null) {
+      if (activity.description.isEmpty) {
+        return const SizedBox.shrink();
+      } else {
+        // Unknown - Render JSON Tree
+        return Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(8),
+            decoration: BoxDecoration(
+              color: Colors.grey[200],
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: SelectableText(
+              const JsonEncoder.withIndent('  ').convert(activity.toJson()),
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        );
       }
     }
 
