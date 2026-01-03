@@ -28,7 +28,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _isPromptExpanded = false;
   String? _error;
   ApiExchange? _lastExchange;
-  DateTime? _lastFetchTime;
   final TextEditingController _messageController = TextEditingController();
 
   @override
@@ -124,7 +123,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       setState(() {
         _activities = activities;
         _session = updatedSession!;
-        _lastFetchTime = DateTime.now();
       });
     }
   }
@@ -199,6 +197,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           overflow: TextOverflow.ellipsis,
         ),
         actions: [
+          if (_session.outputs != null &&
+              _session.outputs!.any((o) => o.pullRequest != null))
+            IconButton(
+              icon: const Icon(Icons.merge_type, color: Colors.purple),
+              tooltip: 'Open Pull Request',
+              onPressed: () {
+                final pr = _session.outputs!
+                    .firstWhere((o) => o.pullRequest != null)
+                    .pullRequest!;
+                launchUrl(Uri.parse(pr.url));
+              },
+            ),
           IconButton(
             icon: const Icon(Icons.data_object),
             tooltip: 'View Session Data',
@@ -289,34 +299,45 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (_isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
-    
+
     if (_error != null) {
       return Center(
-          child: Padding(
-            padding: const EdgeInsets.all(16.0),
-            child: Column(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: [
-                const Icon(Icons.error_outline,
-                    color: Colors.red, size: 48),
-                const SizedBox(height: 8),
-                SelectableText(_error!, textAlign: TextAlign.center),
-                TextButton(
-                    onPressed: _fetchActivities, child: const Text("Retry"))
-              ],
-            ),
+        child: Padding(
+          padding: const EdgeInsets.all(16.0),
+          child: Column(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.error_outline, color: Colors.red, size: 48),
+              const SizedBox(height: 8),
+              SelectableText(_error!, textAlign: TextAlign.center),
+              TextButton(
+                  onPressed: _fetchActivities, child: const Text("Retry"))
+            ],
           ),
-        );
+        ),
+      );
     }
-    
+
+    bool hasPr = _session.outputs != null &&
+        _session.outputs!.any((o) => o.pullRequest != null);
+
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: _activities.length,
+      itemCount: _activities.length + (hasPr ? 2 : 0),
       itemBuilder: (context, index) {
+        if (hasPr) {
+          if (index == 0 || index == _activities.length + 1) {
+            return _buildPrNotice(context);
+          }
+        }
+
         // Map reversed visual index to chronological list (End is Latest/Bottom)
+        // Adjust index if PR exists (skip bottom PR notice at index 0)
+        final int activityIndex = hasPr ? index - 1 : index;
+
         // Visual 0 (Bottom) -> List Last
-        final activity = _activities[_activities.length - 1 - index];
-        
+        final activity = _activities[_activities.length - 1 - activityIndex];
+
         final item = ActivityItem(
           activity: activity,
           onRefresh: () => _refreshActivity(activity),
@@ -325,14 +346,62 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         if (isDevMode) {
           return GestureDetector(
             onLongPress: () => _showContextMenu(context, activity: activity),
-            onSecondaryTap: () =>
-                _showContextMenu(context, activity: activity),
+            onSecondaryTap: () => _showContextMenu(context, activity: activity),
             child: item,
           );
         } else {
           return item;
         }
       },
+    );
+  }
+
+  Widget _buildPrNotice(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        color: Colors.purple.shade50,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+            side: BorderSide(color: Colors.purple.shade100),
+            borderRadius: BorderRadius.circular(8)),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+              title: const Text("Pull Request Available",
+                  style: TextStyle(
+                      fontWeight: FontWeight.bold, color: Colors.purple)),
+              leading: const Icon(Icons.merge_type, color: Colors.purple),
+              children: [
+                for (final output in _session.outputs!
+                    .where((o) => o.pullRequest != null))
+                  Padding(
+                      padding: const EdgeInsets.only(
+                          left: 16.0, right: 16.0, bottom: 16.0),
+                      child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(output.pullRequest!.title,
+                                style: const TextStyle(
+                                    fontWeight: FontWeight.bold)),
+                            const SizedBox(height: 4),
+                            Text(output.pullRequest!.description,
+                                maxLines: 5,
+                                overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 8),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.open_in_new),
+                                label: const Text("Open Pull Request"),
+                                onPressed: () => launchUrl(
+                                    Uri.parse(output.pullRequest!.url)),
+                              ),
+                            )
+                          ]))
+              ]),
+        ),
+      ),
     );
   }
 
@@ -351,203 +420,143 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                // State
-                Row(
-                  children: [
-                    Text("State: ",
-                        style: Theme.of(context).textTheme.labelLarge),
-                    Expanded(
-                      child: MarkdownBody(
-                        data: _session.state
-                            .toString()
-                            .split('.')
-                            .last,
-                      ),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                // Prompt
-                Text("Prompt:",
-                    style: Theme.of(context).textTheme.labelLarge),
-                const SizedBox(height: 4),
-                InkWell(
-                  onTap: () {
-                    setState(() {
-                      _isPromptExpanded = !_isPromptExpanded;
-                    });
-                  },
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      AnimatedSize(
-                        duration: const Duration(milliseconds: 300),
-                        curve: Curves.easeInOut,
-                        alignment: Alignment.topLeft,
-                        child: Container(
-                          constraints: BoxConstraints(
-                              maxHeight: _isPromptExpanded
-                                  ? MediaQuery.sizeOf(context).height * 0.4
-                                  : 60),
-                          width: double.infinity,
-                          clipBehavior: _isPromptExpanded
-                              ? Clip.hardEdge // Need clip if scrolling within container
-                              : Clip.hardEdge,
-                          decoration: const BoxDecoration(),
-                          foregroundDecoration: _isPromptExpanded
-                              ? null
-                              : BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.topCenter,
-                                    end: Alignment.bottomCenter,
-                                    colors: [
-                                      Colors.white
-                                          .withValues(alpha: 0.0),
-                                      Colors.white
-                                          .withValues(alpha: 0.8),
-                                    ],
-                                    stops: const [0.5, 1.0],
-                                  ),
-                                ),
-                          child: SingleChildScrollView(
-                              // Default physics allows scrolling
-                            child: MarkdownBody(data: _session.prompt),
+                    // Start with Pills (State, Date, Automation, Approval, Source, Branch)
+                    Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: [
+                        if (_session.state != null)
+                          Chip(
+                            label:
+                                Text(_session.state.toString().split('.').last),
+                            backgroundColor:
+                                _session.state == SessionState.COMPLETED
+                                    ? Colors.green.shade50
+                                    : (_session.state == SessionState.FAILED
+                                        ? Colors.red.shade50
+                                        : Colors.grey.shade50),
+                            avatar: _session.state == SessionState.COMPLETED
+                                ? const Icon(Icons.check,
+                                    size: 16, color: Colors.green)
+                                : null,
+                            side: BorderSide.none,
                           ),
+                        if (_session.createTime != null)
+                          Chip(
+                            avatar: const Icon(Icons.calendar_today, size: 16),
+                            label: Text(DateFormat.yMMMd().add_jm().format(
+                                DateTime.parse(_session.createTime!)
+                                    .toLocal())),
+                            side: BorderSide.none,
+                          ),
+                        if (_session.automationMode != null)
+                          Chip(
+                            avatar: const Icon(Icons.smart_toy, size: 16),
+                            label: Text("Automation: ${_session.automationMode
+                                .toString()
+                                .split('.')
+                                .last
+                                .replaceAll('AUTOMATION_MODE_', '')}"),
+                            backgroundColor: Colors.blue.shade50,
+                            side: BorderSide.none,
+                          ),
+                        if (_session.requirePlanApproval != null)
+                          Chip(
+                            label: Text(_session.requirePlanApproval!
+                                ? "Approval Required"
+                                : "No Approval Required"),
+                            avatar: Icon(
+                              _session.requirePlanApproval!
+                                  ? Icons.check_circle_outline
+                                  : Icons.do_not_disturb_on_outlined,
+                              size: 16,
+                            ),
+                            backgroundColor: _session.requirePlanApproval!
+                                ? Colors.orange.shade50
+                                : Colors.green.shade50,
+                            side: BorderSide.none,
+                          ),
+                        Chip(
+                          label: Text(_session.sourceContext.source),
+                          avatar: const Icon(Icons.source, size: 16),
+                          side: BorderSide.none,
                         ),
-                      ),
-                      Center(
-                        child: Icon(
-                          _isPromptExpanded
-                              ? Icons.keyboard_arrow_up
-                              : Icons.keyboard_arrow_down,
-                          color: Colors.grey,
-                        ),
-                      )
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 12),
-                // Chips / Pills
-                Wrap(
-                  spacing: 8.0,
-                  runSpacing: 4.0,
-                  children: [
-                    if (_session.automationMode != null)
-                      Chip(
-                        avatar: const Icon(Icons.smart_toy, size: 16),
-                        label: Text("Automation: ${_session.automationMode
-                            .toString()
-                            .split('.')
-                            .last
-                            .replaceAll('AUTOMATION_MODE_', '')}"),
-                        backgroundColor: Colors.blue.shade50,
-                      ),
-                    if (_session.requirePlanApproval != null)
-                      Chip(
-                        label: Text(_session.requirePlanApproval!
-                            ? "Approval Required"
-                            : "No Approval Required"),
-                        avatar: Icon(
-                          _session.requirePlanApproval!
-                              ? Icons.check_circle_outline
-                              : Icons.do_not_disturb_on_outlined,
-                          size: 16,
-                        ),
-                        backgroundColor: _session.requirePlanApproval!
-                            ? Colors.orange.shade50
-                            : Colors.green.shade50,
-                      ),
-                    Chip(
-                      label: Text(_session.sourceContext.source),
-                      avatar: const Icon(Icons.source, size: 16),
+                        if (_session.sourceContext.githubRepoContext
+                                ?.startingBranch !=
+                            null)
+                          Chip(
+                            label: Text(_session.sourceContext
+                                .githubRepoContext!.startingBranch),
+                            avatar: const Icon(Icons.call_split, size: 16),
+                            side: BorderSide.none,
+                          ),
+                      ],
                     ),
-                    if (_session.sourceContext.githubRepoContext
-                            ?.startingBranch !=
-                        null)
-                      Chip(
-                        label: Text(_session.sourceContext
-                            .githubRepoContext!.startingBranch),
-                        avatar: const Icon(Icons.call_split, size: 16),
-                      ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-                if (_lastFetchTime != null)
-                  Text(
-                    'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
-          ),
-          // PR Output
-          if (_session.outputs != null &&
-              _session.outputs!.any((o) => o.pullRequest != null)) ...[
-            for (final output in _session.outputs!
-                .where((o) => o.pullRequest != null)) ...[
-              Card(
-                margin: const EdgeInsets.symmetric(
-                    horizontal: 8.0, vertical: 4.0),
-                color: Colors.purple.shade50,
-                child: Padding(
-                  padding: const EdgeInsets.all(16.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Row(
+                    const SizedBox(height: 12),
+                    Text("Prompt:",
+                        style: Theme.of(context).textTheme.labelLarge),
+                    const SizedBox(height: 4),
+                    InkWell(
+                      onTap: () {
+                        setState(() {
+                          _isPromptExpanded = !_isPromptExpanded;
+                        });
+                      },
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          const Icon(Icons.merge_type,
-                              color: Colors.purple),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              "Pull Request Available",
-                              style: Theme.of(context)
-                                  .textTheme
-                                  .titleMedium!
-                                  .copyWith(
-                                      color: Colors.purple,
-                                      fontWeight: FontWeight.bold),
+                          AnimatedSize(
+                            duration: const Duration(milliseconds: 300),
+                            curve: Curves.easeInOut,
+                            alignment: Alignment.topLeft,
+                            child: Container(
+                              constraints: BoxConstraints(
+                                  maxHeight: _isPromptExpanded
+                                      ? MediaQuery.sizeOf(context).height * 0.4
+                                      : 60),
+                              width: double.infinity,
+                              clipBehavior: _isPromptExpanded
+                                  ? Clip.hardEdge
+                                  : Clip.hardEdge,
+                              decoration: const BoxDecoration(),
+                              foregroundDecoration: _isPromptExpanded
+                                  ? null
+                                  : BoxDecoration(
+                                      gradient: LinearGradient(
+                                        begin: Alignment.topCenter,
+                                        end: Alignment.bottomCenter,
+                                        colors: [
+                                          Colors.white.withValues(alpha: 0.0),
+                                          Colors.white.withValues(alpha: 0.8),
+                                        ],
+                                        stops: const [0.5, 1.0],
+                                      ),
+                                    ),
+                              child: SingleChildScrollView(
+                                child: MarkdownBody(data: _session.prompt),
+                              ),
                             ),
                           ),
+                          Center(
+                            child: Icon(
+                              _isPromptExpanded
+                                  ? Icons.keyboard_arrow_up
+                                  : Icons.keyboard_arrow_down,
+                              color: Colors.grey,
+                            ),
+                          )
                         ],
                       ),
-                      const SizedBox(height: 8),
-                      Text(
-                        output.pullRequest!.title,
-                        style:
-                            const TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      const SizedBox(height: 4),
-                      Text(output.pullRequest!.description,
-                          maxLines: 3, overflow: TextOverflow.ellipsis),
-                      const SizedBox(height: 16),
-                      SizedBox(
-                        width: double.infinity,
-                        child: ElevatedButton.icon(
-                          icon: const Icon(Icons.open_in_new),
-                          label: const Text("Open Pull Request"),
-                          onPressed: () {
-                            launchUrl(Uri.parse(output.pullRequest!.url));
-                          },
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.purple,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      )
-                    ],
-                  ),
+                    ),
+                  ],
                 ),
               ),
+              const Divider(),
             ],
-          ],
-          const Divider(),
-        ],
+          ),
+        ),
       ),
-    ),
-   ),
-  );
+    );
   }
 
   Widget _buildInput(BuildContext context) {
