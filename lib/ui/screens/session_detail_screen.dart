@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
@@ -24,6 +25,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   late Session _session;
   List<Activity> _activities = [];
   bool _isLoading = false;
+  bool _isPromptExpanded = false;
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
@@ -210,6 +212,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 if (_session.url != null) {
                   launchUrl(Uri.parse(_session.url!));
                 }
+              } else if (value == 'approve_plan') {
+                _approvePlan();
               }
             },
             itemBuilder: (context) => [
@@ -234,6 +238,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     ],
                   ),
                 ),
+              const PopupMenuItem(
+                  value: 'approve_plan',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Force Approve Plan'),
+                    ],
+                  )),
             ],
           ),
         ],
@@ -243,25 +256,131 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         itemBuilder: (context, index) {
           // Header
           if (index == 0) {
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Padding(
-                  padding: const EdgeInsets.all(8.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                          "State: ${_session.state.toString().split('.').last}"),
-                      Text("Prompt: ${_session.prompt}"),
-                      if (_lastFetchTime != null)
-                        Text(
-                          'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
-                          style: Theme.of(context).textTheme.bodySmall,
+            return SelectionArea(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.all(16.0),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        // State
+                        Row(
+                          children: [
+                            Text("State: ",
+                                style: Theme.of(context).textTheme.labelLarge),
+                            Expanded(
+                              child: MarkdownBody(
+                                data: _session.state
+                                    .toString()
+                                    .split('.')
+                                    .last,
+                              ),
+                            ),
+                          ],
                         ),
-                    ],
+                        const SizedBox(height: 12),
+                        // Prompt
+                        Text("Prompt:",
+                            style: Theme.of(context).textTheme.labelLarge),
+                        const SizedBox(height: 4),
+                        InkWell(
+                          onTap: () {
+                            setState(() {
+                              _isPromptExpanded = !_isPromptExpanded;
+                            });
+                          },
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              AnimatedCrossFade(
+                                duration: const Duration(milliseconds: 200),
+                                firstChild: Container(
+                                  constraints: const BoxConstraints(maxHeight: 60),
+                                  foregroundDecoration: BoxDecoration(
+                                    gradient: LinearGradient(
+                                      begin: Alignment.topCenter,
+                                      end: Alignment.bottomCenter,
+                                      colors: [
+                                        Colors.white.withValues(alpha: 0.0),
+                                        Colors.white.withValues(alpha: 0.8), // Assuming light theme background
+                                      ],
+                                      stops: const [0.5, 1.0],
+                                    ),
+                                  ),
+                                  child: MarkdownBody(data: _session.prompt),
+                                ),
+                                secondChild: MarkdownBody(data: _session.prompt),
+                                crossFadeState: _isPromptExpanded
+                                    ? CrossFadeState.showSecond
+                                    : CrossFadeState.showFirst,
+                              ),
+                              Center(
+                                child: Icon(
+                                  _isPromptExpanded
+                                      ? Icons.keyboard_arrow_up
+                                      : Icons.keyboard_arrow_down,
+                                  color: Colors.grey,
+                                ),
+                              )
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 12),
+                        // Chips / Pills
+                        Wrap(
+                          spacing: 8.0,
+                          runSpacing: 4.0,
+                          children: [
+                            if (_session.automationMode != null)
+                              Chip(
+                                avatar: const Icon(Icons.smart_toy, size: 16),
+                                label: Text("Automation: ${_session.automationMode
+                                    .toString()
+                                    .split('.')
+                                    .last
+                                    .replaceAll('AUTOMATION_MODE_', '')}"),
+                                backgroundColor: Colors.blue.shade50,
+                              ),
+                            if (_session.requirePlanApproval != null)
+                              Chip(
+                                label: Text(_session.requirePlanApproval!
+                                    ? "Approval Required"
+                                    : "No Approval Required"),
+                                avatar: Icon(
+                                  _session.requirePlanApproval!
+                                      ? Icons.check_circle_outline
+                                      : Icons.do_not_disturb_on_outlined,
+                                  size: 16,
+                                ),
+                                backgroundColor: _session.requirePlanApproval!
+                                    ? Colors.orange.shade50
+                                    : Colors.green.shade50,
+                              ),
+                            Chip(
+                              label: Text(_session.sourceContext.source),
+                              avatar: const Icon(Icons.source, size: 16),
+                            ),
+                            if (_session.sourceContext.githubRepoContext
+                                    ?.startingBranch !=
+                                null)
+                              Chip(
+                                label: Text(_session.sourceContext
+                                    .githubRepoContext!.startingBranch),
+                                avatar: const Icon(Icons.call_split, size: 16),
+                              ),
+                          ],
+                        ),
+                        const SizedBox(height: 8),
+                        if (_lastFetchTime != null)
+                          Text(
+                            'Last updated: ${DateFormat.Hms().format(_lastFetchTime!)}',
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                      ],
+                    ),
                   ),
-                ),
                 // PR Output
                 if (_session.outputs != null &&
                     _session.outputs!.any((o) => o.pullRequest != null)) ...[
@@ -326,7 +445,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 ],
                 const Divider(),
               ],
-            );
+            ),);
           }
 
           // Footer (Chat Input)
