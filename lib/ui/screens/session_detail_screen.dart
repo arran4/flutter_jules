@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
@@ -195,7 +197,45 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             icon: const Icon(Icons.replay),
             onPressed: _fetchActivities,
             tooltip: 'Refresh',
-          )
+          ),
+          PopupMenuButton<String>(
+            onSelected: (value) async {
+              if (value == 'copy_id') {
+                await Clipboard.setData(ClipboardData(text: _session.id));
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Session ID copied')));
+                }
+              } else if (value == 'open_browser') {
+                if (_session.url != null) {
+                  launchUrl(Uri.parse(_session.url!));
+                }
+              }
+            },
+            itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'copy_id',
+                child: Row(
+                  children: [
+                    Icon(Icons.copy, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Copy Session ID'),
+                  ],
+                ),
+              ),
+              if (_session.url != null)
+                const PopupMenuItem(
+                  value: 'open_browser',
+                  child: Row(
+                    children: [
+                      Icon(Icons.open_in_browser, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Open in Browser'),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ],
       ),
       body: ListView.builder(
@@ -222,6 +262,68 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     ],
                   ),
                 ),
+                // PR Output
+                if (_session.outputs != null &&
+                    _session.outputs!.any((o) => o.pullRequest != null)) ...[
+                  for (final output in _session.outputs!
+                      .where((o) => o.pullRequest != null)) ...[
+                    Card(
+                      margin: const EdgeInsets.symmetric(
+                          horizontal: 8.0, vertical: 4.0),
+                      color: Colors.purple.shade50,
+                      child: Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                const Icon(Icons.merge_type,
+                                    color: Colors.purple),
+                                const SizedBox(width: 8),
+                                Expanded(
+                                  child: Text(
+                                    "Pull Request Available",
+                                    style: Theme.of(context)
+                                        .textTheme
+                                        .titleMedium!
+                                        .copyWith(
+                                            color: Colors.purple,
+                                            fontWeight: FontWeight.bold),
+                                  ),
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              output.pullRequest!.title,
+                              style:
+                                  const TextStyle(fontWeight: FontWeight.bold),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(output.pullRequest!.description,
+                                maxLines: 3, overflow: TextOverflow.ellipsis),
+                            const SizedBox(height: 16),
+                            SizedBox(
+                              width: double.infinity,
+                              child: ElevatedButton.icon(
+                                icon: const Icon(Icons.open_in_new),
+                                label: const Text("Open Pull Request"),
+                                onPressed: () {
+                                  launchUrl(Uri.parse(output.pullRequest!.url));
+                                },
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.purple,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            )
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ],
                 const Divider(),
               ],
             );

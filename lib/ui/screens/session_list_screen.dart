@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../utils/search_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
@@ -567,6 +569,91 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         FontStyle.italic),
                                           ),
                                         ],
+                                      ],
+                                    ),
+                                    trailing: Row(
+                                      mainAxisSize: MainAxisSize.min,
+                                      children: [
+                                        if (session.outputs != null &&
+                                            session.outputs!.any(
+                                                (o) => o.pullRequest != null))
+                                          IconButton(
+                                            icon: const Icon(Icons.merge_type),
+                                            tooltip: 'View Pull Request',
+                                            color: Colors.purple,
+                                            onPressed: () {
+                                              final pr = session.outputs!
+                                                  .firstWhere((o) =>
+                                                      o.pullRequest != null)
+                                                  .pullRequest!;
+                                              launchUrl(Uri.parse(pr.url));
+                                            },
+                                          ),
+                                        PopupMenuButton<String>(
+                                          onSelected: (value) async {
+                                            if (value == 'copy_id') {
+                                              await Clipboard.setData(
+                                                  ClipboardData(
+                                                      text: session.id));
+                                              if (context.mounted) {
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(const SnackBar(
+                                                        content: Text(
+                                                            'Session ID copied')));
+                                              }
+                                            } else if (value == 'open_browser') {
+                                              if (session.url != null) {
+                                                launchUrl(
+                                                    Uri.parse(session.url!));
+                                              }
+                                            } else if (value == 'view_pr') {
+                                              final pr = session.outputs!
+                                                  .firstWhere((o) =>
+                                                      o.pullRequest != null)
+                                                  .pullRequest!;
+                                              launchUrl(Uri.parse(pr.url));
+                                            }
+                                          },
+                                          itemBuilder: (context) => [
+                                            const PopupMenuItem(
+                                              value: 'copy_id',
+                                              child: Row(
+                                                children: [
+                                                  Icon(Icons.copy,
+                                                      color: Colors.grey),
+                                                  SizedBox(width: 8),
+                                                  Text('Copy ID'),
+                                                ],
+                                              ),
+                                            ),
+                                            if (session.url != null)
+                                              const PopupMenuItem(
+                                                value: 'open_browser',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.open_in_browser,
+                                                        color: Colors.grey),
+                                                    SizedBox(width: 8),
+                                                    Text('Open in Browser'),
+                                                  ],
+                                                ),
+                                              ),
+                                            if (session.outputs != null &&
+                                                session.outputs!.any((o) =>
+                                                    o.pullRequest != null))
+                                              const PopupMenuItem(
+                                                value: 'view_pr',
+                                                child: Row(
+                                                  children: [
+                                                    Icon(Icons.merge_type,
+                                                        color: Colors.purple),
+                                                    SizedBox(width: 8),
+                                                    Text('View Pull Request'),
+                                                  ],
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                     onTap: () {
