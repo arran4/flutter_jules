@@ -65,12 +65,28 @@ class _ActivityItemState extends State<ActivityItem> {
       iconColor = Colors.orange;
     } else if (activity.agentMessaged != null) {
       title = "Agent";
-      summary = activity.agentMessaged!.agentMessage.split('\n').first;
+      final msg = activity.agentMessaged!.agentMessage;
+      summary = msg;
+      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
+          msg.length < 300 &&
+          !msg.contains('\n')) {
+        isCompactable = true;
+      } else {
+        summary = msg.split('\n').first;
+      }
       icon = Icons.smart_toy;
       iconColor = Colors.blue;
     } else if (activity.userMessaged != null) {
       title = "User";
-      summary = activity.userMessaged!.userMessage.split('\n').first;
+      final msg = activity.userMessaged!.userMessage;
+      summary = msg;
+      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
+          msg.length < 300 &&
+          !msg.contains('\n')) {
+        isCompactable = true;
+      } else {
+        summary = msg.split('\n').first;
+      }
       icon = Icons.person;
       iconColor = Colors.green;
     } else if (activity.progressUpdated != null) {
@@ -247,11 +263,24 @@ class _ActivityItemState extends State<ActivityItem> {
 
   Widget _buildBody() {
     final activity = widget.activity;
-    
-    // If it's "Compactable", the header showed enough. Body is empty.
-    // Check "Compactable" logic again or ensure consistency. 
-    // Actually, let's just inspect content.
-     bool isCompactArtifact = false;
+
+    // Check if simple message (compacted in header)
+    if (activity.artifacts == null || activity.artifacts!.isEmpty) {
+      if (activity.agentMessaged != null) {
+        final msg = activity.agentMessaged!.agentMessage;
+        if (msg.length < 300 && !msg.contains('\n')) {
+          return const SizedBox.shrink();
+        }
+      }
+      if (activity.userMessaged != null) {
+        final msg = activity.userMessaged!.userMessage;
+        if (msg.length < 300 && !msg.contains('\n')) {
+          return const SizedBox.shrink();
+        }
+      }
+    }
+
+    bool isCompactArtifact = false;
      if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
         final changeSet = activity.artifacts!.firstWhere((a) => a.changeSet != null, orElse: () => Artifact()).changeSet;
         if (changeSet != null && changeSet.gitPatch == null && activity.artifacts!.every((a) => a.bashOutput == null && a.changeSet != null && a.changeSet!.gitPatch == null)) {
