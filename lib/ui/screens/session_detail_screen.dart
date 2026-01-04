@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../services/cache_service.dart';
 import '../../services/auth_provider.dart';
+import '../../utils/time_helper.dart'; // Import time helper
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
 import '../../models/api_exchange.dart';
@@ -92,21 +93,41 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (token != null) {
       final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
       if (cachedDetails != null) {
-        // Compare updateTime
-        // If widget.session has no updateTime, we assume we need to fetch.
-        // If cached snapshot matches widget.session.updateTime, we use cache.
-        final listUpdateTime = widget.session.updateTime;
-        final cachedSnapshot = cachedDetails.sessionUpdateTimeSnapshot;
+        final listUpdateTimeStr = widget.session.updateTime;
+        final cachedSnapshotStr = cachedDetails.sessionUpdateTimeSnapshot;
         
-        if (listUpdateTime != null && listUpdateTime == cachedSnapshot) {
+        bool useCache = false;
+
+        if (cachedSnapshotStr != null) {
+           if (listUpdateTimeStr == null) {
+             // List has no info, but cache exists. Use cache.
+             useCache = true;
+           } else {
+             try {
+               final listDate = DateTime.parse(listUpdateTimeStr);
+               final cachedDate = DateTime.parse(cachedSnapshotStr);
+               
+               // If local cache is equal to or newer than the list's info, use cache.
+               // We only fetch if list says there's a newer update than what we have.
+               if (!listDate.isAfter(cachedDate)) {
+                 useCache = true;
+               }
+             } catch (e) {
+               // If parsing fails, default to fetch
+               useCache = false;
+             }
+           }
+        }
+
+        if (useCache) {
            if (mounted) {
              setState(() {
                _activities = cachedDetails.activities;
-               _session = cachedDetails.session;
+               // Use the cached session as it might be newer than the one passed from the stale list
+               _session = cachedDetails.session; 
              });
            }
            validCacheFound = true;
-           // We can stop here, no need to fetch!
            return; 
         }
       }
@@ -378,15 +399,43 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: finalItems.length + (hasPr ? 2 : 0),
+      itemCount: finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
       itemBuilder: (context, index) {
+        if (index == 0) {
+           // Visual Bottom: Last Updated Status
+           if (_session.updateTime != null) {
+              final updateTime = DateTime.parse(_session.updateTime!).toLocal();
+              return Center(
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 8.0),
+                  child: Text(
+                    "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DateTime.now().difference(updateTime).inMinutes > 15
+                              ? Colors.orange
+                              : Colors.grey,
+                        ),
+                  ),
+                ),
+              );
+           }
+           return const SizedBox.shrink();
+        }
+
+        // Adjust index for status item
+        final int adjIndex = index - 1;
+
         if (hasPr) {
-          if (index == 0 || index == finalItems.length + 1) {
+          if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
             return _buildPrNotice(context);
           }
         }
 
-        final int listIndex = hasPr ? index - 1 : index;
+        final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
+        
+        // Safety check
+        if (listIndex < 0 || listIndex >= finalItems.length) return const SizedBox.shrink();
+
         final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 
         if (itemWrapper is ActivityGroupWrapper) {

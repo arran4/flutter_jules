@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
+import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/source_provider.dart';
@@ -338,8 +339,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
                   child: Align(
                     alignment: Alignment.centerLeft,
                     child: Text(
-                      'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)}',
-                      style: Theme.of(context).textTheme.bodySmall,
+                      'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                      style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DateTime.now().difference(lastFetchTime).inMinutes > 30 ? Colors.orange : null,
+                      ),
                     ),
                   ),
                  ),
