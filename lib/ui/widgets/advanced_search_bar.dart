@@ -29,7 +29,7 @@ class AdvancedSearchBar extends StatefulWidget {
 
 class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   final TextEditingController _textController = TextEditingController();
-  final FocusNode _focusNode = FocusNode();
+  late final FocusNode _focusNode;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
@@ -38,6 +38,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   @override
   void initState() {
     super.initState();
+    _focusNode = FocusNode(onKey: _handleFocusKey);
     // Using simple listener for text changes
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(() {
@@ -136,26 +137,30 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
      }
   }
 
-  void _handleKeyEvent(RawKeyEvent event) {
-     if (event is RawKeyDownEvent) {
-       if (_overlayEntry != null && _filteredSuggestions.isNotEmpty) {
-          if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-             setState(() {
-                _highlightedIndex = (_highlightedIndex + 1) % _filteredSuggestions.length;
-                _showOverlay(); // Rebuild to update highlight
-             });
-          } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-             setState(() {
-                _highlightedIndex = (_highlightedIndex - 1 + _filteredSuggestions.length) % _filteredSuggestions.length;
-                _showOverlay();
-             });
-          } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.tab) {
-             if (_filteredSuggestions.isNotEmpty) {
-                _selectSuggestion(_filteredSuggestions[_highlightedIndex]);
-             }
-          }
-       }
+  KeyEventResult _handleFocusKey(FocusNode node, RawKeyEvent event) {
+     if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+
+     if (_overlayEntry != null && _filteredSuggestions.isNotEmpty) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+           setState(() {
+              _highlightedIndex = (_highlightedIndex + 1) % _filteredSuggestions.length;
+              _showOverlay(); // Rebuild to update highlight
+           });
+           return KeyEventResult.handled;
+        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+           setState(() {
+              _highlightedIndex = (_highlightedIndex - 1 + _filteredSuggestions.length) % _filteredSuggestions.length;
+              _showOverlay();
+           });
+           return KeyEventResult.handled;
+        } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.tab) {
+           if (_filteredSuggestions.isNotEmpty) {
+              _selectSuggestion(_filteredSuggestions[_highlightedIndex]);
+              return KeyEventResult.handled;
+           }
+        }
      }
+     return KeyEventResult.ignored;
   }
 
   void _showOverlay() {
@@ -429,17 +434,13 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 const Icon(Icons.search, color: Colors.grey),
                 const SizedBox(width: 8),
                 Expanded(
-                  child: RawKeyboardListener(
-                    focusNode: FocusNode(), 
-                    onKey: _handleKeyEvent,
-                    child: TextField(
-                      controller: _textController,
-                      focusNode: _focusNode,
-                      decoration: const InputDecoration(
-                        hintText: 'Search... (Type @ for filters)',
-                        border: InputBorder.none,
-                        isDense: true,
-                      ),
+                  child: TextField(
+                    controller: _textController,
+                    focusNode: _focusNode,
+                    decoration: const InputDecoration(
+                      hintText: 'Search... (Type @ for filters)',
+                      border: InputBorder.none,
+                      isDense: true,
                     ),
                   ),
                 ),
