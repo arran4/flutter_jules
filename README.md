@@ -27,8 +27,16 @@ A comprehensive Flutter-based client application for interacting with the Google
 ### 🛠️ Developer Tools (Dev Mode)
 Enabled via the Settings screen, **Dev Mode** unlocks powerful inspection tools:
 - **API Viewer:** Real-time inspection of HTTP requests and responses (headers, bodies, status codes) with sensitive token redaction.
+
 - **Model Viewer:** Inspect the raw JSON data underlying any Session or Activity object.
 - **Deep Linking:** Long-press on chat items for advanced context actions.
+
+## Screenshots
+
+
+![Session List](assets/screenshots/session_list.png)
+
+![Session Detail](assets/screenshots/session_detail.png)
 
 ## Architecture
 
