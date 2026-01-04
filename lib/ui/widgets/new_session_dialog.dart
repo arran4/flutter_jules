@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -31,15 +32,78 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   // Automation Option
   bool _autoCreatePr = false;
 
+  // Custom Dropdown State
+  final TextEditingController _sourceController = TextEditingController();
+  late final FocusNode _sourceFocusNode;
+  final LayerLink _sourceLayerLink = LayerLink();
+  OverlayEntry? _sourceOverlayEntry;
+  List<Source> _filteredSources = [];
+  int _highlightedSourceIndex = 0;
+  // Size of the text field to match overlay
+  double? _dropdownWidth;
+
   @override
   void initState() {
     super.initState();
+    _sourceFocusNode = FocusNode(onKey: _handleSourceFocusKey);
+    _sourceFocusNode.addListener(() {
+      if (!_sourceFocusNode.hasFocus) {
+        Future.delayed(const Duration(milliseconds: 100), () {
+          if (!_sourceFocusNode.hasFocus) {
+             _removeSourceOverlay();
+              // Reset text to selected source if valid
+             if (_selectedSource != null) {
+               _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
+             } else {
+               _sourceController.clear();
+             }
+          }
+        });
+      }
+    });
+    // _sourceController.addListener(_onSourceTextChanged); // We'll call explicit filter update from onChanged to avoid loops
+
     _loadPreferences();
     // Defer data fetching to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchSources();
     });
   }
+
+  @override
+  void dispose() {
+    _removeSourceOverlay();
+    _sourceController.dispose();
+    _sourceFocusNode.dispose();
+    super.dispose();
+  }
+
+  KeyEventResult _handleSourceFocusKey(FocusNode node, RawKeyEvent event) {
+     if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+
+     if (_sourceOverlayEntry != null && _filteredSources.isNotEmpty) {
+        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+           setState(() {
+              _highlightedSourceIndex = (_highlightedSourceIndex + 1) % _filteredSources.length;
+              _showSourceOverlay();
+           });
+           return KeyEventResult.handled;
+        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+           setState(() {
+              _highlightedSourceIndex = (_highlightedSourceIndex - 1 + _filteredSources.length) % _filteredSources.length;
+              _showSourceOverlay();
+           });
+           return KeyEventResult.handled;
+        } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.tab) {
+           if (_filteredSources.isNotEmpty) {
+              _selectSource(_filteredSources[_highlightedSourceIndex]);
+              return KeyEventResult.handled;
+           }
+        }
+     }
+     return KeyEventResult.ignored;
+  }
+
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -136,11 +200,113 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           _selectedSource = sources.first;
         }
       }
+      
+      // Update Controller
+      if (_selectedSource != null) {
+        _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
+      }
 
       // Set default branch
       _updateBranchFromSource(prefs: prefs);
     });
   }
+  
+  void _onSourceTextChanged(String val) {
+    // if (!_sourceFocusNode.hasFocus) return; // Allow even if not strict focus for now? 
+
+    final query = val.toLowerCase();
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    
+    List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
+    allSources.sort((a, b) {
+         final labelA = _getSourceDisplayLabel(a);
+         final labelB = _getSourceDisplayLabel(b);
+         final isSourceA = labelA.startsWith('sources/') || a.name.startsWith('sources/');
+         final isSourceB = labelB.startsWith('sources/') || b.name.startsWith('sources/');
+         if (isSourceA != isSourceB) return isSourceA ? 1 : -1;
+         return labelA.compareTo(labelB);
+    });
+
+    setState(() {
+      _filteredSources = allSources.where((s) {
+         final label = _getSourceDisplayLabel(s).toLowerCase();
+         return label.contains(query);
+      }).toList();
+      _highlightedSourceIndex = 0;
+    });
+
+    if (_filteredSources.isNotEmpty) {
+      _showSourceOverlay();
+    } else {
+      _removeSourceOverlay();
+    }
+  }
+
+  void _showSourceOverlay() {
+    if (_sourceOverlayEntry != null) {
+      _sourceOverlayEntry!.markNeedsBuild();
+      return;
+    }
+    
+    _sourceOverlayEntry = OverlayEntry(
+      builder: (context) {
+         return Positioned(
+           width: _dropdownWidth ?? 300,
+           child: CompositedTransformFollower(
+             link: _sourceLayerLink,
+             showWhenUnlinked: false,
+             offset: const Offset(0.0, 60.0), // Approximate height
+             child: Material(
+               elevation: 4.0,
+               color: Theme.of(context).cardColor,
+               child: ConstrainedBox(
+                 constraints: const BoxConstraints(maxHeight: 250),
+                 child: ListView.builder(
+                   padding: EdgeInsets.zero,
+                   shrinkWrap: true,
+                   itemCount: _filteredSources.length,
+                   itemBuilder: (context, index) {
+                      final source = _filteredSources[index];
+                      final isHighlighted = index == _highlightedSourceIndex;
+                      final isPrivate = source.githubRepo?.isPrivate ?? false;
+                      
+                      return Container(
+                        color: isHighlighted ? Theme.of(context).highlightColor : null,
+                        child: ListTile(
+                          dense: true,
+                          leading: isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                          title: Text(_getSourceDisplayLabel(source)),
+                          onTap: () => _selectSource(source),
+                        ),
+                      );
+                   },
+                 ),
+               ),
+             ),
+           ),
+         );
+      }
+    );
+
+    // Insert into overlay
+    Overlay.of(context).insert(_sourceOverlayEntry!);
+  }
+
+  void _removeSourceOverlay() {
+    _sourceOverlayEntry?.remove();
+    _sourceOverlayEntry = null;
+  }
+
+  void _selectSource(Source source) {
+     setState(() {
+       _selectedSource = source;
+       _sourceController.text = _getSourceDisplayLabel(source);
+       _updateBranchFromSource();
+     });
+     _removeSourceOverlay();
+     _sourceFocusNode.unfocus();
+  }
+
 
   void _updateBranchFromSource({SharedPreferences? prefs}) {
     // If selected source is null, clear branch
@@ -435,31 +601,30 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         flex: 3,
                         child: LayoutBuilder(
                           builder: (context, constraints) {
-                            return DropdownMenu<Source>(
-                              width: constraints.maxWidth,
-                              initialSelection: _selectedSource,
-                              label: const Text('Repository'),
-                              requestFocusOnTap: true,
-                              enableFilter: true,
-                              leadingIcon: (_selectedSource?.githubRepo?.isPrivate == true) 
-                                  ? const Icon(Icons.lock, size: 16) 
-                                  : null,
-                              dropdownMenuEntries: sources.map((s) {
-                                final isPrivate = s.githubRepo?.isPrivate ?? false;
-                                return DropdownMenuEntry<Source>(
-                                  value: s,
-                                  label: _getSourceDisplayLabel(s),
-                                  leadingIcon: isPrivate ? const Icon(Icons.lock, size: 16) : null,
-                                );
-                              }).toList(),
-                              onSelected: (widget.sourceFilter != null)
-                                  ? null
-                                  : (Source? newValue) {
-                                      setState(() {
-                                        _selectedSource = newValue;
-                                        _updateBranchFromSource();
-                                      });
-                                    },
+                             // Correctly capture width for overlay
+                             _dropdownWidth = constraints.maxWidth;
+                            return CompositedTransformTarget(
+                              link: _sourceLayerLink,
+                              child: TextField(
+                                controller: _sourceController,
+                                focusNode: _sourceFocusNode,
+                                decoration: InputDecoration(
+                                  labelText: 'Repository',
+                                  border: const OutlineInputBorder(),
+                                  prefixIcon: (_selectedSource?.githubRepo?.isPrivate == true) 
+                                      ? const Icon(Icons.lock, size: 16) 
+                                      : const Icon(Icons.source, size: 16),
+                                  suffixIcon: IconButton(
+                                    icon: const Icon(Icons.close, size: 16),
+                                    onPressed: () {
+                                      _sourceController.clear();
+                                      _sourceFocusNode.requestFocus();
+                                      _onSourceTextChanged('');
+                                    }
+                                  ),
+                                ),
+                                onChanged: _onSourceTextChanged,
+                              ),
                             );
                           }
                         ),
