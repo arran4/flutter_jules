@@ -88,9 +88,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _createSession() async {
+    // Determine pre-selected source from active filters
+    String? preSelectedSource = widget.sourceFilter;
+    if (preSelectedSource == null) {
+       final activeSource = _activeFilters.firstWhere(
+          (f) => f.type == FilterType.source && f.mode == FilterMode.include, 
+          orElse: () => FilterToken(id: '', type: FilterType.flag, label: '', value: '')
+       );
+       if (activeSource.id.isNotEmpty) {
+          preSelectedSource = activeSource.value;
+       }
+    }
+
     final Session? sessionToCreate = await showDialog<Session>(
       context: context,
-      builder: (context) => NewSessionDialog(sourceFilter: widget.sourceFilter),
+      builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
     );
 
     if (sessionToCreate == null) return;
