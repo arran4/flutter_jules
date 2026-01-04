@@ -610,6 +610,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     if (f.value == 'new' && metadata.isNew) matchesAny = true;
                     if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) matchesAny = true;
                     if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
+                    if (f.value == 'has_pr' && (session.outputs?.any((o) => o.pullRequest != null) ?? false)) matchesAny = true;
                  }
                  if (!matchesAny) return false;
               }
@@ -620,6 +621,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     if (f.value == 'new' && metadata.isNew) matchesAny = true;
                     if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) matchesAny = true;
                     if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
+                    if (f.value == 'has_pr' && (session.outputs?.any((o) => o.pullRequest != null) ?? false)) matchesAny = true;
                  }
                  if (matchesAny) return false;
               }
@@ -856,13 +858,62 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                               if (session.outputs != null && session.outputs!.any((o) => o.pullRequest != null))
                                                 Padding(
                                                   padding: const EdgeInsets.symmetric(horizontal: 4.0),
-                                                  child: IconButton(
-                                                    icon: const Icon(Icons.merge_type, color: Colors.purple),
-                                                    tooltip: 'Open Pull Request',
-                                                    onPressed: () {
-                                                      final pr = session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
-                                                      launchUrl(Uri.parse(pr.url));
+                                                  child: GestureDetector(
+                                                    onSecondaryTapUp: (details) {
+                                                       final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+                                                       final RelativeRect position = RelativeRect.fromRect(
+                                                         Rect.fromPoints(details.globalPosition, details.globalPosition),
+                                                         Offset.zero & overlay.size,
+                                                       );
+                                                       showMenu(
+                                                         context: context,
+                                                         position: position,
+                                                         items: <PopupMenuEntry>[
+                                                            PopupMenuItem(
+                                                              child: Row(children: [const Icon(Icons.filter_alt, size: 16), const SizedBox(width: 8), Text("Filter 'Has PR'")]),
+                                                              onTap: () {
+                                                                 _addFilterToken(FilterToken(
+                                                                  id: 'flag:has_pr', 
+                                                                  type: FilterType.flag, 
+                                                                  label: 'Has Pull Request', 
+                                                                  value: 'has_pr',
+                                                                  mode: FilterMode.include
+                                                                ));
+                                                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                                  content: Text("Added filter: Has Pull Request"), 
+                                                                  duration: Duration(seconds: 1),
+                                                                ));
+                                                              },
+                                                            ),
+                                                            PopupMenuItem(
+                                                              child: Row(children: [const Icon(Icons.filter_alt_off, size: 16), const SizedBox(width: 8), Text("Exclude 'Has PR'")]),
+                                                              onTap: () {
+                                                                _addFilterToken(FilterToken(
+                                                                  id: 'flag:has_pr', 
+                                                                  type: FilterType.flag, 
+                                                                  label: 'Has Pull Request', 
+                                                                  value: 'has_pr',
+                                                                  mode: FilterMode.exclude
+                                                                ));
+                                                                ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                                                                  content: Text("Added filter: Exclude Has Pull Request"), 
+                                                                  duration: Duration(seconds: 1),
+                                                                ));
+                                                              },
+                                                            ),
+                                                         ]
+                                                       );
                                                     },
+                                                    child: IconButton(
+                                                      icon: const Icon(Icons.merge_type, color: Colors.purple),
+                                                      tooltip: 'Open Pull Request',
+                                                      onPressed: () {
+                                                        final pr = session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+                                                        launchUrl(Uri.parse(pr.url));
+                                                      },
+                                                    ),
                                                   ),
                                                 ),
                                               PopupMenuButton<String>(
