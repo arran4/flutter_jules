@@ -19,6 +19,7 @@ import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/session_preview_modal.dart';
+import '../widgets/advanced_search_bar.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -30,15 +31,30 @@ class SessionListScreen extends StatefulWidget {
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
-  final Set<SessionState> _statusFilters = {};
-  final TextEditingController _searchController = TextEditingController();
+  // Search & Filter State
+  // Search & Filter State
+  List<FilterToken> _activeFilters = [];
+  String _searchText = '';
+  // Multi-column sorting
+  List<SortOption> _activeSorts = [
+     const SortOption(SortField.updated, SortDirection.descending)
+  ];
+  
+  // Computed suggestions based on available data
+  List<FilterToken> _availableSuggestions = [];
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(() {
-      setState(() {});
-    });
+    if (widget.sourceFilter != null) {
+      // Pre-populate source filter if passed from arguments
+      _activeFilters.add(FilterToken(
+        id: 'source:${widget.sourceFilter}',
+        type: FilterType.source,
+        label: widget.sourceFilter!,
+        value: widget.sourceFilter!,
+      ));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -54,7 +70,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     super.dispose();
   }
 
@@ -205,7 +220,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
-
   void _showContextMenu(BuildContext context, {Session? session}) {
     final lastExchange =
         Provider.of<SessionProvider>(context, listen: false).lastExchange;
@@ -245,74 +259,120 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
-  void _showFilterDialog() {
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
-    final allSessions = sessionProvider.items.map((i) => i.data).toList();
-    final allStatuses = allSessions
-        .map((s) => s.state)
-        .whereType<SessionState>()
-        .toSet()
-        .toList();
-    allStatuses.sort((a, b) => a.index.compareTo(b.index));
+  
+  void _updateSuggestions(List<Session> sessions) {
+    final Set<FilterToken> suggestions = {};
+    
+    // Statuses
+    for (final status in SessionState.values) {
+       if (status == SessionState.STATE_UNSPECIFIED) continue;
+       suggestions.add(FilterToken(
+         id: 'status:${status.name}',
+         type: FilterType.status,
+         label: status.displayName,
+         value: status,
+       ));
+    }
+    
+    // Sources (from sessions)
+    final sources = sessions.map((s) => s.sourceContext.source).toSet();
+    for (final source in sources) {
+      if (source.startsWith("sources/github/")) {
+         suggestions.add(FilterToken(
+           id: 'source:$source',
+           type: FilterType.source,
+           label: source.replaceFirst('sources/github/', ''),
+           value: source,
+         ));
+      } else {
+         suggestions.add(FilterToken(
+           id: 'source:$source',
+           type: FilterType.source,
+           label: source,
+           value: source,
+         ));
+      }
+    }
+    
+    // Flags
+    suggestions.add(FilterToken(id: 'flag:new', type: FilterType.flag, label: 'New', value: 'new'));
+    suggestions.add(FilterToken(id: 'flag:updated', type: FilterType.flag, label: 'Updated', value: 'updated'));
+    suggestions.add(FilterToken(id: 'flag:unread', type: FilterType.flag, label: 'Unread', value: 'unread'));
 
-    showDialog(
+    _availableSuggestions = suggestions.toList();
+    // Sort suggestions? Maybe by type then label
+    _availableSuggestions.sort((a, b) {
+       if (a.type != b.type) return a.type.index.compareTo(b.type.index);
+       return a.label.compareTo(b.label);
+    });
+  }
+
+  void _addFilter(FilterType type, String label, dynamic value) {
+     final token = FilterToken(
+       id: '${type.name}:$value',
+       type: type, 
+       label: label, 
+       value: value
+     );
+     // Avoid duplicates
+     if (!_activeFilters.any((t) => t.id == token.id)) {
+       setState(() {
+         _activeFilters.add(token);
+       });
+     }
+  }
+
+  void _showFilterMenu() {
+      showDialog(
         context: context,
         builder: (context) {
-          return StatefulBuilder(builder: (context, setDialogState) {
-            return AlertDialog(
-              title: const Text('Filter by Status'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: allStatuses.map((status) {
-                    return CheckboxListTile(
-                      title: Text(status.displayName),
-                      subtitle: Text(status.description, style: const TextStyle(fontSize: 12)),
-                      value: _statusFilters.contains(status) ||
-                          _statusFilters.isEmpty,
-                      onChanged: (bool? value) {
-                        setDialogState(() {
-                          if (value == true) {
-                            if (_statusFilters.isEmpty) {
-                              _statusFilters.add(status);
-                            } else {
-                              _statusFilters.add(status);
-                            }
-                          } else {
-                            if (_statusFilters.isEmpty) {
-                              _statusFilters.addAll(allStatuses);
-                              _statusFilters.remove(status);
-                            } else {
-                              _statusFilters.remove(status);
-                            }
-                          }
+          return AlertDialog(
+            title: const Text("All Filters"),
+            content: SizedBox(
+              width: double.maxFinite,
+              child: ListView.builder(
+                shrinkWrap: true,
+                itemCount: _availableSuggestions.length,
+                itemBuilder: (context, index) {
+                   final suggestion = _availableSuggestions[index];
+                   final isActive = _activeFilters.any((f) => f.id == suggestion.id);
+                   
+                   return ListTile(
+                     leading: _getIconForType(suggestion.type),
+                     title: Text(suggestion.label),
+                     trailing: isActive ? const Icon(Icons.check, color: Colors.blue) : null,
+                     onTap: () {
+                        setState(() {
+                           if (isActive) {
+                             _activeFilters.removeWhere((f) => f.id == suggestion.id);
+                           } else {
+                             _activeFilters.add(suggestion);
+                           }
                         });
-                        setState(() {});
-                      },
-                    );
-                  }).toList(),
-                ),
+                        Navigator.pop(context);
+                     },
+                   );
+                },
               ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    setDialogState(() {
-                      _statusFilters.clear();
-                    });
-                    setState(() {});
-                  },
-                  child: const Text('Clear Filter'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          });
-        });
+            ),
+            actions: [
+              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))
+            ],
+          );
+        }
+      );
   }
+
+  Icon _getIconForType(FilterType type) {
+    switch (type) {
+      case FilterType.status: return const Icon(Icons.info_outline, size: 16);
+      case FilterType.source: return const Icon(Icons.source, size: 16);
+      case FilterType.flag: return const Icon(Icons.flag, size: 16);
+      case FilterType.text: return const Icon(Icons.text_fields, size: 16);
+    }
+  }
+
+
 
   void _markAsRead(Session session) {
      final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -335,6 +395,132 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  int _compareSessions(CachedItem<Session> a, CachedItem<Session> b) {
+     for (final sort in _activeSorts) {
+        int cmp = 0;
+        switch (sort.field) {
+           case SortField.updated:
+             cmp = _getEffectiveTime(a).compareTo(_getEffectiveTime(b));
+             break;
+           case SortField.created:
+             final tA = a.data.createTime != null ? DateTime.parse(a.data.createTime!) : DateTime(0);
+             final tB = b.data.createTime != null ? DateTime.parse(b.data.createTime!) : DateTime(0);
+             cmp = tA.compareTo(tB);
+             break;
+           case SortField.name:
+             cmp = (a.data.title ?? a.data.name).compareTo(b.data.title ?? b.data.name);
+             break;
+           case SortField.source:
+             cmp = a.data.sourceContext.source.compareTo(b.data.sourceContext.source);
+             break;
+           case SortField.status:
+             final indexA = a.data.state?.index ?? -1;
+             final indexB = b.data.state?.index ?? -1;
+             cmp = indexA.compareTo(indexB);
+             break;
+        }
+        
+        if (cmp != 0) {
+           return sort.direction == SortDirection.ascending ? cmp : -cmp;
+        }
+     }
+     return 0; // Equal
+  }
+
+  void _addFilterToken(FilterToken token) {
+     // Check if exists
+     if (!_activeFilters.any((t) => t.id == token.id)) {
+        setState(() {
+          _activeFilters.add(token);
+        });
+     } else {
+        // If it exists but mode is different, update it? 
+        // Or if user explicitly clicked "Filter: New" but "NOT New" is active, maybe flip it?
+        // Converting existing to the requested one
+        setState(() {
+           _activeFilters.removeWhere((t) => t.id == token.id);
+           _activeFilters.add(token);
+        });
+     }
+  }
+
+  void _addSortOption(SortOption option) {
+     // Check if field exists
+     final index = _activeSorts.indexWhere((s) => s.field == option.field);
+     setState(() {
+        if (index != -1) {
+           _activeSorts[index] = option; // Update direction
+        } else {
+           _activeSorts.add(option);
+        }
+     });
+  }
+
+  Widget _buildPill(BuildContext context, {
+    required String label,
+    required Color backgroundColor,
+    required Color textColor,
+    required FilterToken filterToken,
+    SortField? sortField,
+  }) {
+    return GestureDetector(
+      onSecondaryTapUp: (details) {
+         final RenderBox overlay = Overlay.of(context).context.findRenderObject() as RenderBox;
+         final RelativeRect position = RelativeRect.fromRect(
+           Rect.fromPoints(details.globalPosition, details.globalPosition),
+           Offset.zero & overlay.size,
+         );
+         
+         showMenu(
+           context: context,
+           position: position,
+           items: <PopupMenuEntry>[
+             PopupMenuItem(
+               child: Row(children: [const Icon(Icons.filter_alt, size: 16), const SizedBox(width: 8), Text("Filter '${filterToken.label}'")]),
+               onTap: () => _addFilterToken(FilterToken(
+                 id: filterToken.id, 
+                 type: filterToken.type, 
+                 label: filterToken.label, 
+                 value: filterToken.value,
+                 mode: FilterMode.include
+               )),
+             ),
+             PopupMenuItem(
+               child: Row(children: [const Icon(Icons.filter_alt_off, size: 16), const SizedBox(width: 8), Text("Exclude '${filterToken.label}'")]),
+               onTap: () => _addFilterToken(FilterToken(
+                 id: filterToken.id, 
+                 type: filterToken.type, 
+                 label: filterToken.label, 
+                 value: filterToken.value,
+                 mode: FilterMode.exclude
+               )),
+             ),
+             if (sortField != null) ...[
+               const PopupMenuDivider(),
+               PopupMenuItem(
+                 child: const Row(children: [Icon(Icons.arrow_upward, size: 16), SizedBox(width: 8), Text("Sort Ascending")]),
+                 onTap: () => _addSortOption(SortOption(sortField, SortDirection.ascending)),
+               ),
+               PopupMenuItem(
+                 child: const Row(children: [Icon(Icons.arrow_downward, size: 16), SizedBox(width: 8), Text("Sort Descending")]),
+                 onTap: () => _addSortOption(SortOption(sortField, SortDirection.descending)),
+               ),
+             ]
+           ]
+         );
+      },
+      child: Container(
+        margin: const EdgeInsets.only(right: 6),
+        padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
+        decoration: BoxDecoration(
+          color: backgroundColor,
+          borderRadius: BorderRadius.circular(4),
+        ),
+        child: Text(label, style: TextStyle(color: textColor, fontSize: 10, fontWeight: FontWeight.bold)),
+      ),
+    );
+  }
+
   DateTime _getEffectiveTime(CachedItem<Session> item) {
     if (item.data.updateTime != null) {
       return DateTime.parse(item.data.updateTime!);
@@ -353,38 +539,131 @@ class _SessionListScreenState extends State<SessionListScreen> {
         final isLoading = sessionProvider.isLoading;
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
-
-        List<CachedItem<Session>> displayItems = cachedItems;
-
-        if (widget.sourceFilter != null) {
-          displayItems = displayItems
-              .where((i) => i.data.sourceContext.source == widget.sourceFilter)
-              .toList();
-        }
-        if (_statusFilters.isNotEmpty) {
-          displayItems = displayItems
-              .where((i) => i.data.state != null && _statusFilters.contains(i.data.state))
-              .toList();
-        }
         
-        // Searching (Naively filtering cached items)
-        if (_searchController.text.isNotEmpty) {
-           final query = _searchController.text.toLowerCase();
-           displayItems = displayItems.where((i) {
-             final s = i.data;
-             return (s.title?.toLowerCase().contains(query) ?? false) ||
-                    (s.name.toLowerCase().contains(query)) || 
-                    (s.id.toLowerCase().contains(query)) ||
-                    (s.state.toString().toLowerCase().contains(query));
-           }).toList();
-        }
+        // Populate suggestions once data is loaded (and if not done yet or data changed substantially)
+        // Ideally we do this only when list changes, but 'build' is fine for now as it's cheap
+        _updateSuggestions(cachedItems.map((i) => i.data).toList());
 
-        // Sorting (ensure time sort)
-        displayItems.sort((a, b) {
-           final timeA = _getEffectiveTime(a);
-           final timeB = _getEffectiveTime(b);
-           return timeB.compareTo(timeA);
-        });
+        List<CachedItem<Session>> displayItems = cachedItems.where((item) {
+           final session = item.data;
+           final metadata = item.metadata;
+           
+           // Text Search
+           if (_searchText.isNotEmpty) {
+             final query = _searchText.toLowerCase();
+             final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
+                    (session.name.toLowerCase().contains(query)) || 
+                    (session.id.toLowerCase().contains(query)) ||
+                    (session.state.toString().toLowerCase().contains(query));
+             if (!matches) return false;
+           }
+
+           // Filter Tokens Logic
+           // Group by Type
+           final statusFilters = _activeFilters.where((f) => f.type == FilterType.status).toList();
+           final sourceFilters = _activeFilters.where((f) => f.type == FilterType.source).toList();
+           final flagFilters = _activeFilters.where((f) => f.type == FilterType.flag).toList();
+
+           // 1. Status: OR logic for Include, AND logic for Exclude
+           // e.g. (Active OR Running) AND NOT Failed
+           if (statusFilters.isNotEmpty) {
+              final includes = statusFilters.where((f) => f.mode == FilterMode.include);
+              final excludes = statusFilters.where((f) => f.mode == FilterMode.exclude);
+              
+              if (includes.isNotEmpty) {
+                 final matchesAny = includes.any((f) => session.state == f.value);
+                 if (!matchesAny) return false;
+              }
+              
+              if (excludes.isNotEmpty) {
+                 final matchesAny = excludes.any((f) => session.state == f.value);
+                 if (matchesAny) return false;
+              }
+           }
+           
+           // 2. Source: OR logic for Include, AND logic for Exclude
+           if (sourceFilters.isNotEmpty) {
+              final includes = sourceFilters.where((f) => f.mode == FilterMode.include);
+              final excludes = sourceFilters.where((f) => f.mode == FilterMode.exclude);
+              
+              if (includes.isNotEmpty) {
+                 final matchesAny = includes.any((f) => session.sourceContext.source == f.value);
+                 if (!matchesAny) return false;
+              }
+              
+              if (excludes.isNotEmpty) {
+                 final matchesAny = excludes.any((f) => session.sourceContext.source == f.value);
+                 if (matchesAny) return false;
+              }
+           }
+
+           // 3. Flags: AND logic (typically flags are distinct properties)
+           // But if I select "New" and "Updated", do I want items that are BOTH? Or either?
+           // Usually "Is New" OR "Is Updated". Let's use OR for Includes.
+           if (flagFilters.isNotEmpty) {
+              final includes = flagFilters.where((f) => f.mode == FilterMode.include);
+              final excludes = flagFilters.where((f) => f.mode == FilterMode.exclude);
+
+              if (includes.isNotEmpty) {
+                 bool matchesAny = false;
+                 for (final f in includes) {
+                    if (f.value == 'new' && metadata.isNew) matchesAny = true;
+                    if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) matchesAny = true;
+                    if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
+                 }
+                 if (!matchesAny) return false;
+              }
+              
+              if (excludes.isNotEmpty) {
+                 bool matchesAny = false;
+                 for (final f in excludes) {
+                    if (f.value == 'new' && metadata.isNew) matchesAny = true;
+                    if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) matchesAny = true;
+                    if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
+                 }
+                 if (matchesAny) return false;
+              }
+           }
+           
+           // 4. Text Filters (Labels/Tag matching)
+           // Treat FilterType.text as broad text matching, including Labels
+           final textFilters = _activeFilters.where((f) => f.type == FilterType.text).toList();
+           if (textFilters.isNotEmpty) {
+               // Includes
+               final includes = textFilters.where((f) => f.mode == FilterMode.include);
+               if (includes.isNotEmpty) {
+                  final matchesAny = includes.any((f) {
+                     final val = f.value.toString().toLowerCase();
+                     // Check labels
+                     if (metadata.labels.any((l) => l.toLowerCase() == val)) return true;
+                     // Check title/name
+                     if (session.title?.toLowerCase().contains(val) ?? false) return true;
+                     if (session.name.toLowerCase().contains(val)) return true;
+                     return false;
+                  });
+                  if (!matchesAny) return false;
+               }
+
+               // Excludes
+               final excludes = textFilters.where((f) => f.mode == FilterMode.exclude);
+               if (excludes.isNotEmpty) {
+                  final matchesAny = excludes.any((f) {
+                     final val = f.value.toString().toLowerCase();
+                     if (metadata.labels.any((l) => l.toLowerCase() == val)) return true;
+                     if (session.title?.toLowerCase().contains(val) ?? false) return true;
+                     if (session.name.toLowerCase().contains(val)) return true;
+                     return false;
+                  });
+                  if (matchesAny) return false;
+               }
+           }
+           
+           return true;
+        }).toList();
+
+        // Sorting
+        // Sorting
+        displayItems.sort(_compareSessions);
 
         return Scaffold(
           appBar: AppBar(
@@ -398,11 +677,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
                 onPressed: () => _fetchSessions(force: true),
-              ),
-              IconButton(
-                icon: const Icon(Icons.filter_list),
-                tooltip: 'Filter',
-                onPressed: _showFilterDialog,
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -457,13 +731,26 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: const InputDecoration(
-                              labelText: 'Search Sessions',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.search),
-                            ),
+                          child: AdvancedSearchBar(
+                             activeFilters: _activeFilters,
+                             onFiltersChanged: (filters) {
+                               setState(() {
+                                 _activeFilters = filters;
+                               });
+                             },
+                             onSearchChanged: (text) {
+                               setState(() {
+                                 _searchText = text;
+                               });
+                             },
+                             availableSuggestions: _availableSuggestions,
+                             onOpenFilterMenu: _showFilterMenu,
+                             activeSorts: _activeSorts,
+                             onSortsChanged: (sorts) {
+                               setState(() {
+                                 _activeSorts = sorts;
+                               });
+                             },
                           ),
                         ),
                         if (lastFetchTime != null)
@@ -516,50 +803,41 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                           crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Row(children: [
+
                                               Expanded(
                                                   child: Row(
                                                 children: [
                                                   if (metadata.isNew)
-                                                    Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    _buildPill(context, 
+                                                      label: 'NEW', 
+                                                      backgroundColor: Colors.green, 
+                                                      textColor: Colors.white,
+                                                      filterToken: FilterToken(id: 'flag:new', type: FilterType.flag, label: 'New', value: 'new'),
+                                                      sortField: SortField.created
                                                     ),
                                                   if (metadata.isUpdated && !metadata.isNew)
-                                                     Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.amber,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('UPDATED', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                    ),
+                                                     _buildPill(context,
+                                                      label: 'UPDATED',
+                                                      backgroundColor: Colors.amber,
+                                                      textColor: Colors.black,
+                                                      filterToken: FilterToken(id: 'flag:updated', type: FilterType.flag, label: 'Updated', value: 'updated'),
+                                                      sortField: SortField.updated
+                                                     ),
                                                   if (metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
-                                                     Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.blueAccent,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('UNREAD', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                    ),
+                                                     _buildPill(context,
+                                                      label: 'UNREAD',
+                                                      backgroundColor: Colors.blueAccent,
+                                                      textColor: Colors.white,
+                                                      filterToken: FilterToken(id: 'flag:unread', type: FilterType.flag, label: 'Unread', value: 'unread'),
+                                                     ),
 
                                                   // Render custom labels
                                                   for (final label in metadata.labels)
-                                                    Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey.shade700,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(label.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                                    _buildPill(context,
+                                                      label: label.toUpperCase(),
+                                                      backgroundColor: Colors.grey.shade700,
+                                                      textColor: Colors.white,
+                                                      filterToken: FilterToken(id: 'text:$label', type: FilterType.text, label: label, value: label),
                                                     ),
 
                                                   Expanded(
@@ -575,6 +853,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   ),
                                                 ],
                                               )),
+                                              if (session.outputs != null && session.outputs!.any((o) => o.pullRequest != null))
+                                                Padding(
+                                                  padding: const EdgeInsets.symmetric(horizontal: 4.0),
+                                                  child: IconButton(
+                                                    icon: const Icon(Icons.merge_type, color: Colors.purple),
+                                                    tooltip: 'Open Pull Request',
+                                                    onPressed: () {
+                                                      final pr = session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+                                                      launchUrl(Uri.parse(pr.url));
+                                                    },
+                                                  ),
+                                                ),
                                               PopupMenuButton<String>(
                                                 icon: const Icon(Icons.more_vert),
                                                 tooltip: 'Actions',
@@ -675,7 +965,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                               ),
                                             ]),
                                             const SizedBox(height: 8),
-                                            SessionMetaPills(session: session, compact: true),
+                                            SessionMetaPills(
+                                              session: session, 
+                                              compact: true,
+                                              onAddFilter: (token) {
+                                                  _addFilterToken(token);
+                                                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                                                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                                                    content: Text("Added filter: ${token.label}"), 
+                                                    duration: const Duration(seconds: 1),
+                                                  ));
+                                              },
+                                              onAddSort: _addSortOption,
+                                            ),
                                             // Progress bar if running
                                              if (session.state == SessionState.IN_PROGRESS && session.totalSteps != null && session.totalSteps! > 0)
                                               Padding(
