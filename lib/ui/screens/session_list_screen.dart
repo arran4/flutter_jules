@@ -323,41 +323,115 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _showFilterMenu() {
+      // Group suggestions by type for better UI
+      final statusSuggestions = _availableSuggestions.where((s) => s.type == FilterType.status).toList();
+      final flagSuggestions = _availableSuggestions.where((s) => s.type == FilterType.flag).toList();
+      final sourceSuggestions = _availableSuggestions.where((s) => s.type == FilterType.source).toList();
+      final otherSuggestions = _availableSuggestions.where((s) => s.type == FilterType.text).toList(); // If any
+
+      // Ordered list of sections
+      final sections = [
+        {'title': 'Status', 'items': statusSuggestions},
+        {'title': 'Flags', 'items': flagSuggestions},
+        // Others if needed
+        if (otherSuggestions.isNotEmpty) {'title': 'Tags', 'items': otherSuggestions},
+        {'title': 'Sources', 'items': sourceSuggestions}, // Sources Last
+      ];
+
       showDialog(
         context: context,
         builder: (context) {
-          return AlertDialog(
-            title: const Text("All Filters"),
-            content: SizedBox(
-              width: double.maxFinite,
-              child: ListView.builder(
-                shrinkWrap: true,
-                itemCount: _availableSuggestions.length,
-                itemBuilder: (context, index) {
-                   final suggestion = _availableSuggestions[index];
-                   final isActive = _activeFilters.any((f) => f.id == suggestion.id);
-                   
-                   return ListTile(
-                     leading: _getIconForType(suggestion.type),
-                     title: Text(suggestion.label),
-                     trailing: isActive ? const Icon(Icons.check, color: Colors.blue) : null,
-                     onTap: () {
-                        setState(() {
-                           if (isActive) {
-                             _activeFilters.removeWhere((f) => f.id == suggestion.id);
-                           } else {
-                             _activeFilters.add(suggestion);
-                           }
-                        });
-                        Navigator.pop(context);
-                     },
-                   );
-                },
-              ),
-            ),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))
-            ],
+          // Use StatefulBuilder to allow UI updates within the dialog when state changes
+          return StatefulBuilder(
+            builder: (context, setDialogState) {
+              return AlertDialog(
+                title: const Text("All Filters"),
+                content: SizedBox(
+                  width: double.maxFinite,
+                  height: 400, // Limit height
+                  child: ListView(
+                    shrinkWrap: true,
+                    children: sections.map((section) {
+                       final title = section['title'] as String;
+                       final items = section['items'] as List<FilterToken>;
+                       if (items.isEmpty) return const SizedBox.shrink();
+
+                       return Column(
+                         crossAxisAlignment: CrossAxisAlignment.start,
+                         children: [
+                           Padding(
+                             padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 16.0),
+                             child: Text(title, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.grey)),
+                           ),
+                           ...items.map((suggestion) {
+                              // Check current state in _activeFilters
+                              final activeFilter = _activeFilters.firstWhere((f) => f.id == suggestion.id && f.mode == FilterMode.include, orElse: () => FilterToken(id: '', type: FilterType.flag, label: '', value: ''));
+                              final isIncluded = activeFilter.id.isNotEmpty;
+                              
+                              final activeExclude = _activeFilters.firstWhere((f) => f.id == suggestion.id && f.mode == FilterMode.exclude, orElse: () => FilterToken(id: '', type: FilterType.flag, label: '', value: ''));
+                              final isExcluded = activeExclude.id.isNotEmpty;
+
+                              return ListTile(
+                                leading: _getIconForType(suggestion.type),
+                                title: Text(suggestion.label),
+                                trailing: Row(
+                                  mainAxisSize: MainAxisSize.min,
+                                  children: [
+                                    // Include Button
+                                    IconButton(
+                                      icon: Icon(Icons.add_circle, color: isIncluded ? Colors.green : Colors.grey.shade300),
+                                      tooltip: "Include",
+                                      onPressed: () {
+                                         setState(() { // Update parent state
+                                            _activeFilters.removeWhere((f) => f.id == suggestion.id);
+                                            if (!isIncluded) {
+                                                _activeFilters.add(FilterToken(
+                                                  id: suggestion.id,
+                                                  type: suggestion.type,
+                                                  label: suggestion.label,
+                                                  value: suggestion.value,
+                                                  mode: FilterMode.include
+                                                ));
+                                            }
+                                         });
+                                         setDialogState(() {}); // Refreshes the dialog UI
+                                      },
+                                    ),
+                                    // Exclude Button
+                                    IconButton(
+                                      icon: Icon(Icons.remove_circle, color: isExcluded ? Colors.red : Colors.grey.shade300),
+                                      tooltip: "Exclude",
+                                      onPressed: () {
+                                         setState(() {
+                                            _activeFilters.removeWhere((f) => f.id == suggestion.id);
+                                            if (!isExcluded) {
+                                                _activeFilters.add(FilterToken(
+                                                  id: suggestion.id,
+                                                  type: suggestion.type,
+                                                  label: suggestion.label,
+                                                  value: suggestion.value,
+                                                  mode: FilterMode.exclude
+                                                ));
+                                            }
+                                         });
+                                         setDialogState(() {}); // Refreshes the dialog UI
+                                      },
+                                    ),
+                                  ],
+                                ),
+                              );
+                           }),
+                           const Divider(),
+                         ],
+                       );
+                    }).toList(),
+                  ),
+                ),
+                actions: [
+                  TextButton(onPressed: () => Navigator.pop(context), child: const Text("Done"))
+                ],
+              );
+            }
           );
         }
       );
