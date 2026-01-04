@@ -1,9 +1,8 @@
-
 enum FilterType {
   status,
   source,
   flag, // New, Updated, Unread
-  text
+  text,
 }
 
 enum FilterMode {
@@ -29,10 +28,12 @@ class FilterToken {
   FilterToken toggleMode() {
     return FilterToken(
       id: id,
-      type: type, 
-      label: label, 
+      type: type,
+      label: label,
       value: value,
-      mode: mode == FilterMode.include ? FilterMode.exclude : FilterMode.include
+      mode: mode == FilterMode.include
+          ? FilterMode.exclude
+          : FilterMode.include,
     );
   }
 
@@ -43,25 +44,17 @@ class FilterToken {
           runtimeType == other.runtimeType &&
           id == other.id &&
           type == other.type &&
-          value == other.value && 
+          value == other.value &&
           mode == other.mode;
 
   @override
-  int get hashCode => id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
+  int get hashCode =>
+      id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
 }
 
-enum SortField {
-  updated,
-  created,
-  name,
-  source,
-  status,
-}
+enum SortField { updated, created, name, source, status }
 
-enum SortDirection {
-  ascending,
-  descending,
-}
+enum SortDirection { ascending, descending }
 
 class SortOption {
   final SortField field;
@@ -70,12 +63,17 @@ class SortOption {
   const SortOption(this.field, this.direction);
 
   String get label {
-    switch(field) {
-      case SortField.updated: return "Updated";
-      case SortField.created: return "Created";
-      case SortField.name: return "Name";
-      case SortField.source: return "Source";
-      case SortField.status: return "Status";
+    switch (field) {
+      case SortField.updated:
+        return "Updated";
+      case SortField.created:
+        return "Created";
+      case SortField.name:
+        return "Name";
+      case SortField.source:
+        return "Source";
+      case SortField.status:
+        return "Status";
     }
   }
 }

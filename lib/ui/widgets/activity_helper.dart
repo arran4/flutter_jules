@@ -97,19 +97,20 @@ class ActivityDisplayInfo {
         }
       } else {
         final changeSetArtifact = activity.artifacts!.firstWhere(
-           (a) => a.changeSet != null,
-           orElse: () => Artifact(),
+          (a) => a.changeSet != null,
+          orElse: () => Artifact(),
         );
 
         if (changeSetArtifact.changeSet != null) {
-           title = "Artifact";
-           summary = "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
-           if (changeSetArtifact.changeSet!.gitPatch == null) {
-             isCompactable = true;
-           }
+          title = "Artifact";
+          summary =
+              "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
+          if (changeSetArtifact.changeSet!.gitPatch == null) {
+            isCompactable = true;
+          }
         } else {
-           title = "Artifacts";
-           summary = "${activity.artifacts!.length} items";
+          title = "Artifacts";
+          summary = "${activity.artifacts!.length} items";
         }
         icon = Icons.category;
         iconColor = Colors.blueGrey;
@@ -128,7 +129,7 @@ class ActivityDisplayInfo {
         iconColor = Colors.amber;
       }
     }
-    
+
     return ActivityDisplayInfo(
       title: title,
       summary: summary,

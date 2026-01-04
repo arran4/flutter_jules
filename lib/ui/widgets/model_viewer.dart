@@ -5,11 +5,7 @@ class ModelViewer extends StatelessWidget {
   final Map<String, dynamic> data;
   final String title;
 
-  const ModelViewer({
-    super.key,
-    required this.data,
-    required this.title,
-  });
+  const ModelViewer({super.key, required this.data, required this.title});
 
   @override
   Widget build(BuildContext context) {
@@ -21,10 +17,7 @@ class ModelViewer extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              title,
-              style: Theme.of(context).textTheme.titleMedium,
-            ),
+            Text(title, style: Theme.of(context).textTheme.titleMedium),
             const SizedBox(height: 16),
             Expanded(
               child: Container(

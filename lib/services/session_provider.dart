@@ -23,25 +23,27 @@ class SessionProvider extends ChangeNotifier {
     _cacheService = service;
   }
 
-  Future<void> fetchSessions(JulesClient client,
-      {bool force = false, String? authToken}) async {
-    
+  Future<void> fetchSessions(
+    JulesClient client, {
+    bool force = false,
+    String? authToken,
+  }) async {
     if (_cacheService == null) {
       _error = "Cache service not initialized";
       notifyListeners();
       return;
     }
-    
+
     // 1. Load from cache immediately
     if (authToken != null) {
-       _items = await _cacheService!.loadSessions(authToken);
-       _sortItems();
-       notifyListeners();
+      _items = await _cacheService!.loadSessions(authToken);
+      _sortItems();
+      notifyListeners();
 
-       // If valid cache exists and we are not forcing a refresh, stop here.
-       if (!force && _items.isNotEmpty) {
-         return;
-       }
+      // If valid cache exists and we are not forcing a refresh, stop here.
+      if (!force && _items.isNotEmpty) {
+        return;
+      }
     }
 
     if (_isLoading) return;
@@ -53,7 +55,7 @@ class SessionProvider extends ChangeNotifier {
     try {
       List<Session> allSessions = [];
       String? pageToken;
-      
+
       // Load all sessions
       do {
         final response = await client.listSessions(
@@ -63,10 +65,9 @@ class SessionProvider extends ChangeNotifier {
             _lastExchange = exchange;
           },
         );
-        
+
         allSessions.addAll(response.sessions);
         pageToken = response.nextPageToken;
-        
       } while (pageToken != null);
 
       if (authToken != null) {
@@ -87,10 +88,14 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> refreshSession(JulesClient client, String sessionName, {String? authToken}) async {
+  Future<void> refreshSession(
+    JulesClient client,
+    String sessionName, {
+    String? authToken,
+  }) async {
     try {
       final updatedSession = await client.getSession(sessionName);
-      
+
       List<Activity>? activities;
       try {
         activities = await client.listActivities(sessionName);
@@ -99,31 +104,37 @@ class SessionProvider extends ChangeNotifier {
       }
 
       if (authToken != null && _cacheService != null) {
-          await _cacheService!.saveSessions(authToken, [updatedSession]);
-          
-          if (activities != null) {
-            await _cacheService!.saveSessionDetails(authToken, updatedSession, activities);
-          }
+        await _cacheService!.saveSessions(authToken, [updatedSession]);
+
+        if (activities != null) {
+          await _cacheService!.saveSessionDetails(
+            authToken,
+            updatedSession,
+            activities,
+          );
+        }
       }
 
       final index = _items.indexWhere((i) => i.data.name == sessionName);
       if (index != -1) {
-         final oldItem = _items[index];
-         
-         if (authToken != null && _cacheService != null) {
-             final freshList = await _cacheService!.loadSessions(authToken);
-             final freshItemLink = freshList.where((i) => i.data.id == updatedSession.id).firstOrNull;
-             if (freshItemLink != null) {
-                _items[index] = freshItemLink;
-             } else {
-                _items[index] = CachedItem(updatedSession, oldItem.metadata);
-             }
-         } else {
-             _items[index] = CachedItem(updatedSession, oldItem.metadata);
-         }
-         
-         _sortItems();
-         notifyListeners();
+        final oldItem = _items[index];
+
+        if (authToken != null && _cacheService != null) {
+          final freshList = await _cacheService!.loadSessions(authToken);
+          final freshItemLink = freshList
+              .where((i) => i.data.id == updatedSession.id)
+              .firstOrNull;
+          if (freshItemLink != null) {
+            _items[index] = freshItemLink;
+          } else {
+            _items[index] = CachedItem(updatedSession, oldItem.metadata);
+          }
+        } else {
+          _items[index] = CachedItem(updatedSession, oldItem.metadata);
+        }
+
+        _sortItems();
+        notifyListeners();
       }
     } catch (e) {
       print("Failed to refresh individual session: $e");
@@ -156,8 +167,8 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-          item.data, 
-          item.metadata.copyWith(lastOpened: DateTime.now())
+          item.data,
+          item.metadata.copyWith(lastOpened: DateTime.now()),
         );
         notifyListeners();
       }

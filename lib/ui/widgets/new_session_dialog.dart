@@ -50,13 +50,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (!_sourceFocusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 100), () {
           if (!_sourceFocusNode.hasFocus) {
-             _removeSourceOverlay();
-              // Reset text to selected source if valid
-             if (_selectedSource != null) {
-               _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
-             } else {
-               _sourceController.clear();
-             }
+            _removeSourceOverlay();
+            // Reset text to selected source if valid
+            if (_selectedSource != null) {
+              _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
+            } else {
+              _sourceController.clear();
+            }
           }
         });
       }
@@ -79,31 +79,34 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   KeyEventResult _handleSourceFocusKey(FocusNode node, RawKeyEvent event) {
-     if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
 
-     if (_sourceOverlayEntry != null && _filteredSources.isNotEmpty) {
-        if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-           setState(() {
-              _highlightedSourceIndex = (_highlightedSourceIndex + 1) % _filteredSources.length;
-              _showSourceOverlay();
-           });
-           return KeyEventResult.handled;
-        } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-           setState(() {
-              _highlightedSourceIndex = (_highlightedSourceIndex - 1 + _filteredSources.length) % _filteredSources.length;
-              _showSourceOverlay();
-           });
-           return KeyEventResult.handled;
-        } else if (event.logicalKey == LogicalKeyboardKey.enter || event.logicalKey == LogicalKeyboardKey.tab) {
-           if (_filteredSources.isNotEmpty) {
-              _selectSource(_filteredSources[_highlightedSourceIndex]);
-              return KeyEventResult.handled;
-           }
+    if (_sourceOverlayEntry != null && _filteredSources.isNotEmpty) {
+      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
+        setState(() {
+          _highlightedSourceIndex =
+              (_highlightedSourceIndex + 1) % _filteredSources.length;
+          _showSourceOverlay();
+        });
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
+        setState(() {
+          _highlightedSourceIndex =
+              (_highlightedSourceIndex - 1 + _filteredSources.length) %
+              _filteredSources.length;
+          _showSourceOverlay();
+        });
+        return KeyEventResult.handled;
+      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
+          event.logicalKey == LogicalKeyboardKey.tab) {
+        if (_filteredSources.isNotEmpty) {
+          _selectSource(_filteredSources[_highlightedSourceIndex]);
+          return KeyEventResult.handled;
         }
-     }
-     return KeyEventResult.ignored;
+      }
+    }
+    return KeyEventResult.ignored;
   }
-
 
   Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
@@ -121,33 +124,33 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     // If forcing or list is empty, fetch
     if (force || sourceProvider.items.isEmpty) {
-       // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
-       // For now, calling it is enough.
-       // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
-       // My implementation of fetchSources: skips if loading, but otherwise fetches.
-       // And it loads from cache first.
-       
-       await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+      // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
+      // For now, calling it is enough.
+      // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
+      // My implementation of fetchSources: skips if loading, but otherwise fetches.
+      // And it loads from cache first.
+
+      await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
-    
-    // If we want to force network refresh, we might need a distinct method or param, 
-    // but the user requirement was to load all on start. 
+
+    // If we want to force network refresh, we might need a distinct method or param,
+    // but the user requirement was to load all on start.
     // Usually cached data is fine for the dropdown unless the user explicitly refreshed in the main screen.
     // The previous code called `refresh`.
-    
+
     // Since fetchSources currently respects cache if available and loaded, we might need to rely on the main screen refresh.
     // But for this dialog's "Refresh" button, we probably want to force a network hit.
     // My refactored fetchSources doesn't expose `force` logic cleanly (it checks cache).
-    
+
     // Wait, my fetchSources executes:
     // 1. Load from cache (if token provided).
     // 2. Network call (do/while).
     // 3. Save to cache.
-    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login". 
+    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login".
     // But `SessionProvider` had logic to skip if fresh. `SourceProvider` refactor I wrote *always* fetches from network after loading cache.
     // Ideally I should have added a freshness check or `force` param.
     // But as written, it acts as a force refresh every time it's called unless `isLoading` is true.
-    
+
     if (mounted) {
       final sources = sourceProvider.items.map((i) => i.data).toList();
       _initializeSelection(sources);
@@ -156,7 +159,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _initializeSelection(List<Source> sources) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (!mounted) return;
 
     setState(() {
@@ -174,33 +177,35 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       // Priority 2: Already selected source (if re-fetching)
       if (_selectedSource != null) {
         try {
-          _selectedSource =
-              sources.firstWhere((s) => s.name == _selectedSource!.name);
+          _selectedSource = sources.firstWhere(
+            (s) => s.name == _selectedSource!.name,
+          );
         } catch (_) {
           _selectedSource = null;
         }
       }
-      
+
       // Priority 3: Last used source from prefs
       if (_selectedSource == null) {
-         final lastSource = prefs.getString('new_session_last_source');
-         if (lastSource != null) {
-             try {
-                _selectedSource = sources.firstWhere((s) => s.name == lastSource);
-             } catch (_) {}
-         }
+        final lastSource = prefs.getString('new_session_last_source');
+        if (lastSource != null) {
+          try {
+            _selectedSource = sources.firstWhere((s) => s.name == lastSource);
+          } catch (_) {}
+        }
       }
 
       // Priority 4: 'sources/default' or first available
       if (_selectedSource == null && sources.isNotEmpty) {
         try {
-          _selectedSource =
-              sources.firstWhere((s) => s.name == 'sources/default');
+          _selectedSource = sources.firstWhere(
+            (s) => s.name == 'sources/default',
+          );
         } catch (_) {
           _selectedSource = sources.first;
         }
       }
-      
+
       // Update Controller
       if (_selectedSource != null) {
         _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
@@ -210,27 +215,29 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _updateBranchFromSource(prefs: prefs);
     });
   }
-  
+
   void _onSourceTextChanged(String val) {
-    // if (!_sourceFocusNode.hasFocus) return; // Allow even if not strict focus for now? 
+    // if (!_sourceFocusNode.hasFocus) return; // Allow even if not strict focus for now?
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    
+
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     allSources.sort((a, b) {
-         final labelA = _getSourceDisplayLabel(a);
-         final labelB = _getSourceDisplayLabel(b);
-         final isSourceA = labelA.startsWith('sources/') || a.name.startsWith('sources/');
-         final isSourceB = labelB.startsWith('sources/') || b.name.startsWith('sources/');
-         if (isSourceA != isSourceB) return isSourceA ? 1 : -1;
-         return labelA.compareTo(labelB);
+      final labelA = _getSourceDisplayLabel(a);
+      final labelB = _getSourceDisplayLabel(b);
+      final isSourceA =
+          labelA.startsWith('sources/') || a.name.startsWith('sources/');
+      final isSourceB =
+          labelB.startsWith('sources/') || b.name.startsWith('sources/');
+      if (isSourceA != isSourceB) return isSourceA ? 1 : -1;
+      return labelA.compareTo(labelB);
     });
 
     setState(() {
       _filteredSources = allSources.where((s) {
-         final label = _getSourceDisplayLabel(s).toLowerCase();
-         return label.contains(query);
+        final label = _getSourceDisplayLabel(s).toLowerCase();
+        return label.contains(query);
       }).toList();
       _highlightedSourceIndex = 0;
     });
@@ -247,45 +254,49 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _sourceOverlayEntry!.markNeedsBuild();
       return;
     }
-    
+
     _sourceOverlayEntry = OverlayEntry(
       builder: (context) {
-         return Positioned(
-           width: _dropdownWidth ?? 300,
-           child: CompositedTransformFollower(
-             link: _sourceLayerLink,
-             showWhenUnlinked: false,
-             offset: const Offset(0.0, 60.0), // Approximate height
-             child: Material(
-               elevation: 4.0,
-               color: Theme.of(context).cardColor,
-               child: ConstrainedBox(
-                 constraints: const BoxConstraints(maxHeight: 250),
-                 child: ListView.builder(
-                   padding: EdgeInsets.zero,
-                   shrinkWrap: true,
-                   itemCount: _filteredSources.length,
-                   itemBuilder: (context, index) {
-                      final source = _filteredSources[index];
-                      final isHighlighted = index == _highlightedSourceIndex;
-                      final isPrivate = source.githubRepo?.isPrivate ?? false;
-                      
-                      return Container(
-                        color: isHighlighted ? Theme.of(context).highlightColor : null,
-                        child: ListTile(
-                          dense: true,
-                          leading: isPrivate ? const Icon(Icons.lock, size: 16) : null,
-                          title: Text(_getSourceDisplayLabel(source)),
-                          onTap: () => _selectSource(source),
-                        ),
-                      );
-                   },
-                 ),
-               ),
-             ),
-           ),
-         );
-      }
+        return Positioned(
+          width: _dropdownWidth ?? 300,
+          child: CompositedTransformFollower(
+            link: _sourceLayerLink,
+            showWhenUnlinked: false,
+            offset: const Offset(0.0, 60.0), // Approximate height
+            child: Material(
+              elevation: 4.0,
+              color: Theme.of(context).cardColor,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: _filteredSources.length,
+                  itemBuilder: (context, index) {
+                    final source = _filteredSources[index];
+                    final isHighlighted = index == _highlightedSourceIndex;
+                    final isPrivate = source.githubRepo?.isPrivate ?? false;
+
+                    return Container(
+                      color: isHighlighted
+                          ? Theme.of(context).highlightColor
+                          : null,
+                      child: ListTile(
+                        dense: true,
+                        leading: isPrivate
+                            ? const Icon(Icons.lock, size: 16)
+                            : null,
+                        title: Text(_getSourceDisplayLabel(source)),
+                        onTap: () => _selectSource(source),
+                      ),
+                    );
+                  },
+                ),
+              ),
+            ),
+          ),
+        );
+      },
     );
 
     // Insert into overlay
@@ -298,15 +309,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   void _selectSource(Source source) {
-     setState(() {
-       _selectedSource = source;
-       _sourceController.text = _getSourceDisplayLabel(source);
-       _updateBranchFromSource();
-     });
-     _removeSourceOverlay();
-     _sourceFocusNode.unfocus();
+    setState(() {
+      _selectedSource = source;
+      _sourceController.text = _getSourceDisplayLabel(source);
+      _updateBranchFromSource();
+    });
+    _removeSourceOverlay();
+    _sourceFocusNode.unfocus();
   }
-
 
   void _updateBranchFromSource({SharedPreferences? prefs}) {
     // If selected source is null, clear branch
@@ -325,17 +335,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (repo.branches != null) {
       branches = repo.branches!.map((b) => b.displayName).toList();
     }
-    
+
     // Try to restore last used branch for this source if available
     String? restoredBranch;
     if (prefs != null) {
-       // We can store per-source branch or just global last branch. 
-       // Storing global last branch might be confusing if switching sources.
-       // Let's store global for now as user typically works on one context.
-       final lastBranch = prefs.getString('new_session_last_branch');
-       if (lastBranch != null && branches.contains(lastBranch)) {
-         restoredBranch = lastBranch;
-       }
+      // We can store per-source branch or just global last branch.
+      // Storing global last branch might be confusing if switching sources.
+      // Let's store global for now as user typically works on one context.
+      final lastBranch = prefs.getString('new_session_last_branch');
+      if (lastBranch != null && branches.contains(lastBranch)) {
+        restoredBranch = lastBranch;
+      }
     }
 
     if (restoredBranch != null) {
@@ -374,15 +384,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           images = [Media(data: base64Image, mimeType: mimeType)];
         } else {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Failed to load image: ${response.statusCode}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to load image: ${response.statusCode}'),
+              ),
+            );
             return;
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to load image: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
           return;
         }
       }
@@ -403,8 +417,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         break;
       case 2: // Start
         requirePlanApproval = false;
-        automationMode = _autoCreatePr 
-            ? AutomationMode.AUTO_CREATE_PR 
+        automationMode = _autoCreatePr
+            ? AutomationMode.AUTO_CREATE_PR
             : AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
         break;
     }
@@ -438,99 +452,111 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(builder: (context, sourceProvider, _) {
-      final sources = sourceProvider.items.map((i) => i.data).toList();
-      
-      // Sort sources
-      sources.sort((a, b) {
-        final labelA = _getSourceDisplayLabel(a);
-        final labelB = _getSourceDisplayLabel(b);
-        
-        final isSourceA = labelA.startsWith('sources/') || a.name.startsWith('sources/');
-        final isSourceB = labelB.startsWith('sources/') || b.name.startsWith('sources/');
-        
-        if (isSourceA != isSourceB) {
-          // If one is source and the other is not, the one that IS 'source' goes last (return 1)
-          return isSourceA ? 1 : -1;
+    return Consumer<SourceProvider>(
+      builder: (context, sourceProvider, _) {
+        final sources = sourceProvider.items.map((i) => i.data).toList();
+
+        // Sort sources
+        sources.sort((a, b) {
+          final labelA = _getSourceDisplayLabel(a);
+          final labelB = _getSourceDisplayLabel(b);
+
+          final isSourceA =
+              labelA.startsWith('sources/') || a.name.startsWith('sources/');
+          final isSourceB =
+              labelB.startsWith('sources/') || b.name.startsWith('sources/');
+
+          if (isSourceA != isSourceB) {
+            // If one is source and the other is not, the one that IS 'source' goes last (return 1)
+            return isSourceA ? 1 : -1;
+          }
+
+          return labelA.compareTo(labelB);
+        });
+
+        if (sourceProvider.isLoading && sources.isEmpty) {
+          // Initial load
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Loading available sources..."),
+              ],
+            ),
+          );
         }
-        
-        return labelA.compareTo(labelB);
-      });
 
-      if (sourceProvider.isLoading && sources.isEmpty) {
-        // Initial load
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text("Loading available sources..."),
+        if (sourceProvider.error != null && sources.isEmpty) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: SelectableText(sourceProvider.error!),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
             ],
-          ),
-        );
-      }
+          );
+        }
 
-      if (sourceProvider.error != null && sources.isEmpty) {
-        return AlertDialog(
-          title: const Text('Error'),
-          content: SelectableText(sourceProvider.error!),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            )
-          ],
-        );
-      }
+        // Determine available branches for the selected source
+        List<String> branches = [];
+        if (_selectedSource != null &&
+            _selectedSource!.githubRepo != null &&
+            _selectedSource!.githubRepo!.branches != null) {
+          branches = _selectedSource!.githubRepo!.branches!
+              .map((b) => b.displayName)
+              .toList();
+        }
+        if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
+          branches.add(_selectedBranch!);
+        }
+        if (branches.isEmpty) branches.add('main');
 
-      // Determine available branches for the selected source
-      List<String> branches = [];
-      if (_selectedSource != null &&
-          _selectedSource!.githubRepo != null &&
-          _selectedSource!.githubRepo!.branches != null) {
-        branches = _selectedSource!.githubRepo!.branches!
-            .map((b) => b.displayName)
-            .toList();
-      }
-      if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
-        branches.add(_selectedBranch!);
-      }
-      if (branches.isEmpty) branches.add('main');
+        return Dialog(
+          child: SingleChildScrollView(
+            child: Padding(
+              padding: const EdgeInsets.all(24.0),
+              child: SizedBox(
+                width: MediaQuery.of(context).size.width * 0.8,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'New Session',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    const SizedBox(height: 16),
 
-      return Dialog(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                   const Text('New Session',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 16),
-                  
-                  // Mode Selection
-                  const Text('I want to...',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildModeChoice(0, 'Ask a Question'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(1, 'Create a Plan'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(2, 'Start Coding'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-                  
-                  if (_selectedModeIndex == 2) ...[
+                    // Mode Selection
+                    const Text(
+                      'I want to...',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        _buildModeChoice(0, 'Ask a Question'),
+                        const SizedBox(width: 8),
+                        _buildModeChoice(1, 'Create a Plan'),
+                        const SizedBox(width: 8),
+                        _buildModeChoice(2, 'Start Coding'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+
+                    if (_selectedModeIndex == 2) ...[
                       CheckboxListTile(
                         title: const Text('Auto-create Pull Request'),
-                        subtitle: const Text('Automatically create a PR when a final patch is generated'),
+                        subtitle: const Text(
+                          'Automatically create a PR when a final patch is generated',
+                        ),
                         value: _autoCreatePr,
                         onChanged: (val) {
                           setState(() {
@@ -541,146 +567,161 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         controlAffinity: ListTileControlAffinity.leading,
                       ),
                       const SizedBox(height: 8),
-                  ],
+                    ],
 
-                  // Prompt
-                  TextField(
-                    autofocus: true,
-                    maxLines: 6,
-                    decoration: const InputDecoration(
-                      labelText: 'Prompt',
-                      hintText: 'Describe what you want to do...',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
+                    // Prompt
+                    TextField(
+                      autofocus: true,
+                      maxLines: 6,
+                      decoration: const InputDecoration(
+                        labelText: 'Prompt',
+                        hintText: 'Describe what you want to do...',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _prompt = val;
+                        });
+                      },
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        _prompt = val;
-                      });
-                    },
-                  ),
-                  const SizedBox(height: 16),
-    
-                  // Image Attachment (URL for now)
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Image URL (Optional)',
-                      hintText: 'https://example.com/image.png',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.image),
+                    const SizedBox(height: 16),
+
+                    // Image Attachment (URL for now)
+                    TextField(
+                      decoration: const InputDecoration(
+                        labelText: 'Image URL (Optional)',
+                        hintText: 'https://example.com/image.png',
+                        border: OutlineInputBorder(),
+                        prefixIcon: Icon(Icons.image),
+                      ),
+                      onChanged: (val) => _imageUrl = val,
                     ),
-                    onChanged: (val) => _imageUrl = val,
-                  ),
-                  const SizedBox(height: 16),
-    
-                  // Context (Source & Branch)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text('Context',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      if (sourceProvider.isLoading)
-                        const SizedBox(
+                    const SizedBox(height: 16),
+
+                    // Context (Source & Branch)
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Context',
+                          style: TextStyle(fontWeight: FontWeight.bold),
+                        ),
+                        if (sourceProvider.isLoading)
+                          const SizedBox(
                             width: 16,
                             height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.refresh, size: 16),
-                          tooltip: 'Refresh Sources',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _fetchSources(force: true),
-                        )
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                             // Correctly capture width for overlay
-                             _dropdownWidth = constraints.maxWidth;
-                            return CompositedTransformTarget(
-                              link: _sourceLayerLink,
-                              child: TextField(
-                                controller: _sourceController,
-                                focusNode: _sourceFocusNode,
-                                decoration: InputDecoration(
-                                  labelText: 'Repository',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon: (_selectedSource?.githubRepo?.isPrivate == true) 
-                                      ? const Icon(Icons.lock, size: 16) 
-                                      : const Icon(Icons.source, size: 16),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.close, size: 16),
-                                    onPressed: () {
-                                      _sourceController.clear();
-                                      _sourceFocusNode.requestFocus();
-                                      _onSourceTextChanged('');
-                                    }
-                                  ),
-                                ),
-                                onChanged: _onSourceTextChanged,
-                              ),
-                            );
-                          }
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Branch',
-                            border: OutlineInputBorder(),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        else
+                          IconButton(
+                            icon: const Icon(Icons.refresh, size: 16),
+                            tooltip: 'Refresh Sources',
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            onPressed: () => _fetchSources(force: true),
                           ),
-                          value: _selectedBranch, // ignore: deprecated_member_use
-                          items: branches
-                              .map((b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text(b, overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedBranch = val;
-                            });
-                          },
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    Row(
+                      children: [
+                        Expanded(
+                          flex: 3,
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Correctly capture width for overlay
+                              _dropdownWidth = constraints.maxWidth;
+                              return CompositedTransformTarget(
+                                link: _sourceLayerLink,
+                                child: TextField(
+                                  controller: _sourceController,
+                                  focusNode: _sourceFocusNode,
+                                  decoration: InputDecoration(
+                                    labelText: 'Repository',
+                                    border: const OutlineInputBorder(),
+                                    prefixIcon:
+                                        (_selectedSource
+                                                ?.githubRepo
+                                                ?.isPrivate ==
+                                            true)
+                                        ? const Icon(Icons.lock, size: 16)
+                                        : const Icon(Icons.source, size: 16),
+                                    suffixIcon: IconButton(
+                                      icon: const Icon(Icons.close, size: 16),
+                                      onPressed: () {
+                                        _sourceController.clear();
+                                        _sourceFocusNode.requestFocus();
+                                        _onSourceTextChanged('');
+                                      },
+                                    ),
+                                  ),
+                                  onChanged: _onSourceTextChanged,
+                                ),
+                              );
+                            },
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  
-                  const SizedBox(height: 24),
-                  
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed: (_prompt.isNotEmpty && _selectedSource != null)
-                            ? _create
-                            : null,
-                        child: const Text('Create Session'),
-                      ),
-                    ],
-                  )
-                ],
+                        const SizedBox(width: 16),
+                        Expanded(
+                          flex: 1,
+                          child: DropdownButtonFormField<String>(
+                            isExpanded: true,
+                            decoration: const InputDecoration(
+                              labelText: 'Branch',
+                              border: OutlineInputBorder(),
+                            ),
+                            value:
+                                _selectedBranch, // ignore: deprecated_member_use
+                            items: branches
+                                .map(
+                                  (b) => DropdownMenuItem(
+                                    value: b,
+                                    child: Text(
+                                      b,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                )
+                                .toList(),
+                            onChanged: (val) {
+                              setState(() {
+                                _selectedBranch = val;
+                              });
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+
+                    const SizedBox(height: 24),
+
+                    // Actions
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.end,
+                      children: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        const SizedBox(width: 8),
+                        FilledButton(
+                          onPressed:
+                              (_prompt.isNotEmpty && _selectedSource != null)
+                              ? _create
+                              : null,
+                          child: const Text('Create Session'),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
   }
 
   Widget _buildModeChoice(int index, String label) {

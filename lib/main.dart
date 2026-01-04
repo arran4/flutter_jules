@@ -44,10 +44,7 @@ class MyApp extends StatelessWidget {
     return MaterialApp(
       title: 'Jules API Client',
       debugShowCheckedModeBanner: false,
-      theme: ThemeData(
-        primarySwatch: Colors.blue,
-        useMaterial3: true,
-      ),
+      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       routes: {
         '/settings': (context) => const SettingsScreen(),
         '/sources_raw': (context) => const SourceListScreen(),

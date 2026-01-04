@@ -24,11 +24,11 @@ class PlanStep {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'index': index,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'index': index,
+  };
 }
 
 class Plan {
@@ -36,26 +36,26 @@ class Plan {
   final List<PlanStep> steps;
   final String createTime;
 
-  Plan({
-    required this.id,
-    required this.steps,
-    required this.createTime,
-  });
+  Plan({required this.id, required this.steps, required this.createTime});
 
   factory Plan.fromJson(Map<String, dynamic> json) {
     return Plan(
       id: getStringPropOrThrow(json, 'id'),
       steps: getObjectArrayPropOrDefaultFunction(
-          json, 'steps', PlanStep.fromJson, () => <PlanStep>[]),
+        json,
+        'steps',
+        PlanStep.fromJson,
+        () => <PlanStep>[],
+      ),
       createTime: getStringPropOrThrow(json, 'createTime'),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'steps': steps.map((e) => e.toJson()).toList(),
-        'createTime': createTime,
-      };
+    'id': id,
+    'steps': steps.map((e) => e.toJson()).toList(),
+    'createTime': createTime,
+  };
 }
 
 class AgentMessaged {
@@ -78,7 +78,8 @@ class PlanGenerated {
   final Plan plan;
   PlanGenerated({required this.plan});
   factory PlanGenerated.fromJson(Map<String, dynamic> json) => PlanGenerated(
-      plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson));
+    plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson),
+  );
   Map<String, dynamic> toJson() => {'plan': plan.toJson()};
 }
 
@@ -132,16 +133,18 @@ class GitPatch {
     return GitPatch(
       unidiffPatch: getStringPropOrThrow(json, 'unidiffPatch'),
       baseCommitId: getStringPropOrThrow(json, 'baseCommitId'),
-      suggestedCommitMessage:
-          getStringPropOrThrow(json, 'suggestedCommitMessage'),
+      suggestedCommitMessage: getStringPropOrThrow(
+        json,
+        'suggestedCommitMessage',
+      ),
     );
   }
 
   Map<String, dynamic> toJson() => {
-        'unidiffPatch': unidiffPatch,
-        'baseCommitId': baseCommitId,
-        'suggestedCommitMessage': suggestedCommitMessage,
-      };
+    'unidiffPatch': unidiffPatch,
+    'baseCommitId': baseCommitId,
+    'suggestedCommitMessage': suggestedCommitMessage,
+  };
 }
 
 class ChangeSet {
@@ -154,7 +157,11 @@ class ChangeSet {
     return ChangeSet(
       source: getStringPropOrThrow(json, 'source'),
       gitPatch: getObjectFunctionPropOrDefault(
-          json, 'gitPatch', GitPatch.fromJson, null),
+        json,
+        'gitPatch',
+        GitPatch.fromJson,
+        null,
+      ),
     );
   }
 
@@ -175,15 +182,15 @@ class BashOutput {
     required this.exitCode,
   });
   factory BashOutput.fromJson(Map<String, dynamic> json) => BashOutput(
-        command: getStringPropOrThrow(json, 'command'),
-        output: getStringPropOrThrow(json, 'output'),
-        exitCode: getNumberPropOrThrow(json, 'exitCode')!.toInt(),
-      );
+    command: getStringPropOrThrow(json, 'command'),
+    output: getStringPropOrThrow(json, 'output'),
+    exitCode: getNumberPropOrThrow(json, 'exitCode')!.toInt(),
+  );
   Map<String, dynamic> toJson() => {
-        'command': command,
-        'output': output,
-        'exitCode': exitCode,
-      };
+    'command': command,
+    'output': output,
+    'exitCode': exitCode,
+  };
 }
 
 class Artifact {
@@ -196,11 +203,23 @@ class Artifact {
   factory Artifact.fromJson(Map<String, dynamic> json) {
     return Artifact(
       changeSet: getObjectFunctionPropOrDefault(
-          json, 'changeSet', ChangeSet.fromJson, null),
-      media:
-          getObjectFunctionPropOrDefault(json, 'media', Media.fromJson, null),
+        json,
+        'changeSet',
+        ChangeSet.fromJson,
+        null,
+      ),
+      media: getObjectFunctionPropOrDefault(
+        json,
+        'media',
+        Media.fromJson,
+        null,
+      ),
       bashOutput: getObjectFunctionPropOrDefault(
-          json, 'bashOutput', BashOutput.fromJson, null),
+        json,
+        'bashOutput',
+        BashOutput.fromJson,
+        null,
+      ),
     );
   }
 
@@ -254,21 +273,53 @@ class Activity {
       createTime: getStringPropOrThrow(json, 'createTime'),
       originator: getStringPropOrDefault(json, 'originator', null),
       artifacts: getObjectArrayPropOrDefaultFunction(
-          json, 'artifacts', Artifact.fromJson, () => null),
+        json,
+        'artifacts',
+        Artifact.fromJson,
+        () => null,
+      ),
       agentMessaged: getObjectFunctionPropOrDefault(
-          json, 'agentMessaged', AgentMessaged.fromJson, null),
+        json,
+        'agentMessaged',
+        AgentMessaged.fromJson,
+        null,
+      ),
       userMessaged: getObjectFunctionPropOrDefault(
-          json, 'userMessaged', UserMessaged.fromJson, null),
+        json,
+        'userMessaged',
+        UserMessaged.fromJson,
+        null,
+      ),
       planGenerated: getObjectFunctionPropOrDefault(
-          json, 'planGenerated', PlanGenerated.fromJson, null),
+        json,
+        'planGenerated',
+        PlanGenerated.fromJson,
+        null,
+      ),
       planApproved: getObjectFunctionPropOrDefault(
-          json, 'planApproved', PlanApproved.fromJson, null),
+        json,
+        'planApproved',
+        PlanApproved.fromJson,
+        null,
+      ),
       progressUpdated: getObjectFunctionPropOrDefault(
-          json, 'progressUpdated', ProgressUpdated.fromJson, null),
+        json,
+        'progressUpdated',
+        ProgressUpdated.fromJson,
+        null,
+      ),
       sessionCompleted: getObjectFunctionPropOrDefault(
-          json, 'sessionCompleted', SessionCompleted.fromJson, null),
+        json,
+        'sessionCompleted',
+        SessionCompleted.fromJson,
+        null,
+      ),
       sessionFailed: getObjectFunctionPropOrDefault(
-          json, 'sessionFailed', SessionFailed.fromJson, null),
+        json,
+        'sessionFailed',
+        SessionFailed.fromJson,
+        null,
+      ),
     );
   }
 

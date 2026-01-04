@@ -43,9 +43,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
+      appBar: AppBar(title: const Text('Settings')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -66,7 +64,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return DropdownMenuItem(
                   value: type,
                   child: Text(
-                      type == TokenType.apiKey ? 'API Key' : 'Access Token'),
+                    type == TokenType.apiKey ? 'API Key' : 'Access Token',
+                  ),
                 );
               }).toList(),
               onChanged: (value) {
@@ -101,8 +100,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Enable advanced debugging features'),
               value: Provider.of<DevModeProvider>(context).isDevMode,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false)
-                    .toggleDevMode(value);
+                Provider.of<DevModeProvider>(
+                  context,
+                  listen: false,
+                ).toggleDevMode(value);
               },
             ),
             SwitchListTile(
@@ -110,8 +111,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
               subtitle: const Text('Log API requests and responses to console'),
               value: Provider.of<DevModeProvider>(context).enableApiLogging,
               onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false)
-                    .toggleApiLogging(value);
+                Provider.of<DevModeProvider>(
+                  context,
+                  listen: false,
+                ).toggleApiLogging(value);
               },
             ),
             const Divider(),
@@ -120,8 +123,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 return Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text('Session Page Size: ${settings.sessionPageSize}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      'Session Page Size: ${settings.sessionPageSize}',
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     Slider(
                       value: settings.sessionPageSize.toDouble(),
                       min: 10,
@@ -143,8 +148,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
             const Spacer(),
             TextButton(
               onPressed: () async {
-                final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
+                final authProvider = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
                 await authProvider.logout();
                 if (mounted) {
                   // ignore: use_build_context_synchronously

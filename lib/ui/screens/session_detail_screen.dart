@@ -61,7 +61,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _performFetchActivities(),
         Future.delayed(const Duration(seconds: 30)).then((_) {
           throw Exception(
-              'Request timed out after 30 seconds. Please check your connection and try again.');
+            'Request timed out after 30 seconds. Please check your connection and try again.',
+          );
         }),
       ]);
     } catch (e) {
@@ -79,7 +80,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-
   Future<void> _performFetchActivities() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
@@ -91,44 +91,47 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 1. Check cache first
     bool validCacheFound = false;
     if (token != null) {
-      final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
+      final cachedDetails = await cacheService.loadSessionDetails(
+        token,
+        widget.session.id,
+      );
       if (cachedDetails != null) {
         final listUpdateTimeStr = widget.session.updateTime;
         final cachedSnapshotStr = cachedDetails.sessionUpdateTimeSnapshot;
-        
+
         bool useCache = false;
 
         if (cachedSnapshotStr != null) {
-           if (listUpdateTimeStr == null) {
-             // List has no info, but cache exists. Use cache.
-             useCache = true;
-           } else {
-             try {
-               final listDate = DateTime.parse(listUpdateTimeStr);
-               final cachedDate = DateTime.parse(cachedSnapshotStr);
-               
-               // If local cache is equal to or newer than the list's info, use cache.
-               // We only fetch if list says there's a newer update than what we have.
-               if (!listDate.isAfter(cachedDate)) {
-                 useCache = true;
-               }
-             } catch (e) {
-               // If parsing fails, default to fetch
-               useCache = false;
-             }
-           }
+          if (listUpdateTimeStr == null) {
+            // List has no info, but cache exists. Use cache.
+            useCache = true;
+          } else {
+            try {
+              final listDate = DateTime.parse(listUpdateTimeStr);
+              final cachedDate = DateTime.parse(cachedSnapshotStr);
+
+              // If local cache is equal to or newer than the list's info, use cache.
+              // We only fetch if list says there's a newer update than what we have.
+              if (!listDate.isAfter(cachedDate)) {
+                useCache = true;
+              }
+            } catch (e) {
+              // If parsing fails, default to fetch
+              useCache = false;
+            }
+          }
         }
 
         if (useCache) {
-           if (mounted) {
-             setState(() {
-               _activities = cachedDetails.activities;
-               // Use the cached session as it might be newer than the one passed from the stale list
-               _session = cachedDetails.session; 
-             });
-           }
-           validCacheFound = true;
-           return; 
+          if (mounted) {
+            setState(() {
+              _activities = cachedDetails.activities;
+              // Use the cached session as it might be newer than the one passed from the stale list
+              _session = cachedDetails.session;
+            });
+          }
+          validCacheFound = true;
+          return;
         }
       }
     }
@@ -159,10 +162,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _session = updatedSession!;
       });
     }
-    
+
     // 3. Save to cache
     if (token != null && updatedSession != null) {
-       await cacheService.saveSessionDetails(token, updatedSession, activities);
+      await cacheService.saveSessionDetails(token, updatedSession, activities);
     }
   }
 
@@ -174,8 +177,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       _fetchActivities();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     }
   }
@@ -185,14 +189,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       await client.approvePlan(_session.name);
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Plan Approved")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Plan Approved")));
       }
       _fetchActivities();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     }
   }
@@ -201,7 +207,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       final updatedActivity = await client.getActivity(activity.name);
-      
+
       if (!mounted) return;
 
       setState(() {
@@ -210,10 +216,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _activities[index] = updatedActivity;
         }
       });
-      
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Activity refreshed")),
-      );
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Activity refreshed")));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -254,10 +260,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             onPressed: () {
               showDialog(
                 context: context,
-                builder: (context) => ModelViewer(
-                  data: _session.toJson(),
-                  title: 'Session Data',
-                ),
+                builder: (context) =>
+                    ModelViewer(data: _session.toJson(), title: 'Session Data'),
               );
             },
           ),
@@ -272,7 +276,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 await Clipboard.setData(ClipboardData(text: _session.id));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Session ID copied')));
+                    const SnackBar(content: Text('Session ID copied')),
+                  );
                 }
               } else if (value == 'open_browser') {
                 if (_session.url != null) {
@@ -305,14 +310,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ),
                 ),
               const PopupMenuItem(
-                  value: 'approve_plan',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('Force Approve Plan'),
-                    ],
-                  )),
+                value: 'approve_plan',
+                child: Row(
+                  children: [
+                    Icon(Icons.check_circle, color: Colors.green),
+                    SizedBox(width: 8),
+                    Text('Force Approve Plan'),
+                  ],
+                ),
+              ),
             ],
           ),
         ],
@@ -321,12 +327,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         children: [
           // Permanent Header
           _buildHeader(context),
-          
+
           // Scrollable Activity List
-          Expanded(
-            child: _buildActivityList(isDevMode),
-          ),
-          
+          Expanded(child: _buildActivityList(isDevMode)),
+
           // Permanent Input Footer
           _buildInput(context),
         ],
@@ -350,14 +354,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               const SizedBox(height: 8),
               SelectableText(_error!, textAlign: TextAlign.center),
               TextButton(
-                  onPressed: _fetchActivities, child: const Text("Retry"))
+                onPressed: _fetchActivities,
+                child: const Text("Retry"),
+              ),
             ],
           ),
         ),
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -399,27 +406,28 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
+      itemCount:
+          finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
       itemBuilder: (context, index) {
         if (index == 0) {
-           // Visual Bottom: Last Updated Status
-           if (_session.updateTime != null) {
-              final updateTime = DateTime.parse(_session.updateTime!).toLocal();
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DateTime.now().difference(updateTime).inMinutes > 15
-                              ? Colors.orange
-                              : Colors.grey,
-                        ),
+          // Visual Bottom: Last Updated Status
+          if (_session.updateTime != null) {
+            final updateTime = DateTime.parse(_session.updateTime!).toLocal();
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
                   ),
                 ),
-              );
-           }
-           return const SizedBox.shrink();
+              ),
+            );
+          }
+          return const SizedBox.shrink();
         }
 
         // Adjust index for status item
@@ -432,9 +440,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
 
         final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
-        
+
         // Safety check
-        if (listIndex < 0 || listIndex >= finalItems.length) return const SizedBox.shrink();
+        if (listIndex < 0 || listIndex >= finalItems.length)
+          return const SizedBox.shrink();
 
         final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 
@@ -489,25 +498,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         ),
         child: ExpansionTile(
           shape: const Border(),
-          title: Row(children: [
-            Icon(group.info.icon, color: group.info.iconColor, size: 20),
-            const SizedBox(width: 12),
-            Text("$count x $title",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Spacer(),
-            if (start != null && end != null)
+          title: Row(
+            children: [
+              Icon(group.info.icon, color: group.info.iconColor, size: 20),
+              const SizedBox(width: 12),
               Text(
+                "$count x $title",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (start != null && end != null)
+                Text(
                   "${DateFormat.Hms().format(start.toLocal())} - ${DateFormat.Hms().format(end.toLocal())}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ]),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+            ],
+          ),
           children: group.activities.map((a) {
             final item = ActivityItem(
-                activity: a, onRefresh: () => _refreshActivity(a));
+              activity: a,
+              onRefresh: () => _refreshActivity(a),
+            );
             if (isDevMode) {
               return GestureDetector(
                 onLongPress: () => _showContextMenu(context, activity: a),
-                onSecondaryTap: () =>
-                    _showContextMenu(context, activity: a),
+                onSecondaryTap: () => _showContextMenu(context, activity: a),
                 child: item,
               );
             }
@@ -525,43 +540,58 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         color: Colors.purple.shade50,
         elevation: 0,
         shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.purple.shade100),
-            borderRadius: BorderRadius.circular(8)),
+          side: BorderSide(color: Colors.purple.shade100),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-              title: const Text("Pull Request Available",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.purple)),
-              leading: const Icon(Icons.merge_type, color: Colors.purple),
-              children: [
-                for (final output in _session.outputs!
-                    .where((o) => o.pullRequest != null))
-                  Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0, right: 16.0, bottom: 16.0),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(output.pullRequest!.title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text(output.pullRequest!.description,
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.open_in_new),
-                                label: const Text("Open Pull Request"),
-                                onPressed: () => launchUrl(
-                                    Uri.parse(output.pullRequest!.url)),
-                              ),
-                            )
-                          ]))
-              ]),
+            title: const Text(
+              "Pull Request Available",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
+            leading: const Icon(Icons.merge_type, color: Colors.purple),
+            children: [
+              for (final output in _session.outputs!.where(
+                (o) => o.pullRequest != null,
+              ))
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    bottom: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        output.pullRequest!.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        output.pullRequest!.description,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text("Open Pull Request"),
+                          onPressed: () =>
+                              launchUrl(Uri.parse(output.pullRequest!.url)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -589,44 +619,50 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       children: [
                         if (_session.state != null)
                           Chip(
-                            label:
-                                Text(_session.state.toString().split('.').last),
+                            label: Text(
+                              _session.state.toString().split('.').last,
+                            ),
                             backgroundColor:
                                 _session.state == SessionState.COMPLETED
-                                    ? Colors.green.shade50
-                                    : (_session.state == SessionState.FAILED
-                                        ? Colors.red.shade50
-                                        : Colors.grey.shade50),
+                                ? Colors.green.shade50
+                                : (_session.state == SessionState.FAILED
+                                      ? Colors.red.shade50
+                                      : Colors.grey.shade50),
                             avatar: _session.state == SessionState.COMPLETED
-                                ? const Icon(Icons.check,
-                                    size: 16, color: Colors.green)
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.green,
+                                  )
                                 : null,
                             side: BorderSide.none,
                           ),
                         if (_session.createTime != null)
                           Chip(
                             avatar: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(DateFormat.yMMMd().add_jm().format(
-                                DateTime.parse(_session.createTime!)
-                                    .toLocal())),
+                            label: Text(
+                              DateFormat.yMMMd().add_jm().format(
+                                DateTime.parse(_session.createTime!).toLocal(),
+                              ),
+                            ),
                             side: BorderSide.none,
                           ),
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
-                            label: Text("Automation: ${_session.automationMode
-                                .toString()
-                                .split('.')
-                                .last
-                                .replaceAll('AUTOMATION_MODE_', '')}"),
+                            label: Text(
+                              "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
+                            ),
                             backgroundColor: Colors.blue.shade50,
                             side: BorderSide.none,
                           ),
                         if (_session.requirePlanApproval != null)
                           Chip(
-                            label: Text(_session.requirePlanApproval!
-                                ? "Approval Required"
-                                : "No Approval Required"),
+                            label: Text(
+                              _session.requirePlanApproval!
+                                  ? "Approval Required"
+                                  : "No Approval Required",
+                            ),
                             avatar: Icon(
                               _session.requirePlanApproval!
                                   ? Icons.check_circle_outline
@@ -643,20 +679,28 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           avatar: const Icon(Icons.source, size: 16),
                           side: BorderSide.none,
                         ),
-                        if (_session.sourceContext.githubRepoContext
+                        if (_session
+                                .sourceContext
+                                .githubRepoContext
                                 ?.startingBranch !=
                             null)
                           Chip(
-                            label: Text(_session.sourceContext
-                                .githubRepoContext!.startingBranch),
+                            label: Text(
+                              _session
+                                  .sourceContext
+                                  .githubRepoContext!
+                                  .startingBranch,
+                            ),
                             avatar: const Icon(Icons.call_split, size: 16),
                             side: BorderSide.none,
                           ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text("Prompt:",
-                        style: Theme.of(context).textTheme.labelLarge),
+                    Text(
+                      "Prompt:",
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
                     const SizedBox(height: 4),
                     InkWell(
                       onTap: () {
@@ -673,9 +717,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             alignment: Alignment.topLeft,
                             child: Container(
                               constraints: BoxConstraints(
-                                  maxHeight: _isPromptExpanded
-                                      ? MediaQuery.sizeOf(context).height * 0.4
-                                      : 60),
+                                maxHeight: _isPromptExpanded
+                                    ? MediaQuery.sizeOf(context).height * 0.4
+                                    : 60,
+                              ),
                               width: double.infinity,
                               clipBehavior: _isPromptExpanded
                                   ? Clip.hardEdge
@@ -706,7 +751,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                   : Icons.keyboard_arrow_down,
                               color: Colors.grey,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -723,8 +768,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove =
-        _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL;
 
     return SafeArea(
       top: false,
@@ -735,8 +779,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
-                decoration:
-                    const InputDecoration(hintText: "Send message..."),
+                decoration: const InputDecoration(hintText: "Send message..."),
                 onChanged: (text) => setState(() {}),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -754,8 +797,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               )
             else if (canApprove)
               ElevatedButton(
-                  onPressed: _approvePlan,
-                  child: const Text("Approve Plan"))
+                onPressed: _approvePlan,
+                child: const Text("Approve Plan"),
+              )
             else
               const IconButton(
                 icon: Icon(Icons.send),
