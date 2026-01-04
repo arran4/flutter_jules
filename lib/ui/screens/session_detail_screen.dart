@@ -30,6 +30,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _isLoading = false;
   bool _isPromptExpanded = false;
   String? _error;
+  String _loadingStatus = '';
   ApiExchange? _lastExchange;
   final TextEditingController _messageController = TextEditingController();
 
@@ -143,11 +144,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     List<Activity> activities;
     try {
+      if (mounted) {
+         setState(() {
+           _loadingStatus = 'Fetching activities...';
+         });
+      }
       activities = await client.listActivities(
         widget.session.name,
         onDebug: (exchange) {
           _lastExchange = exchange;
         },
+        onProgress: (count) {
+           if (mounted) {
+             setState(() {
+               _loadingStatus = 'Loaded $count activities...';
+             });
+           }
+        }
       );
     } catch (e) {
       throw Exception('Failed to load conversation history: $e');
@@ -323,7 +336,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _buildHeader(context),
           
           // Scrollable Activity List
-          Expanded(
+          if (_isLoading)
+            Expanded(
+              child: Center(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    const CircularProgressIndicator(),
+                    const SizedBox(height: 16),
+                    Text(_loadingStatus, style: const TextStyle(color: Colors.grey)),
+                  ],
+                ),
+              ),
+            )
+          else 
+            Expanded(
             child: _buildActivityList(isDevMode),
           ),
           

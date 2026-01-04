@@ -165,24 +165,44 @@ class JulesClient {
   }
 
   Future<List<Activity>> listActivities(String sessionName,
-      {void Function(ApiExchange)? onDebug}) async {
-    final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
-    final response = await _performRequest('GET', url, onDebug: onDebug);
-
-    if (response.statusCode == 200) {
-      try {
-        final json = jsonDecode(response.body);
-        final activities = getObjectArrayPropOrDefaultFunction(
-            json, 'activities', Activity.fromJson, () => <Activity>[]);
-        return activities;
-      } catch (e) {
-        throw Exception(
-            'Failed to parse activities response: $e\nResponse body: ${response.body}');
+      {void Function(ApiExchange)? onDebug, void Function(int loadedCount)? onProgress}) async {
+    List<Activity> allActivities = [];
+    String? nextPageToken;
+    
+    do {
+      final queryParams = <String, String>{};
+      if (nextPageToken != null) {
+        queryParams['pageToken'] = nextPageToken;
       }
-    } else {
-      _handleError(response);
-      throw Exception('Unreachable');
-    }
+
+      final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities')
+          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+          
+      final response = await _performRequest('GET', url, onDebug: onDebug);
+
+      if (response.statusCode == 200) {
+        try {
+          final json = jsonDecode(response.body);
+          final activities = getObjectArrayPropOrDefaultFunction(
+              json, 'activities', Activity.fromJson, () => <Activity>[]);
+          allActivities.addAll(activities);
+          
+          if (onProgress != null) {
+              onProgress(allActivities.length);
+          }
+          
+          nextPageToken = json['nextPageToken'] as String?;
+        } catch (e) {
+          throw Exception(
+              'Failed to parse activities response: $e\nResponse body: ${response.body}');
+        }
+      } else {
+        _handleError(response);
+        throw Exception('Unreachable');
+      }
+    } while (nextPageToken != null && nextPageToken.isNotEmpty);
+
+    return allActivities;
   }
 
   // --- Sources ---
