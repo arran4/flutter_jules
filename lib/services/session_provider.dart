@@ -87,6 +87,50 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshSession(JulesClient client, String sessionName, {String? authToken}) async {
+    try {
+      final updatedSession = await client.getSession(sessionName);
+      
+      List<Activity>? activities;
+      try {
+        activities = await client.listActivities(sessionName);
+      } catch (e) {
+        print('Failed to preload activities for $sessionName: $e');
+      }
+
+      if (authToken != null && _cacheService != null) {
+          await _cacheService!.saveSessions(authToken, [updatedSession]);
+          
+          if (activities != null) {
+            await _cacheService!.saveSessionDetails(authToken, updatedSession, activities);
+          }
+      }
+
+      final index = _items.indexWhere((i) => i.data.name == sessionName);
+      if (index != -1) {
+         final oldItem = _items[index];
+         
+         if (authToken != null && _cacheService != null) {
+             final freshList = await _cacheService!.loadSessions(authToken);
+             final freshItemLink = freshList.where((i) => i.data.id == updatedSession.id).firstOrNull;
+             if (freshItemLink != null) {
+                _items[index] = freshItemLink;
+             } else {
+                _items[index] = CachedItem(updatedSession, oldItem.metadata);
+             }
+         } else {
+             _items[index] = CachedItem(updatedSession, oldItem.metadata);
+         }
+         
+         _sortItems();
+         notifyListeners();
+      }
+    } catch (e) {
+      print("Failed to refresh individual session: $e");
+      rethrow;
+    }
+  }
+
   DateTime _getEffectiveTime(CachedItem<Session> item) {
     if (item.data.updateTime != null) {
       return DateTime.parse(item.data.updateTime!);

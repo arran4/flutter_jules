@@ -104,6 +104,108 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
+  Future<void> _quickReply(Session session) async {
+    final TextEditingController controller = TextEditingController();
+    final bool? shouldSend = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Quick Reply to ${session.title ?? "Session"}'),
+        content: TextField(
+          controller: controller,
+          autofocus: true,
+          decoration: const InputDecoration(
+            hintText: 'Type your message...',
+            border: OutlineInputBorder(),
+          ),
+          maxLines: 3,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Send'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldSend == true && controller.text.isNotEmpty) {
+      if (!mounted) return;
+      try {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        await client.sendMessage(session.name, controller.text);
+        
+        if (mounted) {
+           ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Message sent')),
+          );
+          _fetchSessions(force: true); // Refresh so list updates (e.g. timestamp)
+        }
+      } catch (e) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text('Error sending message: $e')),
+          );
+        }
+      }
+    }
+    controller.dispose();
+  }
+
+  Future<void> _refreshSession(Session session) async {
+    try {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+      
+      await sessionProvider.refreshSession(auth.client, session.name, authToken: auth.token);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Session refreshed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to refresh session: $e')),
+        );
+      }
+    }
+  }
+
+  void _openSessionUrl(Session session) {
+    if (session.url != null) {
+      launchUrl(Uri.parse(session.url!));
+    } else {
+       ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('No URL available for this session')),
+        );
+    }
+  }
+
+  void _openSourceUrl(String sourceName) {
+    // Expected format: sources/github/{owner}/{repo}
+    if (sourceName.startsWith("sources/github/")) {
+      final parts = sourceName.split('/');
+      if (parts.length >= 4) {
+        final owner = parts[2];
+        final repo = parts[3];
+        final url = Uri.parse("https://github.com/$owner/$repo");
+        launchUrl(url);
+        return;
+      }
+    }
+    
+    // Fallback or generic handling
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Cannot open URL for source: $sourceName')),
+    );
+  }
+
+
   void _showContextMenu(BuildContext context, {Session? session}) {
     final lastExchange =
         Provider.of<SessionProvider>(context, listen: false).lastExchange;
@@ -473,15 +575,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   ),
                                                 ],
                                               )),
-                                              if (session.outputs != null &&
-                                                  session.outputs!.any((o) =>
-                                                      o.pullRequest != null))
-                                                IconButton(
-                                                  icon: const Icon(
-                                                      Icons.merge_type),
-                                                  tooltip: 'View Pull Request',
-                                                  color: Colors.purple,
-                                                  onPressed: () {
+                                              PopupMenuButton<String>(
+                                                icon: const Icon(Icons.more_vert),
+                                                tooltip: 'Actions',
+                                                onSelected: (value) {
+                                                  if (value == 'pr') {
                                                     final pr = session.outputs!
                                                         .firstWhere((o) =>
                                                             o.pullRequest !=
@@ -489,8 +587,92 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         .pullRequest!;
                                                     launchUrl(
                                                         Uri.parse(pr.url));
-                                                  },
-                                                ),
+                                                  } else if (value ==
+                                                      'browser') {
+                                                    _openSessionUrl(session);
+                                                  } else if (value == 'reply') {
+                                                    _quickReply(session);
+                                                  } else if (value ==
+                                                      'refresh') {
+                                                    _refreshSession(session);
+                                                  } else if (value ==
+                                                      'source') {
+                                                    _openSourceUrl(session
+                                                        .sourceContext.source);
+                                                  } else if (value == 'raw') {
+                                                    _showContextMenu(context,
+                                                        session: session);
+                                                  }
+                                                },
+                                                itemBuilder: (context) {
+                                                  final hasPr = session
+                                                          .outputs !=
+                                                      null &&
+                                                      session.outputs!.any(
+                                                          (o) =>
+                                                              o.pullRequest !=
+                                                              null);
+                                                  return [
+                                                    if (hasPr)
+                                                      const PopupMenuItem(
+                                                        value: 'pr',
+                                                        child: Row(children: [
+                                                          Icon(Icons.merge_type,
+                                                              color:
+                                                                  Colors.purple),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                              'View Pull Request')
+                                                        ]),
+                                                      ),
+                                                    const PopupMenuItem(
+                                                      value: 'reply',
+                                                      child: Row(children: [
+                                                        Icon(Icons.reply),
+                                                        SizedBox(width: 8),
+                                                        Text('Quick Reply')
+                                                      ]),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'refresh',
+                                                      child: Row(children: [
+                                                        Icon(Icons.refresh),
+                                                        SizedBox(width: 8),
+                                                        Text('Refresh Session')
+                                                      ]),
+                                                    ),
+                                                    if (session.url != null)
+                                                      const PopupMenuItem(
+                                                        value: 'browser',
+                                                        child: Row(children: [
+                                                          Icon(Icons
+                                                              .open_in_browser),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                              'Open in Browser')
+                                                        ]),
+                                                      ),
+                                                    const PopupMenuItem(
+                                                      value: 'source',
+                                                      child: Row(children: [
+                                                        Icon(Icons.source),
+                                                        SizedBox(width: 8),
+                                                        Text('View Source Repo')
+                                                      ]),
+                                                    ),
+                                                    if (isDevMode)
+                                                      const PopupMenuItem(
+                                                        value: 'raw',
+                                                        child: Row(children: [
+                                                          Icon(Icons
+                                                              .developer_mode),
+                                                          SizedBox(width: 8),
+                                                          Text('Dev Tools')
+                                                        ]),
+                                                      ),
+                                                  ];
+                                                },
+                                              ),
                                             ]),
                                             const SizedBox(height: 8),
                                             SessionMetaPills(session: session, compact: true),
