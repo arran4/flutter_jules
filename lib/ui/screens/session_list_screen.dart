@@ -63,7 +63,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final sessionProvider =
           Provider.of<SessionProvider>(context, listen: false);
-      
+
       await sessionProvider.fetchSessions(auth.client,
           force: force, authToken: auth.token);
     } catch (e) {
@@ -165,7 +165,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   children: allStatuses.map((status) {
                     return CheckboxListTile(
                       title: Text(status.displayName),
-                      subtitle: Text(status.description, style: const TextStyle(fontSize: 12)),
+                      subtitle: Text(status.description,
+                          style: const TextStyle(fontSize: 12)),
                       value: _statusFilters.contains(status) ||
                           _statusFilters.isEmpty,
                       onChanged: (bool? value) {
@@ -212,17 +213,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _markAsRead(Session session) {
-     final auth = Provider.of<AuthProvider>(context, listen: false);
-     if (auth.token != null) {
-       Provider.of<SessionProvider>(context, listen: false)
-           .markAsRead(session.id, auth.token!);
-     }
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token != null) {
+      Provider.of<SessionProvider>(context, listen: false)
+          .markAsRead(session.id, auth.token!);
+    }
   }
 
   void _viewRawData(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final sessions = sessionProvider.items.map((i) => i.data.toJson()).toList();
-    
+
     showDialog(
       context: context,
       builder: (context) => ModelViewer(
@@ -260,36 +262,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
         }
         if (_statusFilters.isNotEmpty) {
           displayItems = displayItems
-              .where((i) => i.data.state != null && _statusFilters.contains(i.data.state))
+              .where((i) =>
+                  i.data.state != null && _statusFilters.contains(i.data.state))
               .toList();
         }
-        
+
         // Searching (Naively filtering cached items)
         if (_searchController.text.isNotEmpty) {
-           final query = _searchController.text.toLowerCase();
-           displayItems = displayItems.where((i) {
-             final s = i.data;
-             return (s.title?.toLowerCase().contains(query) ?? false) ||
-                    (s.name.toLowerCase().contains(query)) || 
-                    (s.id.toLowerCase().contains(query)) ||
-                    (s.state.toString().toLowerCase().contains(query));
-           }).toList();
+          final query = _searchController.text.toLowerCase();
+          displayItems = displayItems.where((i) {
+            final s = i.data;
+            return (s.title?.toLowerCase().contains(query) ?? false) ||
+                (s.name.toLowerCase().contains(query)) ||
+                (s.id.toLowerCase().contains(query)) ||
+                (s.state.toString().toLowerCase().contains(query));
+          }).toList();
         }
 
         // Sorting (ensure time sort)
         displayItems.sort((a, b) {
-           final timeA = _getEffectiveTime(a);
-           final timeB = _getEffectiveTime(b);
-           return timeB.compareTo(timeA);
+          final timeA = _getEffectiveTime(a);
+          final timeB = _getEffectiveTime(b);
+          return timeB.compareTo(timeA);
         });
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Sessions'),
-            bottom: isLoading ? const PreferredSize(
-              preferredSize: Size.fromHeight(4.0),
-              child: LinearProgressIndicator(), 
-            ) : null,
+            bottom: isLoading
+                ? const PreferredSize(
+                    preferredSize: Size.fromHeight(4.0),
+                    child: LinearProgressIndicator(),
+                  )
+                : null,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -308,7 +313,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   } else if (value == 'sources') {
                     Navigator.pushNamed(context, '/sources_raw');
                   } else if (value == 'raw_data') {
-                     _viewRawData(context);
+                    _viewRawData(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -334,7 +339,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   ),
                   const PopupMenuItem(
                     value: 'sources',
-                     child: Row(
+                    child: Row(
                       children: [
                         Icon(Icons.source),
                         SizedBox(width: 8),
@@ -364,7 +369,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ),
                         ),
                         if (lastFetchTime != null)
-                           Padding(
+                          Padding(
                             padding: const EdgeInsets.symmetric(horizontal: 16),
                             child: Align(
                               alignment: Alignment.centerLeft,
@@ -373,135 +378,205 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                 style: Theme.of(context).textTheme.bodySmall,
                               ),
                             ),
-                           ),
+                          ),
                         Expanded(
                           child: RefreshIndicator(
                             onRefresh: () => _fetchSessions(force: true),
                             child: ListView.builder(
                               itemCount: displayItems.length,
                               itemBuilder: (context, index) {
-                                  final cachedItem = displayItems[index];
-                                  final session = cachedItem.data;
-                                  final metadata = cachedItem.metadata;
-                                  final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+                                final cachedItem = displayItems[index];
+                                final session = cachedItem.data;
+                                final metadata = cachedItem.metadata;
+                                final isDevMode =
+                                    Provider.of<DevModeProvider>(context)
+                                        .isDevMode;
 
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(
-                                        horizontal: 8, vertical: 4),
-                                    child: InkWell(
-                                      onTap: () {
-                                        _markAsRead(session);
-                                        Navigator.push(
-                                            context,
-                                            MaterialPageRoute(
-                                                builder: (_) =>
-                                                    SessionDetailScreen(
-                                                        session: session)));
-                                      },
-                                      onLongPress: () {
-                                         if (isDevMode) {
-                                           _showContextMenu(context, session: session);
-                                         }
-                                      },
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(12),
-                                        child: Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Row(children: [
-                                              Expanded(
-                                                  child: Row(
-                                                children: [
-                                                  if (metadata.isNew)
-                                                    Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.green,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                                return Card(
+                                  margin: const EdgeInsets.symmetric(
+                                      horizontal: 8, vertical: 4),
+                                  child: InkWell(
+                                    onTap: () {
+                                      _markAsRead(session);
+                                      Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                              builder: (_) =>
+                                                  SessionDetailScreen(
+                                                      session: session)));
+                                    },
+                                    onLongPress: () {
+                                      if (isDevMode) {
+                                        _showContextMenu(context,
+                                            session: session);
+                                      }
+                                    },
+                                    child: Padding(
+                                      padding: const EdgeInsets.all(12),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(children: [
+                                            Expanded(
+                                                child: Row(
+                                              children: [
+                                                if (metadata.isNew)
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 6),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.green,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
                                                     ),
-                                                  if (metadata.isUpdated && !metadata.isNew)
-                                                     Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.amber,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('UPDATED', style: TextStyle(color: Colors.black, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                    ),
-                                                  if (metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
-                                                     Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.blueAccent,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: const Text('UNREAD', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                    ),
-
-                                                  // Render custom labels
-                                                  for (final label in metadata.labels)
-                                                    Container(
-                                                      margin: const EdgeInsets.only(right: 6),
-                                                      padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.grey.shade700,
-                                                        borderRadius: BorderRadius.circular(4),
-                                                      ),
-                                                      child: Text(label.toUpperCase(), style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
-                                                    ),
-
-                                                  Expanded(
-                                                    child: Text(
-                                                        session.title ??
-                                                            session.prompt,
-                                                        maxLines: 1,
-                                                        overflow:
-                                                            TextOverflow.ellipsis,
+                                                    child: const Text('NEW',
                                                         style: TextStyle(
-                                                            fontWeight: (metadata.isUnread) ? FontWeight.bold : FontWeight.normal,
-                                                            fontSize: 16)),
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold)),
                                                   ),
-                                                ],
-                                              )),
-                                              if (session.outputs != null &&
-                                                  session.outputs!.any((o) =>
-                                                      o.pullRequest != null))
-                                                IconButton(
-                                                  icon: const Icon(
-                                                      Icons.merge_type),
-                                                  tooltip: 'View Pull Request',
-                                                  color: Colors.purple,
-                                                  onPressed: () {
-                                                    final pr = session.outputs!
-                                                        .firstWhere((o) =>
-                                                            o.pullRequest !=
-                                                            null)
-                                                        .pullRequest!;
-                                                    launchUrl(
-                                                        Uri.parse(pr.url));
-                                                  },
+                                                if (metadata.isUpdated &&
+                                                    !metadata.isNew)
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 6),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.amber,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    child: const Text('UPDATED',
+                                                        style: TextStyle(
+                                                            color: Colors.black,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold)),
+                                                  ),
+                                                if (metadata.isUnread &&
+                                                    !metadata.isNew &&
+                                                    !metadata.isUpdated)
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 6),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color: Colors.blueAccent,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    child: const Text('UNREAD',
+                                                        style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold)),
+                                                  ),
+
+                                                // Render custom labels
+                                                for (final label
+                                                    in metadata.labels)
+                                                  Container(
+                                                    margin:
+                                                        const EdgeInsets.only(
+                                                            right: 6),
+                                                    padding: const EdgeInsets
+                                                        .symmetric(
+                                                        horizontal: 4,
+                                                        vertical: 2),
+                                                    decoration: BoxDecoration(
+                                                      color:
+                                                          Colors.grey.shade700,
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              4),
+                                                    ),
+                                                    child: Text(
+                                                        label.toUpperCase(),
+                                                        style: const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                            fontWeight:
+                                                                FontWeight
+                                                                    .bold)),
+                                                  ),
+
+                                                Expanded(
+                                                  child: Text(
+                                                      session.title ??
+                                                          session.prompt,
+                                                      maxLines: 1,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                      style: TextStyle(
+                                                          fontWeight: (metadata
+                                                                  .isUnread)
+                                                              ? FontWeight.bold
+                                                              : FontWeight
+                                                                  .normal,
+                                                          fontSize: 16)),
                                                 ),
-                                            ]),
-                                            const SizedBox(height: 8),
-                                            SessionMetaPills(session: session, compact: true),
-                                            // Progress bar if running
-                                             if (session.state == SessionState.IN_PROGRESS && session.totalSteps != null && session.totalSteps! > 0)
-                                              Padding(
-                                                padding: const EdgeInsets.only(top: 8.0),
-                                                child: LinearProgressIndicator(
-                                                  value: session.currentStep! / session.totalSteps!,
-                                                ),
+                                              ],
+                                            )),
+                                            if (session.outputs != null &&
+                                                session.outputs!.any((o) =>
+                                                    o.pullRequest != null))
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.merge_type),
+                                                tooltip: 'View Pull Request',
+                                                color: Colors.purple,
+                                                onPressed: () {
+                                                  final pr = session.outputs!
+                                                      .firstWhere((o) =>
+                                                          o.pullRequest != null)
+                                                      .pullRequest!;
+                                                  launchUrl(Uri.parse(pr.url));
+                                                },
                                               ),
-                                          ],
-                                        ),
+                                          ]),
+                                          const SizedBox(height: 8),
+                                          SessionMetaPills(
+                                              session: session, compact: true),
+                                          // Progress bar if running
+                                          if (session.state ==
+                                                  SessionState.IN_PROGRESS &&
+                                              session.totalSteps != null &&
+                                              session.totalSteps! > 0)
+                                            Padding(
+                                              padding: const EdgeInsets.only(
+                                                  top: 8.0),
+                                              child: LinearProgressIndicator(
+                                                value: session.currentStep! /
+                                                    session.totalSteps!,
+                                              ),
+                                            ),
+                                        ],
                                       ),
                                     ),
-                                  );
+                                  ),
+                                );
                               },
                             ),
                           ),
@@ -518,6 +593,4 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 }
 
-
 // Removed ListItem classes as they are no longer needed
-

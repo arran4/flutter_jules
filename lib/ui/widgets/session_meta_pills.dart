@@ -14,7 +14,7 @@ class SessionMetaPills extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Only wrap with Wrap if NOT compact. 
+    // Only wrap with Wrap if NOT compact.
     // But if we want it to wrap, we should always use Wrap.
     // If compact, maybe smaller icons or fewer items?
     // Let's assume compact just reduces spacing/size.
@@ -36,25 +36,22 @@ class SessionMetaPills extends StatelessWidget {
                 ? const Icon(Icons.check, size: 16, color: Colors.green)
                 : null,
           ),
-          
+
         // DATE Pill
         if (session.createTime != null)
           _buildChip(
             avatar: const Icon(Icons.calendar_today, size: 16),
-            label: DateFormat.yMMMd().add_jm().format(
-                DateTime.parse(session.createTime!)
-                    .toLocal()),
+            label: DateFormat.yMMMd()
+                .add_jm()
+                .format(DateTime.parse(session.createTime!).toLocal()),
           ),
-          
+
         // Automation Mode
         if (session.automationMode != null)
           _buildChip(
             avatar: const Icon(Icons.smart_toy, size: 16),
-            label: "Automation: ${session.automationMode
-                .toString()
-                .split('.')
-                .last
-                .replaceAll('AUTOMATION_MODE_', '')}",
+            label:
+                "Automation: ${session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
             backgroundColor: Colors.blue.shade50,
           ),
 
@@ -82,26 +79,24 @@ class SessionMetaPills extends StatelessWidget {
         ),
 
         // Branch
-        if (session.sourceContext.githubRepoContext
-                ?.startingBranch !=
-            null)
+        if (session.sourceContext.githubRepoContext?.startingBranch != null)
           _buildChip(
-            label: session.sourceContext
-                .githubRepoContext!.startingBranch,
+            label: session.sourceContext.githubRepoContext!.startingBranch,
             avatar: const Icon(Icons.call_split, size: 16),
           ),
       ],
     );
   }
-  
-  Widget _buildChip({required String label, Color? backgroundColor, Widget? avatar}) {
-     return Chip(
-        label: Text(label, style: compact ? const TextStyle(fontSize: 10) : null),
-        backgroundColor: backgroundColor,
-        avatar: avatar,
-        side: BorderSide.none,
-        padding: compact ? const EdgeInsets.all(0) : null,
-        visualDensity: compact ? VisualDensity.compact : null,
-     );
+
+  Widget _buildChip(
+      {required String label, Color? backgroundColor, Widget? avatar}) {
+    return Chip(
+      label: Text(label, style: compact ? const TextStyle(fontSize: 10) : null),
+      backgroundColor: backgroundColor,
+      avatar: avatar,
+      side: BorderSide.none,
+      padding: compact ? const EdgeInsets.all(0) : null,
+      visualDensity: compact ? VisualDensity.compact : null,
+    );
   }
 }

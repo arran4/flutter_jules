@@ -35,7 +35,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
   void initState() {
     super.initState();
     _searchController.addListener(_onSearchChanged);
-    
+
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -72,7 +72,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     sorted.sort((a, b) {
       final nameA = a.data.name;
       final nameB = b.data.name;
-      
+
       switch (_currentSort) {
         case SortOption.recent:
           final lastUsedA = _lastUsed[nameA];
@@ -93,7 +93,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
           final countB = _usageCount[nameB] ?? 0;
           final cmp = countB.compareTo(countA);
           if (cmp != 0) return cmp;
-          
+
           final lastUsedA = _lastUsed[nameA];
           final lastUsedB = _lastUsed[nameB];
           if (lastUsedA != null && lastUsedB != null) {
@@ -121,12 +121,12 @@ class _SourceListScreenState extends State<SourceListScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    // Fetch sources if empty, but usually SessionListScreen triggered it. 
+    // Fetch sources if empty, but usually SessionListScreen triggered it.
     // Just ensure we have data or are loading.
     if (sourceProvider.items.isEmpty && !sourceProvider.isLoading) {
-        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+      await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
-    
+
     // Load usage stats from SessionProvider
     _processSessions();
     _onSearchChanged(); // Update filter
@@ -134,7 +134,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   void _processSessions() {
     // We can get sessions from SessionProvider
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final sessions = sessionProvider.items.map((i) => i.data).toList();
 
     _usageCount.clear();
@@ -164,18 +165,20 @@ class _SourceListScreenState extends State<SourceListScreen> {
   Future<void> _refreshData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
 
     await Future.wait([
       sourceProvider.fetchSources(auth.client, authToken: auth.token),
-      sessionProvider.fetchSessions(auth.client, authToken: auth.token, force: true) // Also refresh stats
+      sessionProvider.fetchSessions(auth.client,
+          authToken: auth.token, force: true) // Also refresh stats
     ]);
-    
+
     _processSessions();
     _onSearchChanged();
-    
+
     if (mounted) {
-       ScaffoldMessenger.of(context).showSnackBar(
+      ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text('Refreshed ${sourceProvider.items.length} sources'),
           duration: const Duration(seconds: 2),
@@ -186,24 +189,28 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   void _showRawData(BuildContext context) {
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    
+
     final sources = sourceProvider.items.map((i) {
-        return {
-           'name': i.data.name,
-           'id': i.data.id,
-           'githubRepo': i.data.githubRepo != null ? {
-               'owner': i.data.githubRepo!.owner,
-               'repo': i.data.githubRepo!.repo,
-               'branches': i.data.githubRepo!.branches?.map((b) => b.displayName).toList(),
-               'defaultBranch': i.data.githubRepo!.defaultBranch?.displayName,
-               'isPrivate': i.data.githubRepo!.isPrivate,
-           } : null,
-           'metadata': {
-              'isNew': i.metadata.isNew,
-              'isUpdated': i.metadata.isUpdated,
-              'lastRetrieved': i.metadata.lastRetrieved.toIso8601String(),
-           }
-        };
+      return {
+        'name': i.data.name,
+        'id': i.data.id,
+        'githubRepo': i.data.githubRepo != null
+            ? {
+                'owner': i.data.githubRepo!.owner,
+                'repo': i.data.githubRepo!.repo,
+                'branches': i.data.githubRepo!.branches
+                    ?.map((b) => b.displayName)
+                    .toList(),
+                'defaultBranch': i.data.githubRepo!.defaultBranch?.displayName,
+                'isPrivate': i.data.githubRepo!.isPrivate,
+              }
+            : null,
+        'metadata': {
+          'isNew': i.metadata.isNew,
+          'isUpdated': i.metadata.isUpdated,
+          'lastRetrieved': i.metadata.lastRetrieved.toIso8601String(),
+        }
+      };
     }).toList();
 
     showDialog(
@@ -227,30 +234,34 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
         // If sources updated (e.g. background fetch finished), update our filtered list
         WidgetsBinding.instance.addPostFrameCallback((_) {
-           if (mounted && sourceProvider.items.length != (_filteredSources.length) && _searchController.text.isEmpty) {
-              // Trigger re-filter if data changed and we aren't actively searching
-           }
+          if (mounted &&
+              sourceProvider.items.length != (_filteredSources.length) &&
+              _searchController.text.isEmpty) {
+            // Trigger re-filter if data changed and we aren't actively searching
+          }
         });
-        
+
         var filtered = filterAndSort<CachedItem<Source>>(
-            items: sources,
-            query: _searchController.text,
-            accessors: [
-              (item) => item.data.githubRepo?.repo ?? '',
-              (item) => item.data.name,
-              (item) => item.data.githubRepo?.owner ?? '',
-            ],
-          );
-        
+          items: sources,
+          query: _searchController.text,
+          accessors: [
+            (item) => item.data.githubRepo?.repo ?? '',
+            (item) => item.data.name,
+            (item) => item.data.githubRepo?.owner ?? '',
+          ],
+        );
+
         final displaySources = _sortSources(filtered);
 
         return Scaffold(
           appBar: AppBar(
             title: const Text('Repositories'),
-            bottom: isLoading ? const PreferredSize(
-              preferredSize: Size.fromHeight(4.0),
-              child: LinearProgressIndicator(), 
-            ) : null,
+            bottom: isLoading
+                ? const PreferredSize(
+                    preferredSize: Size.fromHeight(4.0),
+                    child: LinearProgressIndicator(),
+                  )
+                : null,
             actions: [
               IconButton(
                 icon: const Icon(Icons.refresh),
@@ -267,7 +278,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                     _onSearchChanged();
                   });
                 },
-                itemBuilder: (BuildContext context) => <PopupMenuEntry<SortOption>>[
+                itemBuilder: (BuildContext context) =>
+                    <PopupMenuEntry<SortOption>>[
                   const PopupMenuItem<SortOption>(
                     value: SortOption.recent,
                     child: Text('Most Recently Used'),
@@ -287,7 +299,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                   if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'raw_data') {
-                     _showRawData(context);
+                    _showRawData(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -320,142 +332,181 @@ class _SourceListScreenState extends State<SourceListScreen> {
               : (sources.isEmpty && error != null)
                   ? Center(child: Text('Error: $error'))
                   : Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(8.0),
-                child: TextField(
-                  controller: _searchController,
-                  decoration: const InputDecoration(
-                    labelText: 'Search Repositories',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.search),
-                  ),
-                ),
-              ),
-              if (lastFetchTime != null)
-                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  child: Align(
-                    alignment: Alignment.centerLeft,
-                    child: Text(
-                      'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)}',
-                      style: Theme.of(context).textTheme.bodySmall,
-                    ),
-                  ),
-                 ),
-              Expanded(
-                child: RefreshIndicator(
-                  onRefresh: _refreshData,
-                  child: displaySources.isEmpty
-                      ? ListView(
-                          physics: const AlwaysScrollableScrollPhysics(),
-                          children: [
-                            SizedBox(
-                              height: MediaQuery.of(context).size.height * 0.7,
-                              child: Center(child: Padding(
-                                padding: const EdgeInsets.all(20.0),
-                                child: Text(sources.isEmpty ? 'No repositories found.' : 'No matches found.'),
-                              )),
-                            )
-                          ],
-                        )
-                      : ListView.builder(
-                          physics: const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
-                          controller: _scrollController,
-                          itemCount: displaySources.length,
-                          itemBuilder: (context, index) {
-                            final item = displaySources[index];
-                            final source = item.data;
-                            
-                            final count = _usageCount[source.name] ?? 0;
-                            final lastUsedDate = _lastUsed[source.name];
-
-                            final repo = source.githubRepo;
-                            final isPrivate = repo?.isPrivate ?? false;
-                            final defaultBranch =
-                                repo?.defaultBranch?.displayName ?? 'N/A';
-                            final branchCount = repo?.branches?.length;
-
-                            return Card(
-                              margin: const EdgeInsets.symmetric(
-                                  horizontal: 8, vertical: 4),
-                              child: ListTile(
-                                leading:
-                                    Icon(isPrivate ? Icons.lock : Icons.public),
-                                title: Row(
-                                  children: [
-                                    if (isPrivate)
-                                      const Padding(
-                                        padding: EdgeInsets.only(right: 6.0),
-                                        child: Icon(Icons.lock, size: 16, color: Colors.grey),
-                                      ),
-                                    Expanded(child: Text(repo?.repo ?? source.name, overflow: TextOverflow.ellipsis)),
-                                  ],
-                                ),
-                                subtitle: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                        '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
-                                    const SizedBox(height: 4),
-                                    Row(
-                                      children: [
-                                        if (count > 0)
-                                          Container(
-                                            padding: const EdgeInsets.symmetric(
-                                                horizontal: 6, vertical: 2),
-                                            decoration: BoxDecoration(
-                                              color: Theme.of(context)
-                                                  .colorScheme
-                                                  .surfaceContainerHighest,
-                                              borderRadius:
-                                                  BorderRadius.circular(4),
-                                            ),
-                                            child: Text(
-                                              '$count sessions',
-                                              style: Theme.of(context)
-                                                  .textTheme
-                                                  .labelSmall,
-                                            ),
-                                          ),
-                                        if (count > 0) const SizedBox(width: 8),
-                                        if (lastUsedDate != null)
-                                          Text(
-                                            'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                            style: Theme.of(context)
-                                                .textTheme
-                                                .bodySmall,
-                                          ),
-                                        if (item.metadata.isNew)
-                                           Padding(
-                                             padding: const EdgeInsets.only(left: 8.0),
-                                             child: Container(
-                                                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
-                                                color: Colors.green,
-                                                child: const Text('NEW', style: TextStyle(color: Colors.white, fontSize: 10))),
-                                           ),
-                                      ],
-                                    ),
-                                  ],
-                                ),
-                                isThreeLine: true,
-                                onTap: () {
-                                  Navigator.push(
-                                    context,
-                                    MaterialPageRoute(
-                                      builder: (context) => SessionListScreen(
-                                          sourceFilter: source.name),
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Search Repositories',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.search),
+                            ),
+                          ),
                         ),
-                ),
-              ),
-            ],
-          ),
+                        if (lastFetchTime != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)}',
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _refreshData,
+                            child: displaySources.isEmpty
+                                ? ListView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    children: [
+                                      SizedBox(
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                                0.7,
+                                        child: Center(
+                                            child: Padding(
+                                          padding: const EdgeInsets.all(20.0),
+                                          child: Text(sources.isEmpty
+                                              ? 'No repositories found.'
+                                              : 'No matches found.'),
+                                        )),
+                                      )
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+                                    controller: _scrollController,
+                                    itemCount: displaySources.length,
+                                    itemBuilder: (context, index) {
+                                      final item = displaySources[index];
+                                      final source = item.data;
+
+                                      final count =
+                                          _usageCount[source.name] ?? 0;
+                                      final lastUsedDate =
+                                          _lastUsed[source.name];
+
+                                      final repo = source.githubRepo;
+                                      final isPrivate =
+                                          repo?.isPrivate ?? false;
+                                      final defaultBranch =
+                                          repo?.defaultBranch?.displayName ??
+                                              'N/A';
+                                      final branchCount =
+                                          repo?.branches?.length;
+
+                                      return Card(
+                                        margin: const EdgeInsets.symmetric(
+                                            horizontal: 8, vertical: 4),
+                                        child: ListTile(
+                                          leading: Icon(isPrivate
+                                              ? Icons.lock
+                                              : Icons.public),
+                                          title: Row(
+                                            children: [
+                                              if (isPrivate)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(
+                                                      right: 6.0),
+                                                  child: Icon(Icons.lock,
+                                                      size: 16,
+                                                      color: Colors.grey),
+                                                ),
+                                              Expanded(
+                                                  child: Text(
+                                                      repo?.repo ?? source.name,
+                                                      overflow: TextOverflow
+                                                          .ellipsis)),
+                                            ],
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                  '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  if (count > 0)
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
+                                                          horizontal: 6,
+                                                          vertical: 2),
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .surfaceContainerHighest,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(4),
+                                                      ),
+                                                      child: Text(
+                                                        '$count sessions',
+                                                        style: Theme.of(context)
+                                                            .textTheme
+                                                            .labelSmall,
+                                                      ),
+                                                    ),
+                                                  if (count > 0)
+                                                    const SizedBox(width: 8),
+                                                  if (lastUsedDate != null)
+                                                    Text(
+                                                      'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                                      style: Theme.of(context)
+                                                          .textTheme
+                                                          .bodySmall,
+                                                    ),
+                                                  if (item.metadata.isNew)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              left: 8.0),
+                                                      child: Container(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .symmetric(
+                                                                  horizontal: 4,
+                                                                  vertical: 2),
+                                                          color: Colors.green,
+                                                          child: const Text(
+                                                              'NEW',
+                                                              style: TextStyle(
+                                                                  color: Colors
+                                                                      .white,
+                                                                  fontSize:
+                                                                      10))),
+                                                    ),
+                                                ],
+                                              ),
+                                            ],
+                                          ),
+                                          isThreeLine: true,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    SessionListScreen(
+                                                        sourceFilter:
+                                                            source.name),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ],
+                    ),
         );
       },
     );

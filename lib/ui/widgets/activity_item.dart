@@ -121,20 +121,21 @@ class _ActivityItemState extends State<ActivityItem> {
         // Just generic artifacts (e.g. ChangeSet)
         // Check if it's the "Simple ChangeSet" case
         final changeSetArtifact = activity.artifacts!.firstWhere(
-           (a) => a.changeSet != null,
-           orElse: () => Artifact(),
+          (a) => a.changeSet != null,
+          orElse: () => Artifact(),
         );
 
         if (changeSetArtifact.changeSet != null) {
-           title = "Artifact";
-           summary = "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
-           // If it has no patch, it's very compactable
-           if (changeSetArtifact.changeSet!.gitPatch == null) {
-             isCompactable = true;
-           }
+          title = "Artifact";
+          summary =
+              "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
+          // If it has no patch, it's very compactable
+          if (changeSetArtifact.changeSet!.gitPatch == null) {
+            isCompactable = true;
+          }
         } else {
-           title = "Artifacts";
-           summary = "${activity.artifacts!.length} items";
+          title = "Artifacts";
+          summary = "${activity.artifacts!.length} items";
         }
         icon = Icons.category;
         iconColor = Colors.blueGrey;
@@ -328,14 +329,21 @@ class _ActivityItemState extends State<ActivityItem> {
     }
 
     bool isCompactArtifact = false;
-     if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
-        final changeSet = activity.artifacts!.firstWhere((a) => a.changeSet != null, orElse: () => Artifact()).changeSet;
-        if (changeSet != null && changeSet.gitPatch == null && activity.artifacts!.every((a) => a.bashOutput == null && a.changeSet != null && a.changeSet!.gitPatch == null)) {
-           isCompactArtifact = true;
-        }
-     }
-     
-     if (isCompactArtifact) return const SizedBox.shrink();
+    if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
+      final changeSet = activity.artifacts!
+          .firstWhere((a) => a.changeSet != null, orElse: () => Artifact())
+          .changeSet;
+      if (changeSet != null &&
+          changeSet.gitPatch == null &&
+          activity.artifacts!.every((a) =>
+              a.bashOutput == null &&
+              a.changeSet != null &&
+              a.changeSet!.gitPatch == null)) {
+        isCompactArtifact = true;
+      }
+    }
+
+    if (isCompactArtifact) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -344,51 +352,63 @@ class _ActivityItemState extends State<ActivityItem> {
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
             if (activity.progressUpdated != null)
-               MarkdownBody(data: activity.progressUpdated!.description),
+              MarkdownBody(data: activity.progressUpdated!.description),
             if (activity.agentMessaged != null)
-               MarkdownBody(data: activity.agentMessaged!.agentMessage),
+              MarkdownBody(data: activity.agentMessaged!.agentMessage),
             if (activity.userMessaged != null)
-               MarkdownBody(data: activity.userMessaged!.userMessage),
-               
+              MarkdownBody(data: activity.userMessaged!.userMessage),
             if (activity.artifacts != null)
               for (var artifact in activity.artifacts!) ...[
                 if (artifact.bashOutput != null) ...[
-                   Container(
-                     decoration: BoxDecoration(
-                       color: Colors.black.withValues(alpha: 0.05),
-                       borderRadius: BorderRadius.circular(4),
-                       border: Border.all(color: Colors.black12),
-                     ),
-                     padding: const EdgeInsets.all(8),
-                     child: Column(
-                       crossAxisAlignment: CrossAxisAlignment.start,
-                       children: [
-                         Text("\$ ${artifact.bashOutput!.command}", style: const TextStyle(fontFamily: 'monospace', fontWeight: FontWeight.bold)),
-                         if (artifact.bashOutput!.output.isNotEmpty) ...[
-                           const Divider(height: 12),
-                           Text(artifact.bashOutput!.output, style: const TextStyle(fontFamily: 'monospace')),
-                         ],
-                         if (artifact.bashOutput!.exitCode != 0) ...[
+                  Container(
+                      decoration: BoxDecoration(
+                        color: Colors.black.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(4),
+                        border: Border.all(color: Colors.black12),
+                      ),
+                      padding: const EdgeInsets.all(8),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text("\$ ${artifact.bashOutput!.command}",
+                              style: const TextStyle(
+                                  fontFamily: 'monospace',
+                                  fontWeight: FontWeight.bold)),
+                          if (artifact.bashOutput!.output.isNotEmpty) ...[
+                            const Divider(height: 12),
+                            Text(artifact.bashOutput!.output,
+                                style:
+                                    const TextStyle(fontFamily: 'monospace')),
+                          ],
+                          if (artifact.bashOutput!.exitCode != 0) ...[
                             const SizedBox(height: 4),
-                            Text("Exit Code: ${artifact.bashOutput!.exitCode}", style: const TextStyle(color: Colors.red, fontWeight: FontWeight.bold, fontSize: 12)),
-                         ]
-                       ],
-                     )
-                   ),
-                   const SizedBox(height: 8),
+                            Text("Exit Code: ${artifact.bashOutput!.exitCode}",
+                                style: const TextStyle(
+                                    color: Colors.red,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 12)),
+                          ]
+                        ],
+                      )),
+                  const SizedBox(height: 8),
                 ],
                 if (artifact.changeSet != null) ...[
-                   // If complex changeset (with patch)
-                   if (artifact.changeSet!.gitPatch != null) ...[
-                      Text("Change in ${artifact.changeSet!.source}", style: const TextStyle(fontWeight: FontWeight.bold)),
-                      const SizedBox(height: 4),
-                      Container(
-                         padding: const EdgeInsets.all(8),
-                         color: Colors.black.withValues(alpha: 0.05),
-                         child: Text(artifact.changeSet!.gitPatch!.unidiffPatch, style: const TextStyle(fontFamily: 'monospace', fontSize: 11), maxLines: 15, overflow: TextOverflow.ellipsis),
-                      ),
-                       const SizedBox(height: 8),
-                   ]
+                  // If complex changeset (with patch)
+                  if (artifact.changeSet!.gitPatch != null) ...[
+                    Text("Change in ${artifact.changeSet!.source}",
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 4),
+                    Container(
+                      padding: const EdgeInsets.all(8),
+                      color: Colors.black.withValues(alpha: 0.05),
+                      child: Text(artifact.changeSet!.gitPatch!.unidiffPatch,
+                          style: const TextStyle(
+                              fontFamily: 'monospace', fontSize: 11),
+                          maxLines: 15,
+                          overflow: TextOverflow.ellipsis),
+                    ),
+                    const SizedBox(height: 8),
+                  ]
                 ]
               ]
           ],

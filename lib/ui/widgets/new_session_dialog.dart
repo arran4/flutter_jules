@@ -57,33 +57,33 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     // If forcing or list is empty, fetch
     if (force || sourceProvider.items.isEmpty) {
-       // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
-       // For now, calling it is enough.
-       // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
-       // My implementation of fetchSources: skips if loading, but otherwise fetches.
-       // And it loads from cache first.
-       
-       await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+      // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
+      // For now, calling it is enough.
+      // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
+      // My implementation of fetchSources: skips if loading, but otherwise fetches.
+      // And it loads from cache first.
+
+      await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
-    
-    // If we want to force network refresh, we might need a distinct method or param, 
-    // but the user requirement was to load all on start. 
+
+    // If we want to force network refresh, we might need a distinct method or param,
+    // but the user requirement was to load all on start.
     // Usually cached data is fine for the dropdown unless the user explicitly refreshed in the main screen.
     // The previous code called `refresh`.
-    
+
     // Since fetchSources currently respects cache if available and loaded, we might need to rely on the main screen refresh.
     // But for this dialog's "Refresh" button, we probably want to force a network hit.
     // My refactored fetchSources doesn't expose `force` logic cleanly (it checks cache).
-    
+
     // Wait, my fetchSources executes:
     // 1. Load from cache (if token provided).
     // 2. Network call (do/while).
     // 3. Save to cache.
-    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login". 
+    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login".
     // But `SessionProvider` had logic to skip if fresh. `SourceProvider` refactor I wrote *always* fetches from network after loading cache.
     // Ideally I should have added a freshness check or `force` param.
     // But as written, it acts as a force refresh every time it's called unless `isLoading` is true.
-    
+
     if (mounted) {
       final sources = sourceProvider.items.map((i) => i.data).toList();
       _initializeSelection(sources);
@@ -92,7 +92,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _initializeSelection(List<Source> sources) async {
     final prefs = await SharedPreferences.getInstance();
-    
+
     if (!mounted) return;
 
     setState(() {
@@ -116,15 +116,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           _selectedSource = null;
         }
       }
-      
+
       // Priority 3: Last used source from prefs
       if (_selectedSource == null) {
-         final lastSource = prefs.getString('new_session_last_source');
-         if (lastSource != null) {
-             try {
-                _selectedSource = sources.firstWhere((s) => s.name == lastSource);
-             } catch (_) {}
-         }
+        final lastSource = prefs.getString('new_session_last_source');
+        if (lastSource != null) {
+          try {
+            _selectedSource = sources.firstWhere((s) => s.name == lastSource);
+          } catch (_) {}
+        }
       }
 
       // Priority 4: 'sources/default' or first available
@@ -159,17 +159,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (repo.branches != null) {
       branches = repo.branches!.map((b) => b.displayName).toList();
     }
-    
+
     // Try to restore last used branch for this source if available
     String? restoredBranch;
     if (prefs != null) {
-       // We can store per-source branch or just global last branch. 
-       // Storing global last branch might be confusing if switching sources.
-       // Let's store global for now as user typically works on one context.
-       final lastBranch = prefs.getString('new_session_last_branch');
-       if (lastBranch != null && branches.contains(lastBranch)) {
-         restoredBranch = lastBranch;
-       }
+      // We can store per-source branch or just global last branch.
+      // Storing global last branch might be confusing if switching sources.
+      // Let's store global for now as user typically works on one context.
+      final lastBranch = prefs.getString('new_session_last_branch');
+      if (lastBranch != null && branches.contains(lastBranch)) {
+        restoredBranch = lastBranch;
+      }
     }
 
     if (restoredBranch != null) {
@@ -237,8 +237,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         break;
       case 2: // Start
         requirePlanApproval = false;
-        automationMode = _autoCreatePr 
-            ? AutomationMode.AUTO_CREATE_PR 
+        automationMode = _autoCreatePr
+            ? AutomationMode.AUTO_CREATE_PR
             : AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
         break;
     }
@@ -274,20 +274,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   Widget build(BuildContext context) {
     return Consumer<SourceProvider>(builder: (context, sourceProvider, _) {
       final sources = sourceProvider.items.map((i) => i.data).toList();
-      
+
       // Sort sources
       sources.sort((a, b) {
         final labelA = _getSourceDisplayLabel(a);
         final labelB = _getSourceDisplayLabel(b);
-        
-        final isSourceA = labelA.startsWith('sources/') || a.name.startsWith('sources/');
-        final isSourceB = labelB.startsWith('sources/') || b.name.startsWith('sources/');
-        
+
+        final isSourceA =
+            labelA.startsWith('sources/') || a.name.startsWith('sources/');
+        final isSourceB =
+            labelB.startsWith('sources/') || b.name.startsWith('sources/');
+
         if (isSourceA != isSourceB) {
           // If one is source and the other is not, the one that IS 'source' goes last (return 1)
           return isSourceA ? 1 : -1;
         }
-        
+
         return labelA.compareTo(labelB);
       });
 
@@ -342,10 +344,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                   const Text('New Session',
-                        style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                   const SizedBox(height: 16),
-                  
+                  const Text('New Session',
+                      style:
+                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+                  const SizedBox(height: 16),
+
                   // Mode Selection
                   const Text('I want to...',
                       style: TextStyle(fontWeight: FontWeight.bold)),
@@ -360,21 +363,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ],
                   ),
                   const SizedBox(height: 16),
-                  
+
                   if (_selectedModeIndex == 2) ...[
-                      CheckboxListTile(
-                        title: const Text('Auto-create Pull Request'),
-                        subtitle: const Text('Automatically create a PR when a final patch is generated'),
-                        value: _autoCreatePr,
-                        onChanged: (val) {
-                          setState(() {
-                            _autoCreatePr = val ?? false;
-                          });
-                        },
-                        contentPadding: EdgeInsets.zero,
-                        controlAffinity: ListTileControlAffinity.leading,
-                      ),
-                      const SizedBox(height: 8),
+                    CheckboxListTile(
+                      title: const Text('Auto-create Pull Request'),
+                      subtitle: const Text(
+                          'Automatically create a PR when a final patch is generated'),
+                      value: _autoCreatePr,
+                      onChanged: (val) {
+                        setState(() {
+                          _autoCreatePr = val ?? false;
+                        });
+                      },
+                      contentPadding: EdgeInsets.zero,
+                      controlAffinity: ListTileControlAffinity.leading,
+                    ),
+                    const SizedBox(height: 8),
                   ],
 
                   // Prompt
@@ -394,7 +398,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     },
                   ),
                   const SizedBox(height: 16),
-    
+
                   // Image Attachment (URL for now)
                   TextField(
                     decoration: const InputDecoration(
@@ -406,7 +410,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     onChanged: (val) => _imageUrl = val,
                   ),
                   const SizedBox(height: 16),
-    
+
                   // Context (Source & Branch)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -433,36 +437,38 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     children: [
                       Expanded(
                         flex: 3,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            return DropdownMenu<Source>(
-                              width: constraints.maxWidth,
-                              initialSelection: _selectedSource,
-                              label: const Text('Repository'),
-                              requestFocusOnTap: true,
-                              enableFilter: true,
-                              leadingIcon: (_selectedSource?.githubRepo?.isPrivate == true) 
-                                  ? const Icon(Icons.lock, size: 16) 
-                                  : null,
-                              dropdownMenuEntries: sources.map((s) {
-                                final isPrivate = s.githubRepo?.isPrivate ?? false;
-                                return DropdownMenuEntry<Source>(
-                                  value: s,
-                                  label: _getSourceDisplayLabel(s),
-                                  leadingIcon: isPrivate ? const Icon(Icons.lock, size: 16) : null,
-                                );
-                              }).toList(),
-                              onSelected: (widget.sourceFilter != null)
-                                  ? null
-                                  : (Source? newValue) {
-                                      setState(() {
-                                        _selectedSource = newValue;
-                                        _updateBranchFromSource();
-                                      });
-                                    },
-                            );
-                          }
-                        ),
+                        child: LayoutBuilder(builder: (context, constraints) {
+                          return DropdownMenu<Source>(
+                            width: constraints.maxWidth,
+                            initialSelection: _selectedSource,
+                            label: const Text('Repository'),
+                            requestFocusOnTap: true,
+                            enableFilter: true,
+                            leadingIcon:
+                                (_selectedSource?.githubRepo?.isPrivate == true)
+                                    ? const Icon(Icons.lock, size: 16)
+                                    : null,
+                            dropdownMenuEntries: sources.map((s) {
+                              final isPrivate =
+                                  s.githubRepo?.isPrivate ?? false;
+                              return DropdownMenuEntry<Source>(
+                                value: s,
+                                label: _getSourceDisplayLabel(s),
+                                leadingIcon: isPrivate
+                                    ? const Icon(Icons.lock, size: 16)
+                                    : null,
+                              );
+                            }).toList(),
+                            onSelected: (widget.sourceFilter != null)
+                                ? null
+                                : (Source? newValue) {
+                                    setState(() {
+                                      _selectedSource = newValue;
+                                      _updateBranchFromSource();
+                                    });
+                                  },
+                          );
+                        }),
                       ),
                       const SizedBox(width: 16),
                       Expanded(
@@ -473,11 +479,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             labelText: 'Branch',
                             border: OutlineInputBorder(),
                           ),
-                          value: _selectedBranch, // ignore: deprecated_member_use
+                          value:
+                              _selectedBranch, // ignore: deprecated_member_use
                           items: branches
                               .map((b) => DropdownMenuItem(
                                     value: b,
-                                    child: Text(b, overflow: TextOverflow.ellipsis),
+                                    child: Text(b,
+                                        overflow: TextOverflow.ellipsis),
                                   ))
                               .toList(),
                           onChanged: (val) {
@@ -489,9 +497,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       ),
                     ],
                   ),
-                  
+
                   const SizedBox(height: 24),
-                  
+
                   // Actions
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
@@ -502,9 +510,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       ),
                       const SizedBox(width: 8),
                       FilledButton(
-                        onPressed: (_prompt.isNotEmpty && _selectedSource != null)
-                            ? _create
-                            : null,
+                        onPressed:
+                            (_prompt.isNotEmpty && _selectedSource != null)
+                                ? _create
+                                : null,
                         child: const Text('Create Session'),
                       ),
                     ],

@@ -78,7 +78,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-
   Future<void> _performFetchActivities() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
@@ -90,24 +89,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 1. Check cache first
     bool validCacheFound = false;
     if (token != null) {
-      final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
+      final cachedDetails =
+          await cacheService.loadSessionDetails(token, widget.session.id);
       if (cachedDetails != null) {
         // Compare updateTime
         // If widget.session has no updateTime, we assume we need to fetch.
         // If cached snapshot matches widget.session.updateTime, we use cache.
         final listUpdateTime = widget.session.updateTime;
         final cachedSnapshot = cachedDetails.sessionUpdateTimeSnapshot;
-        
+
         if (listUpdateTime != null && listUpdateTime == cachedSnapshot) {
-           if (mounted) {
-             setState(() {
-               _activities = cachedDetails.activities;
-               _session = cachedDetails.session;
-             });
-           }
-           validCacheFound = true;
-           // We can stop here, no need to fetch!
-           return; 
+          if (mounted) {
+            setState(() {
+              _activities = cachedDetails.activities;
+              _session = cachedDetails.session;
+            });
+          }
+          validCacheFound = true;
+          // We can stop here, no need to fetch!
+          return;
         }
       }
     }
@@ -138,10 +138,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _session = updatedSession!;
       });
     }
-    
+
     // 3. Save to cache
     if (token != null && updatedSession != null) {
-       await cacheService.saveSessionDetails(token, updatedSession, activities);
+      await cacheService.saveSessionDetails(token, updatedSession, activities);
     }
   }
 
@@ -180,7 +180,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       final updatedActivity = await client.getActivity(activity.name);
-      
+
       if (!mounted) return;
 
       setState(() {
@@ -189,7 +189,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _activities[index] = updatedActivity;
         }
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Activity refreshed")),
       );
@@ -300,12 +300,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         children: [
           // Permanent Header
           _buildHeader(context),
-          
+
           // Scrollable Activity List
           Expanded(
             child: _buildActivityList(isDevMode),
           ),
-          
+
           // Permanent Input Footer
           _buildInput(context),
         ],
@@ -452,13 +452,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ]),
           children: group.activities.map((a) {
-            final item = ActivityItem(
-                activity: a, onRefresh: () => _refreshActivity(a));
+            final item =
+                ActivityItem(activity: a, onRefresh: () => _refreshActivity(a));
             if (isDevMode) {
               return GestureDetector(
                 onLongPress: () => _showContextMenu(context, activity: a),
-                onSecondaryTap: () =>
-                    _showContextMenu(context, activity: a),
+                onSecondaryTap: () => _showContextMenu(context, activity: a),
                 child: item,
               );
             }
@@ -486,8 +485,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       fontWeight: FontWeight.bold, color: Colors.purple)),
               leading: const Icon(Icons.merge_type, color: Colors.purple),
               children: [
-                for (final output in _session.outputs!
-                    .where((o) => o.pullRequest != null))
+                for (final output
+                    in _session.outputs!.where((o) => o.pullRequest != null))
                   Padding(
                       padding: const EdgeInsets.only(
                           left: 16.0, right: 16.0, bottom: 16.0),
@@ -499,8 +498,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                     fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
                             Text(output.pullRequest!.description,
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis),
+                                maxLines: 5, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 8),
                             SizedBox(
                               width: double.infinity,
@@ -565,11 +563,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
-                            label: Text("Automation: ${_session.automationMode
-                                .toString()
-                                .split('.')
-                                .last
-                                .replaceAll('AUTOMATION_MODE_', '')}"),
+                            label: Text(
+                                "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}"),
                             backgroundColor: Colors.blue.shade50,
                             side: BorderSide.none,
                           ),
@@ -674,8 +669,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove =
-        _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL;
 
     return SafeArea(
       top: false,
@@ -686,8 +680,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
-                decoration:
-                    const InputDecoration(hintText: "Send message..."),
+                decoration: const InputDecoration(hintText: "Send message..."),
                 onChanged: (text) => setState(() {}),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -705,8 +698,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               )
             else if (canApprove)
               ElevatedButton(
-                  onPressed: _approvePlan,
-                  child: const Text("Approve Plan"))
+                  onPressed: _approvePlan, child: const Text("Approve Plan"))
             else
               const IconButton(
                 icon: Icon(Icons.send),
