@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
-import '../models/cache_metadata.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
 
@@ -25,23 +24,22 @@ class SessionProvider extends ChangeNotifier {
 
   Future<void> fetchSessions(JulesClient client,
       {bool force = false, String? authToken}) async {
-    
     if (_cacheService == null) {
       _error = "Cache service not initialized";
       notifyListeners();
       return;
     }
-    
+
     // 1. Load from cache immediately
     if (authToken != null) {
-       _items = await _cacheService!.loadSessions(authToken);
-       _sortItems();
-       notifyListeners();
+      _items = await _cacheService!.loadSessions(authToken);
+      _sortItems();
+      notifyListeners();
 
-       // If valid cache exists and we are not forcing a refresh, stop here.
-       if (!force && _items.isNotEmpty) {
-         return;
-       }
+      // If valid cache exists and we are not forcing a refresh, stop here.
+      if (!force && _items.isNotEmpty) {
+        return;
+      }
     }
 
     if (_isLoading) return;
@@ -53,7 +51,7 @@ class SessionProvider extends ChangeNotifier {
     try {
       List<Session> allSessions = [];
       String? pageToken;
-      
+
       // Load all sessions
       do {
         final response = await client.listSessions(
@@ -63,10 +61,9 @@ class SessionProvider extends ChangeNotifier {
             _lastExchange = exchange;
           },
         );
-        
+
         allSessions.addAll(response.sessions);
         pageToken = response.nextPageToken;
-        
       } while (pageToken != null);
 
       if (authToken != null) {
@@ -112,9 +109,7 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-          item.data, 
-          item.metadata.copyWith(lastOpened: DateTime.now())
-        );
+            item.data, item.metadata.copyWith(lastOpened: DateTime.now()));
         notifyListeners();
       }
     }
