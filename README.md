@@ -9,6 +9,16 @@ A comprehensive Flutter-based client application for interacting with the Google
 - **Secure Storage:** Credentials are encrypted and stored safely using `flutter_secure_storage`.
 - **Privacy Masking:** Source titles are automatically masked (e.g., `*****`) for private sources to ensure confidentiality.
 
+### 📸 Screenshots
+
+| Session List | Session Detail |
+|:---:|:---:|
+| <img src="screenshots/01_session_list.png" width="300" /> | <img src="screenshots/02_session_detail.png" width="300" /> |
+
+| Source List | Settings |
+|:---:|:---:|
+| <img src="screenshots/03_source_list.png" width="300" /> | <img src="screenshots/04_settings.png" width="300" /> |
+
 ### 💬 Session Management & Chat
 - **Rich Chat Interface:** Interactive message history with support for text and rich media.
 - **Image Attachments:** Attach images to your prompts via URL. The client handles fetching and embedding them as base64 data.
