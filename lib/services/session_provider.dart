@@ -238,4 +238,25 @@ class SessionProvider extends ChangeNotifier {
       }
     }
   }
+
+
+  Future<void> markAsUnread(String sessionId, String authToken) async {
+    if (_cacheService != null) {
+      await _cacheService!.markSessionAsUnread(authToken, sessionId);
+      final index = _items.indexWhere((item) => item.data.id == sessionId);
+      if (index != -1) {
+        final item = _items[index];
+        _items[index] = CachedItem(
+            item.data,
+            CacheMetadata(
+              firstSeen: item.metadata.firstSeen,
+              lastRetrieved: item.metadata.lastRetrieved,
+              lastOpened: null,
+              lastUpdated: item.metadata.lastUpdated,
+              labels: item.metadata.labels,
+            ));
+        notifyListeners();
+      }
+    }
+  }
 }

@@ -1221,7 +1221,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                             PopupMenuButton<String>(
                                               icon: const Icon(Icons.more_vert),
                                               tooltip: 'Actions',
-                                              onSelected: (value) {
+                                              onSelected: (value) async {
+                                                final auth = Provider.of<AuthProvider>(context, listen: false);
                                                 if (value == 'pr') {
                                                   final pr = session.outputs!
                                                       .firstWhere((o) =>
@@ -1240,6 +1241,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 } else if (value == 'raw') {
                                                   _showContextMenu(context,
                                                       session: session);
+                                                } else if (value ==
+                                                    'mark_read') {
+                                                  await sessionProvider
+                                                      .markAsRead(session.id,
+                                                          auth.token!);
+                                                } else if (value ==
+                                                    'mark_unread') {
+                                                  await sessionProvider
+                                                      .markAsUnread(session.id,
+                                                          auth.token!);
                                                 }
                                               },
                                               itemBuilder: (context) {
@@ -1258,6 +1269,26 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         SizedBox(width: 8),
                                                         Text(
                                                             'View Pull Request')
+                                                      ]),
+                                                    ),
+                                                  if (metadata.isUnread)
+                                                    const PopupMenuItem(
+                                                      value: 'mark_read',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .mark_email_read),
+                                                        SizedBox(width: 8),
+                                                        Text('Mark as Read')
+                                                      ]),
+                                                    )
+                                                  else
+                                                    const PopupMenuItem(
+                                                      value: 'mark_unread',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .mark_email_unread),
+                                                        SizedBox(width: 8),
+                                                        Text('Mark as Unread')
                                                       ]),
                                                     ),
                                                   const PopupMenuItem(

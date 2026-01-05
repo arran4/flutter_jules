@@ -6,6 +6,7 @@ import 'package:url_launcher/url_launcher.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import '../../services/cache_service.dart';
 import '../../services/auth_provider.dart';
+import '../../services/session_provider.dart';
 import '../../utils/time_helper.dart'; // Import time helper
 import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
@@ -212,6 +213,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 3. Save to cache
     if (token != null) {
       await cacheService.saveSessionDetails(token, updatedSession, activities);
+      
+      // 4. Mark as Read
+      if (mounted) {
+        Provider.of<SessionProvider>(context, listen: false)
+            .markAsRead(widget.session.id, token);
+      }
     }
   }
 
@@ -315,9 +322,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             onPressed: () => _fetchActivities(force: true, shallow: true),
             tooltip: 'Refresh',
           ),
-          PopupMenuButton<String>(
+            PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'full_refresh') {
+              if (value == 'mark_read_back') {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                await Provider.of<SessionProvider>(context, listen: false)
+                    .markAsRead(_session.id, auth.token!);
+                if (context.mounted) Navigator.pop(context);
+              } else if (value == 'full_refresh') {
                 _fetchActivities(force: true, shallow: false);
               } else if (value == 'copy_id') {
                 await Clipboard.setData(ClipboardData(text: _session.id));
@@ -334,6 +346,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'mark_read_back',
+                child: Row(
+                  children: [
+                    Icon(Icons.mark_email_read, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Mark as Read and Go Back'),
+                  ],
+                ),
+              ),
+              const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'full_refresh',
                 child: Row(

@@ -15,18 +15,9 @@ class CacheMetadata {
 
   // Convenience Getters
 
-  // "New" (Unread Type A): Never opened, AND discovered recently (within 1 hour of refresh).
-  // Matches "Not opened at all", but expires if data refresh occurs >1h after discovery.
+  // "New" (Unread Type A): Never opened.
   bool get isNew {
-    if (lastOpened != null) return false;
-
-    // If the latest refresh (lastRetrieved) happened more than 1 hour after we first saw this item,
-    // it is no longer considered "New".
-    if (lastRetrieved.difference(firstSeen).inHours >= 1) {
-      return false;
-    }
-
-    return true;
+    return lastOpened == null;
   }
 
   // "Updated" (Unread Type B): Opened before, but content changed since last open.

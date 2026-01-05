@@ -214,6 +214,28 @@ class CacheService {
     }
   }
 
+  Future<void> markSessionAsUnread(String token, String sessionId) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final file = File(path.join(cacheDir.path, 'sessions', fileName));
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+      final metadata = CacheMetadata.fromJson(json['metadata']);
+
+      final newMetadata = CacheMetadata(
+        firstSeen: metadata.firstSeen,
+        lastRetrieved: metadata.lastRetrieved,
+        lastOpened: null, // Explicitly set to null for unread
+        lastUpdated: metadata.lastUpdated,
+        labels: metadata.labels,
+      );
+
+      json['metadata'] = newMetadata.toJson();
+      await file.writeAsString(jsonEncode(json));
+    }
+  }
+
   // New methods for session details (activities) cache
   Future<void> saveSessionDetails(
       String token, Session session, List<Activity> activities) async {
