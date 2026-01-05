@@ -1,25 +1,20 @@
 import 'package:flutter/material.dart';
-import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../utils/search_helper.dart';
-import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
-import '../../services/dev_mode_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
-import '../../services/settings_provider.dart';
 import '../../services/cache_service.dart';
+import '../../utils/time_helper.dart';
+import '../../services/dev_mode_provider.dart';
 import '../../models.dart';
-import '../../models/cache_metadata.dart';
-import '../widgets/api_viewer.dart';
-import '../widgets/model_viewer.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
-import '../widgets/session_preview_modal.dart';
 import '../widgets/advanced_search_bar.dart';
+import '../widgets/api_viewer.dart';
+import '../widgets/model_viewer.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -335,17 +330,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
       if (a.type != b.type) return a.type.index.compareTo(b.type.index);
       return a.label.compareTo(b.label);
     });
-  }
-
-  void _addFilter(FilterType type, String label, dynamic value) {
-    final token = FilterToken(
-        id: '${type.name}:$value', type: type, label: label, value: value);
-    // Avoid duplicates
-    if (!_activeFilters.any((t) => t.id == token.id)) {
-      setState(() {
-        _activeFilters.add(token);
-      });
-    }
   }
 
   void _showFilterMenu() {

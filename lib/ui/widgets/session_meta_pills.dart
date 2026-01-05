@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
-import '../../models/search_filter.dart';
 
 class SessionMetaPills extends StatelessWidget {
   final Session session;

@@ -96,7 +96,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
     final token = auth.token;
-    final devMode = Provider.of<DevModeProvider>(context, listen: false);
     final cacheService = Provider.of<CacheService>(context, listen: false);
 
     // 1. Check cache first
@@ -211,7 +210,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
 
     // 3. Save to cache
-    if (token != null && updatedSession != null) {
+    if (token != null) {
       await cacheService.saveSessionDetails(token, updatedSession, activities);
     }
   }

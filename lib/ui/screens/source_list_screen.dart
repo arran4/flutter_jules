@@ -5,11 +5,9 @@ import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
-import '../../services/dev_mode_provider.dart';
 import '../../services/source_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
-import '../../models/cache_metadata.dart';
 import '../../services/cache_service.dart';
 import '../widgets/model_viewer.dart';
 
@@ -24,7 +22,6 @@ class SourceListScreen extends StatefulWidget {
 
 class _SourceListScreenState extends State<SourceListScreen> {
   List<CachedItem<Source>> _filteredSources = [];
-  String? _error;
   final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
@@ -231,7 +228,6 @@ class _SourceListScreenState extends State<SourceListScreen> {
         final isLoading = sourceProvider.isLoading;
         final error = sourceProvider.error;
         final lastFetchTime = sourceProvider.lastFetchTime;
-        final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
         // If sources updated (e.g. background fetch finished), update our filtered list
         WidgetsBinding.instance.addPostFrameCallback((_) {

@@ -29,80 +29,69 @@ void main() {
       mockClient = MockJulesClient();
     });
 
-    test('loadInitialPage loads data successfully', () async {
+    test('fetchSources loads data successfully (single page)', () async {
       final sources = <Source>[
         Source(name: 'source1', id: 'id1'),
         Source(name: 'source2', id: 'id2'),
       ];
       final response =
-          ListSourcesResponse(sources: sources, nextPageToken: 'next_page');
+          ListSourcesResponse(sources: sources, nextPageToken: null);
 
-      when(mockClient.listSources()).thenAnswer((_) async => response);
+      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
+          .thenAnswer((_) async => response);
 
-      await provider.loadInitialPage(mockClient);
+      await provider.fetchSources(mockClient);
 
-      expect(provider.sources, equals(sources));
-      expect(provider.currentPage, 1);
-      expect(provider.hasMorePages, true);
-      expect(provider.initialLoadComplete, true);
+      expect(provider.items.length, 2);
+      expect(provider.items[0].data.name, 'source1');
+      expect(provider.items[1].data.name, 'source2');
       expect(provider.error, isNull);
     });
 
-    test('loadInitialPage handles errors', () async {
-      when(mockClient.listSources()).thenThrow(Exception('Network error'));
+    test('fetchSources handles errors', () async {
+      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
+          .thenThrow(Exception('Network error'));
 
-      await provider.loadInitialPage(mockClient);
+      await provider.fetchSources(mockClient);
 
-      expect(provider.sources, isEmpty);
-      expect(provider.initialLoadComplete, false);
+      expect(provider.items, isEmpty);
       expect(provider.error, contains('Network error'));
     });
 
-    test('loadNextPage appends data', () async {
-      // Setup initial state
-      final initialSources = <Source>[Source(name: 'source1', id: 'id1')];
-      final initialResponse =
-          ListSourcesResponse(sources: initialSources, nextPageToken: 'token1');
-      when(mockClient.listSources()).thenAnswer((_) async => initialResponse);
-      await provider.loadInitialPage(mockClient);
+    test('fetchSources handles pagination', () async {
+      // Setup page 1
+      final page1Sources = <Source>[Source(name: 'source1', id: 'id1')];
+      final page1Response =
+          ListSourcesResponse(sources: page1Sources, nextPageToken: 'token1');
+      
+      // Setup page 2
+      final page2Sources = <Source>[Source(name: 'source2', id: 'id2')];
+      final page2Response =
+          ListSourcesResponse(sources: page2Sources, nextPageToken: null);
 
-      // Setup next page
-      final nextSources = <Source>[Source(name: 'source2', id: 'id2')];
-      final nextResponse =
-          ListSourcesResponse(sources: nextSources, nextPageToken: null);
-      when(mockClient.listSources(pageToken: 'token1'))
-          .thenAnswer((_) async => nextResponse);
+      // Mock sequence
+      when(mockClient.listSources(pageToken: argThat(isNull, named: 'pageToken')))
+          .thenAnswer((_) async => page1Response);
+      when(mockClient.listSources(pageToken: argThat(equals('token1'), named: 'pageToken')))
+          .thenAnswer((_) async => page2Response);
 
-      await provider.loadNextPage(mockClient);
+      await provider.fetchSources(mockClient);
 
-      expect(provider.sources.length, 2);
-      expect(provider.sources[1].name, 'source2');
-      expect(provider.currentPage, 2);
-      expect(provider.hasMorePages, false);
+      expect(provider.items.length, 2);
+      expect(provider.items[0].data.name, 'source1');
+      expect(provider.items[1].data.name, 'source2');
     });
 
-    test('refresh replaces data', () async {
-      // Setup initial state
-      final initialSources = <Source>[Source(name: 'old_source', id: 'id1')];
-      final initialResponse =
-          ListSourcesResponse(sources: initialSources, nextPageToken: null);
-      when(mockClient.listSources()).thenAnswer((_) async => initialResponse);
-      await provider.loadInitialPage(mockClient);
-
-      // Setup refresh data
-      final newSources = <Source>[Source(name: 'new_source', id: 'id2')];
-      final newResponse =
-          ListSourcesResponse(sources: newSources, nextPageToken: null);
-      // Reset mock to return new data on next call (which refresh will do)
-      // Note: refresh loops through pages. Here we just return one page.
-      when(mockClient.listSources(pageToken: null))
-          .thenAnswer((_) async => newResponse);
-
-      await provider.refresh(mockClient);
-
-      expect(provider.sources.length, 1);
-      expect(provider.sources.first.name, 'new_source');
-      expect(provider.initialLoadComplete, true);
+    test('ensureSourceAvailable triggers fetch if source missing', () async {
+        // Initial state empty
+        final initialResponse = ListSourcesResponse(sources: [], nextPageToken: null);
+        when(mockClient.listSources(pageToken: anyNamed('pageToken')))
+            .thenAnswer((_) async => initialResponse);
+        
+        await provider.ensureSourceAvailable(mockClient, 'missing_source');
+        
+        // Should have called listSources (via fetchSources)
+        verify(mockClient.listSources(pageToken: anyNamed('pageToken'))).called(1);
     });
   });
 }
