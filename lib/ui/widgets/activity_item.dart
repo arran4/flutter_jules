@@ -354,7 +354,6 @@ class _ActivityItemState extends State<ActivityItem> {
               MarkdownBody(data: activity.agentMessaged!.agentMessage),
             if (activity.userMessaged != null)
               MarkdownBody(data: activity.userMessaged!.userMessage),
-
             if (activity.artifacts != null)
               for (var artifact in activity.artifacts!) ...[
                 if (artifact.bashOutput != null) ...[

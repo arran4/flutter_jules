@@ -93,7 +93,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-              _filteredSources.length;
+                  _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -283,9 +283,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading: isPrivate
-                            ? const Icon(Icons.lock, size: 16)
-                            : null,
+                        leading:
+                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -640,10 +639,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   decoration: InputDecoration(
                                     labelText: 'Repository',
                                     border: const OutlineInputBorder(),
-                                    prefixIcon:
-                                        (_selectedSource
-                                                ?.githubRepo
-                                                ?.isPrivate ==
+                                    prefixIcon: (_selectedSource
+                                                ?.githubRepo?.isPrivate ==
                                             true)
                                         ? const Icon(Icons.lock, size: 16)
                                         : const Icon(Icons.source, size: 16),
@@ -708,8 +705,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         FilledButton(
                           onPressed:
                               (_prompt.isNotEmpty && _selectedSource != null)
-                              ? _create
-                              : null,
+                                  ? _create
+                                  : null,
                           child: const Text('Create Session'),
                         ),
                       ],

@@ -7,7 +7,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<List<FilterToken>> onFiltersChanged;
   final ValueChanged<String> onSearchChanged;
   final List<FilterToken>
-  availableSuggestions; // All possible filters for autocomplete
+      availableSuggestions; // All possible filters for autocomplete
   final VoidCallback onOpenFilterMenu;
 
   final List<SortOption> activeSorts;
@@ -91,8 +91,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         _filteredSuggestions = widget.availableSuggestions.where((s) {
           if (widget.activeFilters.any(
             (af) => af.id == s.id && af.type == s.type,
-          ))
-            return false;
+          )) return false;
           return s.label.toLowerCase().contains(query);
         }).toList();
 
@@ -160,7 +159,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         setState(() {
           _highlightedIndex =
               (_highlightedIndex - 1 + _filteredSuggestions.length) %
-              _filteredSuggestions.length;
+                  _filteredSuggestions.length;
           _showOverlay();
         });
         return KeyEventResult.handled;
@@ -221,9 +220,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   final isHighlighted = index == _highlightedIndex;
 
                   return Container(
-                    color: isHighlighted
-                        ? Theme.of(context).highlightColor
-                        : null,
+                    color:
+                        isHighlighted ? Theme.of(context).highlightColor : null,
                     child: ListTile(
                       dense: true,
                       leading: _getIconForType(suggestion.type),
@@ -390,9 +388,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   void _addSort() {
     // Show menu to pick a field not in list
     final existingFields = widget.activeSorts.map((s) => s.field).toSet();
-    final availableFields = SortField.values
-        .where((f) => !existingFields.contains(f))
-        .toList();
+    final availableFields =
+        SortField.values.where((f) => !existingFields.contains(f)).toList();
 
     if (availableFields.isEmpty) return; // All fields added
 

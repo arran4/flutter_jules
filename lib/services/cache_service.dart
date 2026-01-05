@@ -90,8 +90,7 @@ class CacheService {
           final oldMetadata = CacheMetadata.fromJson(json['metadata']);
 
           DateTime? lastUpdated = oldMetadata.lastUpdated;
-          bool hasChanged =
-              session.updateTime != oldSession.updateTime ||
+          bool hasChanged = session.updateTime != oldSession.updateTime ||
               session.state != oldSession.state;
 
           if (hasChanged) {
@@ -272,8 +271,7 @@ class CacheService {
       final json = jsonDecode(content);
 
       final session = Session.fromJson(json['session']);
-      final activities =
-          (json['activities'] as List<dynamic>?)
+      final activities = (json['activities'] as List<dynamic>?)
               ?.map((e) => Activity.fromJson(e))
               .toList() ??
           [];

@@ -48,8 +48,8 @@ class SessionMetaPills extends StatelessWidget {
             context,
             avatar: const Icon(Icons.calendar_today, size: 16),
             label: DateFormat.yMMMd().add_jm().format(
-              DateTime.parse(session.createTime!).toLocal(),
-            ),
+                  DateTime.parse(session.createTime!).toLocal(),
+                ),
             sortField: SortField.created,
           ),
 

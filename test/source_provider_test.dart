@@ -96,8 +96,8 @@ void main() {
         }
         return newCachedItems; // Load after save
       });
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async =>
+      when(mockClient.listSources(pageToken: anyNamed('pageToken'))).thenAnswer(
+          (_) async =>
               ListSourcesResponse(sources: [newSource], nextPageToken: null));
       when(mockCacheService.saveSources(authToken, [newSource]))
           .thenAnswer((_) async {});
@@ -141,8 +141,8 @@ void main() {
         }
         return newCachedItems; // loaded after save
       });
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async =>
+      when(mockClient.listSources(pageToken: anyNamed('pageToken'))).thenAnswer(
+          (_) async =>
               ListSourcesResponse(sources: [source1], nextPageToken: null));
       when(mockCacheService.saveSources(authToken, [source1]))
           .thenAnswer((_) async {});
@@ -156,8 +156,7 @@ void main() {
       verify(mockClient.listSources(pageToken: null)).called(1);
     });
 
-    test('ensureSourceAvailable does not fetch if source is present',
-        () async {
+    test('ensureSourceAvailable does not fetch if source is present', () async {
       // Arrange
       final cachedItems = [CachedItem(source1, metadata)];
       when(mockCacheService.loadSources(authToken))

@@ -51,8 +51,7 @@ class CacheMetadata {
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.parse(json['lastUpdated'])
           : null,
-      labels:
-          (json['labels'] as List<dynamic>?)
+      labels: (json['labels'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

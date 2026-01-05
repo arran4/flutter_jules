@@ -363,8 +363,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr =
-        _session.outputs != null &&
+    bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -419,10 +418,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 child: Text(
                   "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DateTime.now().difference(updateTime).inMinutes > 15
-                        ? Colors.orange
-                        : Colors.grey,
-                  ),
+                        color:
+                            DateTime.now().difference(updateTime).inMinutes > 15
+                                ? Colors.orange
+                                : Colors.grey,
+                      ),
                 ),
               ),
             );
@@ -624,10 +624,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             ),
                             backgroundColor:
                                 _session.state == SessionState.COMPLETED
-                                ? Colors.green.shade50
-                                : (_session.state == SessionState.FAILED
-                                      ? Colors.red.shade50
-                                      : Colors.grey.shade50),
+                                    ? Colors.green.shade50
+                                    : (_session.state == SessionState.FAILED
+                                        ? Colors.red.shade50
+                                        : Colors.grey.shade50),
                             avatar: _session.state == SessionState.COMPLETED
                                 ? const Icon(
                                     Icons.check,
@@ -642,8 +642,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             avatar: const Icon(Icons.calendar_today, size: 16),
                             label: Text(
                               DateFormat.yMMMd().add_jm().format(
-                                DateTime.parse(_session.createTime!).toLocal(),
-                              ),
+                                    DateTime.parse(_session.createTime!)
+                                        .toLocal(),
+                                  ),
                             ),
                             side: BorderSide.none,
                           ),
@@ -679,16 +680,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           avatar: const Icon(Icons.source, size: 16),
                           side: BorderSide.none,
                         ),
-                        if (_session
-                                .sourceContext
-                                .githubRepoContext
+                        if (_session.sourceContext.githubRepoContext
                                 ?.startingBranch !=
                             null)
                           Chip(
                             label: Text(
-                              _session
-                                  .sourceContext
-                                  .githubRepoContext!
+                              _session.sourceContext.githubRepoContext!
                                   .startingBranch,
                             ),
                             avatar: const Icon(Icons.call_split, size: 16),
