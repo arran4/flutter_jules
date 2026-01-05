@@ -1,4 +1,3 @@
-
 class CacheMetadata {
   final DateTime firstSeen;
   final DateTime lastRetrieved;
@@ -13,29 +12,31 @@ class CacheMetadata {
     this.lastUpdated,
     this.labels = const [],
   });
-  
+
   // Convenience Getters
-  
+
   // "New" (Unread Type A): Never opened, AND discovered recently (within 1 hour of refresh).
   // Matches "Not opened at all", but expires if data refresh occurs >1h after discovery.
   bool get isNew {
     if (lastOpened != null) return false;
-    
+
     // If the latest refresh (lastRetrieved) happened more than 1 hour after we first saw this item,
     // it is no longer considered "New".
     if (lastRetrieved.difference(firstSeen).inHours >= 1) {
       return false;
     }
-    
-    return true; 
+
+    return true;
   }
-  
+
   // "Updated" (Unread Type B): Opened before, but content changed since last open.
   // Matches "Changed since the previous data reset" (assuming reset = open).
   // AND logic ensures we don't mark read items as updated, nor new items as updated (UI separates them).
-  bool get isUpdated => 
-      lastOpened != null && lastUpdated != null && lastUpdated!.isAfter(lastOpened!);
-  
+  bool get isUpdated =>
+      lastOpened != null &&
+      lastUpdated != null &&
+      lastUpdated!.isAfter(lastOpened!);
+
   // "Unread": Either never opened (New) OR opened but changed (Updated).
   // Matches "Changed ... OR not opened at all".
   bool get isUnread => isNew || isUpdated;
@@ -50,7 +51,10 @@ class CacheMetadata {
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.parse(json['lastUpdated'])
           : null,
-      labels: (json['labels'] as List<dynamic>?)?.map((e) => e.toString()).toList() ?? [],
+      labels: (json['labels'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 

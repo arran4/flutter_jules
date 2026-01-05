@@ -29,7 +29,7 @@ class CachedSessionDetails {
 
 class CacheService {
   final bool isDevMode;
-  
+
   CacheService({this.isDevMode = false});
 
   Future<Directory> _getCacheDirectory(String token) async {
@@ -48,9 +48,10 @@ class CacheService {
         } else {
           final home = Platform.environment['HOME'];
           if (home != null) {
-            baseDir = Directory(path.join(home, '.cache', 'flutter_jules_agent'));
+            baseDir =
+                Directory(path.join(home, '.cache', 'flutter_jules_agent'));
           } else {
-             baseDir = await getApplicationCacheDirectory();
+            baseDir = await getApplicationCacheDirectory();
           }
         }
       } else {
@@ -66,7 +67,8 @@ class CacheService {
     return directory;
   }
 
-  Future<void> saveSessions(String token, List<CachedItem<Session>> items) async {
+  Future<void> saveSessions(
+      String token, List<CachedItem<Session>> items) async {
     final cacheDir = await _getCacheDirectory(token);
     final sessionsDir = Directory(path.join(cacheDir.path, 'sessions'));
     if (!await sessionsDir.exists()) {
@@ -76,10 +78,10 @@ class CacheService {
     for (final item in items) {
       final session = item.data;
       final metadata = item.metadata;
-      
+
       final fileName = Uri.encodeComponent(session.id) + '.json';
       final file = File(path.join(sessionsDir.path, fileName));
-      
+
       final dataToSave = {
         'data': session.toJson(),
         'metadata': metadata.toJson(),
@@ -90,7 +92,7 @@ class CacheService {
   }
 
   Future<List<CachedItem<Session>>> loadSessions(String token) async {
-     final cacheDir = await _getCacheDirectory(token);
+    final cacheDir = await _getCacheDirectory(token);
     final sessionsDir = Directory(path.join(cacheDir.path, 'sessions'));
     if (!await sessionsDir.exists()) {
       return [];
@@ -112,7 +114,7 @@ class CacheService {
     }
     return results;
   }
-  
+
   Future<void> saveSources(String token, List<Source> newSources) async {
     final cacheDir = await _getCacheDirectory(token);
     final sourcesDir = Directory(path.join(cacheDir.path, 'sources'));
@@ -138,17 +140,17 @@ class CacheService {
 
           bool changed = jsonEncode(newJson) != jsonEncode(oldSourceData);
           DateTime? lastUpdated = oldMetadata.lastUpdated;
-          
+
           if (changed) {
             lastUpdated = now;
           }
-          
+
           metadata = oldMetadata.copyWith(
-             lastRetrieved: now,
-             lastUpdated: lastUpdated,
-           );
+            lastRetrieved: now,
+            lastUpdated: lastUpdated,
+          );
         } catch (e) {
-           metadata = CacheMetadata(
+          metadata = CacheMetadata(
             firstSeen: now,
             lastRetrieved: now,
           );
@@ -178,7 +180,7 @@ class CacheService {
 
     final List<CachedItem<Source>> results = [];
     await for (final entity in sourcesDir.list()) {
-       if (entity is File && entity.path.endsWith('.json')) {
+      if (entity is File && entity.path.endsWith('.json')) {
         try {
           final content = await entity.readAsString();
           final json = jsonDecode(content);
@@ -192,7 +194,7 @@ class CacheService {
     }
     return results;
   }
-  
+
   Future<void> markSessionAsRead(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
     // Might be in sessions or cached_details, but we track metadata in sessions list usually
@@ -202,55 +204,58 @@ class CacheService {
       final content = await file.readAsString();
       final json = jsonDecode(content);
       final metadata = CacheMetadata.fromJson(json['metadata']);
-      
+
       final newMetadata = metadata.copyWith(
         lastOpened: DateTime.now(),
       );
-      
+
       json['metadata'] = newMetadata.toJson();
       await file.writeAsString(jsonEncode(json));
     }
   }
-  
+
   // New methods for session details (activities) cache
-  Future<void> saveSessionDetails(String token, Session session, List<Activity> activities) async {
+  Future<void> saveSessionDetails(
+      String token, Session session, List<Activity> activities) async {
     final cacheDir = await _getCacheDirectory(token);
     final detailsDir = Directory(path.join(cacheDir.path, 'session_details'));
     if (!await detailsDir.exists()) {
       await detailsDir.create(recursive: true);
     }
-    
+
     final fileName = Uri.encodeComponent(session.id) + '.json';
     final file = File(path.join(detailsDir.path, fileName));
-    
+
     final dataToSave = {
       'session': session.toJson(), // Store full session as well
       'activities': activities.map((a) => a.toJson()).toList(),
       'sessionUpdateTimeSnapshot': session.updateTime, // The key linkage
       'savedAt': DateTime.now().toIso8601String(),
     };
-    
+
     await file.writeAsString(jsonEncode(dataToSave));
   }
-   
-  Future<CachedSessionDetails?> loadSessionDetails(String token, String sessionId) async {
+
+  Future<CachedSessionDetails?> loadSessionDetails(
+      String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
     final fileName = Uri.encodeComponent(sessionId) + '.json';
     final file = File(path.join(cacheDir.path, 'session_details', fileName));
-    
+
     if (!await file.exists()) {
       return null;
     }
-    
+
     try {
       final content = await file.readAsString();
       final json = jsonDecode(content);
-      
+
       final session = Session.fromJson(json['session']);
       final activities = (json['activities'] as List<dynamic>?)
-          ?.map((e) => Activity.fromJson(e))
-          .toList() ?? [];
-      
+              ?.map((e) => Activity.fromJson(e))
+              .toList() ??
+          [];
+
       return CachedSessionDetails(
         session: session,
         activities: activities,

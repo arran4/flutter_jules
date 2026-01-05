@@ -77,8 +77,8 @@ class SessionPreviewModal extends StatelessWidget {
                                               fontWeight: FontWeight.bold)),
                                       const SizedBox(height: 4),
                                       MarkdownBody(
-                                          data:
-                                              prOutput.pullRequest!.description),
+                                          data: prOutput
+                                              .pullRequest!.description),
                                       const SizedBox(height: 8),
                                       ElevatedButton.icon(
                                         icon: const Icon(Icons.open_in_new,

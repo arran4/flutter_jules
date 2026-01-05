@@ -49,7 +49,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchActivities({bool force = false, bool shallow = true}) async {
+  Future<void> _fetchActivities(
+      {bool force = false, bool shallow = true}) async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -67,14 +68,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       ]);
     } catch (e) {
       if (shallow && _activities.isNotEmpty) {
-         if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-               SnackBar(content: Text("Partial refresh failed ($e), retrying full refresh..."))
-            );
-         }
-         // Recurse with force=true (full)
-         _fetchActivities(force: true, shallow: false);
-         return;
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+              content: Text(
+                  "Partial refresh failed ($e), retrying full refresh...")));
+        }
+        // Recurse with force=true (full)
+        _fetchActivities(force: true, shallow: false);
+        return;
       }
       if (mounted) {
         setState(() {
@@ -90,8 +91,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-
-  Future<void> _performFetchActivities({bool force = false, bool shallow = true}) async {
+  Future<void> _performFetchActivities(
+      {bool force = false, bool shallow = true}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
     final token = auth.token;
@@ -101,43 +102,44 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 1. Check cache first
     // Only use cache if not forced. Also if shallow is requested but we have no activities yet, we treat it as init load (use cache).
     if (!force && token != null) {
-      final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
+      final cachedDetails =
+          await cacheService.loadSessionDetails(token, widget.session.id);
       if (cachedDetails != null) {
         final listUpdateTimeStr = widget.session.updateTime;
         final cachedSnapshotStr = cachedDetails.sessionUpdateTimeSnapshot;
-        
+
         bool useCache = false;
 
         if (cachedSnapshotStr != null) {
-           if (listUpdateTimeStr == null) {
-             // List has no info, but cache exists. Use cache.
-             useCache = true;
-           } else {
-             try {
-               final listDate = DateTime.parse(listUpdateTimeStr);
-               final cachedDate = DateTime.parse(cachedSnapshotStr);
-               
-               // If local cache is equal to or newer than the list's info, use cache.
-               // We only fetch if list says there's a newer update than what we have.
-               if (!listDate.isAfter(cachedDate)) {
-                 useCache = true;
-               }
-             } catch (e) {
-               // If parsing fails, default to fetch
-               useCache = false;
-             }
-           }
+          if (listUpdateTimeStr == null) {
+            // List has no info, but cache exists. Use cache.
+            useCache = true;
+          } else {
+            try {
+              final listDate = DateTime.parse(listUpdateTimeStr);
+              final cachedDate = DateTime.parse(cachedSnapshotStr);
+
+              // If local cache is equal to or newer than the list's info, use cache.
+              // We only fetch if list says there's a newer update than what we have.
+              if (!listDate.isAfter(cachedDate)) {
+                useCache = true;
+              }
+            } catch (e) {
+              // If parsing fails, default to fetch
+              useCache = false;
+            }
+          }
         }
 
         if (useCache) {
-           if (mounted) {
-             setState(() {
-               _activities = cachedDetails.activities;
-               // Use the cached session as it might be newer than the one passed from the stale list
-               _session = cachedDetails.session; 
-             });
-           }
-           return; 
+          if (mounted) {
+            setState(() {
+              _activities = cachedDetails.activities;
+              // Use the cached session as it might be newer than the one passed from the stale list
+              _session = cachedDetails.session;
+            });
+          }
+          return;
         }
       }
     }
@@ -153,9 +155,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     List<Activity> activities;
     try {
       if (mounted) {
-         setState(() {
-           _loadingStatus = shallow ? 'Fetching latest activities...' : 'Fetching conversation history...';
-         });
+        setState(() {
+          _loadingStatus = shallow
+              ? 'Fetching latest activities...'
+              : 'Fetching conversation history...';
+        });
       }
       activities = await client.listActivities(
         widget.session.name,
@@ -163,15 +167,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _lastExchange = exchange;
         },
         onProgress: (count) {
-           if (mounted) {
-             setState(() {
-               _loadingStatus = 'Loaded $count new activities...'; // "new" if shallow
-             });
-           }
+          if (mounted) {
+            setState(() {
+              _loadingStatus =
+                  'Loaded $count new activities...'; // "new" if shallow
+            });
+          }
         },
-        shouldStop: (shallow && _activities.isNotEmpty) 
-          ? (act) => _activities.any((existing) => existing.id == act.id) 
-          : null,
+        shouldStop: (shallow && _activities.isNotEmpty)
+            ? (act) => _activities.any((existing) => existing.id == act.id)
+            : null,
       );
     } catch (e) {
       throw Exception('Failed to load conversation history: $e');
@@ -180,31 +185,34 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (mounted) {
       setState(() {
         if (activities.isNotEmpty) {
-           // If we fetched new ones, merge.
-           if (shallow && _activities.isNotEmpty) {
-              final newIds = activities.map((a) => a.id).toSet();
-              final oldUnique = _activities.where((a) => !newIds.contains(a.id)).toList();
-              
-              // Combine and Sort
-              _activities = [...activities, ...oldUnique];
-              // Sort by CreateTime Ascending (Oldest First) which is standard for Chat
-              try {
-                  _activities.sort((a,b) => DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
-              } catch (_) {}
-           } else {
-              _activities = activities;
-              try {
-                  _activities.sort((a,b) => DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
-              } catch (_) {}
-           }
+          // If we fetched new ones, merge.
+          if (shallow && _activities.isNotEmpty) {
+            final newIds = activities.map((a) => a.id).toSet();
+            final oldUnique =
+                _activities.where((a) => !newIds.contains(a.id)).toList();
+
+            // Combine and Sort
+            _activities = [...activities, ...oldUnique];
+            // Sort by CreateTime Ascending (Oldest First) which is standard for Chat
+            try {
+              _activities.sort((a, b) => DateTime.parse(a.createTime)
+                  .compareTo(DateTime.parse(b.createTime)));
+            } catch (_) {}
+          } else {
+            _activities = activities;
+            try {
+              _activities.sort((a, b) => DateTime.parse(a.createTime)
+                  .compareTo(DateTime.parse(b.createTime)));
+            } catch (_) {}
+          }
         }
         _session = updatedSession!;
       });
     }
-    
+
     // 3. Save to cache
     if (token != null && updatedSession != null) {
-       await cacheService.saveSessionDetails(token, updatedSession, activities);
+      await cacheService.saveSessionDetails(token, updatedSession, activities);
     }
   }
 
@@ -243,7 +251,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       final updatedActivity = await client.getActivity(activity.name);
-      
+
       if (!mounted) return;
 
       setState(() {
@@ -252,7 +260,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _activities[index] = updatedActivity;
         }
       });
-      
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text("Activity refreshed")),
       );
@@ -304,14 +312,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.refresh), 
-            onPressed: () => _fetchActivities(force: true, shallow: true), 
+            icon: const Icon(Icons.refresh),
+            onPressed: () => _fetchActivities(force: true, shallow: true),
             tooltip: 'Refresh',
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
               if (value == 'full_refresh') {
-                 _fetchActivities(force: true, shallow: false);
+                _fetchActivities(force: true, shallow: false);
               } else if (value == 'copy_id') {
                 await Clipboard.setData(ClipboardData(text: _session.id));
                 if (context.mounted) {
@@ -375,7 +383,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         children: [
           // Permanent Header
           _buildHeader(context),
-          
+
           // Scrollable Activity List
           if (_isLoading)
             Expanded(
@@ -385,16 +393,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   children: [
                     const CircularProgressIndicator(),
                     const SizedBox(height: 16),
-                    Text(_loadingStatus, style: const TextStyle(color: Colors.grey)),
+                    Text(_loadingStatus,
+                        style: const TextStyle(color: Colors.grey)),
                   ],
                 ),
               ),
             )
-          else 
+          else
             Expanded(
-            child: _buildActivityList(isDevMode),
-          ),
-          
+              child: _buildActivityList(isDevMode),
+            ),
+
           // Permanent Input Footer
           _buildInput(context),
         ],
@@ -467,27 +476,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
+      itemCount:
+          finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
       itemBuilder: (context, index) {
         if (index == 0) {
-           // Visual Bottom: Last Updated Status
-           if (_session.updateTime != null) {
-              final updateTime = DateTime.parse(_session.updateTime!).toLocal();
-              return Center(
-                child: Padding(
-                  padding: const EdgeInsets.symmetric(vertical: 8.0),
-                  child: Text(
-                    "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
-                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                          color: DateTime.now().difference(updateTime).inMinutes > 15
-                              ? Colors.orange
-                              : Colors.grey,
-                        ),
-                  ),
+          // Visual Bottom: Last Updated Status
+          if (_session.updateTime != null) {
+            final updateTime = DateTime.parse(_session.updateTime!).toLocal();
+            return Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 8.0),
+                child: Text(
+                  "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                        color:
+                            DateTime.now().difference(updateTime).inMinutes > 15
+                                ? Colors.orange
+                                : Colors.grey,
+                      ),
                 ),
-              );
-           }
-           return const SizedBox.shrink();
+              ),
+            );
+          }
+          return const SizedBox.shrink();
         }
 
         // Adjust index for status item
@@ -500,9 +511,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
 
         final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
-        
+
         // Safety check
-        if (listIndex < 0 || listIndex >= finalItems.length) return const SizedBox.shrink();
+        if (listIndex < 0 || listIndex >= finalItems.length)
+          return const SizedBox.shrink();
 
         final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 
@@ -569,13 +581,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   style: const TextStyle(fontSize: 12, color: Colors.grey)),
           ]),
           children: group.activities.map((a) {
-            final item = ActivityItem(
-                activity: a, onRefresh: () => _refreshActivity(a));
+            final item =
+                ActivityItem(activity: a, onRefresh: () => _refreshActivity(a));
             if (isDevMode) {
               return GestureDetector(
                 onLongPress: () => _showContextMenu(context, activity: a),
-                onSecondaryTap: () =>
-                    _showContextMenu(context, activity: a),
+                onSecondaryTap: () => _showContextMenu(context, activity: a),
                 child: item,
               );
             }
@@ -603,8 +614,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       fontWeight: FontWeight.bold, color: Colors.purple)),
               leading: const Icon(Icons.merge_type, color: Colors.purple),
               children: [
-                for (final output in _session.outputs!
-                    .where((o) => o.pullRequest != null))
+                for (final output
+                    in _session.outputs!.where((o) => o.pullRequest != null))
                   Padding(
                       padding: const EdgeInsets.only(
                           left: 16.0, right: 16.0, bottom: 16.0),
@@ -616,8 +627,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                     fontWeight: FontWeight.bold)),
                             const SizedBox(height: 4),
                             Text(output.pullRequest!.description,
-                                maxLines: 5,
-                                overflow: TextOverflow.ellipsis),
+                                maxLines: 5, overflow: TextOverflow.ellipsis),
                             const SizedBox(height: 8),
                             SizedBox(
                               width: double.infinity,
@@ -682,11 +692,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
-                            label: Text("Automation: ${_session.automationMode
-                                .toString()
-                                .split('.')
-                                .last
-                                .replaceAll('AUTOMATION_MODE_', '')}"),
+                            label: Text(
+                                "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}"),
                             backgroundColor: Colors.blue.shade50,
                             side: BorderSide.none,
                           ),
@@ -791,8 +798,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove =
-        _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL;
 
     return SafeArea(
       top: false,
@@ -803,8 +809,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             Expanded(
               child: TextField(
                 controller: _messageController,
-                decoration:
-                    const InputDecoration(hintText: "Send message..."),
+                decoration: const InputDecoration(hintText: "Send message..."),
                 onChanged: (text) => setState(() {}),
                 onSubmitted: (value) {
                   if (value.isNotEmpty) {
@@ -822,8 +827,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               )
             else if (canApprove)
               ElevatedButton(
-                  onPressed: _approvePlan,
-                  child: const Text("Approve Plan"))
+                  onPressed: _approvePlan, child: const Text("Approve Plan"))
             else
               const IconButton(
                 icon: Icon(Icons.send),

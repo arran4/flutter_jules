@@ -250,11 +250,21 @@ class Activity {
 
   factory Activity.fromJson(Map<String, dynamic> json) {
     final knownKeys = {
-      'name', 'id', 'description', 'createTime', 'originator', 'artifacts',
-      'agentMessaged', 'userMessaged', 'planGenerated', 'planApproved',
-      'progressUpdated', 'sessionCompleted', 'sessionFailed'
+      'name',
+      'id',
+      'description',
+      'createTime',
+      'originator',
+      'artifacts',
+      'agentMessaged',
+      'userMessaged',
+      'planGenerated',
+      'planApproved',
+      'progressUpdated',
+      'sessionCompleted',
+      'sessionFailed'
     };
-    
+
     final unmapped = <String, dynamic>{};
     for (final key in json.keys) {
       if (!knownKeys.contains(key)) {

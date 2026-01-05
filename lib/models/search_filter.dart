@@ -1,4 +1,3 @@
-
 enum FilterType {
   status,
   source,
@@ -28,12 +27,13 @@ class FilterToken {
 
   FilterToken toggleMode() {
     return FilterToken(
-      id: id,
-      type: type, 
-      label: label, 
-      value: value,
-      mode: mode == FilterMode.include ? FilterMode.exclude : FilterMode.include
-    );
+        id: id,
+        type: type,
+        label: label,
+        value: value,
+        mode: mode == FilterMode.include
+            ? FilterMode.exclude
+            : FilterMode.include);
   }
 
   @override
@@ -43,11 +43,12 @@ class FilterToken {
           runtimeType == other.runtimeType &&
           id == other.id &&
           type == other.type &&
-          value == other.value && 
+          value == other.value &&
           mode == other.mode;
 
   @override
-  int get hashCode => id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
+  int get hashCode =>
+      id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
 }
 
 enum SortField {
@@ -70,12 +71,17 @@ class SortOption {
   const SortOption(this.field, this.direction);
 
   String get label {
-    switch(field) {
-      case SortField.updated: return "Updated";
-      case SortField.created: return "Created";
-      case SortField.name: return "Name";
-      case SortField.source: return "Source";
-      case SortField.status: return "Status";
+    switch (field) {
+      case SortField.updated:
+        return "Updated";
+      case SortField.created:
+        return "Created";
+      case SortField.name:
+        return "Name";
+      case SortField.source:
+        return "Source";
+      case SortField.status:
+        return "Status";
     }
   }
 }

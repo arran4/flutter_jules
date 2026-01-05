@@ -122,27 +122,27 @@ class JulesClient {
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
       final listResponse = ListSessionsResponse.fromJson(json);
-      
+
       if (shouldStop != null) {
-          final filteredSessions = <Session>[];
-          for (final session in listResponse.sessions) {
-              if (shouldStop(session)) {
-                  return ListSessionsResponse(
-                      sessions: filteredSessions,
-                      nextPageToken: null, 
-                  );
-              }
-              filteredSessions.add(session);
-          }
-          // If we filtered nothing (didn't stop), we must ensure we return the items.
-          // Since we iterated and added to filteredSessions, we should return that new list
-          // attached to the original nextPageToken.
-          return ListSessionsResponse(
+        final filteredSessions = <Session>[];
+        for (final session in listResponse.sessions) {
+          if (shouldStop(session)) {
+            return ListSessionsResponse(
               sessions: filteredSessions,
-              nextPageToken: listResponse.nextPageToken,
-          );
+              nextPageToken: null,
+            );
+          }
+          filteredSessions.add(session);
+        }
+        // If we filtered nothing (didn't stop), we must ensure we return the items.
+        // Since we iterated and added to filteredSessions, we should return that new list
+        // attached to the original nextPageToken.
+        return ListSessionsResponse(
+          sessions: filteredSessions,
+          nextPageToken: listResponse.nextPageToken,
+        );
       }
-      
+
       return listResponse;
     } else {
       _handleError(response);
@@ -188,19 +188,21 @@ class JulesClient {
   }
 
   Future<List<Activity>> listActivities(String sessionName,
-      {void Function(ApiExchange)? onDebug, void Function(int loadedCount)? onProgress, bool Function(Activity)? shouldStop}) async {
+      {void Function(ApiExchange)? onDebug,
+      void Function(int loadedCount)? onProgress,
+      bool Function(Activity)? shouldStop}) async {
     List<Activity> allActivities = [];
     String? nextPageToken;
-    
+
     do {
       final queryParams = <String, String>{};
       if (nextPageToken != null) {
         queryParams['pageToken'] = nextPageToken;
       }
 
-      final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities')
-          .replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
-          
+      final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities').replace(
+          queryParameters: queryParams.isNotEmpty ? queryParams : null);
+
       final response = await _performRequest('GET', url, onDebug: onDebug);
 
       if (response.statusCode == 200) {
@@ -208,28 +210,28 @@ class JulesClient {
           final json = jsonDecode(response.body);
           final activities = getObjectArrayPropOrDefaultFunction(
               json, 'activities', Activity.fromJson, () => <Activity>[]);
-          
+
           if (shouldStop != null) {
-             bool stop = false;
-             for (final activity in activities) {
-                 if (shouldStop(activity)) {
-                    stop = true;
-                    break;
-                 }
-                 allActivities.add(activity);
-             }
-             if (stop) {
-                nextPageToken = null; 
-             } else {
-                nextPageToken = json['nextPageToken'] as String?;
-             }
+            bool stop = false;
+            for (final activity in activities) {
+              if (shouldStop(activity)) {
+                stop = true;
+                break;
+              }
+              allActivities.add(activity);
+            }
+            if (stop) {
+              nextPageToken = null;
+            } else {
+              nextPageToken = json['nextPageToken'] as String?;
+            }
           } else {
-             allActivities.addAll(activities);
-             nextPageToken = json['nextPageToken'] as String?;
+            allActivities.addAll(activities);
+            nextPageToken = json['nextPageToken'] as String?;
           }
-          
+
           if (onProgress != null) {
-              onProgress(allActivities.length);
+            onProgress(allActivities.length);
           }
         } catch (e) {
           throw Exception(

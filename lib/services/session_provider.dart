@@ -24,25 +24,27 @@ class SessionProvider extends ChangeNotifier {
   }
 
   Future<void> fetchSessions(JulesClient client,
-      {bool force = false, bool shallow = true, String? authToken, void Function(String)? onRefreshFallback}) async {
-    
+      {bool force = false,
+      bool shallow = true,
+      String? authToken,
+      void Function(String)? onRefreshFallback}) async {
     if (_cacheService == null) {
       _error = "Cache service not initialized";
       notifyListeners();
       return;
     }
-    
+
     // 1. Load from cache immediately
     if (authToken != null) {
-       _items = await _cacheService!.loadSessions(authToken);
-       _sortItems();
-       notifyListeners();
+      _items = await _cacheService!.loadSessions(authToken);
+      _sortItems();
+      notifyListeners();
 
-       // If not forced and not shallow, we stop.
-       // Ideally we want to refresh if shallow is allowed.
-       if (!force && _items.isNotEmpty && !shallow) {
-         return;
-       }
+      // If not forced and not shallow, we stop.
+      // Ideally we want to refresh if shallow is allowed.
+      if (!force && _items.isNotEmpty && !shallow) {
+        return;
+      }
     }
 
     if (_isLoading) return;
@@ -54,103 +56,106 @@ class SessionProvider extends ChangeNotifier {
     try {
       List<Session> newSessions = [];
       String? pageToken;
-      
+
       // Load sessions
       do {
         final response = await client.listSessions(
-          pageSize: 100, 
+          pageSize: 100,
           pageToken: pageToken,
           onDebug: (exchange) {
             _lastExchange = exchange;
           },
-          shouldStop: (shallow && _items.isNotEmpty) ? (session) {
-             // Stop if we find this session in our cache with same updateTime/state
-             return _items.any((existing) => 
-               existing.data.id == session.id && 
-               existing.data.updateTime == session.updateTime &&
-               existing.data.state == session.state 
-             );
-          } : null,
+          shouldStop: (shallow && _items.isNotEmpty)
+              ? (session) {
+                  // Stop if we find this session in our cache with same updateTime/state
+                  return _items.any((existing) =>
+                      existing.data.id == session.id &&
+                      existing.data.updateTime == session.updateTime &&
+                      existing.data.state == session.state);
+                }
+              : null,
         );
-        
+
         newSessions.addAll(response.sessions);
         pageToken = response.nextPageToken;
-        
       } while (pageToken != null);
-      
+
       // Merge logic
       if (newSessions.isNotEmpty) {
-           for (final session in newSessions) {
-               final index = _items.indexWhere((i) => i.data.id == session.id);
-               CacheMetadata metadata;
-               
-               if (index != -1) {
-                   final oldItem = _items[index];
-                   _items.removeAt(index);
-                   
-                   final changed = (oldItem.data.updateTime != session.updateTime) ||
-                                   (oldItem.data.state != session.state);
+        for (final session in newSessions) {
+          final index = _items.indexWhere((i) => i.data.id == session.id);
+          CacheMetadata metadata;
 
-                   metadata = oldItem.metadata.copyWith(
-                       lastRetrieved: DateTime.now(),
-                       lastUpdated: changed 
-                          ? DateTime.now() 
-                          : oldItem.metadata.lastUpdated
-                   );
-               } else {
-                   metadata = CacheMetadata(
-                       firstSeen: DateTime.now(),
-                       lastRetrieved: DateTime.now(),
-                       lastUpdated: DateTime.now() 
-                   );
-               }
-               _items.add(CachedItem(session, metadata));
-           }
+          if (index != -1) {
+            final oldItem = _items[index];
+            _items.removeAt(index);
+
+            final changed = (oldItem.data.updateTime != session.updateTime) ||
+                (oldItem.data.state != session.state);
+
+            metadata = oldItem.metadata.copyWith(
+                lastRetrieved: DateTime.now(),
+                lastUpdated:
+                    changed ? DateTime.now() : oldItem.metadata.lastUpdated);
+          } else {
+            metadata = CacheMetadata(
+                firstSeen: DateTime.now(),
+                lastRetrieved: DateTime.now(),
+                lastUpdated: DateTime.now());
+          }
+          _items.add(CachedItem(session, metadata));
+        }
       }
 
-       if (newSessions.isNotEmpty) {
-          // ... logic captured by context ...
-       }
+      if (newSessions.isNotEmpty) {
+        // ... logic captured by context ...
+      }
 
-       // Update lastRetrieved for all items (especially those skipped by shallow refresh)
-       final now = DateTime.now();
-       for (var i = 0; i < _items.length; i++) {
-            if (now.difference(_items[i].metadata.lastRetrieved).inSeconds > 1) {
-                _items[i] = CachedItem(_items[i].data, _items[i].metadata.copyWith(lastRetrieved: now));
-            }
-       }
+      // Update lastRetrieved for all items (especially those skipped by shallow refresh)
+      final now = DateTime.now();
+      for (var i = 0; i < _items.length; i++) {
+        if (now.difference(_items[i].metadata.lastRetrieved).inSeconds > 1) {
+          _items[i] = CachedItem(
+              _items[i].data, _items[i].metadata.copyWith(lastRetrieved: now));
+        }
+      }
 
-       if (authToken != null) {
-         await _cacheService!.saveSessions(authToken, _items);
-         _sortItems();
-       }
+      if (authToken != null) {
+        await _cacheService!.saveSessions(authToken, _items);
+        _sortItems();
+      }
 
       _lastFetchTime = DateTime.now();
       _error = null;
     } catch (e) {
       if (shallow && _items.isNotEmpty) {
-          final msg = "Shallow refresh failed ($e), switching to full refresh";
-          print(msg);
-          if (onRefreshFallback != null) onRefreshFallback(msg);
-          
-          _isLoading = false; 
-          await fetchSessions(client, force: true, shallow: false, authToken: authToken, onRefreshFallback: onRefreshFallback);
-          return;
+        final msg = "Shallow refresh failed ($e), switching to full refresh";
+        print(msg);
+        if (onRefreshFallback != null) onRefreshFallback(msg);
+
+        _isLoading = false;
+        await fetchSessions(client,
+            force: true,
+            shallow: false,
+            authToken: authToken,
+            onRefreshFallback: onRefreshFallback);
+        return;
       }
       _error = e.toString();
     } finally {
       // Ensure we don't double-reset if recursive call handled it
       if (_isLoading) {
-          _isLoading = false;
-          notifyListeners();
+        _isLoading = false;
+        notifyListeners();
       }
     }
   }
 
-  Future<void> refreshSession(JulesClient client, String sessionName, {String? authToken}) async {
+  Future<void> refreshSession(JulesClient client, String sessionName,
+      {String? authToken}) async {
     try {
       final updatedSession = await client.getSession(sessionName);
-      
+
       List<Activity>? activities;
       try {
         activities = await client.listActivities(sessionName);
@@ -161,42 +166,42 @@ class SessionProvider extends ChangeNotifier {
       // Determine metadata
       final index = _items.indexWhere((i) => i.data.name == sessionName);
       CacheMetadata metadata;
-      
+
       if (index != -1) {
-          final oldItem = _items[index];
-          final changed = (oldItem.data.updateTime != updatedSession.updateTime) || 
-                          (oldItem.data.state != updatedSession.state);
-          metadata = oldItem.metadata.copyWith(
-              lastRetrieved: DateTime.now(),
-              lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated
-          );
+        final oldItem = _items[index];
+        final changed =
+            (oldItem.data.updateTime != updatedSession.updateTime) ||
+                (oldItem.data.state != updatedSession.state);
+        metadata = oldItem.metadata.copyWith(
+            lastRetrieved: DateTime.now(),
+            lastUpdated:
+                changed ? DateTime.now() : oldItem.metadata.lastUpdated);
       } else {
-          metadata = CacheMetadata(
-              firstSeen: DateTime.now(),
-              lastRetrieved: DateTime.now(),
-              lastUpdated: DateTime.now()
-          );
+        metadata = CacheMetadata(
+            firstSeen: DateTime.now(),
+            lastRetrieved: DateTime.now(),
+            lastUpdated: DateTime.now());
       }
 
       final cachedItem = CachedItem(updatedSession, metadata);
 
       if (authToken != null && _cacheService != null) {
-          await _cacheService!.saveSessions(authToken, [cachedItem]);
-          
-          if (activities != null) {
-            await _cacheService!.saveSessionDetails(authToken, updatedSession, activities);
-          }
+        await _cacheService!.saveSessions(authToken, [cachedItem]);
+
+        if (activities != null) {
+          await _cacheService!
+              .saveSessionDetails(authToken, updatedSession, activities);
+        }
       }
 
       if (index != -1) {
-          _items[index] = cachedItem;
+        _items[index] = cachedItem;
       } else {
-          _items.add(cachedItem);
+        _items.add(cachedItem);
       }
-      
+
       _sortItems();
       notifyListeners();
-
     } catch (e) {
       print("Failed to refresh individual session: $e");
       rethrow;
@@ -228,9 +233,7 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-          item.data, 
-          item.metadata.copyWith(lastOpened: DateTime.now())
-        );
+            item.data, item.metadata.copyWith(lastOpened: DateTime.now()));
         notifyListeners();
       }
     }
