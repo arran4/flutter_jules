@@ -35,9 +35,22 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   ApiExchange? _lastExchange;
   final TextEditingController _messageController = TextEditingController();
 
+  final FocusNode _messageFocusNode = FocusNode();
+
   @override
   void initState() {
     super.initState();
+    _messageFocusNode.onKeyEvent = (node, event) {
+      if (event is KeyDownEvent &&
+          event.logicalKey == LogicalKeyboardKey.enter &&
+          HardwareKeyboard.instance.isControlPressed) {
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+          return KeyEventResult.handled;
+        }
+      }
+      return KeyEventResult.ignored;
+    };
     _session = widget.session;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _fetchActivities();
@@ -47,6 +60,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _messageFocusNode.dispose();
     super.dispose();
   }
 
@@ -831,25 +845,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: CallbackShortcuts(
-                bindings: {
-                  const SingleActivator(LogicalKeyboardKey.enter,
-                      control: true): () {
-                    if (_messageController.text.isNotEmpty) {
-                      _sendMessage(_messageController.text);
-                    }
-                  },
-                },
-                child: TextField(
-                  controller: _messageController,
-                  decoration: const InputDecoration(
-                      hintText: "Send message... (Ctrl+Enter to send)"),
-                  minLines: 1,
-                  maxLines: 8,
-                  keyboardType: TextInputType.multiline,
-                  textInputAction: TextInputAction.newline,
-                  onChanged: (text) => setState(() {}),
-                ),
+              child: TextField(
+                controller: _messageController,
+                focusNode: _messageFocusNode,
+                decoration: const InputDecoration(
+                    hintText: "Send message... (Ctrl+Enter to send)"),
+                minLines: 1,
+                maxLines: 8,
+                keyboardType: TextInputType.multiline,
+                textInputAction: TextInputAction.newline,
+                onChanged: (text) => setState(() {}),
               ),
             ),
             const SizedBox(width: 8),
