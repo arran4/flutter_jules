@@ -220,6 +220,28 @@ class _ActivityItemState extends State<ActivityItem> {
                     await widget.onRefresh!();
                   },
                 ),
+              if (widget.activity.unmappedProps.isNotEmpty)
+                 IconButton(
+                    icon: const Icon(Icons.warning_amber, size: 18, color: Colors.orange),
+                    tooltip: 'Unknown Properties Found',
+                    onPressed: () {
+                         showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Unknown Properties"),
+                            content: SingleChildScrollView(
+                                child: SelectableText(
+                                  const JsonEncoder.withIndent('  ').convert(widget.activity.unmappedProps),
+                                  style: const TextStyle(fontFamily: 'monospace'),
+                                )
+                            ),
+                            actions: [
+                              TextButton(onPressed: () => Navigator.pop(context), child: const Text("Close"))
+                            ],
+                          ),
+                        );
+                    },
+                 ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, size: 18),
                 padding: EdgeInsets.zero,
@@ -335,7 +357,12 @@ class _ActivityItemState extends State<ActivityItem> {
         }
      }
      
-     if (isCompactArtifact) return const SizedBox.shrink();
+     final hasOtherContent = activity.progressUpdated != null || 
+                             activity.agentMessaged != null || 
+                             activity.userMessaged != null ||
+                             activity.unmappedProps.isNotEmpty;
+     
+     if (isCompactArtifact && !hasOtherContent) return const SizedBox.shrink();
 
     return Padding(
       padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
@@ -343,8 +370,10 @@ class _ActivityItemState extends State<ActivityItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (activity.progressUpdated != null)
+            if (activity.progressUpdated != null) ...[
                MarkdownBody(data: activity.progressUpdated!.description),
+               const SizedBox(height: 8),
+            ],
             if (activity.agentMessaged != null)
                MarkdownBody(data: activity.agentMessaged!.agentMessage),
             if (activity.userMessaged != null)
@@ -378,7 +407,6 @@ class _ActivityItemState extends State<ActivityItem> {
                    const SizedBox(height: 8),
                 ],
                 if (artifact.changeSet != null) ...[
-                   // If complex changeset (with patch)
                    if (artifact.changeSet!.gitPatch != null) ...[
                       Text("Change in ${artifact.changeSet!.source}", style: const TextStyle(fontWeight: FontWeight.bold)),
                       const SizedBox(height: 4),
@@ -388,8 +416,34 @@ class _ActivityItemState extends State<ActivityItem> {
                          child: Text(artifact.changeSet!.gitPatch!.unidiffPatch, style: const TextStyle(fontFamily: 'monospace', fontSize: 11), maxLines: 15, overflow: TextOverflow.ellipsis),
                       ),
                        const SizedBox(height: 8),
+                   ] else ...[
+                       Padding(
+                         padding: const EdgeInsets.symmetric(vertical: 4),
+                         child: Row(children: [
+                            const Icon(Icons.insert_drive_file_outlined, size: 16, color: Colors.blueGrey),
+                            const SizedBox(width: 8),
+                            Flexible(child: Text(artifact.changeSet!.source, style: const TextStyle(fontSize: 13, color: Colors.blueGrey, fontWeight: FontWeight.w500))),
+                         ]),
+                       )
                    ]
                 ]
+              ],
+              
+              if (activity.unmappedProps.isNotEmpty) ...[
+                 const SizedBox(height: 12),
+                 const Text("Unknown Data:", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.orange)),
+                 Container(
+                   width: double.infinity,
+                   padding: const EdgeInsets.all(8),
+                   decoration: BoxDecoration(
+                      color: Colors.orange.withValues(alpha: 0.1),
+                      borderRadius: BorderRadius.circular(4),
+                   ),
+                   child: Text(
+                      const JsonEncoder.withIndent('  ').convert(activity.unmappedProps),
+                      style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
+                   ),
+                 )
               ]
           ],
         ),

@@ -229,6 +229,7 @@ class Activity {
   final ProgressUpdated? progressUpdated;
   final SessionCompleted? sessionCompleted;
   final SessionFailed? sessionFailed;
+  final Map<String, dynamic> unmappedProps;
 
   Activity({
     required this.name,
@@ -244,9 +245,23 @@ class Activity {
     this.progressUpdated,
     this.sessionCompleted,
     this.sessionFailed,
+    this.unmappedProps = const {},
   });
 
   factory Activity.fromJson(Map<String, dynamic> json) {
+    final knownKeys = {
+      'name', 'id', 'description', 'createTime', 'originator', 'artifacts',
+      'agentMessaged', 'userMessaged', 'planGenerated', 'planApproved',
+      'progressUpdated', 'sessionCompleted', 'sessionFailed'
+    };
+    
+    final unmapped = <String, dynamic>{};
+    for (final key in json.keys) {
+      if (!knownKeys.contains(key)) {
+        unmapped[key] = json[key];
+      }
+    }
+
     return Activity(
       name: getStringPropOrThrow(json, 'name'),
       id: getStringPropOrThrow(json, 'id'),
@@ -269,6 +284,7 @@ class Activity {
           json, 'sessionCompleted', SessionCompleted.fromJson, null),
       sessionFailed: getObjectFunctionPropOrDefault(
           json, 'sessionFailed', SessionFailed.fromJson, null),
+      unmappedProps: unmapped,
     );
   }
 
