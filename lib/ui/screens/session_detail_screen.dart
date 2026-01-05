@@ -324,10 +324,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
             PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'mark_read_back') {
+              if (value == 'mark_unread_back') {
                 final auth = Provider.of<AuthProvider>(context, listen: false);
                 await Provider.of<SessionProvider>(context, listen: false)
-                    .markAsRead(_session.id, auth.token!);
+                    .markAsUnread(_session.id, auth.token!);
                 if (context.mounted) Navigator.pop(context);
               } else if (value == 'full_refresh') {
                 _fetchActivities(force: true, shallow: false);
@@ -347,12 +347,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             },
             itemBuilder: (context) => [
               const PopupMenuItem(
-                value: 'mark_read_back',
+                value: 'mark_unread_back',
                 child: Row(
                   children: [
-                    Icon(Icons.mark_email_read, color: Colors.grey),
+                    Icon(Icons.mark_email_unread, color: Colors.grey),
                     SizedBox(width: 8),
-                    Text('Mark as Read and Go Back'),
+                    Text('Mark as Unread and Go Back'),
                   ],
                 ),
               ),

@@ -236,6 +236,25 @@ class CacheService {
     }
   }
 
+  Future<void> markPrAsOpened(String token, String sessionId) async {
+    await markSessionAsRead(token, sessionId);
+    final cacheDir = await _getCacheDirectory(token);
+    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final file = File(path.join(cacheDir.path, 'sessions', fileName));
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+      final metadata = CacheMetadata.fromJson(json['metadata']);
+
+      final newMetadata = metadata.copyWith(
+        lastPrOpened: DateTime.now(),
+      );
+
+      json['metadata'] = newMetadata.toJson();
+      await file.writeAsString(jsonEncode(json));
+    }
+  }
+
   // New methods for session details (activities) cache
   Future<void> saveSessionDetails(
       String token, Session session, List<Activity> activities) async {

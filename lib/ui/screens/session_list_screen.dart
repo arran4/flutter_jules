@@ -1229,6 +1229,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           o.pullRequest != null)
                                                       .pullRequest!;
                                                   launchUrl(Uri.parse(pr.url));
+                                                } else if (value == 'pr_read') {
+                                                  final pr = session.outputs!
+                                                      .firstWhere((o) =>
+                                                          o.pullRequest != null)
+                                                      .pullRequest!;
+                                                  await sessionProvider
+                                                      .markPrAsOpened(
+                                                          session.id,
+                                                          auth.token!);
+                                                  launchUrl(Uri.parse(pr.url));
                                                 } else if (value == 'browser') {
                                                   _openSessionUrl(session);
                                                 } else if (value == 'reply') {
@@ -1259,7 +1269,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     session.outputs!.any((o) =>
                                                         o.pullRequest != null);
                                                 return [
-                                                  if (hasPr)
+                                                  if (hasPr) ...[
                                                     const PopupMenuItem(
                                                       value: 'pr',
                                                       child: Row(children: [
@@ -1271,6 +1281,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             'View Pull Request')
                                                       ]),
                                                     ),
+                                                    if (metadata.isUnread)
+                                                      const PopupMenuItem(
+                                                        value: 'pr_read',
+                                                        child: Row(children: [
+                                                          Icon(
+                                                              Icons
+                                                                  .mark_email_read,
+                                                              color: Colors
+                                                                  .purple),
+                                                          SizedBox(width: 8),
+                                                          Text(
+                                                              'Open PR & Mark Read')
+                                                        ]),
+                                                      ),
+                                                  ],
                                                   if (metadata.isUnread)
                                                     const PopupMenuItem(
                                                       value: 'mark_read',
