@@ -17,6 +17,7 @@ A comprehensive Flutter-based client application for interacting with the Google
     - **Plan:** Enforces a plan approval step (`requirePlanApproval`).
     - **Start:** Automation mode triggering `AUTO_CREATE_PR`.
 - **Plan Approval:** Built-in UI to review and approve execution plans directly within the chat stream.
+- **Progress Tracking:** Real-time updates on long-running tasks, showing step-by-step progress.
 - **Pagination:** Infinite scrolling implementation to seamlessly load session history.
 
 ### 📚 Source Exploration
