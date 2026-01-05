@@ -66,52 +66,20 @@ class CacheService {
     return directory;
   }
 
-  Future<void> saveSessions(String token, List<Session> newSessions) async {
+  Future<void> saveSessions(String token, List<CachedItem<Session>> items) async {
     final cacheDir = await _getCacheDirectory(token);
     final sessionsDir = Directory(path.join(cacheDir.path, 'sessions'));
     if (!await sessionsDir.exists()) {
       await sessionsDir.create(recursive: true);
     }
 
-    final now = DateTime.now();
-
-    for (final session in newSessions) {
+    for (final item in items) {
+      final session = item.data;
+      final metadata = item.metadata;
+      
       final fileName = Uri.encodeComponent(session.id) + '.json';
       final file = File(path.join(sessionsDir.path, fileName));
-      CacheMetadata metadata;
-
-      if (await file.exists()) {
-        try {
-          final content = await file.readAsString();
-          final json = jsonDecode(content);
-          final oldSession = Session.fromJson(json['data']);
-          final oldMetadata = CacheMetadata.fromJson(json['metadata']);
-
-          DateTime? lastUpdated = oldMetadata.lastUpdated;
-          bool hasChanged = session.updateTime != oldSession.updateTime || session.state != oldSession.state;
-          
-          if (hasChanged) {
-            lastUpdated = now;
-          }
-
-          metadata = oldMetadata.copyWith(
-            lastRetrieved: now,
-            lastUpdated: lastUpdated,
-          );
-
-        } catch (e) {
-           metadata = CacheMetadata(
-            firstSeen: now,
-            lastRetrieved: now,
-          );
-        }
-      } else {
-        metadata = CacheMetadata(
-          firstSeen: now,
-          lastRetrieved: now,
-        );
-      }
-
+      
       final dataToSave = {
         'data': session.toJson(),
         'metadata': metadata.toJson(),

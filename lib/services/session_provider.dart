@@ -24,7 +24,7 @@ class SessionProvider extends ChangeNotifier {
   }
 
   Future<void> fetchSessions(JulesClient client,
-      {bool force = false, String? authToken}) async {
+      {bool force = false, bool shallow = true, String? authToken, void Function(String)? onRefreshFallback}) async {
     
     if (_cacheService == null) {
       _error = "Cache service not initialized";
@@ -38,8 +38,9 @@ class SessionProvider extends ChangeNotifier {
        _sortItems();
        notifyListeners();
 
-       // If valid cache exists and we are not forcing a refresh, stop here.
-       if (!force && _items.isNotEmpty) {
+       // If not forced and not shallow, we stop.
+       // Ideally we want to refresh if shallow is allowed.
+       if (!force && _items.isNotEmpty && !shallow) {
          return;
        }
     }
@@ -51,39 +52,98 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      List<Session> allSessions = [];
+      List<Session> newSessions = [];
       String? pageToken;
       
-      // Load all sessions
+      // Load sessions
       do {
         final response = await client.listSessions(
-          pageSize: 100, // Fetch larger chunks
+          pageSize: 100, 
           pageToken: pageToken,
           onDebug: (exchange) {
             _lastExchange = exchange;
           },
+          shouldStop: (shallow && _items.isNotEmpty) ? (session) {
+             // Stop if we find this session in our cache with same updateTime/state
+             return _items.any((existing) => 
+               existing.data.id == session.id && 
+               existing.data.updateTime == session.updateTime &&
+               existing.data.state == session.state 
+             );
+          } : null,
         );
         
-        allSessions.addAll(response.sessions);
+        newSessions.addAll(response.sessions);
         pageToken = response.nextPageToken;
         
       } while (pageToken != null);
+      
+      // Merge logic
+      if (newSessions.isNotEmpty) {
+           for (final session in newSessions) {
+               final index = _items.indexWhere((i) => i.data.id == session.id);
+               CacheMetadata metadata;
+               
+               if (index != -1) {
+                   final oldItem = _items[index];
+                   _items.removeAt(index);
+                   
+                   final changed = (oldItem.data.updateTime != session.updateTime) ||
+                                   (oldItem.data.state != session.state);
 
-      if (authToken != null) {
-        await _cacheService!.saveSessions(authToken, allSessions);
-        _items = await _cacheService!.loadSessions(authToken);
-        _sortItems();
-      } else {
-        // Fallback if no token (shouldn't happen if fetching worked)
+                   metadata = oldItem.metadata.copyWith(
+                       lastRetrieved: DateTime.now(),
+                       lastUpdated: changed 
+                          ? DateTime.now() 
+                          : oldItem.metadata.lastUpdated
+                   );
+               } else {
+                   metadata = CacheMetadata(
+                       firstSeen: DateTime.now(),
+                       lastRetrieved: DateTime.now(),
+                       lastUpdated: DateTime.now() 
+                   );
+               }
+               _items.add(CachedItem(session, metadata));
+           }
       }
+
+       if (newSessions.isNotEmpty) {
+          // ... logic captured by context ...
+       }
+
+       // Update lastRetrieved for all items (especially those skipped by shallow refresh)
+       final now = DateTime.now();
+       for (var i = 0; i < _items.length; i++) {
+            if (now.difference(_items[i].metadata.lastRetrieved).inSeconds > 1) {
+                _items[i] = CachedItem(_items[i].data, _items[i].metadata.copyWith(lastRetrieved: now));
+            }
+       }
+
+       if (authToken != null) {
+         await _cacheService!.saveSessions(authToken, _items);
+         _sortItems();
+       }
 
       _lastFetchTime = DateTime.now();
       _error = null;
     } catch (e) {
+      if (shallow && _items.isNotEmpty) {
+          final msg = "Shallow refresh failed ($e), switching to full refresh";
+          print(msg);
+          if (onRefreshFallback != null) onRefreshFallback(msg);
+          
+          _isLoading = false; 
+          await fetchSessions(client, force: true, shallow: false, authToken: authToken, onRefreshFallback: onRefreshFallback);
+          return;
+      }
       _error = e.toString();
     } finally {
-      _isLoading = false;
-      notifyListeners();
+      // Ensure we don't double-reset if recursive call handled it
+      if (_isLoading) {
+          _isLoading = false;
+          notifyListeners();
+      }
     }
   }
 
@@ -98,33 +158,45 @@ class SessionProvider extends ChangeNotifier {
         print('Failed to preload activities for $sessionName: $e');
       }
 
+      // Determine metadata
+      final index = _items.indexWhere((i) => i.data.name == sessionName);
+      CacheMetadata metadata;
+      
+      if (index != -1) {
+          final oldItem = _items[index];
+          final changed = (oldItem.data.updateTime != updatedSession.updateTime) || 
+                          (oldItem.data.state != updatedSession.state);
+          metadata = oldItem.metadata.copyWith(
+              lastRetrieved: DateTime.now(),
+              lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated
+          );
+      } else {
+          metadata = CacheMetadata(
+              firstSeen: DateTime.now(),
+              lastRetrieved: DateTime.now(),
+              lastUpdated: DateTime.now()
+          );
+      }
+
+      final cachedItem = CachedItem(updatedSession, metadata);
+
       if (authToken != null && _cacheService != null) {
-          await _cacheService!.saveSessions(authToken, [updatedSession]);
+          await _cacheService!.saveSessions(authToken, [cachedItem]);
           
           if (activities != null) {
             await _cacheService!.saveSessionDetails(authToken, updatedSession, activities);
           }
       }
 
-      final index = _items.indexWhere((i) => i.data.name == sessionName);
       if (index != -1) {
-         final oldItem = _items[index];
-         
-         if (authToken != null && _cacheService != null) {
-             final freshList = await _cacheService!.loadSessions(authToken);
-             final freshItemLink = freshList.where((i) => i.data.id == updatedSession.id).firstOrNull;
-             if (freshItemLink != null) {
-                _items[index] = freshItemLink;
-             } else {
-                _items[index] = CachedItem(updatedSession, oldItem.metadata);
-             }
-         } else {
-             _items[index] = CachedItem(updatedSession, oldItem.metadata);
-         }
-         
-         _sortItems();
-         notifyListeners();
+          _items[index] = cachedItem;
+      } else {
+          _items.add(cachedItem);
       }
+      
+      _sortItems();
+      notifyListeners();
+
     } catch (e) {
       print("Failed to refresh individual session: $e");
       rethrow;

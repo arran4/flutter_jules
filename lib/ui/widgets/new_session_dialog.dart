@@ -544,20 +544,29 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                   ],
 
                   // Prompt
-                  TextField(
-                    autofocus: true,
-                    maxLines: 6,
-                    decoration: const InputDecoration(
-                      labelText: 'Prompt',
-                      hintText: 'Describe what you want to do...',
-                      border: OutlineInputBorder(),
-                      alignLabelWithHint: true,
-                    ),
-                    onChanged: (val) {
-                      setState(() {
-                        _prompt = val;
-                      });
+                  CallbackShortcuts(
+                    bindings: {
+                      const SingleActivator(LogicalKeyboardKey.enter, control: true): () {
+                        if (_prompt.isNotEmpty && _selectedSource != null) {
+                          _create();
+                        }
+                      },
                     },
+                    child: TextField(
+                      autofocus: true,
+                      maxLines: 6,
+                      decoration: const InputDecoration(
+                        labelText: 'Prompt',
+                        hintText: 'Describe what you want to do...',
+                        border: OutlineInputBorder(),
+                        alignLabelWithHint: true,
+                      ),
+                      onChanged: (val) {
+                        setState(() {
+                          _prompt = val;
+                        });
+                      },
+                    ),
                   ),
                   const SizedBox(height: 16),
     

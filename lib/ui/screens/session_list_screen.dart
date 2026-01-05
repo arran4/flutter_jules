@@ -73,7 +73,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchSessions({bool force = false}) async {
+  Future<void> _fetchSessions({bool force = false, bool shallow = true}) async {
     if (!mounted) return;
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -81,7 +81,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
           Provider.of<SessionProvider>(context, listen: false);
       
       await sessionProvider.fetchSessions(auth.client,
-          force: force, authToken: auth.token);
+          force: force, 
+          shallow: shallow, 
+          authToken: auth.token,
+          onRefreshFallback: (msg) {
+             if (mounted) {
+               ScaffoldMessenger.of(context).showSnackBar(
+                 SnackBar(content: Text(msg))
+               );
+             }
+          }
+      );
     } catch (e) {
       // Provider handles error state
     }
@@ -764,11 +774,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
               IconButton(
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
-                onPressed: () => _fetchSessions(force: true),
+                onPressed: () => _fetchSessions(force: true, shallow: true),
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
-                  if (value == 'settings') {
+                  if (value == 'full_refresh') {
+                    _fetchSessions(force: true, shallow: false);
+                  } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'sources') {
                     Navigator.pushNamed(context, '/sources_raw');
@@ -777,6 +789,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   }
                 },
                 itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'full_refresh',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh),
+                        SizedBox(width: 8),
+                        Text('Full Refresh'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'raw_data',
                     child: Row(
@@ -858,7 +880,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                            ),
                         Expanded(
                           child: RefreshIndicator(
-                            onRefresh: () => _fetchSessions(force: true),
+                            onRefresh: () => _fetchSessions(force: true, shallow: true),
                             child: ListView.builder(
                               itemCount: displayItems.length,
                               itemBuilder: (context, index) {

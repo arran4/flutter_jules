@@ -109,6 +109,7 @@ class JulesClient {
     int? pageSize,
     String? pageToken,
     void Function(ApiExchange)? onDebug,
+    bool Function(Session)? shouldStop,
   }) async {
     final queryParams = <String, String>{};
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
@@ -120,7 +121,29 @@ class JulesClient {
 
     if (response.statusCode == 200) {
       final json = jsonDecode(response.body);
-      return ListSessionsResponse.fromJson(json);
+      final listResponse = ListSessionsResponse.fromJson(json);
+      
+      if (shouldStop != null) {
+          final filteredSessions = <Session>[];
+          for (final session in listResponse.sessions) {
+              if (shouldStop(session)) {
+                  return ListSessionsResponse(
+                      sessions: filteredSessions,
+                      nextPageToken: null, 
+                  );
+              }
+              filteredSessions.add(session);
+          }
+          // If we filtered nothing (didn't stop), we must ensure we return the items.
+          // Since we iterated and added to filteredSessions, we should return that new list
+          // attached to the original nextPageToken.
+          return ListSessionsResponse(
+              sessions: filteredSessions,
+              nextPageToken: listResponse.nextPageToken,
+          );
+      }
+      
+      return listResponse;
     } else {
       _handleError(response);
       throw Exception('Unreachable');
@@ -165,7 +188,7 @@ class JulesClient {
   }
 
   Future<List<Activity>> listActivities(String sessionName,
-      {void Function(ApiExchange)? onDebug, void Function(int loadedCount)? onProgress}) async {
+      {void Function(ApiExchange)? onDebug, void Function(int loadedCount)? onProgress, bool Function(Activity)? shouldStop}) async {
     List<Activity> allActivities = [];
     String? nextPageToken;
     
@@ -185,13 +208,29 @@ class JulesClient {
           final json = jsonDecode(response.body);
           final activities = getObjectArrayPropOrDefaultFunction(
               json, 'activities', Activity.fromJson, () => <Activity>[]);
-          allActivities.addAll(activities);
+          
+          if (shouldStop != null) {
+             bool stop = false;
+             for (final activity in activities) {
+                 if (shouldStop(activity)) {
+                    stop = true;
+                    break;
+                 }
+                 allActivities.add(activity);
+             }
+             if (stop) {
+                nextPageToken = null; 
+             } else {
+                nextPageToken = json['nextPageToken'] as String?;
+             }
+          } else {
+             allActivities.addAll(activities);
+             nextPageToken = json['nextPageToken'] as String?;
+          }
           
           if (onProgress != null) {
               onProgress(allActivities.length);
           }
-          
-          nextPageToken = json['nextPageToken'] as String?;
         } catch (e) {
           throw Exception(
               'Failed to parse activities response: $e\nResponse body: ${response.body}');

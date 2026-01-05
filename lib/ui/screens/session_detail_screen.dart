@@ -49,7 +49,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     super.dispose();
   }
 
-  Future<void> _fetchActivities() async {
+  Future<void> _fetchActivities({bool force = false, bool shallow = true}) async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -59,13 +59,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     try {
       // Add timeout to prevent indefinite hanging
       await Future.any([
-        _performFetchActivities(),
+        _performFetchActivities(force: force, shallow: shallow),
         Future.delayed(const Duration(seconds: 30)).then((_) {
           throw Exception(
               'Request timed out after 30 seconds. Please check your connection and try again.');
         }),
       ]);
     } catch (e) {
+      if (shallow && _activities.isNotEmpty) {
+         if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+               SnackBar(content: Text("Partial refresh failed ($e), retrying full refresh..."))
+            );
+         }
+         // Recurse with force=true (full)
+         _fetchActivities(force: true, shallow: false);
+         return;
+      }
       if (mounted) {
         setState(() {
           _error = e.toString();
@@ -81,17 +91,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
 
-  Future<void> _performFetchActivities() async {
+  Future<void> _performFetchActivities({bool force = false, bool shallow = true}) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
     final token = auth.token;
     final devMode = Provider.of<DevModeProvider>(context, listen: false);
-    final enableLogging = devMode.enableApiLogging;
     final cacheService = Provider.of<CacheService>(context, listen: false);
 
     // 1. Check cache first
-    bool validCacheFound = false;
-    if (token != null) {
+    // Only use cache if not forced. Also if shallow is requested but we have no activities yet, we treat it as init load (use cache).
+    if (!force && token != null) {
       final cachedDetails = await cacheService.loadSessionDetails(token, widget.session.id);
       if (cachedDetails != null) {
         final listUpdateTimeStr = widget.session.updateTime;
@@ -128,7 +137,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                _session = cachedDetails.session; 
              });
            }
-           validCacheFound = true;
            return; 
         }
       }
@@ -146,7 +154,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     try {
       if (mounted) {
          setState(() {
-           _loadingStatus = 'Fetching activities...';
+           _loadingStatus = shallow ? 'Fetching latest activities...' : 'Fetching conversation history...';
          });
       }
       activities = await client.listActivities(
@@ -157,10 +165,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         onProgress: (count) {
            if (mounted) {
              setState(() {
-               _loadingStatus = 'Loaded $count activities...';
+               _loadingStatus = 'Loaded $count new activities...'; // "new" if shallow
              });
            }
-        }
+        },
+        shouldStop: (shallow && _activities.isNotEmpty) 
+          ? (act) => _activities.any((existing) => existing.id == act.id) 
+          : null,
       );
     } catch (e) {
       throw Exception('Failed to load conversation history: $e');
@@ -168,7 +179,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     if (mounted) {
       setState(() {
-        _activities = activities;
+        if (activities.isNotEmpty) {
+           // If we fetched new ones, merge.
+           if (shallow && _activities.isNotEmpty) {
+              final newIds = activities.map((a) => a.id).toSet();
+              final oldUnique = _activities.where((a) => !newIds.contains(a.id)).toList();
+              
+              // Combine and Sort
+              _activities = [...activities, ...oldUnique];
+              // Sort by CreateTime Ascending (Oldest First) which is standard for Chat
+              try {
+                  _activities.sort((a,b) => DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
+              } catch (_) {}
+           } else {
+              _activities = activities;
+              try {
+                  _activities.sort((a,b) => DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
+              } catch (_) {}
+           }
+        }
         _session = updatedSession!;
       });
     }
@@ -275,13 +304,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             },
           ),
           IconButton(
-            icon: const Icon(Icons.replay),
-            onPressed: _fetchActivities,
+            icon: const Icon(Icons.refresh), 
+            onPressed: () => _fetchActivities(force: true, shallow: true), 
             tooltip: 'Refresh',
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
-              if (value == 'copy_id') {
+              if (value == 'full_refresh') {
+                 _fetchActivities(force: true, shallow: false);
+              } else if (value == 'copy_id') {
                 await Clipboard.setData(ClipboardData(text: _session.id));
                 if (context.mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -296,6 +327,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               }
             },
             itemBuilder: (context) => [
+              const PopupMenuItem(
+                value: 'full_refresh',
+                child: Row(
+                  children: [
+                    Icon(Icons.refresh, color: Colors.grey),
+                    SizedBox(width: 8),
+                    Text('Full Refresh'),
+                  ],
+                ),
+              ),
               const PopupMenuItem(
                 value: 'copy_id',
                 child: Row(
