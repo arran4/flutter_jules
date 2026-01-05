@@ -1222,7 +1222,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                               icon: const Icon(Icons.more_vert),
                                               tooltip: 'Actions',
                                               onSelected: (value) async {
-                                                final auth = Provider.of<AuthProvider>(context, listen: false);
+                                                final auth =
+                                                    Provider.of<AuthProvider>(
+                                                        context,
+                                                        listen: false);
                                                 if (value == 'pr') {
                                                   final pr = session.outputs!
                                                       .firstWhere((o) =>
@@ -1243,6 +1246,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   _openSessionUrl(session);
                                                 } else if (value == 'reply') {
                                                   _quickReply(session);
+                                                } else if (value ==
+                                                    'view_prompt') {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        AlertDialog(
+                                                      title: const Text(
+                                                          "Session Prompt"),
+                                                      content:
+                                                          SingleChildScrollView(
+                                                        child: SelectableText(
+                                                            session.prompt),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                  context),
+                                                          child: const Text(
+                                                              "Close"),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
                                                 } else if (value == 'refresh') {
                                                   _refreshSession(session);
                                                 } else if (value == 'source') {
@@ -1322,6 +1349,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       Icon(Icons.reply),
                                                       SizedBox(width: 8),
                                                       Text('Quick Reply')
+                                                    ]),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'view_prompt',
+                                                    child: Row(children: [
+                                                      Icon(Icons.description),
+                                                      SizedBox(width: 8),
+                                                      Text('View Prompt')
                                                     ]),
                                                   ),
                                                   const PopupMenuItem(

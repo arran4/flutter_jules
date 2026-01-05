@@ -239,7 +239,6 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-
   Future<void> markAsUnread(String sessionId, String authToken) async {
     if (_cacheService != null) {
       await _cacheService!.markSessionAsUnread(authToken, sessionId);

@@ -213,7 +213,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 3. Save to cache
     if (token != null) {
       await cacheService.saveSessionDetails(token, updatedSession, activities);
-      
+
       // 4. Mark as Read
       if (mounted) {
         Provider.of<SessionProvider>(context, listen: false)
@@ -322,7 +322,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             onPressed: () => _fetchActivities(force: true, shallow: true),
             tooltip: 'Refresh',
           ),
-            PopupMenuButton<String>(
+          PopupMenuButton<String>(
             onSelected: (value) async {
               if (value == 'mark_unread_back') {
                 final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -820,24 +820,36 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL;
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+        (_session.requirePlanApproval ?? true);
 
     return SafeArea(
       top: false,
       child: Padding(
         padding: const EdgeInsets.all(8.0),
         child: Row(
+          crossAxisAlignment: CrossAxisAlignment.end,
           children: [
             Expanded(
-              child: TextField(
-                controller: _messageController,
-                decoration: const InputDecoration(hintText: "Send message..."),
-                onChanged: (text) => setState(() {}),
-                onSubmitted: (value) {
-                  if (value.isNotEmpty) {
-                    _sendMessage(value);
-                  }
+              child: CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.enter,
+                      control: true): () {
+                    if (_messageController.text.isNotEmpty) {
+                      _sendMessage(_messageController.text);
+                    }
+                  },
                 },
+                child: TextField(
+                  controller: _messageController,
+                  decoration: const InputDecoration(
+                      hintText: "Send message... (Ctrl+Enter to send)"),
+                  minLines: 1,
+                  maxLines: 8,
+                  keyboardType: TextInputType.multiline,
+                  textInputAction: TextInputAction.newline,
+                  onChanged: (text) => setState(() {}),
+                ),
               ),
             ),
             const SizedBox(width: 8),

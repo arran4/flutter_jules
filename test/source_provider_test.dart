@@ -63,16 +63,18 @@ void main() {
       final page1Sources = <Source>[Source(name: 'source1', id: 'id1')];
       final page1Response =
           ListSourcesResponse(sources: page1Sources, nextPageToken: 'token1');
-      
+
       // Setup page 2
       final page2Sources = <Source>[Source(name: 'source2', id: 'id2')];
       final page2Response =
           ListSourcesResponse(sources: page2Sources, nextPageToken: null);
 
       // Mock sequence
-      when(mockClient.listSources(pageToken: argThat(isNull, named: 'pageToken')))
+      when(mockClient.listSources(
+              pageToken: argThat(isNull, named: 'pageToken')))
           .thenAnswer((_) async => page1Response);
-      when(mockClient.listSources(pageToken: argThat(equals('token1'), named: 'pageToken')))
+      when(mockClient.listSources(
+              pageToken: argThat(equals('token1'), named: 'pageToken')))
           .thenAnswer((_) async => page2Response);
 
       await provider.fetchSources(mockClient);
@@ -83,15 +85,17 @@ void main() {
     });
 
     test('ensureSourceAvailable triggers fetch if source missing', () async {
-        // Initial state empty
-        final initialResponse = ListSourcesResponse(sources: [], nextPageToken: null);
-        when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-            .thenAnswer((_) async => initialResponse);
-        
-        await provider.ensureSourceAvailable(mockClient, 'missing_source');
-        
-        // Should have called listSources (via fetchSources)
-        verify(mockClient.listSources(pageToken: anyNamed('pageToken'))).called(1);
+      // Initial state empty
+      final initialResponse =
+          ListSourcesResponse(sources: [], nextPageToken: null);
+      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
+          .thenAnswer((_) async => initialResponse);
+
+      await provider.ensureSourceAvailable(mockClient, 'missing_source');
+
+      // Should have called listSources (via fetchSources)
+      verify(mockClient.listSources(pageToken: anyNamed('pageToken')))
+          .called(1);
     });
   });
 }
