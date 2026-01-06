@@ -295,11 +295,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             .updateSession(updatedSession!, authToken: token);
       }
 
-      // 4. Mark as Read
-      if (mounted) {
-        Provider.of<SessionProvider>(context, listen: false)
-            .markAsRead(widget.session.id, token);
-      }
     }
   }
 
@@ -435,7 +430,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
-    return Scaffold(
+    return PopScope(
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          if (auth.token != null) {
+            // Fire and forget
+            Provider.of<SessionProvider>(context, listen: false)
+                .markAsRead(_session.id, auth.token!);
+          }
+        }
+      },
+      child: Scaffold(
       appBar: AppBar(
         leading: const BackButton(),
         title: Text(
@@ -574,7 +581,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               // Watch Toggle - we need to know current watch state.
               // We access it via SessionProvider -> items.
               // Note: This relies on cached items being up to date.
-              if (Provider.of<SessionProvider>(context)
+              if (Provider.of<SessionProvider>(context, listen: false)
                   .items
                   .any((i) => i.data.id == _session.id && i.metadata.isWatched))
                 const PopupMenuItem(
@@ -678,7 +685,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _buildInput(context),
         ],
       ),
-    );
+    ));
   }
 
   Widget _buildActivityList(bool isDevMode) {
