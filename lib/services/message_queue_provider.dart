@@ -6,11 +6,13 @@ import 'jules_client.dart';
 class MessageQueueProvider extends ChangeNotifier {
   List<QueuedMessage> _queue = [];
   bool _isOffline = false;
+  bool _isConnecting = false;
   CacheService? _cacheService;
   String? _authToken;
 
   List<QueuedMessage> get queue => _queue;
   bool get isOffline => _isOffline;
+  bool get isConnecting => _isConnecting;
 
   void setCacheService(CacheService service, String? token) {
     _cacheService = service;
@@ -71,16 +73,21 @@ class MessageQueueProvider extends ChangeNotifier {
 
   // Returns true if connection successful
   Future<bool> goOnline(JulesClient client) async {
+    if (_isConnecting) return false;
+    _isConnecting = true;
+    notifyListeners();
     try {
       // Test endpoint with a lightweight call
       await client.listSessions(pageSize: 1);
       _isOffline = false;
-      notifyListeners();
       return true;
     } catch (e) {
       // Still offline
       // print("Go Online check failed: $e");
       return false;
+    } finally {
+      _isConnecting = false;
+      notifyListeners();
     }
   }
 

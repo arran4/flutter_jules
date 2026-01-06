@@ -897,10 +897,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
               Consumer<MessageQueueProvider>(
                 builder: (context, queueProvider, _) {
                   if (queueProvider.isOffline) {
-                    return TextButton.icon(
-                      icon: const Icon(Icons.wifi_off, color: Colors.white),
-                      label: const Text("GO ONLINE",
-                          style: TextStyle(color: Colors.white)),
+                    if (queueProvider.isConnecting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        ),
+                      );
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.wifi_off),
+                      tooltip: "Go Online",
                       onPressed: () async {
                         final auth =
                             Provider.of<AuthProvider>(context, listen: false);
@@ -937,60 +949,85 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         context,
                         MaterialPageRoute(
                             builder: (_) => const OfflineQueueScreen()));
+                  } else if (value == 'go_offline') {
+                    final queueProvider = Provider.of<MessageQueueProvider>(
+                        context,
+                        listen: false);
+                    if (!queueProvider.isOffline) {
+                      queueProvider.setOffline(true);
+                      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                          content: Text("Switched to Offline Mode")));
+                    }
                   }
                 },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'full_refresh',
-                    child: Row(
-                      children: [
-                        Icon(Icons.refresh),
-                        SizedBox(width: 8),
-                        Text('Full Refresh'),
-                      ],
+                itemBuilder: (context) {
+                  final isOffline =
+                      Provider.of<MessageQueueProvider>(context, listen: false)
+                          .isOffline;
+                  return [
+                    const PopupMenuItem(
+                      value: 'full_refresh',
+                      child: Row(
+                        children: [
+                          Icon(Icons.refresh),
+                          SizedBox(width: 8),
+                          Text('Full Refresh'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'queue',
-                    child: Row(
-                      children: [
-                        Icon(Icons.queue),
-                        SizedBox(width: 8),
-                        Text('Offline Message Queue'),
-                      ],
+                    const PopupMenuItem(
+                      value: 'queue',
+                      child: Row(
+                        children: [
+                          Icon(Icons.queue),
+                          SizedBox(width: 8),
+                          Text('Offline Message Queue'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'raw_data',
-                    child: Row(
-                      children: [
-                        Icon(Icons.data_object),
-                        SizedBox(width: 8),
-                        Text('View Raw Data'),
-                      ],
+                    if (!isOffline)
+                      const PopupMenuItem(
+                        value: 'go_offline',
+                        child: Row(
+                          children: [
+                            Icon(Icons.wifi_off),
+                            SizedBox(width: 8),
+                            Text('Go Offline'),
+                          ],
+                        ),
+                      ),
+                    const PopupMenuItem(
+                      value: 'raw_data',
+                      child: Row(
+                        children: [
+                          Icon(Icons.data_object),
+                          SizedBox(width: 8),
+                          Text('View Raw Data'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'settings',
-                    child: Row(
-                      children: [
-                        Icon(Icons.settings),
-                        SizedBox(width: 8),
-                        Text('Settings'),
-                      ],
+                    const PopupMenuItem(
+                      value: 'settings',
+                      child: Row(
+                        children: [
+                          Icon(Icons.settings),
+                          SizedBox(width: 8),
+                          Text('Settings'),
+                        ],
+                      ),
                     ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'sources',
-                    child: Row(
-                      children: [
-                        Icon(Icons.source),
-                        SizedBox(width: 8),
-                        Text('Repositories'),
-                      ],
+                    const PopupMenuItem(
+                      value: 'sources',
+                      child: Row(
+                        children: [
+                          Icon(Icons.source),
+                          SizedBox(width: 8),
+                          Text('Manage Sources'),
+                        ],
+                      ),
                     ),
-                  ),
-                ],
+                  ];
+                },
               ),
             ],
           ),

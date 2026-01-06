@@ -349,8 +349,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           Consumer<MessageQueueProvider>(
             builder: (context, queueProvider, _) {
               if (queueProvider.isOffline) {
+                if (queueProvider.isConnecting) {
+                  return const Padding(
+                    padding: EdgeInsets.all(12.0),
+                    child: SizedBox(
+                      width: 20,
+                      height: 20,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    ),
+                  );
+                }
                 return IconButton(
-                  icon: const Icon(Icons.wifi_off, color: Colors.grey),
+                  icon: const Icon(Icons.wifi_off),
                   tooltip: 'Go Online',
                   onPressed: () async {
                     final auth =
