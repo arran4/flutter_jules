@@ -253,8 +253,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
 
     try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final client = auth.client;
       await client.sendMessage(_session.name, message);
+
+      // Mark as pending update (dirty)
+      if (mounted) {
+        Provider.of<SessionProvider>(context, listen: false)
+            .markAsPendingUpdate(_session.id, auth.token!);
+      }
+
       _messageController.clear();
       _fetchActivities();
     } catch (e) {
@@ -411,6 +419,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 }
               } else if (value == 'approve_plan') {
                 _approvePlan();
+              } else if (value == 'watch') {
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                await Provider.of<SessionProvider>(context, listen: false)
+                    .toggleWatch(_session.id, auth.token!);
+                setState(() {}); // Rebuild to update menu icon
               }
             },
             itemBuilder: (context) => [
@@ -436,6 +449,35 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ],
                 ),
               ),
+
+              const PopupMenuDivider(),
+              // Watch Toggle - we need to know current watch state.
+              // We access it via SessionProvider -> items.
+              // Note: This relies on cached items being up to date.
+              if (Provider.of<SessionProvider>(context)
+                  .items
+                  .any((i) => i.data.id == _session.id && i.metadata.isWatched))
+                const PopupMenuItem(
+                  value: 'watch',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility_off, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Unwatch'),
+                    ],
+                  ),
+                )
+              else
+                const PopupMenuItem(
+                  value: 'watch',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Watch'),
+                    ],
+                  ),
+                ),
               const PopupMenuDivider(),
               const PopupMenuItem(
                 value: 'full_refresh',

@@ -4,7 +4,10 @@ class CacheMetadata {
   final DateTime? lastOpened; // When the user actually clicked/viewed it
   final DateTime? lastPrOpened; // When the user opened the PR
   final DateTime? lastUpdated; // When the content last changed (detected delta)
-  final List<String> labels; // e.g. ["priority", "favorite"]
+  final List<String> labels;
+  final bool isWatched;
+  final bool
+      hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
 
   CacheMetadata({
     required this.firstSeen,
@@ -13,6 +16,8 @@ class CacheMetadata {
     this.lastPrOpened,
     this.lastUpdated,
     this.labels = const [],
+    this.isWatched = false,
+    this.hasPendingUpdates = false,
   });
 
   // Convenience Getters
@@ -57,6 +62,8 @@ class CacheMetadata {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      isWatched: json['isWatched'] ?? false,
+      hasPendingUpdates: json['hasPendingUpdates'] ?? false,
     );
   }
 
@@ -68,6 +75,8 @@ class CacheMetadata {
       if (lastPrOpened != null) 'lastPrOpened': lastPrOpened!.toIso8601String(),
       if (lastUpdated != null) 'lastUpdated': lastUpdated!.toIso8601String(),
       'labels': labels,
+      'isWatched': isWatched,
+      'hasPendingUpdates': hasPendingUpdates,
     };
   }
 
@@ -78,6 +87,8 @@ class CacheMetadata {
     DateTime? lastPrOpened,
     DateTime? lastUpdated,
     List<String>? labels,
+    bool? isWatched,
+    bool? hasPendingUpdates,
   }) {
     return CacheMetadata(
       firstSeen: firstSeen ?? this.firstSeen,
@@ -86,6 +97,8 @@ class CacheMetadata {
       lastPrOpened: lastPrOpened ?? this.lastPrOpened,
       lastUpdated: lastUpdated ?? this.lastUpdated,
       labels: labels ?? this.labels,
+      isWatched: isWatched ?? this.isWatched,
+      hasPendingUpdates: hasPendingUpdates ?? this.hasPendingUpdates,
     );
   }
 }

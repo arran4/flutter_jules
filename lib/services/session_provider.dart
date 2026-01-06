@@ -226,6 +226,86 @@ class SessionProvider extends ChangeNotifier {
     });
   }
 
+  Future<void> refreshDirtySessions(JulesClient client,
+      {required String authToken}) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final dirtyItems = _items.where((item) => _isSessionDirty(item)).toList();
+      await Future.wait(dirtyItems.map((item) async {
+        try {
+          // Deep refresh
+          await refreshSession(client, item.data.name, authToken: authToken);
+
+          // After successful refresh, clear pending updates flag if it was set
+          // We need to fetch the item again from _items because refreshSession replaced it
+          final index = _items.indexWhere((i) => i.data.id == item.data.id);
+          if (index != -1) {
+            final refreshedItem = _items[index];
+            if (refreshedItem.metadata.hasPendingUpdates) {
+              final newItem = CachedItem(refreshedItem.data,
+                  refreshedItem.metadata.copyWith(hasPendingUpdates: false));
+              _items[index] = newItem;
+              if (_cacheService != null) {
+                await _cacheService!.saveSessions(authToken, [newItem]);
+              }
+            }
+          }
+        } catch (e) {
+          // print("Failed to refresh dirty session ${item.data.id}: $e");
+        }
+      }));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
+  bool _isSessionDirty(CachedItem<Session> item) {
+    if (item.data.state == SessionState.IN_PROGRESS) return true; // In Progress
+    if (item.metadata.hasPendingUpdates) return true; // Message Sent
+    if (item.metadata.isWatched) return true; // Watched
+    if (item.metadata.isUpdated) return true; // "Updated" indicator
+    return false;
+  }
+
+  Future<void> toggleWatch(String sessionId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      final newMetadata = item.metadata.copyWith(
+        isWatched: !item.metadata.isWatched,
+      );
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
+  // Called when sending a message
+  Future<void> markAsPendingUpdate(String sessionId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      if (!item.metadata.hasPendingUpdates) {
+        final newMetadata = item.metadata.copyWith(hasPendingUpdates: true);
+        final newItem = CachedItem(item.data, newMetadata);
+        _items[index] = newItem;
+        notifyListeners();
+
+        if (_cacheService != null) {
+          await _cacheService!.saveSessions(authToken, [newItem]);
+        }
+      }
+    }
+  }
+
   Future<void> markAsRead(String sessionId, String authToken) async {
     if (_cacheService != null) {
       await _cacheService!.markSessionAsRead(authToken, sessionId);
@@ -253,6 +333,8 @@ class SessionProvider extends ChangeNotifier {
               lastOpened: null,
               lastUpdated: item.metadata.lastUpdated,
               labels: item.metadata.labels,
+              isWatched: item.metadata.isWatched,
+              hasPendingUpdates: item.metadata.hasPendingUpdates,
             ));
         notifyListeners();
       }

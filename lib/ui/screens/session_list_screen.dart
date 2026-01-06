@@ -958,6 +958,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                           content: Text("Switched to Offline Mode")));
                     }
+                  } else if (value == 'refresh_dirty') {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    final sessionProvider =
+                        Provider.of<SessionProvider>(context, listen: false);
+                    sessionProvider.refreshDirtySessions(auth.client,
+                        authToken: auth.token!);
                   }
                 },
                 itemBuilder: (context) {
@@ -993,6 +1000,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             Icon(Icons.wifi_off),
                             SizedBox(width: 8),
                             Text('Go Offline'),
+                          ],
+                        ),
+                      ),
+                    if (!isOffline)
+                      const PopupMenuItem(
+                        value: 'refresh_dirty',
+                        child: Row(
+                          children: [
+                            Icon(Icons.sync_problem),
+                            SizedBox(width: 8),
+                            Text('Refresh Dirty Sessions'),
                           ],
                         ),
                       ),
@@ -1169,6 +1187,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         type: FilterType.flag,
                                                         label: 'Unread',
                                                         value: 'unread'),
+                                                  ),
+                                                if (metadata.isWatched)
+                                                  _buildPill(
+                                                    context,
+                                                    label: 'WATCHING',
+                                                    backgroundColor:
+                                                        Colors.deepPurple,
+                                                    textColor: Colors.white,
+                                                    filterToken: FilterToken(
+                                                        id: 'flag:watched',
+                                                        type: FilterType.flag,
+                                                        label: 'Watched',
+                                                        value: 'watched'),
                                                   ),
 
                                                 // Render custom labels
@@ -1408,6 +1439,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   await sessionProvider
                                                       .markAsUnread(session.id,
                                                           auth.token!);
+                                                } else if (value == 'watch') {
+                                                  await sessionProvider
+                                                      .toggleWatch(session.id,
+                                                          auth.token!);
                                                 }
                                               },
                                               itemBuilder: (context) {
@@ -1460,6 +1495,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             .mark_email_unread),
                                                         SizedBox(width: 8),
                                                         Text('Mark as Unread')
+                                                      ]),
+                                                    ),
+                                                  if (metadata.isWatched)
+                                                    const PopupMenuItem(
+                                                      value: 'watch',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .visibility_off),
+                                                        SizedBox(width: 8),
+                                                        Text('Unwatch')
+                                                      ]),
+                                                    )
+                                                  else
+                                                    const PopupMenuItem(
+                                                      value: 'watch',
+                                                      child: Row(children: [
+                                                        Icon(Icons.visibility),
+                                                        SizedBox(width: 8),
+                                                        Text('Watch')
                                                       ]),
                                                     ),
                                                   const PopupMenuItem(
