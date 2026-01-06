@@ -35,6 +35,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   String _loadingStatus = '';
   ApiExchange? _lastExchange;
   final TextEditingController _messageController = TextEditingController();
+  bool _isSending = false; // Track sending state
+  bool _isCancelled = false; // Track cancellation
+  List<Activity> _localActivities = []; // Client-side mock activites
 
   final FocusNode _messageFocusNode = FocusNode();
 
@@ -222,6 +225,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           }
         }
         _session = updatedSession!;
+        // Clear local activities as we now have server state
+        _localActivities.clear();
       });
     }
 
@@ -241,6 +246,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final queueProvider =
         Provider.of<MessageQueueProvider>(context, listen: false);
 
+    // Offline Case
     if (queueProvider.isOffline) {
       queueProvider.addMessage(_session.id, message);
       _messageController.clear();
@@ -252,26 +258,68 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       return;
     }
 
+    // Attempting Online Send
+    setState(() {
+      _isSending = true;
+      _isCancelled = false;
+    });
+
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
       final client = auth.client;
+
+      // Logically cancel (ignore result) if user cancels, but we can't truly cancel the future
       await client.sendMessage(_session.name, message);
 
-      // Mark as pending update (dirty)
-      if (mounted) {
-        Provider.of<SessionProvider>(context, listen: false)
-            .markAsPendingUpdate(_session.id, auth.token!);
+      if (_isCancelled) {
+        // User cancelled, but it succeeded. Logic handled by potential earlier queueing if desired, 
+        // but here we just ignore success if we wanted to 'cancel'. 
+        // Given we don't 'un-send', we just proceed if not cancelled, or do nothing if cancelled.
+      } else {
+        if (mounted) {
+           Provider.of<SessionProvider>(context, listen: false).markAsPendingUpdate(_session.id, auth.token!);
+
+           // Add Mock Activity
+           final mockActivity = Activity(
+             name: "local/${DateTime.now().millisecondsSinceEpoch}",
+             id: "local-${DateTime.now().millisecondsSinceEpoch}",
+             createTime: DateTime.now().toIso8601String(),
+             userMessaged: UserMessaged(userMessage: message),
+             description: "Client Side",
+             unmappedProps: {'isLocal': true},
+           );
+           
+           setState(() {
+             _localActivities.add(mockActivity);
+           });
+        }
+        _messageController.clear();
+        _fetchActivities();
+      }
+    } catch (e) {
+      if (_isCancelled) {
+          return;
+      }
+      
+      if (!mounted) {
+        // Queue if user navigated away
+        queueProvider.addMessage(_session.id, message);
+        return;
       }
 
-      _messageController.clear();
-      _fetchActivities();
-    } catch (e) {
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text("Error: $e")));
+    } finally {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
+        setState(() {
+          _isSending = false;
+          _isCancelled = false;
+        });
       }
     }
   }
+
+
 
   Future<void> _approvePlan() async {
     try {
@@ -524,12 +572,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         ],
       ),
       body: Column(
-        children: [
+         children: [
+
+          if (_isSending)
+             const LinearProgressIndicator(minHeight: 2)
+          else 
+             const SizedBox(height: 2),
+
           // Permanent Header
           _buildHeader(context),
 
           // Scrollable Activity List
-          if (_isLoading)
+          if (_isLoading && _activities.isEmpty)
             Expanded(
               child: Center(
                 child: Column(
@@ -556,7 +610,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Widget _buildActivityList(bool isDevMode) {
-    if (_isLoading) {
+    if (_isLoading && _activities.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
 
@@ -598,7 +652,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         description: "Queued Message",
         unmappedProps: {'isQueued': true}));
 
-    final allActivities = [..._activities, ...queuedActivities];
+    final allActivities = [..._activities, ...queuedActivities, ..._localActivities];
     allActivities.sort((a, b) =>
         DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
 
@@ -710,6 +764,42 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               size: 16, color: Colors.grey))
                     ],
                   ));
+            }
+            final isLocal = activity.unmappedProps['isLocal'] == true;
+            if (isLocal) {
+               return Stack(
+                 children: [
+                   Opacity(
+                     opacity: 0.8,
+                     child: Container(
+                       decoration: BoxDecoration(
+                         border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
+                         borderRadius: BorderRadius.circular(8),
+                       ),
+                       child: item,
+                     ),
+                   ),
+                   Positioned(
+                     right: 8,
+                     top: 8,
+                     child: Row(
+                       mainAxisSize: MainAxisSize.min,
+                       children: [
+                         const Icon(Icons.cloud_upload_outlined, size: 14, color: Colors.blue),
+                         const SizedBox(width: 4),
+                         IconButton(
+                           visualDensity: VisualDensity.compact,
+                           padding: EdgeInsets.zero,
+                           constraints: const BoxConstraints(),
+                           icon: const Icon(Icons.refresh, size: 16, color: Colors.blue),
+                           onPressed: () => _fetchActivities(force: true, shallow: true),
+                           tooltip: "Refresh (Client Only)",
+                         ),
+                       ],
+                     ),
+                   ),
+                 ],
+               );
             }
             return item;
           }
@@ -991,18 +1081,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 decoration: const InputDecoration(
                     hintText: "Send message... (Ctrl+Enter to send)"),
                 minLines: 1,
+                enabled: !_isSending, // Disable input while sending
                 maxLines: 8,
                 keyboardType: TextInputType.multiline,
                 textInputAction: TextInputAction.newline,
-                onChanged: (text) => setState(() {}),
+                onChanged: _isSending ? null : (text) => setState(() {}),
               ),
             ),
             const SizedBox(width: 8),
-            if (hasText)
+            if (hasText || _isSending)
               IconButton(
                 icon: const Icon(Icons.send),
-                onPressed: () => _sendMessage(_messageController.text),
-                tooltip: 'Send Message',
+                // Disable button (gray out) when sending
+                onPressed: _isSending ? null : () => _sendMessage(_messageController.text),
+                tooltip: _isSending ? 'Sending...' : 'Send Message',
               )
             else if (canApprove)
               ElevatedButton(
