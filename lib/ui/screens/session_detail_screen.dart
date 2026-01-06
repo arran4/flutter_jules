@@ -103,7 +103,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // But the setting is "Refresh on Open".
           // If we interpret strictly:
           _fetchActivities(
-              force: false, shallow: true); // Normal load (uses cache)
+            force: false,
+            shallow: true,
+          ); // Normal load (uses cache)
           break;
         case SessionRefreshPolicy.shallow:
           _fetchActivities(force: false, shallow: true);
@@ -143,8 +145,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-  Future<void> _fetchActivities(
-      {bool force = false, bool shallow = true}) async {
+  Future<void> _fetchActivities({
+    bool force = false,
+    bool shallow = true,
+  }) async {
     if (!mounted) return;
     setState(() {
       _isLoading = true;
@@ -157,15 +161,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _performFetchActivities(force: force, shallow: shallow),
         Future.delayed(const Duration(seconds: 30)).then((_) {
           throw Exception(
-              'Request timed out after 30 seconds. Please check your connection and try again.');
+            'Request timed out after 30 seconds. Please check your connection and try again.',
+          );
         }),
       ]);
     } catch (e) {
       if (shallow && _activities.isNotEmpty) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
               content: Text(
-                  "Partial refresh failed ($e), retrying full refresh...")));
+                "Partial refresh failed ($e), retrying full refresh...",
+              ),
+            ),
+          );
         }
         // Recurse with force=true (full)
         _fetchActivities(force: true, shallow: false);
@@ -185,8 +194,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-  Future<void> _performFetchActivities(
-      {bool force = false, bool shallow = true}) async {
+  Future<void> _performFetchActivities({
+    bool force = false,
+    bool shallow = true,
+  }) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final client = auth.client;
     final token = auth.token;
@@ -195,8 +206,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // 1. Check cache first
     // Only use cache if not forced. Also if shallow is requested but we have no activities yet, we treat it as init load (use cache).
     if (!force && token != null) {
-      final cachedDetails =
-          await cacheService.loadSessionDetails(token, widget.session.id);
+      final cachedDetails = await cacheService.loadSessionDetails(
+        token,
+        widget.session.id,
+      );
       if (cachedDetails != null) {
         final listUpdateTimeStr = widget.session.updateTime;
         final cachedSnapshotStr = cachedDetails.sessionUpdateTimeSnapshot;
@@ -284,21 +297,28 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique =
-                _activities.where((a) => !newIds.contains(a.id)).toList();
+            final oldUnique = _activities
+                .where((a) => !newIds.contains(a.id))
+                .toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
             // Sort by CreateTime Ascending (Oldest First) which is standard for Chat
             try {
-              _activities.sort((a, b) => DateTime.parse(a.createTime)
-                  .compareTo(DateTime.parse(b.createTime)));
+              _activities.sort(
+                (a, b) => DateTime.parse(
+                  a.createTime,
+                ).compareTo(DateTime.parse(b.createTime)),
+              );
             } catch (_) {}
           } else {
             _activities = activities;
             try {
-              _activities.sort((a, b) => DateTime.parse(a.createTime)
-                  .compareTo(DateTime.parse(b.createTime)));
+              _activities.sort(
+                (a, b) => DateTime.parse(
+                  a.createTime,
+                ).compareTo(DateTime.parse(b.createTime)),
+              );
             } catch (_) {}
           }
         }
@@ -314,15 +334,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       await cacheService.saveSessionDetails(token, updatedSession!, activities);
 
       if (mounted) {
-        await Provider.of<SessionProvider>(context, listen: false)
-            .updateSession(updatedSession!, authToken: token);
+        await Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).updateSession(updatedSession!, authToken: token);
       }
     }
   }
 
   Future<void> _sendMessage(String message) async {
-    final queueProvider =
-        Provider.of<MessageQueueProvider>(context, listen: false);
+    final queueProvider = Provider.of<MessageQueueProvider>(
+      context,
+      listen: false,
+    );
 
     // Offline Case
     if (queueProvider.isOffline) {
@@ -330,7 +354,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       _messageController.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text("Message added to offline queue")));
+          const SnackBar(content: Text("Message added to offline queue")),
+        );
         setState(() {}); // Trigger rebuild
       }
       return;
@@ -357,8 +382,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         // Given we don't 'un-send', we just proceed if not cancelled, or do nothing if cancelled.
       } else {
         if (mounted) {
-          Provider.of<SessionProvider>(context, listen: false)
-              .markAsPendingUpdate(_session.id, auth.token!);
+          Provider.of<SessionProvider>(
+            context,
+            listen: false,
+          ).markAsPendingUpdate(_session.id, auth.token!);
 
           // Add Mock Activity
           final mockActivity = Activity(
@@ -378,8 +405,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
         if (mounted) {
           // Refresh based on settings
-          final settings =
-              Provider.of<SettingsProvider>(context, listen: false);
+          final settings = Provider.of<SettingsProvider>(
+            context,
+            listen: false,
+          );
           switch (settings.refreshOnMessage) {
             case SessionRefreshPolicy.none:
               break;
@@ -403,8 +432,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         return;
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text("Error: $e")));
     } finally {
       if (mounted) {
         setState(() {
@@ -422,14 +452,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         await client.approvePlan(_session.name);
       });
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(const SnackBar(content: Text("Plan Approved")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("Plan Approved")));
       }
       _fetchActivities();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context)
-            .showSnackBar(SnackBar(content: Text("Error: $e")));
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text("Error: $e")));
       }
     }
   }
@@ -450,9 +482,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
       });
 
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Activity refreshed")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Activity refreshed")));
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -467,285 +499,301 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
     return PopScope(
-        canPop: true,
-        onPopInvokedWithResult: (bool didPop, dynamic result) async {
-          if (didPop) {
-            final auth = Provider.of<AuthProvider>(context, listen: false);
-            if (auth.token != null) {
-              // Fire and forget
-              Provider.of<SessionProvider>(context, listen: false)
-                  .markAsRead(_session.id, auth.token!);
-            }
+      canPop: true,
+      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+        if (didPop) {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          if (auth.token != null) {
+            // Fire and forget
+            Provider.of<SessionProvider>(
+              context,
+              listen: false,
+            ).markAsRead(_session.id, auth.token!);
           }
-        },
-        child: Scaffold(
-          appBar: AppBar(
-            leading: const BackButton(),
-            title: Text(
-              _session.title ?? 'Session Detail',
-              maxLines: 1,
-              overflow: TextOverflow.ellipsis,
-            ),
-            actions: [
-              if (_session.outputs != null &&
-                  _session.outputs!.any((o) => o.pullRequest != null))
-                IconButton(
-                  icon: const Icon(Icons.merge_type, color: Colors.purple),
-                  tooltip: 'Open Pull Request',
-                  onPressed: () {
-                    final pr = _session.outputs!
-                        .firstWhere((o) => o.pullRequest != null)
-                        .pullRequest!;
-                    launchUrl(Uri.parse(pr.url));
-                  },
-                ),
+        }
+      },
+      child: Scaffold(
+        appBar: AppBar(
+          leading: const BackButton(),
+          title: Text(
+            _session.title ?? 'Session Detail',
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+          actions: [
+            if (_session.outputs != null &&
+                _session.outputs!.any((o) => o.pullRequest != null))
               IconButton(
-                icon: const Icon(Icons.data_object),
-                tooltip: 'View Session Data',
+                icon: const Icon(Icons.merge_type, color: Colors.purple),
+                tooltip: 'Open Pull Request',
                 onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ModelViewer(
-                      data: _session.toJson(),
-                      title: 'Session Data',
-                    ),
-                  );
+                  final pr = _session.outputs!
+                      .firstWhere((o) => o.pullRequest != null)
+                      .pullRequest!;
+                  launchUrl(Uri.parse(pr.url));
                 },
               ),
-              Consumer<MessageQueueProvider>(
-                builder: (context, queueProvider, _) {
-                  if (queueProvider.isOffline) {
-                    if (queueProvider.isConnecting) {
-                      return const Padding(
-                        padding: EdgeInsets.all(12.0),
-                        child: SizedBox(
-                          width: 20,
-                          height: 20,
-                          child: CircularProgressIndicator(
-                            strokeWidth: 2,
-                          ),
-                        ),
-                      );
-                    }
-                    return IconButton(
-                      icon: const Icon(Icons.wifi_off),
-                      tooltip: 'Go Online',
-                      onPressed: () async {
-                        final auth =
-                            Provider.of<AuthProvider>(context, listen: false);
-                        final online =
-                            await queueProvider.goOnline(auth.client);
-                        if (!context.mounted) return;
-                        if (online) {
-                          _fetchActivities(force: true);
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Still offline")));
-                        }
-                      },
+            IconButton(
+              icon: const Icon(Icons.data_object),
+              tooltip: 'View Session Data',
+              onPressed: () {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: _session.toJson(),
+                    title: 'Session Data',
+                  ),
+                );
+              },
+            ),
+            Consumer<MessageQueueProvider>(
+              builder: (context, queueProvider, _) {
+                if (queueProvider.isOffline) {
+                  if (queueProvider.isConnecting) {
+                    return const Padding(
+                      padding: EdgeInsets.all(12.0),
+                      child: SizedBox(
+                        width: 20,
+                        height: 20,
+                        child: CircularProgressIndicator(strokeWidth: 2),
+                      ),
                     );
                   }
                   return IconButton(
-                    icon: const Icon(Icons.refresh),
-                    // Disable/Gray out while "busy" (min 2s or until completion)
-                    // Also blockout if any other network op is running
-                    onPressed: (_isRefreshDisabled || _busyCount > 0)
-                        ? null
-                        : _handleRefresh,
-                    tooltip: 'Refresh',
+                    icon: const Icon(Icons.wifi_off),
+                    tooltip: 'Go Online',
+                    onPressed: () async {
+                      final auth = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final online = await queueProvider.goOnline(auth.client);
+                      if (!context.mounted) return;
+                      if (online) {
+                        _fetchActivities(force: true);
+                      } else {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Still offline")),
+                        );
+                      }
+                    },
                   );
-                },
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) async {
-                  if (value == 'mark_unread_back') {
-                    final auth =
-                        Provider.of<AuthProvider>(context, listen: false);
-                    await Provider.of<SessionProvider>(context, listen: false)
-                        .markAsUnread(_session.id, auth.token!);
-                    if (context.mounted) Navigator.pop(context);
-                  } else if (value == 'pr_back') {
-                    final pr = _session.outputs!
-                        .firstWhere((o) => o.pullRequest != null)
-                        .pullRequest!;
-                    launchUrl(Uri.parse(pr.url));
-                    if (context.mounted) Navigator.pop(context);
-                  } else if (value == 'copy_pr_url') {
-                    final pr = _session.outputs!
-                        .firstWhere((o) => o.pullRequest != null)
-                        .pullRequest!;
-                    await Clipboard.setData(ClipboardData(text: pr.url));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('PR URL copied')));
-                    }
-                  } else if (value == 'full_refresh') {
-                    _fetchActivities(force: true, shallow: false);
-                  } else if (value == 'copy_id') {
-                    await Clipboard.setData(ClipboardData(text: _session.id));
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Session ID copied')));
-                    }
-                  } else if (value == 'open_browser') {
-                    if (_session.url != null) {
-                      launchUrl(Uri.parse(_session.url!));
-                    }
-                  } else if (value == 'approve_plan') {
-                    _approvePlan();
-                  } else if (value == 'watch') {
-                    final auth =
-                        Provider.of<AuthProvider>(context, listen: false);
-                    await Provider.of<SessionProvider>(context, listen: false)
-                        .toggleWatch(_session.id, auth.token!);
-                    setState(() {}); // Rebuild to update menu icon
+                }
+                return IconButton(
+                  icon: const Icon(Icons.refresh),
+                  // Disable/Gray out while "busy" (min 2s or until completion)
+                  // Also blockout if any other network op is running
+                  onPressed: (_isRefreshDisabled || _busyCount > 0)
+                      ? null
+                      : _handleRefresh,
+                  tooltip: 'Refresh',
+                );
+              },
+            ),
+            PopupMenuButton<String>(
+              onSelected: (value) async {
+                if (value == 'mark_unread_back') {
+                  final auth = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
+                  await Provider.of<SessionProvider>(
+                    context,
+                    listen: false,
+                  ).markAsUnread(_session.id, auth.token!);
+                  if (context.mounted) Navigator.pop(context);
+                } else if (value == 'pr_back') {
+                  final pr = _session.outputs!
+                      .firstWhere((o) => o.pullRequest != null)
+                      .pullRequest!;
+                  launchUrl(Uri.parse(pr.url));
+                  if (context.mounted) Navigator.pop(context);
+                } else if (value == 'copy_pr_url') {
+                  final pr = _session.outputs!
+                      .firstWhere((o) => o.pullRequest != null)
+                      .pullRequest!;
+                  await Clipboard.setData(ClipboardData(text: pr.url));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('PR URL copied')),
+                    );
                   }
-                },
-                itemBuilder: (context) => [
-                  if (_session.outputs != null &&
-                      _session.outputs!.any((o) => o.pullRequest != null))
-                    const PopupMenuItem(
-                      value: 'pr_back',
-                      child: Row(
-                        children: [
-                          Icon(Icons.merge_type, color: Colors.purple),
-                          SizedBox(width: 8),
-                          Text('Open PR and Go Back'),
-                        ],
-                      ),
-                    ),
-                    if (_session.outputs != null &&
-                      _session.outputs!.any((o) => o.pullRequest != null))
-                    const PopupMenuItem(
-                      value: 'copy_pr_url',
-                      child: Row(
-                        children: [
-                          Icon(Icons.copy, color: Colors.blueGrey),
-                          SizedBox(width: 8),
-                          Text('Copy PR URL'),
-                        ],
-                      ),
-                    ),
+                } else if (value == 'full_refresh') {
+                  _fetchActivities(force: true, shallow: false);
+                } else if (value == 'copy_id') {
+                  await Clipboard.setData(ClipboardData(text: _session.id));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Session ID copied')),
+                    );
+                  }
+                } else if (value == 'open_browser') {
+                  if (_session.url != null) {
+                    launchUrl(Uri.parse(_session.url!));
+                  }
+                } else if (value == 'approve_plan') {
+                  _approvePlan();
+                } else if (value == 'watch') {
+                  final auth = Provider.of<AuthProvider>(
+                    context,
+                    listen: false,
+                  );
+                  await Provider.of<SessionProvider>(
+                    context,
+                    listen: false,
+                  ).toggleWatch(_session.id, auth.token!);
+                  setState(() {}); // Rebuild to update menu icon
+                }
+              },
+              itemBuilder: (context) => [
+                if (_session.outputs != null &&
+                    _session.outputs!.any((o) => o.pullRequest != null))
                   const PopupMenuItem(
-                    value: 'mark_unread_back',
+                    value: 'pr_back',
                     child: Row(
                       children: [
-                        Icon(Icons.mark_email_unread, color: Colors.grey),
+                        Icon(Icons.merge_type, color: Colors.purple),
                         SizedBox(width: 8),
-                        Text('Mark as Unread and Go Back'),
+                        Text('Open PR and Go Back'),
                       ],
                     ),
                   ),
-
-                  const PopupMenuDivider(),
-                  // Watch Toggle - we need to know current watch state.
-                  // We access it via SessionProvider -> items.
-                  // Note: This relies on cached items being up to date.
-                  if (Provider.of<SessionProvider>(context, listen: false)
-                      .items
-                      .any((i) =>
-                          i.data.id == _session.id && i.metadata.isWatched))
-                    const PopupMenuItem(
-                      value: 'watch',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility_off, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('Unwatch'),
-                        ],
-                      ),
-                    )
-                  else
-                    const PopupMenuItem(
-                      value: 'watch',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('Watch'),
-                        ],
-                      ),
-                    ),
-                  const PopupMenuDivider(),
+                if (_session.outputs != null &&
+                    _session.outputs!.any((o) => o.pullRequest != null))
                   const PopupMenuItem(
-                    value: 'full_refresh',
+                    value: 'copy_pr_url',
                     child: Row(
                       children: [
-                        Icon(Icons.refresh, color: Colors.grey),
+                        Icon(Icons.copy, color: Colors.blueGrey),
                         SizedBox(width: 8),
-                        Text('Full Refresh'),
+                        Text('Copy PR URL'),
                       ],
                     ),
                   ),
-                  const PopupMenuItem(
-                    value: 'copy_id',
-                    child: Row(
-                      children: [
-                        Icon(Icons.copy, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Copy Session ID'),
-                      ],
-                    ),
+                const PopupMenuItem(
+                  value: 'mark_unread_back',
+                  child: Row(
+                    children: [
+                      Icon(Icons.mark_email_unread, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Mark as Unread and Go Back'),
+                    ],
                   ),
-                  if (_session.url != null)
-                    const PopupMenuItem(
-                      value: 'open_browser',
-                      child: Row(
-                        children: [
-                          Icon(Icons.open_in_browser, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('Open in Browser'),
-                        ],
-                      ),
-                    ),
-                  const PopupMenuItem(
-                      value: 'approve_plan',
-                      child: Row(
-                        children: [
-                          Icon(Icons.check_circle, color: Colors.green),
-                          SizedBox(width: 8),
-                          Text('Force Approve Plan'),
-                        ],
-                      )),
-                ],
-              ),
-            ],
-          ),
-          body: Column(
-            children: [
-              if (_isSending)
-                const LinearProgressIndicator(minHeight: 2)
-              else
-                const SizedBox(height: 2),
-
-              // Permanent Header
-              _buildHeader(context),
-
-              // Scrollable Activity List
-              if (_isLoading && _activities.isEmpty)
-                Expanded(
-                  child: Center(
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const CircularProgressIndicator(),
-                        const SizedBox(height: 16),
-                        Text(_loadingStatus,
-                            style: const TextStyle(color: Colors.grey)),
-                      ],
-                    ),
-                  ),
-                )
-              else
-                Expanded(
-                  child: _buildActivityList(isDevMode),
                 ),
 
-              // Permanent Input Footer
-              _buildInput(context),
-            ],
-          ),
-        ));
+                const PopupMenuDivider(),
+                // Watch Toggle - we need to know current watch state.
+                // We access it via SessionProvider -> items.
+                // Note: This relies on cached items being up to date.
+                if (Provider.of<SessionProvider>(
+                  context,
+                  listen: false,
+                ).items.any(
+                  (i) => i.data.id == _session.id && i.metadata.isWatched,
+                ))
+                  const PopupMenuItem(
+                    value: 'watch',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_off, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Unwatch'),
+                      ],
+                    ),
+                  )
+                else
+                  const PopupMenuItem(
+                    value: 'watch',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Watch'),
+                      ],
+                    ),
+                  ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'full_refresh',
+                  child: Row(
+                    children: [
+                      Icon(Icons.refresh, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Full Refresh'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'copy_id',
+                  child: Row(
+                    children: [
+                      Icon(Icons.copy, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Copy Session ID'),
+                    ],
+                  ),
+                ),
+                if (_session.url != null)
+                  const PopupMenuItem(
+                    value: 'open_browser',
+                    child: Row(
+                      children: [
+                        Icon(Icons.open_in_browser, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Open in Browser'),
+                      ],
+                    ),
+                  ),
+                const PopupMenuItem(
+                  value: 'approve_plan',
+                  child: Row(
+                    children: [
+                      Icon(Icons.check_circle, color: Colors.green),
+                      SizedBox(width: 8),
+                      Text('Force Approve Plan'),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ],
+        ),
+        body: Column(
+          children: [
+            if (_isSending)
+              const LinearProgressIndicator(minHeight: 2)
+            else
+              const SizedBox(height: 2),
+
+            // Permanent Header
+            _buildHeader(context),
+
+            // Scrollable Activity List
+            if (_isLoading && _activities.isEmpty)
+              Expanded(
+                child: Center(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      const CircularProgressIndicator(),
+                      const SizedBox(height: 16),
+                      Text(
+                        _loadingStatus,
+                        style: const TextStyle(color: Colors.grey),
+                      ),
+                    ],
+                  ),
+                ),
+              )
+            else
+              Expanded(child: _buildActivityList(isDevMode)),
+
+            // Permanent Input Footer
+            _buildInput(context),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildActivityList(bool isDevMode) {
@@ -764,14 +812,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               const SizedBox(height: 8),
               SelectableText(_error!, textAlign: TextAlign.center),
               TextButton(
-                  onPressed: _fetchActivities, child: const Text("Retry"))
+                onPressed: _fetchActivities,
+                child: const Text("Retry"),
+              ),
             ],
           ),
         ),
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -780,24 +831,30 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages =
-        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+    final queuedMessages = queueProvider.queue
+        .where((m) => m.sessionId == _session.id)
+        .toList();
 
-    final queuedActivities = queuedMessages.map((m) => Activity(
+    final queuedActivities = queuedMessages.map(
+      (m) => Activity(
         name: "queued/${m.id}",
         id: "queued-${m.id}",
         createTime: m.createdAt.toIso8601String(),
         userMessaged: UserMessaged(userMessage: m.content),
         description: "Queued Message",
-        unmappedProps: {'isQueued': true}));
+        unmappedProps: {'isQueued': true},
+      ),
+    );
 
     final allActivities = [
       ..._activities,
       ...queuedActivities,
-      ..._localActivities
+      ..._localActivities,
     ];
-    allActivities.sort((a, b) =>
-        DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
+    allActivities.sort(
+      (a, b) =>
+          DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)),
+    );
 
     for (var activity in allActivities) {
       final info = ActivityDisplayInfo.fromActivity(activity);
@@ -847,11 +904,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 child: Text(
                   "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            DateTime.now().difference(updateTime).inMinutes > 15
-                                ? Colors.orange
-                                : Colors.grey,
-                      ),
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
+                  ),
                 ),
               ),
             );
@@ -896,17 +952,22 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             final isQueued = activity.unmappedProps['isQueued'] == true;
             if (isQueued) {
               return Opacity(
-                  opacity: 0.6,
-                  child: Stack(
-                    children: [
-                      item,
-                      const Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Icon(Icons.cloud_off,
-                              size: 16, color: Colors.grey))
-                    ],
-                  ));
+                opacity: 0.6,
+                child: Stack(
+                  children: [
+                    item,
+                    const Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Icon(
+                        Icons.cloud_off,
+                        size: 16,
+                        color: Colors.grey,
+                      ),
+                    ),
+                  ],
+                ),
+              );
             }
             final isLocal = activity.unmappedProps['isLocal'] == true;
             if (isLocal) {
@@ -917,7 +978,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     child: Container(
                       decoration: BoxDecoration(
                         border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.3)),
+                          color: Colors.blue.withValues(alpha: 0.3),
+                        ),
                         borderRadius: BorderRadius.circular(8),
                       ),
                       child: item,
@@ -929,15 +991,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.cloud_upload_outlined,
-                            size: 14, color: Colors.blue),
+                        const Icon(
+                          Icons.cloud_upload_outlined,
+                          size: 14,
+                          color: Colors.blue,
+                        ),
                         const SizedBox(width: 4),
                         IconButton(
                           visualDensity: VisualDensity.compact,
                           padding: EdgeInsets.zero,
                           constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.refresh,
-                              size: 16, color: Colors.blue),
+                          icon: const Icon(
+                            Icons.refresh,
+                            size: 16,
+                            color: Colors.blue,
+                          ),
                           onPressed: (_isRefreshDisabled || _busyCount > 0)
                               ? null
                               : _handleRefresh,
@@ -983,20 +1051,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         ),
         child: ExpansionTile(
           shape: const Border(),
-          title: Row(children: [
-            Icon(group.info.icon, color: group.info.iconColor, size: 20),
-            const SizedBox(width: 12),
-            Text("$count x $title",
-                style: const TextStyle(fontWeight: FontWeight.bold)),
-            const Spacer(),
-            if (start != null && end != null)
+          title: Row(
+            children: [
+              Icon(group.info.icon, color: group.info.iconColor, size: 20),
+              const SizedBox(width: 12),
               Text(
+                "$count x $title",
+                style: const TextStyle(fontWeight: FontWeight.bold),
+              ),
+              const Spacer(),
+              if (start != null && end != null)
+                Text(
                   "${DateFormat.Hms().format(start.toLocal())} - ${DateFormat.Hms().format(end.toLocal())}",
-                  style: const TextStyle(fontSize: 12, color: Colors.grey)),
-          ]),
+                  style: const TextStyle(fontSize: 12, color: Colors.grey),
+                ),
+            ],
+          ),
           children: group.activities.map((a) {
-            final item =
-                ActivityItem(activity: a, onRefresh: () => _refreshActivity(a));
+            final item = ActivityItem(
+              activity: a,
+              onRefresh: () => _refreshActivity(a),
+            );
             if (isDevMode) {
               return GestureDetector(
                 onLongPress: () => _showContextMenu(context, activity: a),
@@ -1018,42 +1093,58 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         color: Colors.purple.shade50,
         elevation: 0,
         shape: RoundedRectangleBorder(
-            side: BorderSide(color: Colors.purple.shade100),
-            borderRadius: BorderRadius.circular(8)),
+          side: BorderSide(color: Colors.purple.shade100),
+          borderRadius: BorderRadius.circular(8),
+        ),
         child: Theme(
           data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
           child: ExpansionTile(
-              title: const Text("Pull Request Available",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold, color: Colors.purple)),
-              leading: const Icon(Icons.merge_type, color: Colors.purple),
-              children: [
-                for (final output
-                    in _session.outputs!.where((o) => o.pullRequest != null))
-                  Padding(
-                      padding: const EdgeInsets.only(
-                          left: 16.0, right: 16.0, bottom: 16.0),
-                      child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(output.pullRequest!.title,
-                                style: const TextStyle(
-                                    fontWeight: FontWeight.bold)),
-                            const SizedBox(height: 4),
-                            Text(output.pullRequest!.description,
-                                maxLines: 5, overflow: TextOverflow.ellipsis),
-                            const SizedBox(height: 8),
-                            SizedBox(
-                              width: double.infinity,
-                              child: ElevatedButton.icon(
-                                icon: const Icon(Icons.open_in_new),
-                                label: const Text("Open Pull Request"),
-                                onPressed: () => launchUrl(
-                                    Uri.parse(output.pullRequest!.url)),
-                              ),
-                            )
-                          ]))
-              ]),
+            title: const Text(
+              "Pull Request Available",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.purple,
+              ),
+            ),
+            leading: const Icon(Icons.merge_type, color: Colors.purple),
+            children: [
+              for (final output in _session.outputs!.where(
+                (o) => o.pullRequest != null,
+              ))
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    bottom: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        output.pullRequest!.title,
+                        style: const TextStyle(fontWeight: FontWeight.bold),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        output.pullRequest!.description,
+                        maxLines: 5,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text("Open Pull Request"),
+                          onPressed: () =>
+                              launchUrl(Uri.parse(output.pullRequest!.url)),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+            ],
+          ),
         ),
       ),
     );
@@ -1081,41 +1172,50 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       children: [
                         if (_session.state != null)
                           Chip(
-                            label:
-                                Text(_session.state.toString().split('.').last),
+                            label: Text(
+                              _session.state.toString().split('.').last,
+                            ),
                             backgroundColor:
                                 _session.state == SessionState.COMPLETED
-                                    ? Colors.green.shade50
-                                    : (_session.state == SessionState.FAILED
-                                        ? Colors.red.shade50
-                                        : Colors.grey.shade50),
+                                ? Colors.green.shade50
+                                : (_session.state == SessionState.FAILED
+                                      ? Colors.red.shade50
+                                      : Colors.grey.shade50),
                             avatar: _session.state == SessionState.COMPLETED
-                                ? const Icon(Icons.check,
-                                    size: 16, color: Colors.green)
+                                ? const Icon(
+                                    Icons.check,
+                                    size: 16,
+                                    color: Colors.green,
+                                  )
                                 : null,
                             side: BorderSide.none,
                           ),
                         if (_session.createTime != null)
                           Chip(
                             avatar: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(DateFormat.yMMMd().add_jm().format(
-                                DateTime.parse(_session.createTime!)
-                                    .toLocal())),
+                            label: Text(
+                              DateFormat.yMMMd().add_jm().format(
+                                DateTime.parse(_session.createTime!).toLocal(),
+                              ),
+                            ),
                             side: BorderSide.none,
                           ),
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
                             label: Text(
-                                "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}"),
+                              "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
+                            ),
                             backgroundColor: Colors.blue.shade50,
                             side: BorderSide.none,
                           ),
                         if (_session.requirePlanApproval != null)
                           Chip(
-                            label: Text(_session.requirePlanApproval!
-                                ? "Approval Required"
-                                : "No Approval Required"),
+                            label: Text(
+                              _session.requirePlanApproval!
+                                  ? "Approval Required"
+                                  : "No Approval Required",
+                            ),
                             avatar: Icon(
                               _session.requirePlanApproval!
                                   ? Icons.check_circle_outline
@@ -1132,20 +1232,28 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           avatar: const Icon(Icons.source, size: 16),
                           side: BorderSide.none,
                         ),
-                        if (_session.sourceContext.githubRepoContext
+                        if (_session
+                                .sourceContext
+                                .githubRepoContext
                                 ?.startingBranch !=
                             null)
                           Chip(
-                            label: Text(_session.sourceContext
-                                .githubRepoContext!.startingBranch),
+                            label: Text(
+                              _session
+                                  .sourceContext
+                                  .githubRepoContext!
+                                  .startingBranch,
+                            ),
                             avatar: const Icon(Icons.call_split, size: 16),
                             side: BorderSide.none,
                           ),
                       ],
                     ),
                     const SizedBox(height: 12),
-                    Text("Prompt:",
-                        style: Theme.of(context).textTheme.labelLarge),
+                    Text(
+                      "Prompt:",
+                      style: Theme.of(context).textTheme.labelLarge,
+                    ),
                     const SizedBox(height: 4),
                     InkWell(
                       onTap: () {
@@ -1162,9 +1270,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             alignment: Alignment.topLeft,
                             child: Container(
                               constraints: BoxConstraints(
-                                  maxHeight: _isPromptExpanded
-                                      ? MediaQuery.sizeOf(context).height * 0.4
-                                      : 60),
+                                maxHeight: _isPromptExpanded
+                                    ? MediaQuery.sizeOf(context).height * 0.4
+                                    : 60,
+                              ),
                               width: double.infinity,
                               clipBehavior: _isPromptExpanded
                                   ? Clip.hardEdge
@@ -1195,7 +1304,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                   : Icons.keyboard_arrow_down,
                               color: Colors.grey,
                             ),
-                          )
+                          ),
                         ],
                       ),
                     ),
@@ -1212,7 +1321,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(
@@ -1227,7 +1337,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 controller: _messageController,
                 focusNode: _messageFocusNode,
                 decoration: const InputDecoration(
-                    hintText: "Send message... (Ctrl+Enter to send)"),
+                  hintText: "Send message... (Ctrl+Enter to send)",
+                ),
                 minLines: 1,
                 enabled: !_isSending, // Disable input while sending
                 maxLines: 8,
@@ -1248,7 +1359,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               )
             else if (canApprove)
               ElevatedButton(
-                  onPressed: _approvePlan, child: const Text("Approve Plan"))
+                onPressed: _approvePlan,
+                child: const Text("Approve Plan"),
+              )
             else
               const IconButton(
                 icon: Icon(Icons.send),
