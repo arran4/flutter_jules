@@ -133,8 +133,9 @@ class SessionMetaPills extends StatelessWidget {
   Color _getColorForState(SessionState state) {
     if (state == SessionState.COMPLETED) return Colors.green.shade50;
     if (state == SessionState.FAILED) return Colors.red.shade50;
-    if (state == SessionState.IN_PROGRESS || state == SessionState.PLANNING)
+    if (state == SessionState.IN_PROGRESS || state == SessionState.PLANNING) {
       return Colors.blue.shade50;
+    }
     return Colors.grey.shade50;
   }
 

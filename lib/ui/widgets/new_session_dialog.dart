@@ -1,3 +1,5 @@
+// ignore_for_file: deprecated_member_use
+
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -45,7 +47,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
-    _sourceFocusNode = FocusNode(onKey: _handleSourceFocusKey);
+    _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
     _sourceFocusNode.addListener(() {
       if (!_sourceFocusNode.hasFocus) {
         Future.delayed(const Duration(milliseconds: 100), () {
@@ -78,8 +80,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     super.dispose();
   }
 
-  KeyEventResult _handleSourceFocusKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+  KeyEventResult _handleSourceFocusKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (_sourceOverlayEntry != null && _filteredSources.isNotEmpty) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
@@ -656,7 +658,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             border: OutlineInputBorder(),
                           ),
                           value:
-                              _selectedBranch, // ignore: deprecated_member_use
+                              _selectedBranch,
                           items: branches
                               .map((b) => DropdownMenuItem(
                                     value: b,

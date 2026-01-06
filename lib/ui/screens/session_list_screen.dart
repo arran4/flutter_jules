@@ -127,8 +127,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ScaffoldMessenger.of(context)
                 .showSnackBar(SnackBar(content: Text("Error: $e")));
           });
-          ScaffoldMessenger.of(context)
-              .showSnackBar(const SnackBar(content: Text("Queue processed")));
+          if (context.mounted) {
+            ScaffoldMessenger.of(context)
+               .showSnackBar(const SnackBar(content: Text("Queue processed")));
+          }
         },
       ),
     ));
@@ -141,7 +143,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final activeSource = _activeFilters.firstWhere(
           (f) => f.type == FilterType.source && f.mode == FilterMode.include,
           orElse: () =>
-              FilterToken(id: '', type: FilterType.flag, label: '', value: ''));
+              const FilterToken(id: '', type: FilterType.flag, label: '', value: ''));
       if (activeSource.id.isNotEmpty) {
         preSelectedSource = activeSource.value;
       }
@@ -356,14 +358,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
 
     // Flags
-    suggestions.add(FilterToken(
+    suggestions.add(const FilterToken(
         id: 'flag:new', type: FilterType.flag, label: 'New', value: 'new'));
-    suggestions.add(FilterToken(
+    suggestions.add(const FilterToken(
         id: 'flag:updated',
         type: FilterType.flag,
         label: 'Updated',
         value: 'updated'));
-    suggestions.add(FilterToken(
+    suggestions.add(const FilterToken(
         id: 'flag:unread',
         type: FilterType.flag,
         label: 'Unread',
@@ -435,7 +437,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               (f) =>
                                   f.id == suggestion.id &&
                                   f.mode == FilterMode.include,
-                              orElse: () => FilterToken(
+                              orElse: () => const FilterToken(
                                   id: '',
                                   type: FilterType.flag,
                                   label: '',
@@ -446,7 +448,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               (f) =>
                                   f.id == suggestion.id &&
                                   f.mode == FilterMode.exclude,
-                              orElse: () => FilterToken(
+                              orElse: () => const FilterToken(
                                   id: '',
                                   type: FilterType.flag,
                                   label: '',
@@ -812,26 +814,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'new' && metadata.isNew) matchesAny = true;
                 if (f.value == 'updated' &&
                     metadata.isUpdated &&
-                    !metadata.isNew) matchesAny = true;
+                    !metadata.isNew) {
+                      matchesAny = true;
+                }
                 if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
                 if (f.value == 'has_pr' &&
                     (session.outputs?.any((o) => o.pullRequest != null) ??
-                        false)) matchesAny = true;
+                        false)) {
+                          matchesAny = true;
+                }
               }
               if (!matchesAny) return false;
             }
 
-            if (excludes.isNotEmpty) {
+             if (excludes.isNotEmpty) {
               bool matchesAny = false;
               for (final f in excludes) {
                 if (f.value == 'new' && metadata.isNew) matchesAny = true;
                 if (f.value == 'updated' &&
                     metadata.isUpdated &&
-                    !metadata.isNew) matchesAny = true;
+                    !metadata.isNew) {
+                      matchesAny = true;
+                }
                 if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
                 if (f.value == 'has_pr' &&
                     (session.outputs?.any((o) => o.pullRequest != null) ??
-                        false)) matchesAny = true;
+                        false)) {
+                          matchesAny = true;
+                }
               }
               if (matchesAny) return false;
             }
@@ -849,11 +859,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
               final matchesAny = includes.any((f) {
                 final val = f.value.toString().toLowerCase();
                 // Check labels
-                if (metadata.labels.any((l) => l.toLowerCase() == val))
+                if (metadata.labels.any((l) => l.toLowerCase() == val)) {
                   return true;
+                }
                 // Check title/name
-                if (session.title?.toLowerCase().contains(val) ?? false)
+                if (session.title?.toLowerCase().contains(val) ?? false) {
                   return true;
+                }
                 if (session.name.toLowerCase().contains(val)) return true;
                 return false;
               });
@@ -866,10 +878,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
             if (excludes.isNotEmpty) {
               final matchesAny = excludes.any((f) {
                 final val = f.value.toString().toLowerCase();
-                if (metadata.labels.any((l) => l.toLowerCase() == val))
+                if (metadata.labels.any((l) => l.toLowerCase() == val)) {
                   return true;
-                if (session.title?.toLowerCase().contains(val) ?? false)
-                  return true;
+                }
+                if (session.title?.toLowerCase().contains(val) ?? false) {
+                   return true;
+                }
                 if (session.name.toLowerCase().contains(val)) return true;
                 return false;
               });
@@ -916,11 +930,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       onPressed: () async {
                         final auth =
                             Provider.of<AuthProvider>(context, listen: false);
-                        final online =
-                            await queueProvider.goOnline(auth.client);
-                        if (online && mounted) {
-                          _fetchSessions(force: true);
-                        } else if (mounted) {
+                        final online = await queueProvider.goOnline(auth.client);
+                    if (online && mounted) {
+                      _fetchSessions(force: true);
+                        } else if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Still offline")));
                         }
@@ -1152,7 +1165,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       backgroundColor:
                                                           Colors.green,
                                                       textColor: Colors.white,
-                                                      filterToken: FilterToken(
+                                                      filterToken: const FilterToken(
                                                           id: 'flag:new',
                                                           type: FilterType.flag,
                                                           label: 'New',
@@ -1166,7 +1179,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       backgroundColor:
                                                           Colors.amber,
                                                       textColor: Colors.black,
-                                                      filterToken: FilterToken(
+                                                      filterToken: const FilterToken(
                                                           id: 'flag:updated',
                                                           type: FilterType.flag,
                                                           label: 'Updated',
@@ -1182,7 +1195,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     backgroundColor:
                                                         Colors.blueAccent,
                                                     textColor: Colors.white,
-                                                    filterToken: FilterToken(
+                                                    filterToken: const FilterToken(
                                                         id: 'flag:unread',
                                                         type: FilterType.flag,
                                                         label: 'Unread',
@@ -1195,7 +1208,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     backgroundColor:
                                                         Colors.deepPurple,
                                                     textColor: Colors.white,
-                                                    filterToken: FilterToken(
+                                                    filterToken: const FilterToken(
                                                         id: 'flag:watched',
                                                         type: FilterType.flag,
                                                         label: 'Watched',
@@ -1266,18 +1279,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         items: <PopupMenuEntry>[
                                                           PopupMenuItem(
                                                             child:
-                                                                Row(children: [
-                                                              const Icon(
-                                                                  Icons
-                                                                      .filter_alt,
-                                                                  size: 16),
-                                                              const SizedBox(
-                                                                  width: 8),
-                                                              Text(
-                                                                  "Filter 'Has PR'")
+                                                                const Row(children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .filter_alt,
+                                                                size: 16),
+                                                            SizedBox(
+                                                                width: 8),
+                                                            Text(
+                                                                "Filter 'Has PR'")
                                                             ]),
                                                             onTap: () {
-                                                              _addFilterToken(FilterToken(
+                                                              _addFilterToken(const FilterToken(
                                                                   id:
                                                                       'flag:has_pr',
                                                                   type:
@@ -1308,18 +1321,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           ),
                                                           PopupMenuItem(
                                                             child:
-                                                                Row(children: [
-                                                              const Icon(
-                                                                  Icons
-                                                                      .filter_alt_off,
-                                                                  size: 16),
-                                                              const SizedBox(
-                                                                  width: 8),
-                                                              Text(
-                                                                  "Exclude 'Has PR'")
+                                                                const Row(children: [
+                                                              Icon(
+                                                                Icons
+                                                                    .filter_alt_off,
+                                                                size: 16),
+                                                            SizedBox(
+                                                                width: 8),
+                                                            Text(
+                                                                "Exclude 'Has PR'")
                                                             ]),
                                                             onTap: () {
-                                                              _addFilterToken(FilterToken(
+                                                              _addFilterToken(const FilterToken(
                                                                   id:
                                                                       'flag:has_pr',
                                                                   type:

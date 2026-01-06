@@ -37,7 +37,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false; // Track sending state
   bool _isCancelled = false; // Track cancellation
-  List<Activity> _localActivities = []; // Client-side mock activites
+  final List<Activity> _localActivities = []; // Client-side mock activites
 
   final FocusNode _messageFocusNode = FocusNode();
 
@@ -424,9 +424,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     final auth =
                         Provider.of<AuthProvider>(context, listen: false);
                     final online = await queueProvider.goOnline(auth.client);
-                    if (online && mounted) {
+                    if (!context.mounted) return;
+                    if (online) {
                       _fetchActivities(force: true);
-                    } else if (mounted) {
+                    } else {
                       ScaffoldMessenger.of(context).showSnackBar(
                           const SnackBar(content: Text("Still offline")));
                     }
@@ -727,9 +728,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
         final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
 
-        // Safety check
-        if (listIndex < 0 || listIndex >= finalItems.length)
+        if (listIndex < 0 || listIndex >= finalItems.length) {
           return const SizedBox.shrink();
+        }
 
         final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 

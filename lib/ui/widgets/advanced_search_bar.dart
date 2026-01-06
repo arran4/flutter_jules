@@ -39,7 +39,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   @override
   void initState() {
     super.initState();
-    _focusNode = FocusNode(onKey: _handleFocusKey);
+    _focusNode = FocusNode(onKeyEvent: _handleFocusKey);
     // Using simple listener for text changes
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(() {
@@ -90,7 +90,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       setState(() {
         _filteredSuggestions = widget.availableSuggestions.where((s) {
           if (widget.activeFilters
-              .any((af) => af.id == s.id && af.type == s.type)) return false;
+              .any((af) => af.id == s.id && af.type == s.type)) {
+            return false;
+          }
           return s.label.toLowerCase().contains(query);
         }).toList();
 
@@ -127,7 +129,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final exactMatch = widget.availableSuggestions.firstWhere(
         (s) => s.label.toLowerCase() == query,
         orElse: () =>
-            FilterToken(id: '', type: FilterType.text, label: '', value: ''));
+            const FilterToken(id: '', type: FilterType.text, label: '', value: ''));
 
     if (exactMatch.id.isNotEmpty) {
       _selectSuggestion(exactMatch);
@@ -142,8 +144,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
-  KeyEventResult _handleFocusKey(FocusNode node, RawKeyEvent event) {
-    if (event is! RawKeyDownEvent) return KeyEventResult.ignored;
+  KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (_overlayEntry != null && _filteredSuggestions.isNotEmpty) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
@@ -349,11 +351,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
               borderRadius: BorderRadius.circular(16),
               border: Border.all(color: Colors.grey.shade300),
               boxShadow: isDragging
-                  ? [
+                  ? const [
                       BoxShadow(
                           color: Colors.black26,
                           blurRadius: 4,
-                          offset: const Offset(0, 2))
+                          offset: Offset(0, 2))
                     ]
                   : null,
             ),
@@ -519,8 +521,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       child: _buildSortPill(sort),
                     ),
                     child: DragTarget<SortOption>(
-                      onWillAccept: (data) => data != null && data != sort,
-                      onAccept: (incoming) {
+                      onWillAcceptWithDetails: (details) => details.data != sort,
+                      onAcceptWithDetails: (details) {
+                        final incoming = details.data;
                         final incomingIndex =
                             widget.activeSorts.indexOf(incoming);
                         final targetIndex = index;

@@ -17,7 +17,7 @@ class FilterToken {
   final dynamic value; // Underlying value (e.g., SessionState enum)
   final FilterMode mode;
 
-  FilterToken({
+  const FilterToken({
     required this.id,
     required this.type,
     required this.label,
