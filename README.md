@@ -81,7 +81,7 @@ lib/
 #### Linux Requirements
 If building on Linux, ensure the following system dependencies are installed:
 ```bash
-sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev
+sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
 ```
 *Note: The app requires `uses-material-design: true` in `pubspec.yaml` for correct icon rendering.*
 
