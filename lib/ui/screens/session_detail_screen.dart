@@ -379,6 +379,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 await Provider.of<SessionProvider>(context, listen: false)
                     .markAsUnread(_session.id, auth.token!);
                 if (context.mounted) Navigator.pop(context);
+              } else if (value == 'pr_back') {
+                final pr = _session.outputs!
+                    .firstWhere((o) => o.pullRequest != null)
+                    .pullRequest!;
+                launchUrl(Uri.parse(pr.url));
+                if (context.mounted) Navigator.pop(context);
               } else if (value == 'full_refresh') {
                 _fetchActivities(force: true, shallow: false);
               } else if (value == 'copy_id') {
@@ -396,6 +402,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               }
             },
             itemBuilder: (context) => [
+              if (_session.outputs != null &&
+                  _session.outputs!.any((o) => o.pullRequest != null))
+                const PopupMenuItem(
+                  value: 'pr_back',
+                  child: Row(
+                    children: [
+                      Icon(Icons.merge_type, color: Colors.purple),
+                      SizedBox(width: 8),
+                      Text('Open PR and Go Back'),
+                    ],
+                  ),
+                ),
               const PopupMenuItem(
                 value: 'mark_unread_back',
                 child: Row(

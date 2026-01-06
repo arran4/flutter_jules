@@ -1391,20 +1391,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             'View Pull Request')
                                                       ]),
                                                     ),
-                                                    if (metadata.isUnread)
-                                                      const PopupMenuItem(
-                                                        value: 'pr_read',
-                                                        child: Row(children: [
-                                                          Icon(
-                                                              Icons
-                                                                  .mark_email_read,
-                                                              color: Colors
-                                                                  .purple),
-                                                          SizedBox(width: 8),
-                                                          Text(
-                                                              'Open PR & Mark Read')
-                                                        ]),
-                                                      ),
+                                                    const PopupMenuItem(
+                                                      value: 'pr_read',
+                                                      child: Row(children: [
+                                                        Icon(
+                                                            Icons
+                                                                .mark_email_read,
+                                                            color:
+                                                                Colors.purple),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                            'Open PR & Mark Read')
+                                                      ]),
+                                                    ),
                                                   ],
                                                   if (metadata.isUnread)
                                                     const PopupMenuItem(
