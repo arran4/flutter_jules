@@ -18,7 +18,7 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()),
+        ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ProxyProvider<DevModeProvider, CacheService>(
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),

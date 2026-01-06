@@ -11,6 +11,7 @@ import '../../services/session_provider.dart';
 import '../../utils/time_helper.dart'; // Import time helper
 import '../../services/dev_mode_provider.dart';
 import '../../services/message_queue_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
@@ -88,7 +89,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     };
     _session = widget.session;
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      _fetchActivities();
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      switch (settings.refreshOnOpen) {
+        case SessionRefreshPolicy.none:
+          // Try to load from cache even if "refresh" is none?
+          // Originally _fetchActivities defaults to check cache first.
+          // Is "None" just "No Network"?
+          // Assuming "None" means rely on passed session or cache only, do not fetch.
+          // But _fetchActivities(force: false) basically does that if cache is fresh.
+          // Let's call it with special handling, or just skip?
+          // If we skip, we might show empty list.
+          // Let's assume "None" means "No Auto Refresh", but still load initial data (cache).
+          // But the setting is "Refresh on Open".
+          // If we interpret strictly:
+          _fetchActivities(
+              force: false, shallow: true); // Normal load (uses cache)
+          break;
+        case SessionRefreshPolicy.shallow:
+          _fetchActivities(force: false, shallow: true);
+          break;
+        case SessionRefreshPolicy.full:
+          _fetchActivities(force: true, shallow: false);
+          break;
+      }
     });
   }
 
@@ -294,7 +317,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         await Provider.of<SessionProvider>(context, listen: false)
             .updateSession(updatedSession!, authToken: token);
       }
-
     }
   }
 
@@ -330,35 +352,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       });
 
       if (_isCancelled) {
-        // User cancelled, but it succeeded. Logic handled by potential earlier queueing if desired, 
-        // but here we just ignore success if we wanted to 'cancel'. 
+        // User cancelled, but it succeeded. Logic handled by potential earlier queueing if desired,
+        // but here we just ignore success if we wanted to 'cancel'.
         // Given we don't 'un-send', we just proceed if not cancelled, or do nothing if cancelled.
       } else {
         if (mounted) {
-           Provider.of<SessionProvider>(context, listen: false).markAsPendingUpdate(_session.id, auth.token!);
+          Provider.of<SessionProvider>(context, listen: false)
+              .markAsPendingUpdate(_session.id, auth.token!);
 
-           // Add Mock Activity
-           final mockActivity = Activity(
-             name: "local/${DateTime.now().millisecondsSinceEpoch}",
-             id: "local-${DateTime.now().millisecondsSinceEpoch}",
-             createTime: DateTime.now().toIso8601String(),
-             userMessaged: UserMessaged(userMessage: message),
-             description: "Client Side",
-             unmappedProps: {'isLocal': true},
-           );
-           
-           setState(() {
-             _localActivities.add(mockActivity);
-           });
+          // Add Mock Activity
+          final mockActivity = Activity(
+            name: "local/${DateTime.now().millisecondsSinceEpoch}",
+            id: "local-${DateTime.now().millisecondsSinceEpoch}",
+            createTime: DateTime.now().toIso8601String(),
+            userMessaged: UserMessaged(userMessage: message),
+            description: "Client Side",
+            unmappedProps: {'isLocal': true},
+          );
+
+          setState(() {
+            _localActivities.add(mockActivity);
+          });
         }
         _messageController.clear();
-        _fetchActivities();
+
+        if (mounted) {
+          // Refresh based on settings
+          final settings =
+              Provider.of<SettingsProvider>(context, listen: false);
+          switch (settings.refreshOnMessage) {
+            case SessionRefreshPolicy.none:
+              break;
+            case SessionRefreshPolicy.shallow:
+              _fetchActivities(force: true, shallow: true);
+              break;
+            case SessionRefreshPolicy.full:
+              _fetchActivities(force: true, shallow: false);
+              break;
+          }
+        }
       }
     } catch (e) {
       if (_isCancelled) {
-          return;
+        return;
       }
-      
+
       if (!mounted) {
         // Queue if user navigated away
         queueProvider.addMessage(_session.id, message);
@@ -376,8 +414,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       }
     }
   }
-
-
 
   Future<void> _approvePlan() async {
     try {
@@ -431,261 +467,264 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
     return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) {
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          if (auth.token != null) {
-            // Fire and forget
-            Provider.of<SessionProvider>(context, listen: false)
-                .markAsRead(_session.id, auth.token!);
+        canPop: true,
+        onPopInvokedWithResult: (bool didPop, dynamic result) async {
+          if (didPop) {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            if (auth.token != null) {
+              // Fire and forget
+              Provider.of<SessionProvider>(context, listen: false)
+                  .markAsRead(_session.id, auth.token!);
+            }
           }
-        }
-      },
-      child: Scaffold(
-      appBar: AppBar(
-        leading: const BackButton(),
-        title: Text(
-          _session.title ?? 'Session Detail',
-          maxLines: 1,
-          overflow: TextOverflow.ellipsis,
-        ),
-        actions: [
-          if (_session.outputs != null &&
-              _session.outputs!.any((o) => o.pullRequest != null))
-            IconButton(
-              icon: const Icon(Icons.merge_type, color: Colors.purple),
-              tooltip: 'Open Pull Request',
-              onPressed: () {
-                final pr = _session.outputs!
-                    .firstWhere((o) => o.pullRequest != null)
-                    .pullRequest!;
-                launchUrl(Uri.parse(pr.url));
-              },
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const BackButton(),
+            title: Text(
+              _session.title ?? 'Session Detail',
+              maxLines: 1,
+              overflow: TextOverflow.ellipsis,
             ),
-          IconButton(
-            icon: const Icon(Icons.data_object),
-            tooltip: 'View Session Data',
-            onPressed: () {
-              showDialog(
-                context: context,
-                builder: (context) => ModelViewer(
-                  data: _session.toJson(),
-                  title: 'Session Data',
-                ),
-              );
-            },
-          ),
-          Consumer<MessageQueueProvider>(
-            builder: (context, queueProvider, _) {
-              if (queueProvider.isOffline) {
-                if (queueProvider.isConnecting) {
-                  return const Padding(
-                    padding: EdgeInsets.all(12.0),
-                    child: SizedBox(
-                      width: 20,
-                      height: 20,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
-                    ),
-                  );
-                }
-                return IconButton(
-                  icon: const Icon(Icons.wifi_off),
-                  tooltip: 'Go Online',
-                  onPressed: () async {
-                    final auth =
-                        Provider.of<AuthProvider>(context, listen: false);
-                    final online = await queueProvider.goOnline(auth.client);
-                    if (!context.mounted) return;
-                    if (online) {
-                      _fetchActivities(force: true);
-                    } else {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text("Still offline")));
-                    }
-                  },
-                );
-              }
-              return IconButton(
-                icon: const Icon(Icons.refresh),
-                // Disable/Gray out while "busy" (min 2s or until completion)
-                // Also blockout if any other network op is running
-                onPressed: (_isRefreshDisabled || _busyCount > 0)
-                    ? null
-                    : _handleRefresh,
-                tooltip: 'Refresh',
-              );
-            },
-          ),
-          PopupMenuButton<String>(
-            onSelected: (value) async {
-              if (value == 'mark_unread_back') {
-                final auth = Provider.of<AuthProvider>(context, listen: false);
-                await Provider.of<SessionProvider>(context, listen: false)
-                    .markAsUnread(_session.id, auth.token!);
-                if (context.mounted) Navigator.pop(context);
-              } else if (value == 'pr_back') {
-                final pr = _session.outputs!
-                    .firstWhere((o) => o.pullRequest != null)
-                    .pullRequest!;
-                launchUrl(Uri.parse(pr.url));
-                if (context.mounted) Navigator.pop(context);
-              } else if (value == 'full_refresh') {
-                _fetchActivities(force: true, shallow: false);
-              } else if (value == 'copy_id') {
-                await Clipboard.setData(ClipboardData(text: _session.id));
-                if (context.mounted) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Session ID copied')));
-                }
-              } else if (value == 'open_browser') {
-                if (_session.url != null) {
-                  launchUrl(Uri.parse(_session.url!));
-                }
-              } else if (value == 'approve_plan') {
-                _approvePlan();
-              } else if (value == 'watch') {
-                final auth = Provider.of<AuthProvider>(context, listen: false);
-                await Provider.of<SessionProvider>(context, listen: false)
-                    .toggleWatch(_session.id, auth.token!);
-                setState(() {}); // Rebuild to update menu icon
-              }
-            },
-            itemBuilder: (context) => [
+            actions: [
               if (_session.outputs != null &&
                   _session.outputs!.any((o) => o.pullRequest != null))
-                const PopupMenuItem(
-                  value: 'pr_back',
-                  child: Row(
-                    children: [
-                      Icon(Icons.merge_type, color: Colors.purple),
-                      SizedBox(width: 8),
-                      Text('Open PR and Go Back'),
-                    ],
-                  ),
+                IconButton(
+                  icon: const Icon(Icons.merge_type, color: Colors.purple),
+                  tooltip: 'Open Pull Request',
+                  onPressed: () {
+                    final pr = _session.outputs!
+                        .firstWhere((o) => o.pullRequest != null)
+                        .pullRequest!;
+                    launchUrl(Uri.parse(pr.url));
+                  },
                 ),
-              const PopupMenuItem(
-                value: 'mark_unread_back',
-                child: Row(
-                  children: [
-                    Icon(Icons.mark_email_unread, color: Colors.grey),
-                    SizedBox(width: 8),
-                    Text('Mark as Unread and Go Back'),
-                  ],
-                ),
+              IconButton(
+                icon: const Icon(Icons.data_object),
+                tooltip: 'View Session Data',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => ModelViewer(
+                      data: _session.toJson(),
+                      title: 'Session Data',
+                    ),
+                  );
+                },
               ),
+              Consumer<MessageQueueProvider>(
+                builder: (context, queueProvider, _) {
+                  if (queueProvider.isOffline) {
+                    if (queueProvider.isConnecting) {
+                      return const Padding(
+                        padding: EdgeInsets.all(12.0),
+                        child: SizedBox(
+                          width: 20,
+                          height: 20,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                          ),
+                        ),
+                      );
+                    }
+                    return IconButton(
+                      icon: const Icon(Icons.wifi_off),
+                      tooltip: 'Go Online',
+                      onPressed: () async {
+                        final auth =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final online =
+                            await queueProvider.goOnline(auth.client);
+                        if (!context.mounted) return;
+                        if (online) {
+                          _fetchActivities(force: true);
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Still offline")));
+                        }
+                      },
+                    );
+                  }
+                  return IconButton(
+                    icon: const Icon(Icons.refresh),
+                    // Disable/Gray out while "busy" (min 2s or until completion)
+                    // Also blockout if any other network op is running
+                    onPressed: (_isRefreshDisabled || _busyCount > 0)
+                        ? null
+                        : _handleRefresh,
+                    tooltip: 'Refresh',
+                  );
+                },
+              ),
+              PopupMenuButton<String>(
+                onSelected: (value) async {
+                  if (value == 'mark_unread_back') {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    await Provider.of<SessionProvider>(context, listen: false)
+                        .markAsUnread(_session.id, auth.token!);
+                    if (context.mounted) Navigator.pop(context);
+                  } else if (value == 'pr_back') {
+                    final pr = _session.outputs!
+                        .firstWhere((o) => o.pullRequest != null)
+                        .pullRequest!;
+                    launchUrl(Uri.parse(pr.url));
+                    if (context.mounted) Navigator.pop(context);
+                  } else if (value == 'full_refresh') {
+                    _fetchActivities(force: true, shallow: false);
+                  } else if (value == 'copy_id') {
+                    await Clipboard.setData(ClipboardData(text: _session.id));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Session ID copied')));
+                    }
+                  } else if (value == 'open_browser') {
+                    if (_session.url != null) {
+                      launchUrl(Uri.parse(_session.url!));
+                    }
+                  } else if (value == 'approve_plan') {
+                    _approvePlan();
+                  } else if (value == 'watch') {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    await Provider.of<SessionProvider>(context, listen: false)
+                        .toggleWatch(_session.id, auth.token!);
+                    setState(() {}); // Rebuild to update menu icon
+                  }
+                },
+                itemBuilder: (context) => [
+                  if (_session.outputs != null &&
+                      _session.outputs!.any((o) => o.pullRequest != null))
+                    const PopupMenuItem(
+                      value: 'pr_back',
+                      child: Row(
+                        children: [
+                          Icon(Icons.merge_type, color: Colors.purple),
+                          SizedBox(width: 8),
+                          Text('Open PR and Go Back'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'mark_unread_back',
+                    child: Row(
+                      children: [
+                        Icon(Icons.mark_email_unread, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Mark as Unread and Go Back'),
+                      ],
+                    ),
+                  ),
 
-              const PopupMenuDivider(),
-              // Watch Toggle - we need to know current watch state.
-              // We access it via SessionProvider -> items.
-              // Note: This relies on cached items being up to date.
-              if (Provider.of<SessionProvider>(context, listen: false)
-                  .items
-                  .any((i) => i.data.id == _session.id && i.metadata.isWatched))
-                const PopupMenuItem(
-                  value: 'watch',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility_off, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Unwatch'),
-                    ],
+                  const PopupMenuDivider(),
+                  // Watch Toggle - we need to know current watch state.
+                  // We access it via SessionProvider -> items.
+                  // Note: This relies on cached items being up to date.
+                  if (Provider.of<SessionProvider>(context, listen: false)
+                      .items
+                      .any((i) =>
+                          i.data.id == _session.id && i.metadata.isWatched))
+                    const PopupMenuItem(
+                      value: 'watch',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_off, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Unwatch'),
+                        ],
+                      ),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'watch',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Watch'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                    value: 'full_refresh',
+                    child: Row(
+                      children: [
+                        Icon(Icons.refresh, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Full Refresh'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'copy_id',
+                    child: Row(
+                      children: [
+                        Icon(Icons.copy, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Copy Session ID'),
+                      ],
+                    ),
+                  ),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                      value: 'open_browser',
+                      child: Row(
+                        children: [
+                          Icon(Icons.open_in_browser, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Open in Browser'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                      value: 'approve_plan',
+                      child: Row(
+                        children: [
+                          Icon(Icons.check_circle, color: Colors.green),
+                          SizedBox(width: 8),
+                          Text('Force Approve Plan'),
+                        ],
+                      )),
+                ],
+              ),
+            ],
+          ),
+          body: Column(
+            children: [
+              if (_isSending)
+                const LinearProgressIndicator(minHeight: 2)
+              else
+                const SizedBox(height: 2),
+
+              // Permanent Header
+              _buildHeader(context),
+
+              // Scrollable Activity List
+              if (_isLoading && _activities.isEmpty)
+                Expanded(
+                  child: Center(
+                    child: Column(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const CircularProgressIndicator(),
+                        const SizedBox(height: 16),
+                        Text(_loadingStatus,
+                            style: const TextStyle(color: Colors.grey)),
+                      ],
+                    ),
                   ),
                 )
               else
-                const PopupMenuItem(
-                  value: 'watch',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Watch'),
-                    ],
-                  ),
+                Expanded(
+                  child: _buildActivityList(isDevMode),
                 ),
-              const PopupMenuDivider(),
-              const PopupMenuItem(
-                value: 'full_refresh',
-                child: Row(
-                  children: [
-                    Icon(Icons.refresh, color: Colors.grey),
-                    SizedBox(width: 8),
-                    Text('Full Refresh'),
-                  ],
-                ),
-              ),
-              const PopupMenuItem(
-                value: 'copy_id',
-                child: Row(
-                  children: [
-                    Icon(Icons.copy, color: Colors.grey),
-                    SizedBox(width: 8),
-                    Text('Copy Session ID'),
-                  ],
-                ),
-              ),
-              if (_session.url != null)
-                const PopupMenuItem(
-                  value: 'open_browser',
-                  child: Row(
-                    children: [
-                      Icon(Icons.open_in_browser, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Open in Browser'),
-                    ],
-                  ),
-                ),
-              const PopupMenuItem(
-                  value: 'approve_plan',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('Force Approve Plan'),
-                    ],
-                  )),
+
+              // Permanent Input Footer
+              _buildInput(context),
             ],
           ),
-        ],
-      ),
-      body: Column(
-         children: [
-
-          if (_isSending)
-             const LinearProgressIndicator(minHeight: 2)
-          else 
-             const SizedBox(height: 2),
-
-          // Permanent Header
-          _buildHeader(context),
-
-          // Scrollable Activity List
-          if (_isLoading && _activities.isEmpty)
-            Expanded(
-              child: Center(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    const CircularProgressIndicator(),
-                    const SizedBox(height: 16),
-                    Text(_loadingStatus,
-                        style: const TextStyle(color: Colors.grey)),
-                  ],
-                ),
-              ),
-            )
-          else
-            Expanded(
-              child: _buildActivityList(isDevMode),
-            ),
-
-          // Permanent Input Footer
-          _buildInput(context),
-        ],
-      ),
-    ));
+        ));
   }
 
   Widget _buildActivityList(bool isDevMode) {
@@ -731,7 +770,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         description: "Queued Message",
         unmappedProps: {'isQueued': true}));
 
-    final allActivities = [..._activities, ...queuedActivities, ..._localActivities];
+    final allActivities = [
+      ..._activities,
+      ...queuedActivities,
+      ..._localActivities
+    ];
     allActivities.sort((a, b) =>
         DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
 
@@ -846,42 +889,44 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             }
             final isLocal = activity.unmappedProps['isLocal'] == true;
             if (isLocal) {
-               return Stack(
-                 children: [
-                   Opacity(
-                     opacity: 0.8,
-                     child: Container(
-                       decoration: BoxDecoration(
-                         border: Border.all(color: Colors.blue.withValues(alpha: 0.3)),
-                         borderRadius: BorderRadius.circular(8),
-                       ),
-                       child: item,
-                     ),
-                   ),
-                   Positioned(
-                     right: 8,
-                     top: 8,
-                     child: Row(
-                       mainAxisSize: MainAxisSize.min,
-                       children: [
-                         const Icon(Icons.cloud_upload_outlined, size: 14, color: Colors.blue),
-                         const SizedBox(width: 4),
-                         IconButton(
-                           visualDensity: VisualDensity.compact,
-                           padding: EdgeInsets.zero,
-                           constraints: const BoxConstraints(),
-                            icon: const Icon(Icons.refresh,
-                                size: 16, color: Colors.blue),
-                            onPressed: (_isRefreshDisabled || _busyCount > 0)
-                                ? null
-                                : _handleRefresh,
-                            tooltip: "Refresh (Client Only)",
-                          ),
-                       ],
-                     ),
-                   ),
-                 ],
-               );
+              return Stack(
+                children: [
+                  Opacity(
+                    opacity: 0.8,
+                    child: Container(
+                      decoration: BoxDecoration(
+                        border: Border.all(
+                            color: Colors.blue.withValues(alpha: 0.3)),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: item,
+                    ),
+                  ),
+                  Positioned(
+                    right: 8,
+                    top: 8,
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.cloud_upload_outlined,
+                            size: 14, color: Colors.blue),
+                        const SizedBox(width: 4),
+                        IconButton(
+                          visualDensity: VisualDensity.compact,
+                          padding: EdgeInsets.zero,
+                          constraints: const BoxConstraints(),
+                          icon: const Icon(Icons.refresh,
+                              size: 16, color: Colors.blue),
+                          onPressed: (_isRefreshDisabled || _busyCount > 0)
+                              ? null
+                              : _handleRefresh,
+                          tooltip: "Refresh (Client Only)",
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              );
             }
             return item;
           }
@@ -1175,7 +1220,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               IconButton(
                 icon: const Icon(Icons.send),
                 // Disable button (gray out) when sending
-                onPressed: _isSending ? null : () => _sendMessage(_messageController.text),
+                onPressed: _isSending
+                    ? null
+                    : () => _sendMessage(_messageController.text),
                 tooltip: _isSending ? 'Sending...' : 'Send Message',
               )
             else if (canApprove)

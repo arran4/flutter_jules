@@ -1,162 +1,247 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import '../../services/auth_provider.dart';
-import '../../services/dev_mode_provider.dart';
 import '../../services/settings_provider.dart';
+import '../../services/dev_mode_provider.dart';
+import '../../services/auth_provider.dart';
 
-class SettingsScreen extends StatefulWidget {
+class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key});
-
-  @override
-  State<SettingsScreen> createState() => _SettingsScreenState();
-}
-
-class _SettingsScreenState extends State<SettingsScreen> {
-  late TextEditingController _tokenController;
-  late TokenType _selectedType;
-
-  @override
-  void initState() {
-    super.initState();
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    _tokenController = TextEditingController(text: authProvider.token);
-    _selectedType = authProvider.tokenType;
-  }
-
-  @override
-  void dispose() {
-    _tokenController.dispose();
-    super.dispose();
-  }
-
-  void _saveToken() async {
-    final authProvider = Provider.of<AuthProvider>(context, listen: false);
-    await authProvider.setToken(_tokenController.text.trim(), _selectedType);
-    if (mounted) {
-      // ignore: use_build_context_synchronously
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Token updated successfully')),
-      );
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Settings'),
+        title: const Text('Refresh Settings'),
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.stretch,
-          children: [
-            const Text(
-              'API Configuration',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            const SizedBox(height: 16),
-            DropdownButtonFormField<TokenType>(
-              value: _selectedType, // ignore: deprecated_member_use
-              decoration: const InputDecoration(
-                labelText: 'Token Type',
-                border: OutlineInputBorder(),
+      body: Consumer3<SettingsProvider, DevModeProvider, AuthProvider>(
+        builder: (context, settings, devMode, auth, child) {
+          return ListView(
+            children: [
+              _buildSectionHeader(context, 'Session Updates'),
+              _buildSessionDropdown(
+                context,
+                title: 'On Session Open',
+                value: settings.refreshOnOpen,
+                onChanged: settings.setRefreshOnOpen,
               ),
-              items: TokenType.values.map((type) {
-                return DropdownMenuItem(
-                  value: type,
-                  child: Text(
-                      type == TokenType.apiKey ? 'API Key' : 'Access Token'),
-                );
-              }).toList(),
-              onChanged: (value) {
-                if (value != null) {
-                  setState(() {
-                    _selectedType = value;
-                  });
-                }
-              },
-            ),
-            const SizedBox(height: 16),
-            TextField(
-              controller: _tokenController,
-              decoration: const InputDecoration(
-                labelText: 'API Token',
-                border: OutlineInputBorder(),
-                hintText: 'Enter your token',
+              _buildSessionDropdown(
+                context,
+                title: 'On Message Sent',
+                value: settings.refreshOnMessage,
+                onChanged: settings.setRefreshOnMessage,
               ),
-            ),
-            const SizedBox(height: 16),
-            ElevatedButton(
-              onPressed: _saveToken,
-              child: const Text('Update Token'),
-            ),
-            const Divider(height: 32),
-            const Text(
-              'Developer Options',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
-            ),
-            SwitchListTile(
-              title: const Text('Dev Mode'),
-              subtitle: const Text('Enable advanced debugging features'),
-              value: Provider.of<DevModeProvider>(context).isDevMode,
-              onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false)
-                    .toggleDevMode(value);
-              },
-            ),
-            SwitchListTile(
-              title: const Text('API Logging'),
-              subtitle: const Text('Log API requests and responses to console'),
-              value: Provider.of<DevModeProvider>(context).enableApiLogging,
-              onChanged: (value) {
-                Provider.of<DevModeProvider>(context, listen: false)
-                    .toggleApiLogging(value);
-              },
-            ),
-            const Divider(),
-            Consumer<SettingsProvider>(
-              builder: (context, settings, child) {
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text('Session Page Size: ${settings.sessionPageSize}',
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Slider(
-                      value: settings.sessionPageSize.toDouble(),
-                      min: 10,
-                      max: 100,
-                      divisions: 9,
-                      label: settings.sessionPageSize.toString(),
-                      onChanged: (double value) {
-                        settings.setSessionPageSize(value.toInt());
-                      },
+              const Divider(),
+              _buildSectionHeader(context, 'List Updates'),
+              _buildListDropdown(
+                context,
+                title: 'On Return to List',
+                value: settings.refreshOnReturn,
+                onChanged: settings.setRefreshOnReturn,
+              ),
+              _buildListDropdown(
+                context,
+                title: 'On Session Created',
+                value: settings.refreshOnCreate,
+                onChanged: settings.setRefreshOnCreate,
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Performance'),
+              ListTile(
+                title: const Text('Sessions Page Size'),
+                subtitle: Text('${settings.sessionPageSize} items'),
+              ),
+              Slider(
+                value: settings.sessionPageSize.toDouble(),
+                min: 10,
+                max: 100,
+                divisions: 9,
+                label: settings.sessionPageSize.toString(),
+                onChanged: (double value) {
+                  settings.setSessionPageSize(value.toInt());
+                },
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Developer'),
+              SwitchListTile(
+                title: const Text('Developer Mode'),
+                subtitle: const Text('Enable advanced features and stats'),
+                value: devMode.isDevMode,
+                onChanged: (value) => devMode.toggleDevMode(value),
+              ),
+              SwitchListTile(
+                title: const Text('API Logging'),
+                subtitle:
+                    const Text('Log API requests and responses to console'),
+                value: devMode.enableApiLogging,
+                onChanged: (value) => devMode.toggleApiLogging(value),
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Authentication'),
+              ListTile(
+                title: const Text('Current Session'),
+                subtitle: Text(auth.tokenType == TokenType.apiKey
+                    ? 'API Key'
+                    : 'Google Access Token'),
+                trailing: const Icon(Icons.check_circle, color: Colors.green),
+              ),
+              ListTile(
+                title: const Text('Update API Key'),
+                leading: const Icon(Icons.vpn_key),
+                onTap: () async {
+                  final controller = TextEditingController();
+                  final newKey = await showDialog<String>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Enter API Key'),
+                      content: TextField(
+                        controller: controller,
+                        decoration: const InputDecoration(
+                          labelText: 'API Key',
+                          hintText: 'Paste your API key here',
+                        ),
+                        obscureText: true,
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () =>
+                              Navigator.pop(context, controller.text),
+                          child: const Text('Save'),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      'Higher values load more data but may be slower. API Max is 100.',
-                      style: TextStyle(fontSize: 12, color: Colors.grey),
+                  );
+
+                  if (newKey != null && newKey.isNotEmpty) {
+                    if (!context.mounted) return;
+                    await auth.setToken(newKey, TokenType.apiKey);
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                            content: Text('API Key updated successfully')),
+                      );
+                    }
+                  }
+                },
+              ),
+              ListTile(
+                title:
+                    const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                leading: const Icon(Icons.logout, color: Colors.red),
+                onTap: () async {
+                  final confirm = await showDialog<bool>(
+                    context: context,
+                    builder: (context) => AlertDialog(
+                      title: const Text('Sign Out'),
+                      content: const Text('Are you sure you want to sign out?'),
+                      actions: [
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel')),
+                        TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text('Sign Out')),
+                      ],
                     ),
-                  ],
-                );
-              },
-            ),
-            const Spacer(),
-            TextButton(
-              onPressed: () async {
-                final authProvider =
-                    Provider.of<AuthProvider>(context, listen: false);
-                await authProvider.logout();
-                if (mounted) {
-                  // ignore: use_build_context_synchronously
-                  Navigator.of(context).popUntil((route) => route.isFirst);
-                }
-              },
-              style: TextButton.styleFrom(foregroundColor: Colors.red),
-              child: const Text('Logout / Clear Token'),
-            ),
-          ],
-        ),
+                  );
+                  if (confirm == true) {
+                    if (context.mounted) {
+                      Navigator.pop(context); // Close settings
+                      auth.logout();
+                    }
+                  }
+                },
+              ),
+            ],
+          );
+        },
       ),
     );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleMedium?.copyWith(
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildSessionDropdown(
+    BuildContext context, {
+    required String title,
+    required SessionRefreshPolicy value,
+    required Function(SessionRefreshPolicy) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<SessionRefreshPolicy>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: SessionRefreshPolicy.values.map((policy) {
+          return DropdownMenuItem(
+            value: policy,
+            child: Text(_formatSessionPolicy(policy)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildListDropdown(
+    BuildContext context, {
+    required String title,
+    required ListRefreshPolicy value,
+    required Function(ListRefreshPolicy) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<ListRefreshPolicy>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: ListRefreshPolicy.values.map((policy) {
+          return DropdownMenuItem(
+            value: policy,
+            child: Text(_formatListPolicy(policy)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatSessionPolicy(SessionRefreshPolicy policy) {
+    switch (policy) {
+      case SessionRefreshPolicy.none:
+        return 'None';
+      case SessionRefreshPolicy.shallow:
+        return 'Quick Refresh';
+      case SessionRefreshPolicy.full:
+        return 'Full Refresh';
+    }
+  }
+
+  String _formatListPolicy(ListRefreshPolicy policy) {
+    switch (policy) {
+      case ListRefreshPolicy.none:
+        return 'None';
+      case ListRefreshPolicy.dirty:
+        return 'Dirty Only';
+      case ListRefreshPolicy.quick:
+        return 'Quick Refresh';
+      case ListRefreshPolicy.full:
+        return 'Full Refresh';
+    }
   }
 }

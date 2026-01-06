@@ -16,6 +16,7 @@ import '../widgets/advanced_search_bar.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
+import '../../services/settings_provider.dart';
 import 'offline_queue_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
@@ -77,9 +78,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
       final sessionProvider =
           Provider.of<SessionProvider>(context, listen: false);
 
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
       await sessionProvider.fetchSessions(auth.client,
           force: force,
           shallow: shallow,
+          pageSize: settings.sessionPageSize,
           authToken: auth.token, onRefreshFallback: (msg) {
         if (mounted) {
           ScaffoldMessenger.of(context)
@@ -129,7 +132,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           });
           if (context.mounted) {
             ScaffoldMessenger.of(context)
-               .showSnackBar(const SnackBar(content: Text("Queue processed")));
+                .showSnackBar(const SnackBar(content: Text("Queue processed")));
           }
         },
       ),
@@ -142,8 +145,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (preSelectedSource == null) {
       final activeSource = _activeFilters.firstWhere(
           (f) => f.type == FilterType.source && f.mode == FilterMode.include,
-          orElse: () =>
-              const FilterToken(id: '', type: FilterType.flag, label: '', value: ''));
+          orElse: () => const FilterToken(
+              id: '', type: FilterType.flag, label: '', value: ''));
       if (activeSource.id.isNotEmpty) {
         preSelectedSource = activeSource.value;
       }
@@ -160,8 +163,26 @@ class _SessionListScreenState extends State<SessionListScreen> {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       await client.createSession(sessionToCreate);
-      // Trigger refresh
-      _fetchSessions(force: true);
+
+      if (!mounted) return;
+
+      // Trigger refresh based on settings
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      switch (settings.refreshOnCreate) {
+        case ListRefreshPolicy.none:
+          break;
+        case ListRefreshPolicy.dirty:
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          Provider.of<SessionProvider>(context, listen: false)
+              .refreshDirtySessions(client, authToken: auth.token!);
+          break;
+        case ListRefreshPolicy.quick:
+          _fetchSessions(force: true, shallow: true);
+          break;
+        case ListRefreshPolicy.full:
+          _fetchSessions(force: true, shallow: false);
+          break;
+      }
     } catch (e) {
       if (mounted) {
         showDialog(
@@ -815,32 +836,32 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'updated' &&
                     metadata.isUpdated &&
                     !metadata.isNew) {
-                      matchesAny = true;
+                  matchesAny = true;
                 }
                 if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
                 if (f.value == 'has_pr' &&
                     (session.outputs?.any((o) => o.pullRequest != null) ??
                         false)) {
-                          matchesAny = true;
+                  matchesAny = true;
                 }
               }
               if (!matchesAny) return false;
             }
 
-             if (excludes.isNotEmpty) {
+            if (excludes.isNotEmpty) {
               bool matchesAny = false;
               for (final f in excludes) {
                 if (f.value == 'new' && metadata.isNew) matchesAny = true;
                 if (f.value == 'updated' &&
                     metadata.isUpdated &&
                     !metadata.isNew) {
-                      matchesAny = true;
+                  matchesAny = true;
                 }
                 if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
                 if (f.value == 'has_pr' &&
                     (session.outputs?.any((o) => o.pullRequest != null) ??
                         false)) {
-                          matchesAny = true;
+                  matchesAny = true;
                 }
               }
               if (matchesAny) return false;
@@ -882,7 +903,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   return true;
                 }
                 if (session.title?.toLowerCase().contains(val) ?? false) {
-                   return true;
+                  return true;
                 }
                 if (session.name.toLowerCase().contains(val)) return true;
                 return false;
@@ -930,9 +951,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       onPressed: () async {
                         final auth =
                             Provider.of<AuthProvider>(context, listen: false);
-                        final online = await queueProvider.goOnline(auth.client);
-                    if (online && mounted) {
-                      _fetchSessions(force: true);
+                        final online =
+                            await queueProvider.goOnline(auth.client);
+                        if (online && mounted) {
+                          _fetchSessions(force: true);
                         } else if (context.mounted) {
                           ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(content: Text("Still offline")));
@@ -1134,14 +1156,41 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   margin: const EdgeInsets.symmetric(
                                       horizontal: 8, vertical: 4),
                                   child: InkWell(
-                                    onTap: () {
+                                    onTap: () async {
                                       _markAsRead(session);
-                                      Navigator.push(
+                                      await Navigator.push(
                                           context,
                                           MaterialPageRoute(
                                               builder: (_) =>
                                                   SessionDetailScreen(
                                                       session: session)));
+
+                                      // On Return
+                                      if (!context.mounted) return;
+                                      final settings =
+                                          Provider.of<SettingsProvider>(context,
+                                              listen: false);
+                                      switch (settings.refreshOnReturn) {
+                                        case ListRefreshPolicy.none:
+                                          break;
+                                        case ListRefreshPolicy.dirty:
+                                          final auth =
+                                              Provider.of<AuthProvider>(context,
+                                                  listen: false);
+                                          Provider.of<SessionProvider>(context,
+                                                  listen: false)
+                                              .refreshDirtySessions(auth.client,
+                                                  authToken: auth.token!);
+                                          break;
+                                        case ListRefreshPolicy.quick:
+                                          _fetchSessions(
+                                              force: true, shallow: true);
+                                          break;
+                                        case ListRefreshPolicy.full:
+                                          _fetchSessions(
+                                              force: true, shallow: false);
+                                          break;
+                                      }
                                     },
                                     onLongPress: () {
                                       if (isDevMode) {
@@ -1165,25 +1214,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       backgroundColor:
                                                           Colors.green,
                                                       textColor: Colors.white,
-                                                      filterToken: const FilterToken(
-                                                          id: 'flag:new',
-                                                          type: FilterType.flag,
-                                                          label: 'New',
-                                                          value: 'new'),
+                                                      filterToken:
+                                                          const FilterToken(
+                                                              id: 'flag:new',
+                                                              type: FilterType
+                                                                  .flag,
+                                                              label: 'New',
+                                                              value: 'new'),
                                                       sortField:
                                                           SortField.created),
                                                 if (metadata.isUpdated &&
                                                     !metadata.isNew)
                                                   _buildPill(context,
                                                       label: 'UPDATED',
-                                                      backgroundColor:
-                                                          Colors.amber,
+                                                      backgroundColor: Colors
+                                                          .amber,
                                                       textColor: Colors.black,
-                                                      filterToken: const FilterToken(
-                                                          id: 'flag:updated',
-                                                          type: FilterType.flag,
-                                                          label: 'Updated',
-                                                          value: 'updated'),
+                                                      filterToken:
+                                                          const FilterToken(
+                                                              id:
+                                                                  'flag:updated',
+                                                              type: FilterType
+                                                                  .flag,
+                                                              label: 'Updated',
+                                                              value: 'updated'),
                                                       sortField:
                                                           SortField.updated),
                                                 if (metadata.isUnread &&
@@ -1195,11 +1249,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     backgroundColor:
                                                         Colors.blueAccent,
                                                     textColor: Colors.white,
-                                                    filterToken: const FilterToken(
-                                                        id: 'flag:unread',
-                                                        type: FilterType.flag,
-                                                        label: 'Unread',
-                                                        value: 'unread'),
+                                                    filterToken:
+                                                        const FilterToken(
+                                                            id: 'flag:unread',
+                                                            type:
+                                                                FilterType.flag,
+                                                            label: 'Unread',
+                                                            value: 'unread'),
                                                   ),
                                                 if (metadata.isWatched)
                                                   _buildPill(
@@ -1208,11 +1264,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     backgroundColor:
                                                         Colors.deepPurple,
                                                     textColor: Colors.white,
-                                                    filterToken: const FilterToken(
-                                                        id: 'flag:watched',
-                                                        type: FilterType.flag,
-                                                        label: 'Watched',
-                                                        value: 'watched'),
+                                                    filterToken:
+                                                        const FilterToken(
+                                                            id: 'flag:watched',
+                                                            type:
+                                                                FilterType.flag,
+                                                            label: 'Watched',
+                                                            value: 'watched'),
                                                   ),
 
                                                 // Render custom labels
@@ -1278,17 +1336,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         position: position,
                                                         items: <PopupMenuEntry>[
                                                           PopupMenuItem(
-                                                            child:
-                                                                const Row(children: [
-                                                              Icon(
-                                                                Icons
-                                                                    .filter_alt,
-                                                                size: 16),
-                                                            SizedBox(
-                                                                width: 8),
-                                                            Text(
-                                                                "Filter 'Has PR'")
-                                                            ]),
+                                                            child: const Row(
+                                                                children: [
+                                                                  Icon(
+                                                                      Icons
+                                                                          .filter_alt,
+                                                                      size: 16),
+                                                                  SizedBox(
+                                                                      width: 8),
+                                                                  Text(
+                                                                      "Filter 'Has PR'")
+                                                                ]),
                                                             onTap: () {
                                                               _addFilterToken(const FilterToken(
                                                                   id:
@@ -1320,17 +1378,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             },
                                                           ),
                                                           PopupMenuItem(
-                                                            child:
-                                                                const Row(children: [
-                                                              Icon(
-                                                                Icons
-                                                                    .filter_alt_off,
-                                                                size: 16),
-                                                            SizedBox(
-                                                                width: 8),
-                                                            Text(
-                                                                "Exclude 'Has PR'")
-                                                            ]),
+                                                            child: const Row(
+                                                                children: [
+                                                                  Icon(
+                                                                      Icons
+                                                                          .filter_alt_off,
+                                                                      size: 16),
+                                                                  SizedBox(
+                                                                      width: 8),
+                                                                  Text(
+                                                                      "Exclude 'Has PR'")
+                                                                ]),
                                                             onTap: () {
                                                               _addFilterToken(const FilterToken(
                                                                   id:

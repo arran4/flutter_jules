@@ -1,35 +1,105 @@
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+enum SessionRefreshPolicy {
+  none,
+  shallow,
+  full,
+}
+
+enum ListRefreshPolicy {
+  none,
+  dirty,
+  quick,
+  full,
+}
+
 class SettingsProvider extends ChangeNotifier {
+  static const String keyRefreshOnOpen = 'refresh_on_open';
+  static const String keyRefreshOnMessage = 'refresh_on_message';
+  static const String keyRefreshOnReturn = 'refresh_on_return';
+  static const String keyRefreshOnCreate = 'refresh_on_create';
   static const String _sessionPageSizeKey = 'session_page_size';
 
+  SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
+  SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
+  ListRefreshPolicy _refreshOnReturn = ListRefreshPolicy.dirty;
+  ListRefreshPolicy _refreshOnCreate = ListRefreshPolicy.quick;
   int _sessionPageSize = 100;
   bool _isInitialized = false;
 
+  SharedPreferences? _prefs;
+
+  SessionRefreshPolicy get refreshOnOpen => _refreshOnOpen;
+  SessionRefreshPolicy get refreshOnMessage => _refreshOnMessage;
+  ListRefreshPolicy get refreshOnReturn => _refreshOnReturn;
+  ListRefreshPolicy get refreshOnCreate => _refreshOnCreate;
   int get sessionPageSize => _sessionPageSize;
   bool get isInitialized => _isInitialized;
 
-  SettingsProvider() {
+  Future<void> init() async {
+    _prefs = await SharedPreferences.getInstance();
     _loadSettings();
   }
 
-  Future<void> _loadSettings() async {
-    final prefs = await SharedPreferences.getInstance();
-    _sessionPageSize = prefs.getInt(_sessionPageSizeKey) ?? 100;
+  void _loadSettings() {
+    if (_prefs == null) return;
+
+    _refreshOnOpen = _loadEnum(keyRefreshOnOpen, SessionRefreshPolicy.values,
+        SessionRefreshPolicy.shallow);
+    _refreshOnMessage = _loadEnum(keyRefreshOnMessage,
+        SessionRefreshPolicy.values, SessionRefreshPolicy.shallow);
+    _refreshOnReturn = _loadEnum(
+        keyRefreshOnReturn, ListRefreshPolicy.values, ListRefreshPolicy.dirty);
+    _refreshOnCreate = _loadEnum(
+        keyRefreshOnCreate, ListRefreshPolicy.values, ListRefreshPolicy.quick);
+    _sessionPageSize = _prefs!.getInt(_sessionPageSizeKey) ?? 100;
     _isInitialized = true;
+
     notifyListeners();
+  }
+
+  T _loadEnum<T extends Enum>(String key, List<T> values, T defaultValue) {
+    if (_prefs == null) return defaultValue;
+    try {
+      final index = _prefs!.getInt(key);
+      if (index != null && index >= 0 && index < values.length) {
+        return values[index];
+      }
+    } catch (_) {}
+    return defaultValue;
+  }
+
+  Future<void> setRefreshOnOpen(SessionRefreshPolicy policy) async {
+    _refreshOnOpen = policy;
+    notifyListeners();
+    await _prefs?.setInt(keyRefreshOnOpen, policy.index);
+  }
+
+  Future<void> setRefreshOnMessage(SessionRefreshPolicy policy) async {
+    _refreshOnMessage = policy;
+    notifyListeners();
+    await _prefs?.setInt(keyRefreshOnMessage, policy.index);
+  }
+
+  Future<void> setRefreshOnReturn(ListRefreshPolicy policy) async {
+    _refreshOnReturn = policy;
+    notifyListeners();
+    await _prefs?.setInt(keyRefreshOnReturn, policy.index);
+  }
+
+  Future<void> setRefreshOnCreate(ListRefreshPolicy policy) async {
+    _refreshOnCreate = policy;
+    notifyListeners();
+    await _prefs?.setInt(keyRefreshOnCreate, policy.index);
   }
 
   Future<void> setSessionPageSize(int size) async {
     // API limits: default 30, max 100.
     if (size < 1) size = 1;
     if (size > 100) size = 100;
-
     _sessionPageSize = size;
     notifyListeners();
-
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt(_sessionPageSizeKey, size);
+    await _prefs?.setInt(_sessionPageSizeKey, size);
   }
 }

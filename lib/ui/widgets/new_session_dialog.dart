@@ -657,8 +657,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             labelText: 'Branch',
                             border: OutlineInputBorder(),
                           ),
-                          value:
-                              _selectedBranch,
+                          value: _selectedBranch,
                           items: branches
                               .map((b) => DropdownMenuItem(
                                     value: b,

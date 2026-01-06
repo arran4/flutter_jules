@@ -26,6 +26,7 @@ class SessionProvider extends ChangeNotifier {
   Future<void> fetchSessions(JulesClient client,
       {bool force = false,
       bool shallow = true,
+      int pageSize = 100,
       String? authToken,
       void Function(String)? onRefreshFallback}) async {
     if (_cacheService == null) {
@@ -60,7 +61,7 @@ class SessionProvider extends ChangeNotifier {
       // Load sessions
       do {
         final response = await client.listSessions(
-          pageSize: 100,
+          pageSize: pageSize,
           pageToken: pageToken,
           onDebug: (exchange) {
             _lastExchange = exchange;
@@ -137,6 +138,7 @@ class SessionProvider extends ChangeNotifier {
         await fetchSessions(client,
             force: true,
             shallow: false,
+            pageSize: pageSize,
             authToken: authToken,
             onRefreshFallback: onRefreshFallback);
         return;

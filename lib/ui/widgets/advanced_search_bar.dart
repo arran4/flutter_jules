@@ -128,8 +128,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     // Try exact match first
     final exactMatch = widget.availableSuggestions.firstWhere(
         (s) => s.label.toLowerCase() == query,
-        orElse: () =>
-            const FilterToken(id: '', type: FilterType.text, label: '', value: ''));
+        orElse: () => const FilterToken(
+            id: '', type: FilterType.text, label: '', value: ''));
 
     if (exactMatch.id.isNotEmpty) {
       _selectSuggestion(exactMatch);
@@ -521,7 +521,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       child: _buildSortPill(sort),
                     ),
                     child: DragTarget<SortOption>(
-                      onWillAcceptWithDetails: (details) => details.data != sort,
+                      onWillAcceptWithDetails: (details) =>
+                          details.data != sort,
                       onAcceptWithDetails: (details) {
                         final incoming = details.data;
                         final incomingIndex =
