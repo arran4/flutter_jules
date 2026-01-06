@@ -1598,7 +1598,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   launchUrl(Uri.parse(pr.url));
                                                 } else if (value == 'browser') {
                                                   _openSessionUrl(session);
-                                                } else if (value == 'reply') {
+                                                } else if (value == 'copy_pr_url') {
+                                                  final prUrl = session.outputs
+                                                      ?.firstWhere((o) => o.pullRequest != null, orElse: () => Output())
+                                                      .pullRequest?.url;
+                                                  if (prUrl != null) {
+                                                    Clipboard.setData(ClipboardData(text: prUrl));
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('PR URL copied to clipboard')),
+                                                    );
+                                                  }
+                                                } else if (value == 'copy_jules_url') {
+                                                  if (session.url != null) {
+                                                    Clipboard.setData(ClipboardData(text: session.url!));
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Jules URL copied to clipboard')),
+                                                    );
+                                                  }
+                                                }else if (value == 'reply') {
                                                   _quickReply(session);
                                                 } else if (value ==
                                                     'view_prompt') {
@@ -1679,6 +1696,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             'Open PR & Mark Read')
                                                       ]),
                                                     ),
+                                                    const PopupMenuItem(
+                                                      value: 'copy_pr_url',
+                                                      child: Row(children: [
+                                                        Icon(Icons.copy, color: Colors.purple),
+                                                        SizedBox(width: 8),
+                                                        Text('Copy PR Link'),
+                                                      ]),
+                                                    ),
                                                   ],
                                                   if (metadata.isUnread)
                                                     const PopupMenuItem(
@@ -1751,6 +1776,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             .open_in_browser),
                                                         SizedBox(width: 8),
                                                         Text('Open in Browser')
+                                                      ]),
+                                                    ),
+                                                  if (session.url != null)
+                                                    const PopupMenuItem(
+                                                      value: 'copy_jules_url',
+                                                      child: Row(children: [
+                                                        Icon(Icons.copy),
+                                                        SizedBox(width: 8),
+                                                        Text('Copy Jules Link'),
                                                       ]),
                                                     ),
                                                   const PopupMenuItem(
