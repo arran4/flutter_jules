@@ -6,6 +6,7 @@ class CacheMetadata {
   final DateTime? lastUpdated; // When the content last changed (detected delta)
   final List<String> labels;
   final bool isWatched;
+  final bool isHidden;
   final bool
       hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
 
@@ -18,6 +19,7 @@ class CacheMetadata {
     this.labels = const [],
     this.isWatched = false,
     this.hasPendingUpdates = false,
+    this.isHidden = false,
   });
 
   // Convenience Getters
@@ -64,6 +66,7 @@ class CacheMetadata {
           [],
       isWatched: json['isWatched'] ?? false,
       hasPendingUpdates: json['hasPendingUpdates'] ?? false,
+      isHidden: json['isHidden'] ?? false,
     );
   }
 
@@ -77,6 +80,7 @@ class CacheMetadata {
       'labels': labels,
       'isWatched': isWatched,
       'hasPendingUpdates': hasPendingUpdates,
+      'isHidden': isHidden,
     };
   }
 
@@ -89,6 +93,7 @@ class CacheMetadata {
     List<String>? labels,
     bool? isWatched,
     bool? hasPendingUpdates,
+    bool? isHidden,
   }) {
     return CacheMetadata(
       firstSeen: firstSeen ?? this.firstSeen,
@@ -99,6 +104,7 @@ class CacheMetadata {
       labels: labels ?? this.labels,
       isWatched: isWatched ?? this.isWatched,
       hasPendingUpdates: hasPendingUpdates ?? this.hasPendingUpdates,
+      isHidden: isHidden ?? this.isHidden,
     );
   }
 }

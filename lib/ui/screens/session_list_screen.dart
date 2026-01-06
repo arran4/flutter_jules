@@ -9,6 +9,7 @@ import '../../services/source_provider.dart';
 import '../../services/cache_service.dart';
 import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
+import '../../models/cache_metadata.dart';
 import '../../models.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
@@ -463,6 +464,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Watching',
         value: 'watched'));
+    suggestions.add(const FilterToken(
+        id: 'flag:hidden',
+        type: FilterType.flag,
+        label: 'Hidden',
+        value: 'hidden'));
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -833,6 +839,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final session = item.data;
           final metadata = item.metadata;
 
+          // Default hidden check:
+          // If the session is hidden, it should generally NOT be shown...
+          // UNLESS the user has explicitly requested to see hidden items via a filter.
+          final hasHiddenFilter = _activeFilters.any(
+              (f) => f.id == 'flag:hidden' && f.mode == FilterMode.include);
+          if (metadata.isHidden && !hasHiddenFilter) {
+            return false;
+          }
+
           // Text Search
           if (_searchText.isNotEmpty) {
             final query = _searchText.toLowerCase();
@@ -919,6 +934,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'watched' && metadata.isWatched) {
                   matchesAny = true;
                 }
+                if (f.value == 'hidden' && metadata.isHidden) {
+                  matchesAny = true;
+                }
               }
               if (!matchesAny) return false;
             }
@@ -939,6 +957,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   matchesAny = true;
                 }
                 if (f.value == 'watched' && metadata.isWatched) {
+                  matchesAny = true;
+                }
+                if (f.value == 'hidden' && metadata.isHidden) {
                   matchesAny = true;
                 }
               }
@@ -1293,10 +1314,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       }
                                     },
                                     onLongPress: () {
-                                      if (isDevMode) {
-                                        _showContextMenu(context,
-                                            session: session);
-                                      }
+                                      _showTileMenu(context, session, metadata,
+                                          isDevMode);
+                                    },
+                                    onSecondaryTapUp: (details) {
+                                       _showTileMenu(context, session, metadata, isDevMode, position: details.globalPosition);
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
@@ -1404,8 +1426,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                   .normal,
                                                           fontSize: 16)),
                                                 ),
+
                                               ],
                                             )),
+                                            // Trailing Menu Button
+                                            InkWell(
+                                              borderRadius: BorderRadius.circular(16),
+                                              onTapDown: (details) {
+                                                _showTileMenu(context, session, metadata, isDevMode, position: details.globalPosition);
+                                              },
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(8.0),
+                                                child: Icon(Icons.more_vert, size: 20),
+                                              ),
+                                            ),
                                             if (session.outputs != null &&
                                                 session.outputs!.any((o) =>
                                                     o.pullRequest != null))
@@ -1572,208 +1606,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   ),
                                                 ),
                                               ),
-                                            PopupMenuButton<String>(
-                                              icon: const Icon(Icons.more_vert),
-                                              tooltip: 'Actions',
-                                              onSelected: (value) async {
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
-                                                        context,
-                                                        listen: false);
-                                                if (value == 'pr') {
-                                                  final pr = session.outputs!
-                                                      .firstWhere((o) =>
-                                                          o.pullRequest != null)
-                                                      .pullRequest!;
-                                                  launchUrl(Uri.parse(pr.url));
-                                                } else if (value == 'pr_read') {
-                                                  final pr = session.outputs!
-                                                      .firstWhere((o) =>
-                                                          o.pullRequest != null)
-                                                      .pullRequest!;
-                                                  await sessionProvider
-                                                      .markPrAsOpened(
-                                                          session.id,
-                                                          auth.token!);
-                                                  launchUrl(Uri.parse(pr.url));
-                                                } else if (value == 'browser') {
-                                                  _openSessionUrl(session);
-                                                } else if (value == 'reply') {
-                                                  _quickReply(session);
-                                                } else if (value ==
-                                                    'view_prompt') {
-                                                  showDialog(
-                                                    context: context,
-                                                    builder: (context) =>
-                                                        AlertDialog(
-                                                      title: const Text(
-                                                          "Session Prompt"),
-                                                      content:
-                                                          SingleChildScrollView(
-                                                        child: SelectableText(
-                                                            session.prompt),
-                                                      ),
-                                                      actions: [
-                                                        TextButton(
-                                                          onPressed: () =>
-                                                              Navigator.pop(
-                                                                  context),
-                                                          child: const Text(
-                                                              "Close"),
-                                                        ),
-                                                      ],
-                                                    ),
-                                                  );
-                                                } else if (value == 'refresh') {
-                                                  _refreshSession(session);
-                                                } else if (value == 'source') {
-                                                  _openSourceUrl(session
-                                                      .sourceContext.source);
-                                                } else if (value == 'raw') {
-                                                  _showContextMenu(context,
-                                                      session: session);
-                                                } else if (value ==
-                                                    'mark_read') {
-                                                  await sessionProvider
-                                                      .markAsRead(session.id,
-                                                          auth.token!);
-                                                } else if (value ==
-                                                    'mark_unread') {
-                                                  await sessionProvider
-                                                      .markAsUnread(session.id,
-                                                          auth.token!);
-                                                } else if (value == 'watch') {
-                                                  await sessionProvider
-                                                      .toggleWatch(session.id,
-                                                          auth.token!);
-                                                }
-                                              },
-                                              itemBuilder: (context) {
-                                                final hasPr = session.outputs !=
-                                                        null &&
-                                                    session.outputs!.any((o) =>
-                                                        o.pullRequest != null);
-                                                return [
-                                                  if (hasPr) ...[
-                                                    const PopupMenuItem(
-                                                      value: 'pr',
-                                                      child: Row(children: [
-                                                        Icon(Icons.merge_type,
-                                                            color:
-                                                                Colors.purple),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                            'View Pull Request')
-                                                      ]),
-                                                    ),
-                                                    const PopupMenuItem(
-                                                      value: 'pr_read',
-                                                      child: Row(children: [
-                                                        Icon(
-                                                            Icons
-                                                                .mark_email_read,
-                                                            color:
-                                                                Colors.purple),
-                                                        SizedBox(width: 8),
-                                                        Text(
-                                                            'Open PR & Mark Read')
-                                                      ]),
-                                                    ),
-                                                  ],
-                                                  if (metadata.isUnread)
-                                                    const PopupMenuItem(
-                                                      value: 'mark_read',
-                                                      child: Row(children: [
-                                                        Icon(Icons
-                                                            .mark_email_read),
-                                                        SizedBox(width: 8),
-                                                        Text('Mark as Read')
-                                                      ]),
-                                                    )
-                                                  else
-                                                    const PopupMenuItem(
-                                                      value: 'mark_unread',
-                                                      child: Row(children: [
-                                                        Icon(Icons
-                                                            .mark_email_unread),
-                                                        SizedBox(width: 8),
-                                                        Text('Mark as Unread')
-                                                      ]),
-                                                    ),
-                                                  if (metadata.isWatched)
-                                                    const PopupMenuItem(
-                                                      value: 'watch',
-                                                      child: Row(children: [
-                                                        Icon(Icons
-                                                            .visibility_off),
-                                                        SizedBox(width: 8),
-                                                        Text('Unwatch')
-                                                      ]),
-                                                    )
-                                                  else
-                                                    const PopupMenuItem(
-                                                      value: 'watch',
-                                                      child: Row(children: [
-                                                        Icon(Icons.visibility),
-                                                        SizedBox(width: 8),
-                                                        Text('Watch')
-                                                      ]),
-                                                    ),
-                                                  const PopupMenuItem(
-                                                    value: 'reply',
-                                                    child: Row(children: [
-                                                      Icon(Icons.reply),
-                                                      SizedBox(width: 8),
-                                                      Text('Quick Reply')
-                                                    ]),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'view_prompt',
-                                                    child: Row(children: [
-                                                      Icon(Icons.description),
-                                                      SizedBox(width: 8),
-                                                      Text('View Prompt')
-                                                    ]),
-                                                  ),
-                                                  const PopupMenuItem(
-                                                    value: 'refresh',
-                                                    child: Row(children: [
-                                                      Icon(Icons.refresh),
-                                                      SizedBox(width: 8),
-                                                      Text('Refresh Session')
-                                                    ]),
-                                                  ),
-                                                  if (session.url != null)
-                                                    const PopupMenuItem(
-                                                      value: 'browser',
-                                                      child: Row(children: [
-                                                        Icon(Icons
-                                                            .open_in_browser),
-                                                        SizedBox(width: 8),
-                                                        Text('Open in Browser')
-                                                      ]),
-                                                    ),
-                                                  const PopupMenuItem(
-                                                    value: 'source',
-                                                    child: Row(children: [
-                                                      Icon(Icons.source),
-                                                      SizedBox(width: 8),
-                                                      Text('View Source Repo')
-                                                    ]),
-                                                  ),
-                                                  if (isDevMode)
-                                                    const PopupMenuItem(
-                                                      value: 'raw',
-                                                      child: Row(children: [
-                                                        Icon(Icons
-                                                            .developer_mode),
-                                                        SizedBox(width: 8),
-                                                        Text('Dev Tools')
-                                                      ]),
-                                                    ),
-                                                ];
-                                              },
-                                            ),
+
                                           ]),
                                           const SizedBox(height: 8),
                                           SessionMetaPills(
@@ -1824,6 +1657,109 @@ class _SessionListScreenState extends State<SessionListScreen> {
         );
       },
     );
+  }
+
+
+  void _showTileMenu(BuildContext context, Session session,
+      CacheMetadata metadata, bool isDevMode,
+      {Offset? position}) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect finalPosition = position != null
+        ? RelativeRect.fromRect(
+            Rect.fromPoints(position, position),
+            Offset.zero & overlay.size,
+          )
+        : RelativeRect.fromLTRB(
+            overlay.size.width / 2,
+            overlay.size.height / 2,
+            overlay.size.width / 2,
+            overlay.size.height / 2,
+          ); // Center fallback
+
+    showMenu(context: context, position: finalPosition, items: [
+      PopupMenuItem(
+        child: Row(
+          children: [
+            Icon(metadata.isHidden ? Icons.visibility : Icons.visibility_off),
+            const SizedBox(width: 8),
+            Text(metadata.isHidden ? 'Unhide' : 'Hide'),
+          ],
+        ),
+        onTap: () async {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          await Provider.of<SessionProvider>(context, listen: false)
+              .toggleHidden(session.id, auth.token!);
+        },
+      ),
+      if (session.url != null)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.open_in_browser),
+              SizedBox(width: 8),
+              Text('Open in Browser'),
+            ],
+          ),
+          onTap: () => _openSessionUrl(session),
+        ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.reply),
+            SizedBox(width: 8),
+            Text('Quick Reply'),
+          ],
+        ),
+        onTap: () => _quickReply(session),
+      ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.refresh),
+            SizedBox(width: 8),
+            Text('Refresh Session'),
+          ],
+        ),
+        onTap: () {
+          Future.delayed(Duration.zero, () {
+            if (context.mounted) _refreshSession(session);
+          });
+        },
+      ),
+      const PopupMenuItem(
+        value: 'source',
+        child: Row(
+          children: [
+            Icon(Icons.source),
+            SizedBox(width: 8),
+            Text('View Source Repo'),
+          ],
+        ),
+      ),
+      if (isDevMode)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.developer_mode),
+              SizedBox(width: 8),
+              Text('Dev Tools'),
+            ],
+          ),
+          onTap: () {
+            // Wait for menu to close?
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                _showContextMenu(context, session: session);
+              }
+            });
+          },
+        ),
+    ]).then((value) {
+      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
+        _openSourceUrl(session.sourceContext.source);
+      }
+    });
   }
 }
 

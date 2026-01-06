@@ -599,6 +599,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     await Provider.of<SessionProvider>(context, listen: false)
                         .toggleWatch(_session.id, auth.token!);
                     setState(() {}); // Rebuild to update menu icon
+                  } else if (value == 'hide_back') {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    await Provider.of<SessionProvider>(context, listen: false)
+                        .toggleHidden(_session.id, auth.token!);
+                    if (context.mounted) Navigator.pop(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -626,6 +632,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         ],
                       ),
                     ),
+                  const PopupMenuItem(
+                    value: 'hide_back',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_off),
+                        SizedBox(width: 8),
+                        Text('Hide and go back'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'mark_unread_back',
                     child: Row(
