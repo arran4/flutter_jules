@@ -39,6 +39,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
     const SortOption(SortField.updated, SortDirection.descending)
   ];
 
+  List<CachedItem<Session>> _displayItems = [];
+
   // Computed suggestions based on available data
   List<FilterToken> _availableSuggestions = [];
 
@@ -279,6 +281,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
           SnackBar(content: Text('Failed to refresh session: $e')),
         );
       }
+    }
+  }
+
+  Future<void> _refreshVisibleSessions() async {
+    final count = _displayItems.length;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Refreshing $count visible sessions...')),
+    );
+
+    for (final item in _displayItems) {
+      await _refreshSession(item.data);
+    }
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Visible sessions refreshed')),
+      );
     }
   }
 
@@ -829,7 +849,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // Ideally we do this only when list changes, but 'build' is fine for now as it's cheap
         _updateSuggestions(cachedItems.map((i) => i.data).toList());
 
-        List<CachedItem<Session>> displayItems = cachedItems.where((item) {
+        _displayItems = cachedItems.where((item) {
           final session = item.data;
           final metadata = item.metadata;
 
@@ -995,7 +1015,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         // Sorting
         // Sorting
-        displayItems.sort(_compareSessions);
+        _displayItems.sort(_compareSessions);
 
         return Scaffold(
           appBar: AppBar(
@@ -1051,6 +1071,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 onSelected: (value) {
                   if (value == 'full_refresh') {
                     _fetchSessions(force: true, shallow: false);
+                  } else if (value == 'refresh_visible') {
+                    _refreshVisibleSessions();
                   } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'sources') {
@@ -1097,6 +1119,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ],
                       ),
                     ),
+                    if (_displayItems.isNotEmpty)
+                      const PopupMenuItem(
+                        value: 'refresh_visible',
+                        child: Row(
+                          children: [
+                            Icon(Icons.sync),
+                            SizedBox(width: 8),
+                            Text('Refresh Visible Sessions'),
+                          ],
+                        ),
+                      ),
                     const PopupMenuItem(
                       value: 'queue',
                       child: Row(
@@ -1233,9 +1266,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             onRefresh: () =>
                                 _fetchSessions(force: true, shallow: true),
                             child: ListView.builder(
-                              itemCount: displayItems.length,
+                              itemCount: _displayItems.length,
                               itemBuilder: (context, index) {
-                                final cachedItem = displayItems[index];
+                                final cachedItem = _displayItems[index];
                                 final session = cachedItem.data;
                                 final metadata = cachedItem.metadata;
                                 final isDevMode =
