@@ -570,6 +570,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         .pullRequest!;
                     launchUrl(Uri.parse(pr.url));
                     if (context.mounted) Navigator.pop(context);
+                  } else if (value == 'copy_pr_url') {
+                    final pr = _session.outputs!
+                        .firstWhere((o) => o.pullRequest != null)
+                        .pullRequest!;
+                    await Clipboard.setData(ClipboardData(text: pr.url));
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('PR URL copied')));
+                    }
                   } else if (value == 'full_refresh') {
                     _fetchActivities(force: true, shallow: false);
                   } else if (value == 'copy_id') {
@@ -602,6 +611,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           Icon(Icons.merge_type, color: Colors.purple),
                           SizedBox(width: 8),
                           Text('Open PR and Go Back'),
+                        ],
+                      ),
+                    ),
+                    if (_session.outputs != null &&
+                      _session.outputs!.any((o) => o.pullRequest != null))
+                    const PopupMenuItem(
+                      value: 'copy_pr_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, color: Colors.blueGrey),
+                          SizedBox(width: 8),
+                          Text('Copy PR URL'),
                         ],
                       ),
                     ),

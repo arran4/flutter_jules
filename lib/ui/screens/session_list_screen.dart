@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -305,6 +306,67 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  void _openSessionById() async {
+    final controller = TextEditingController();
+    final String? sessionId = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog(
+        title: const Text('Open Session by ID'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Session ID',
+            hintText: 'Enter complete session ID',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(dialogContext),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(dialogContext, controller.text),
+            child: const Text('Open'),
+          ),
+        ],
+      ),
+    );
+
+    if (sessionId != null && sessionId.trim().isNotEmpty) {
+      if (!mounted) return;
+      
+      // Show loading
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (_) => const Center(child: CircularProgressIndicator()),
+      );
+
+      try {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        final session = await client.getSession(sessionId.trim());
+        
+        if (!mounted) return;
+        Navigator.pop(context); // Dismiss loading
+
+        Navigator.push(
+          context,
+          MaterialPageRoute(
+            builder: (_) => SessionDetailScreen(session: session),
+          ),
+        );
+      } catch (e) {
+        if (!mounted) return;
+        Navigator.pop(context); // Dismiss loading
+        
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load session: $e')),
+        );
+      }
+    }
+  }
+
   void _showContextMenu(BuildContext context, {Session? session}) {
     final lastExchange =
         Provider.of<SessionProvider>(context, listen: false).lastExchange;
@@ -391,6 +453,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Unread',
         value: 'unread'));
+    suggestions.add(const FilterToken(
+        id: 'flag:watched',
+        type: FilterType.flag,
+        label: 'Watching',
+        value: 'watched'));
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -844,6 +911,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         false)) {
                   matchesAny = true;
                 }
+                if (f.value == 'watched' && metadata.isWatched) {
+                  matchesAny = true;
+                }
               }
               if (!matchesAny) return false;
             }
@@ -861,6 +931,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'has_pr' &&
                     (session.outputs?.any((o) => o.pullRequest != null) ??
                         false)) {
+                  matchesAny = true;
+                }
+                if (f.value == 'watched' && metadata.isWatched) {
                   matchesAny = true;
                 }
               }
@@ -1000,6 +1073,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         Provider.of<SessionProvider>(context, listen: false);
                     sessionProvider.refreshDirtySessions(auth.client,
                         authToken: auth.token!);
+                  } else if (value == 'open_by_id') {
+                    _openSessionById();
                   }
                 },
                 itemBuilder: (context) {
@@ -1024,6 +1099,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           Icon(Icons.queue),
                           SizedBox(width: 8),
                           Text('Offline Message Queue'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'open_by_id',
+                      child: Row(
+                        children: [
+                          Icon(Icons.input),
+                          SizedBox(width: 8),
+                          Text('Open by Session ID'),
                         ],
                       ),
                     ),
@@ -1269,7 +1354,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             id: 'flag:watched',
                                                             type:
                                                                 FilterType.flag,
-                                                            label: 'Watched',
+                                                            label: 'Watching',
                                                             value: 'watched'),
                                                   ),
 
@@ -1416,6 +1501,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                     Duration(
                                                                         seconds:
                                                                             1),
+                                                              ));
+                                                            },
+                                                          ),
+                                                          const PopupMenuDivider(),
+                                                          PopupMenuItem(
+                                                            child: const Row(
+                                                                children: [
+                                                                  Icon(Icons.copy,
+                                                                      size: 16),
+                                                                  SizedBox(
+                                                                      width: 8),
+                                                                  Text(
+                                                                      "Copy PR URL")
+                                                                ]),
+                                                            onTap: () {
+                                                              final pr = session
+                                                                  .outputs!
+                                                                  .firstWhere(
+                                                                      (o) =>
+                                                                          o.pullRequest !=
+                                                                          null)
+                                                                  .pullRequest!;
+                                                              Clipboard.setData(
+                                                                  ClipboardData(
+                                                                      text: pr
+                                                                          .url));
+                                                              ScaffoldMessenger.of(
+                                                                      context)
+                                                                  .showSnackBar(
+                                                                      const SnackBar(
+                                                                content: Text(
+                                                                    "PR URL copied to clipboard"),
                                                               ));
                                                             },
                                                           ),
