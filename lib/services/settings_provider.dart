@@ -10,6 +10,7 @@ enum SessionRefreshPolicy {
 enum ListRefreshPolicy {
   none,
   dirty,
+  watched,
   quick,
   full,
 }

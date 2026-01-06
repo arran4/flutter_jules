@@ -177,6 +177,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
           Provider.of<SessionProvider>(context, listen: false)
               .refreshDirtySessions(client, authToken: auth.token!);
           break;
+        case ListRefreshPolicy.watched:
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          Provider.of<SessionProvider>(context, listen: false)
+              .refreshWatchedSessions(client, authToken: auth.token!);
+          break;
         case ListRefreshPolicy.quick:
           _fetchSessions(force: true, shallow: true);
           break;
@@ -1265,6 +1270,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                           Provider.of<SessionProvider>(context,
                                                   listen: false)
                                               .refreshDirtySessions(auth.client,
+                                                  authToken: auth.token!);
+                                          break;
+                                        case ListRefreshPolicy.watched:
+                                          final auth =
+                                              Provider.of<AuthProvider>(context,
+                                                  listen: false);
+                                          Provider.of<SessionProvider>(context,
+                                                  listen: false)
+                                              .refreshWatchedSessions(
+                                                  auth.client,
                                                   authToken: auth.token!);
                                           break;
                                         case ListRefreshPolicy.quick:

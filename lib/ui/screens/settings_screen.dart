@@ -238,6 +238,8 @@ class SettingsScreen extends StatelessWidget {
         return 'None';
       case ListRefreshPolicy.dirty:
         return 'Dirty Only';
+      case ListRefreshPolicy.watched:
+        return 'Watched Only';
       case ListRefreshPolicy.quick:
         return 'Quick Refresh';
       case ListRefreshPolicy.full:

@@ -309,6 +309,28 @@ class SessionProvider extends ChangeNotifier {
     return false;
   }
 
+  Future<void> refreshWatchedSessions(JulesClient client,
+      {required String authToken}) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
+      await Future.wait(watchedItems.map((item) async {
+        try {
+          await refreshSession(client, item.data.name, authToken: authToken);
+        } catch (e) {
+          // Ignore failures for individual sessions
+        }
+      }));
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> toggleWatch(String sessionId, String authToken) async {
     final index = _items.indexWhere((item) => item.data.id == sessionId);
     if (index != -1) {
