@@ -620,7 +620,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         ],
                       ),
                     ),
-                    if (_session.outputs != null &&
+                  if (_session.outputs != null &&
                       _session.outputs!.any((o) => o.pullRequest != null))
                     const PopupMenuItem(
                       value: 'copy_pr_url',

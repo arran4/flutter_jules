@@ -341,7 +341,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     if (sessionId != null && sessionId.trim().isNotEmpty) {
       if (!mounted) return;
-      
+
       // Show loading
       showDialog(
         context: context,
@@ -352,7 +352,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         final session = await client.getSession(sessionId.trim());
-        
+
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
 
@@ -365,7 +365,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       } catch (e) {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load session: $e')),
         );
@@ -1318,7 +1318,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                           isDevMode);
                                     },
                                     onSecondaryTapUp: (details) {
-                                       _showTileMenu(context, session, metadata, isDevMode, position: details.globalPosition);
+                                      _showTileMenu(
+                                          context, session, metadata, isDevMode,
+                                          position: details.globalPosition);
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
@@ -1426,18 +1428,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                   .normal,
                                                           fontSize: 16)),
                                                 ),
-
                                               ],
                                             )),
                                             // Trailing Menu Button
                                             InkWell(
-                                              borderRadius: BorderRadius.circular(16),
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
                                               onTapDown: (details) {
-                                                _showTileMenu(context, session, metadata, isDevMode, position: details.globalPosition);
+                                                _showTileMenu(context, session,
+                                                    metadata, isDevMode,
+                                                    position:
+                                                        details.globalPosition);
                                               },
                                               child: const Padding(
                                                 padding: EdgeInsets.all(8.0),
-                                                child: Icon(Icons.more_vert, size: 20),
+                                                child: Icon(Icons.more_vert,
+                                                    size: 20),
                                               ),
                                             ),
                                             if (session.outputs != null &&
@@ -1557,7 +1563,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           PopupMenuItem(
                                                             child: const Row(
                                                                 children: [
-                                                                  Icon(Icons.copy,
+                                                                  Icon(
+                                                                      Icons
+                                                                          .copy,
                                                                       size: 16),
                                                                   SizedBox(
                                                                       width: 8),
@@ -1567,17 +1575,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             onTap: () {
                                                               final pr = session
                                                                   .outputs!
-                                                                  .firstWhere(
-                                                                      (o) =>
-                                                                          o.pullRequest !=
-                                                                          null)
+                                                                  .firstWhere((o) =>
+                                                                      o.pullRequest !=
+                                                                      null)
                                                                   .pullRequest!;
                                                               Clipboard.setData(
                                                                   ClipboardData(
                                                                       text: pr
                                                                           .url));
-                                                              ScaffoldMessenger.of(
-                                                                      context)
+                                                              ScaffoldMessenger
+                                                                      .of(
+                                                                          context)
                                                                   .showSnackBar(
                                                                       const SnackBar(
                                                                 content: Text(
@@ -1606,7 +1614,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   ),
                                                 ),
                                               ),
-
                                           ]),
                                           const SizedBox(height: 8),
                                           SessionMetaPills(
@@ -1658,7 +1665,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
       },
     );
   }
-
 
   void _showTileMenu(BuildContext context, Session session,
       CacheMetadata metadata, bool isDevMode,
