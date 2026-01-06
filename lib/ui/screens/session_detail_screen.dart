@@ -9,6 +9,7 @@ import '../../services/auth_provider.dart';
 import '../../services/session_provider.dart';
 import '../../utils/time_helper.dart'; // Import time helper
 import '../../services/dev_mode_provider.dart';
+import '../../services/message_queue_provider.dart';
 import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
@@ -237,6 +238,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _sendMessage(String message) async {
+    final queueProvider =
+        Provider.of<MessageQueueProvider>(context, listen: false);
+
+    if (queueProvider.isOffline) {
+      queueProvider.addMessage(_session.id, message);
+      _messageController.clear();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Message added to offline queue")));
+        setState(() {}); // Trigger rebuild
+      }
+      return;
+    }
+
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
       await client.sendMessage(_session.name, message);
@@ -331,10 +346,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               );
             },
           ),
-          IconButton(
-            icon: const Icon(Icons.refresh),
-            onPressed: () => _fetchActivities(force: true, shallow: true),
-            tooltip: 'Refresh',
+          Consumer<MessageQueueProvider>(
+            builder: (context, queueProvider, _) {
+              if (queueProvider.isOffline) {
+                return IconButton(
+                  icon: const Icon(Icons.wifi_off, color: Colors.grey),
+                  tooltip: 'Go Online',
+                  onPressed: () async {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    final online = await queueProvider.goOnline(auth.client);
+                    if (online && mounted) {
+                      _fetchActivities(force: true);
+                    } else if (mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text("Still offline")));
+                    }
+                  },
+                );
+              }
+              return IconButton(
+                icon: const Icon(Icons.refresh),
+                onPressed: () => _fetchActivities(force: true, shallow: true),
+                tooltip: 'Refresh',
+              );
+            },
           ),
           PopupMenuButton<String>(
             onSelected: (value) async {
@@ -477,7 +513,24 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final List<ActivityListItem> groupedItems = [];
     ActivityGroupWrapper? currentGroup;
 
-    for (var activity in _activities) {
+    // Merge queued messages
+    final queueProvider = Provider.of<MessageQueueProvider>(context);
+    final queuedMessages =
+        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+
+    final queuedActivities = queuedMessages.map((m) => Activity(
+        name: "queued/${m.id}",
+        id: "queued-${m.id}",
+        createTime: m.createdAt.toIso8601String(),
+        userMessaged: UserMessaged(userMessage: m.content),
+        description: "Queued Message",
+        unmappedProps: {'isQueued': true}));
+
+    final allActivities = [..._activities, ...queuedActivities];
+    allActivities.sort((a, b) =>
+        DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
+
+    for (var activity in allActivities) {
       final info = ActivityDisplayInfo.fromActivity(activity);
 
       if (currentGroup != null) {
@@ -571,6 +624,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               child: item,
             );
           } else {
+            final isQueued = activity.unmappedProps['isQueued'] == true;
+            if (isQueued) {
+              return Opacity(
+                  opacity: 0.6,
+                  child: Stack(
+                    children: [
+                      item,
+                      const Positioned(
+                          right: 8,
+                          top: 8,
+                          child: Icon(Icons.cloud_off,
+                              size: 16, color: Colors.grey))
+                    ],
+                  ));
+            }
             return item;
           }
         }

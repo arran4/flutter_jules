@@ -4,6 +4,7 @@ import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
+import 'services/message_queue_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
 import 'ui/screens/session_list_screen.dart';
@@ -29,6 +30,12 @@ void main() {
         ChangeNotifierProxyProvider<CacheService, SourceProvider>(
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
+        ),
+        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
+            MessageQueueProvider>(
+          create: (_) => MessageQueueProvider(),
+          update: (_, cache, auth, queue) =>
+              queue!..setCacheService(cache, auth.token),
         ),
       ],
       child: const MyApp(),

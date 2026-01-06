@@ -7,6 +7,7 @@ import '../models/session.dart';
 import '../models/source.dart';
 import '../models/activity.dart';
 import '../models/cache_metadata.dart';
+import '../models/queued_message.dart';
 
 class CachedItem<T> {
   final T data;
@@ -79,7 +80,7 @@ class CacheService {
       final session = item.data;
       final metadata = item.metadata;
 
-      final fileName = Uri.encodeComponent(session.id) + '.json';
+      final fileName = '${Uri.encodeComponent(session.id)}.json';
       final file = File(path.join(sessionsDir.path, fileName));
 
       final dataToSave = {
@@ -107,8 +108,8 @@ class CacheService {
           final session = Session.fromJson(json['data']);
           final metadata = CacheMetadata.fromJson(json['metadata']);
           results.add(CachedItem(session, metadata));
-        } catch (e) {
-          print('Error loading cached session: $e');
+        } catch (_) {
+          // Ignore cache load errors
         }
       }
     }
@@ -125,7 +126,7 @@ class CacheService {
     final now = DateTime.now();
 
     for (final source in newSources) {
-      final fileName = Uri.encodeComponent(source.id) + '.json';
+      final fileName = '${Uri.encodeComponent(source.id)}.json';
       final file = File(path.join(sourcesDir.path, fileName));
       CacheMetadata metadata;
 
@@ -187,8 +188,8 @@ class CacheService {
           final source = Source.fromJson(json['data']);
           final metadata = CacheMetadata.fromJson(json['metadata']);
           results.add(CachedItem(source, metadata));
-        } catch (e) {
-          print('Error loading cached source: $e');
+        } catch (_) {
+          // Ignore cache load error
         }
       }
     }
@@ -198,7 +199,7 @@ class CacheService {
   Future<void> markSessionAsRead(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
     // Might be in sessions or cached_details, but we track metadata in sessions list usually
-    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final fileName = '${Uri.encodeComponent(sessionId)}.json';
     final file = File(path.join(cacheDir.path, 'sessions', fileName));
     if (await file.exists()) {
       final content = await file.readAsString();
@@ -216,7 +217,7 @@ class CacheService {
 
   Future<void> markSessionAsUnread(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
-    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final fileName = '${Uri.encodeComponent(sessionId)}.json';
     final file = File(path.join(cacheDir.path, 'sessions', fileName));
     if (await file.exists()) {
       final content = await file.readAsString();
@@ -239,7 +240,7 @@ class CacheService {
   Future<void> markPrAsOpened(String token, String sessionId) async {
     await markSessionAsRead(token, sessionId);
     final cacheDir = await _getCacheDirectory(token);
-    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final fileName = '${Uri.encodeComponent(sessionId)}.json';
     final file = File(path.join(cacheDir.path, 'sessions', fileName));
     if (await file.exists()) {
       final content = await file.readAsString();
@@ -264,7 +265,7 @@ class CacheService {
       await detailsDir.create(recursive: true);
     }
 
-    final fileName = Uri.encodeComponent(session.id) + '.json';
+    final fileName = '${Uri.encodeComponent(session.id)}.json';
     final file = File(path.join(detailsDir.path, fileName));
 
     final dataToSave = {
@@ -280,7 +281,7 @@ class CacheService {
   Future<CachedSessionDetails?> loadSessionDetails(
       String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
-    final fileName = Uri.encodeComponent(sessionId) + '.json';
+    final fileName = '${Uri.encodeComponent(sessionId)}.json';
     final file = File(path.join(cacheDir.path, 'session_details', fileName));
 
     if (!await file.exists()) {
@@ -303,8 +304,31 @@ class CacheService {
         sessionUpdateTimeSnapshot: json['sessionUpdateTimeSnapshot'],
       );
     } catch (e) {
-      print("Error loading cached session details: $e");
+      // Ignore cache load error
       return null;
+    }
+  }
+
+  // Message Queue
+  Future<void> saveMessageQueue(String token, List<QueuedMessage> queue) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final file = File(path.join(cacheDir.path, 'message_queue.json'));
+    final json = queue.map((m) => m.toJson()).toList();
+    await file.writeAsString(jsonEncode(json));
+  }
+
+  Future<List<QueuedMessage>> loadMessageQueue(String token) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final file = File(path.join(cacheDir.path, 'message_queue.json'));
+    if (!await file.exists()) {
+      return [];
+    }
+    try {
+      final content = await file.readAsString();
+      final json = jsonDecode(content) as List;
+      return json.map((e) => QueuedMessage.fromJson(e)).toList();
+    } catch (_) {
+      return [];
     }
   }
 }

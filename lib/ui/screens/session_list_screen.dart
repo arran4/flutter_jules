@@ -15,6 +15,8 @@ import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
+import '../../services/message_queue_provider.dart';
+import 'offline_queue_screen.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -84,9 +86,52 @@ class _SessionListScreenState extends State<SessionListScreen> {
               .showSnackBar(SnackBar(content: Text(msg)));
         }
       });
+
+      if (mounted) {
+        if (sessionProvider.error != null) {
+          // Naive offline detection: if error occurs, assume offline?
+          // Or just let user see error.
+          // Better: If error is not null, suggest going offline or auto-set?
+          // Let's auto-set if it looks like a network issue or just generic error for now.
+          final queueProvider =
+              Provider.of<MessageQueueProvider>(context, listen: false);
+          // Only auto-switch if we aren't already explicitly one way or another?
+          // Actually, if it fails, we are effectively offline.
+          if (!queueProvider.isOffline) {
+            queueProvider.setOffline(true);
+            ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                content: Text("Connection failed, switching to offline mode")));
+          }
+        } else {
+          // Success
+          final queueProvider =
+              Provider.of<MessageQueueProvider>(context, listen: false);
+          if (queueProvider.queue.isNotEmpty && !queueProvider.isOffline) {
+            _promptSendQueue(context, queueProvider);
+          }
+        }
+      }
     } catch (e) {
       // Provider handles error state
     }
+  }
+
+  void _promptSendQueue(BuildContext context, MessageQueueProvider provider) {
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+      content: Text("You have ${provider.queue.length} pending messages."),
+      action: SnackBarAction(
+        label: "SEND ALL",
+        onPressed: () async {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          await provider.sendQueue(auth.client, onError: (id, e) {
+            ScaffoldMessenger.of(context)
+                .showSnackBar(SnackBar(content: Text("Error: $e")));
+          });
+          ScaffoldMessenger.of(context)
+              .showSnackBar(const SnackBar(content: Text("Queue processed")));
+        },
+      ),
+    ));
   }
 
   Future<void> _createSession() async {
@@ -849,10 +894,33 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   )
                 : null,
             actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-                onPressed: () => _fetchSessions(force: true, shallow: true),
+              Consumer<MessageQueueProvider>(
+                builder: (context, queueProvider, _) {
+                  if (queueProvider.isOffline) {
+                    return TextButton.icon(
+                      icon: const Icon(Icons.wifi_off, color: Colors.white),
+                      label: const Text("GO ONLINE",
+                          style: TextStyle(color: Colors.white)),
+                      onPressed: () async {
+                        final auth =
+                            Provider.of<AuthProvider>(context, listen: false);
+                        final online =
+                            await queueProvider.goOnline(auth.client);
+                        if (online && mounted) {
+                          _fetchSessions(force: true);
+                        } else if (mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(content: Text("Still offline")));
+                        }
+                      },
+                    );
+                  }
+                  return IconButton(
+                    icon: const Icon(Icons.refresh),
+                    tooltip: 'Refresh',
+                    onPressed: () => _fetchSessions(force: true, shallow: true),
+                  );
+                },
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -864,6 +932,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     Navigator.pushNamed(context, '/sources_raw');
                   } else if (value == 'raw_data') {
                     _viewRawData(context);
+                  } else if (value == 'queue') {
+                    Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                            builder: (_) => const OfflineQueueScreen()));
                   }
                 },
                 itemBuilder: (context) => [
@@ -874,6 +947,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         Icon(Icons.refresh),
                         SizedBox(width: 8),
                         Text('Full Refresh'),
+                      ],
+                    ),
+                  ),
+                  const PopupMenuItem(
+                    value: 'queue',
+                    child: Row(
+                      children: [
+                        Icon(Icons.queue),
+                        SizedBox(width: 8),
+                        Text('Offline Message Queue'),
                       ],
                     ),
                   ),

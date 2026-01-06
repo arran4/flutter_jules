@@ -130,7 +130,7 @@ class SessionProvider extends ChangeNotifier {
     } catch (e) {
       if (shallow && _items.isNotEmpty) {
         final msg = "Shallow refresh failed ($e), switching to full refresh";
-        print(msg);
+        // print(msg);
         if (onRefreshFallback != null) onRefreshFallback(msg);
 
         _isLoading = false;
@@ -160,7 +160,7 @@ class SessionProvider extends ChangeNotifier {
       try {
         activities = await client.listActivities(sessionName);
       } catch (e) {
-        print('Failed to preload activities for $sessionName: $e');
+        // print('Failed to preload activities for $sessionName: $e');
       }
 
       // Determine metadata
@@ -203,7 +203,7 @@ class SessionProvider extends ChangeNotifier {
       _sortItems();
       notifyListeners();
     } catch (e) {
-      print("Failed to refresh individual session: $e");
+      // print("Failed to refresh individual session: $e");
       rethrow;
     }
   }
