@@ -151,6 +151,42 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  // Manual update from SessionDetailScreen
+  Future<void> updateSession(Session session, {String? authToken}) async {
+    // Determine metadata
+    final index = _items.indexWhere((i) => i.data.name == session.name);
+    CacheMetadata metadata;
+
+    if (index != -1) {
+      final oldItem = _items[index];
+      final changed = (oldItem.data.updateTime != session.updateTime) ||
+          (oldItem.data.state != session.state);
+      metadata = oldItem.metadata.copyWith(
+          lastRetrieved: DateTime.now(),
+          lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated);
+    } else {
+      metadata = CacheMetadata(
+          firstSeen: DateTime.now(),
+          lastRetrieved: DateTime.now(),
+          lastUpdated: DateTime.now());
+    }
+
+    final cachedItem = CachedItem(session, metadata);
+
+    if (authToken != null && _cacheService != null) {
+      await _cacheService!.saveSessions(authToken, [cachedItem]);
+    }
+
+    if (index != -1) {
+      _items[index] = cachedItem;
+    } else {
+      _items.add(cachedItem);
+    }
+
+    _sortItems();
+    notifyListeners();
+  }
+
   Future<void> refreshSession(JulesClient client, String sessionName,
       {String? authToken}) async {
     try {

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'dart:async';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -38,8 +39,38 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _isSending = false; // Track sending state
   bool _isCancelled = false; // Track cancellation
   final List<Activity> _localActivities = []; // Client-side mock activites
+  bool _isRefreshDisabled = false; // Track refresh button disabled state
+
+  // Concurrency Control
+  Future<void> _apiLock = Future.value();
+  int _busyCount = 0;
 
   final FocusNode _messageFocusNode = FocusNode();
+
+  Future<T> _locked<T>(Future<T> Function() op) {
+    setState(() => _busyCount++);
+    final completer = Completer<T>();
+
+    // Chain the operation to the tail of the lock
+    final next = _apiLock.then((_) async {
+      try {
+        final result = await op();
+        completer.complete(result);
+      } catch (e) {
+        completer.completeError(e);
+      }
+    });
+
+    // Update the lock to point to the new tail
+    _apiLock = next.then((_) {}).catchError((_) {});
+
+    // Ensure busy count is decremented when this specific op finishes
+    return completer.future.whenComplete(() {
+      if (mounted) {
+        setState(() => _busyCount--);
+      }
+    });
+  }
 
   @override
   void initState() {
@@ -66,6 +97,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     _messageController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleRefresh() async {
+    if (_isRefreshDisabled) return;
+
+    setState(() {
+      _isRefreshDisabled = true;
+    });
+
+    try {
+      final fetchFuture = _fetchActivities(force: true, shallow: true);
+      final timeoutFuture = Future.delayed(const Duration(seconds: 2));
+
+      await Future.any([fetchFuture, timeoutFuture]);
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshDisabled = false;
+        });
+      }
+    }
   }
 
   Future<void> _fetchActivities(
@@ -164,41 +216,44 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // 2. Fetch if cache not used
     Session? updatedSession;
-    try {
-      updatedSession = await client.getSession(widget.session.name);
-    } catch (e) {
-      throw Exception('Failed to load session details: $e');
-    }
+    List<Activity> activities = [];
 
-    List<Activity> activities;
-    try {
-      if (mounted) {
-        setState(() {
-          _loadingStatus = shallow
-              ? 'Fetching latest activities...'
-              : 'Fetching conversation history...';
-        });
+    await _locked(() async {
+      try {
+        updatedSession = await client.getSession(widget.session.name);
+      } catch (e) {
+        throw Exception('Failed to load session details: $e');
       }
-      activities = await client.listActivities(
-        widget.session.name,
-        onDebug: (exchange) {
-          _lastExchange = exchange;
-        },
-        onProgress: (count) {
-          if (mounted) {
-            setState(() {
-              _loadingStatus =
-                  'Loaded $count new activities...'; // "new" if shallow
-            });
-          }
-        },
-        shouldStop: (shallow && _activities.isNotEmpty)
-            ? (act) => _activities.any((existing) => existing.id == act.id)
-            : null,
-      );
-    } catch (e) {
-      throw Exception('Failed to load conversation history: $e');
-    }
+
+      try {
+        if (mounted) {
+          setState(() {
+            _loadingStatus = shallow
+                ? 'Fetching latest activities...'
+                : 'Fetching conversation history...';
+          });
+        }
+        activities = await client.listActivities(
+          widget.session.name,
+          onDebug: (exchange) {
+            _lastExchange = exchange;
+          },
+          onProgress: (count) {
+            if (mounted) {
+              setState(() {
+                _loadingStatus =
+                    'Loaded $count new activities...'; // "new" if shallow
+              });
+            }
+          },
+          shouldStop: (shallow && _activities.isNotEmpty)
+              ? (act) => _activities.any((existing) => existing.id == act.id)
+              : null,
+        );
+      } catch (e) {
+        throw Exception('Failed to load conversation history: $e');
+      }
+    });
 
     if (mounted) {
       setState(() {
@@ -231,8 +286,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
 
     // 3. Save to cache
-    if (token != null) {
-      await cacheService.saveSessionDetails(token, updatedSession, activities);
+    // 3. Save to cache
+    if (token != null && updatedSession != null) {
+      await cacheService.saveSessionDetails(token, updatedSession!, activities);
+
+      if (mounted) {
+        await Provider.of<SessionProvider>(context, listen: false)
+            .updateSession(updatedSession!, authToken: token);
+      }
 
       // 4. Mark as Read
       if (mounted) {
@@ -269,7 +330,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       final client = auth.client;
 
       // Logically cancel (ignore result) if user cancels, but we can't truly cancel the future
-      await client.sendMessage(_session.name, message);
+      await _locked(() async {
+        await client.sendMessage(_session.name, message);
+      });
 
       if (_isCancelled) {
         // User cancelled, but it succeeded. Logic handled by potential earlier queueing if desired, 
@@ -324,7 +387,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Future<void> _approvePlan() async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      await client.approvePlan(_session.name);
+      await _locked(() async {
+        await client.approvePlan(_session.name);
+      });
       if (mounted) {
         ScaffoldMessenger.of(context)
             .showSnackBar(const SnackBar(content: Text("Plan Approved")));
@@ -341,7 +406,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Future<void> _refreshActivity(Activity activity) async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
-      final updatedActivity = await client.getActivity(activity.name);
+      final updatedActivity = await _locked(() async {
+        return await client.getActivity(activity.name);
+      });
 
       if (!mounted) return;
 
@@ -436,7 +503,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               }
               return IconButton(
                 icon: const Icon(Icons.refresh),
-                onPressed: () => _fetchActivities(force: true, shallow: true),
+                // Disable/Gray out while "busy" (min 2s or until completion)
+                // Also blockout if any other network op is running
+                onPressed: (_isRefreshDisabled || _busyCount > 0)
+                    ? null
+                    : _handleRefresh,
                 tooltip: 'Refresh',
               );
             },
@@ -792,10 +863,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                            visualDensity: VisualDensity.compact,
                            padding: EdgeInsets.zero,
                            constraints: const BoxConstraints(),
-                           icon: const Icon(Icons.refresh, size: 16, color: Colors.blue),
-                           onPressed: () => _fetchActivities(force: true, shallow: true),
-                           tooltip: "Refresh (Client Only)",
-                         ),
+                            icon: const Icon(Icons.refresh,
+                                size: 16, color: Colors.blue),
+                            onPressed: (_isRefreshDisabled || _busyCount > 0)
+                                ? null
+                                : _handleRefresh,
+                            tooltip: "Refresh (Client Only)",
+                          ),
                        ],
                      ),
                    ),
