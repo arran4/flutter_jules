@@ -7,6 +7,7 @@ import 'services/source_provider.dart';
 import 'services/message_queue_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
+import 'services/refresh_service.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -36,6 +37,17 @@ void main() {
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
+        ),
+        ChangeNotifierProxyProvider3<SettingsProvider, SessionProvider,
+            SourceProvider, RefreshService>(
+          create: (context) => RefreshService(
+            context.read<SettingsProvider>(),
+            context.read<SessionProvider>(),
+            context.read<SourceProvider>(),
+            context.read<AuthProvider>(),
+          ),
+          update: (_, settings, sessionProvider, sourceProvider, service) =>
+              service!,
         ),
       ],
       child: const MyApp(),
