@@ -20,6 +20,8 @@ import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import 'offline_queue_screen.dart';
+import 'dart:convert';
+import '../../services/exceptions.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -162,50 +164,113 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (sessionToCreate == null) return;
     if (!mounted) return;
 
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      await client.createSession(sessionToCreate);
+    Future<void> performCreate() async {
+      try {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        await client.createSession(sessionToCreate);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      // Trigger refresh based on settings
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-      switch (settings.refreshOnCreate) {
-        case ListRefreshPolicy.none:
-          break;
-        case ListRefreshPolicy.dirty:
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          Provider.of<SessionProvider>(context, listen: false)
-              .refreshDirtySessions(client, authToken: auth.token!);
-          break;
-        case ListRefreshPolicy.watched:
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          Provider.of<SessionProvider>(context, listen: false)
-              .refreshWatchedSessions(client, authToken: auth.token!);
-          break;
-        case ListRefreshPolicy.quick:
-          _fetchSessions(force: true, shallow: true);
-          break;
-        case ListRefreshPolicy.full:
-          _fetchSessions(force: true, shallow: false);
-          break;
-      }
-    } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Error Creating Session'),
-            content: SingleChildScrollView(child: SelectableText(e.toString())),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close')),
-            ],
-          ),
-        );
+        // Trigger refresh based on settings
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        switch (settings.refreshOnCreate) {
+          case ListRefreshPolicy.none:
+            break;
+          case ListRefreshPolicy.dirty:
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<SessionProvider>(context, listen: false)
+                .refreshDirtySessions(client, authToken: auth.token!);
+            break;
+          case ListRefreshPolicy.watched:
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<SessionProvider>(context, listen: false)
+                .refreshWatchedSessions(client, authToken: auth.token!);
+            break;
+          case ListRefreshPolicy.quick:
+            _fetchSessions(force: true, shallow: true);
+            break;
+          case ListRefreshPolicy.full:
+            _fetchSessions(force: true, shallow: false);
+            break;
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        bool handled = false;
+        if (e is JulesException && e.responseBody != null) {
+          try {
+            final body = jsonDecode(e.responseBody!);
+            if (body is Map && body.containsKey('error')) {
+              final error = body['error'];
+              if (error is Map &&
+                  (error['code'] == 429 ||
+                      error['status'] == 'RESOURCE_EXHAUSTED')) {
+                // Queue automatically
+                Provider.of<MessageQueueProvider>(context, listen: false)
+                    .addCreateSessionRequest(sessionToCreate);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text("API Quota Exhausted. Session creation queued.")));
+                handled = true;
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (!handled) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error Creating Session'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SelectableText(e.toString()),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text("Your Prompt:",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(4)),
+                        child: SelectableText(sessionToCreate.prompt)),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Provider.of<MessageQueueProvider>(context, listen: false)
+                        .addCreateSessionRequest(sessionToCreate);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Session creation queued.")));
+                  },
+                  child: const Text('Queue'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    performCreate(); // Retry
+                  },
+                  child: const Text('Try Again'),
+                ),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close')),
+              ],
+            ),
+          );
+        }
       }
     }
+
+    await performCreate();
   }
 
   Future<void> _quickReply(Session session) async {
@@ -250,7 +315,33 @@ class _SessionListScreenState extends State<SessionListScreen> {
               force: true); // Refresh so list updates (e.g. timestamp)
         }
       } catch (e) {
-        if (mounted) {
+        bool handled = false;
+        if (e is JulesException && e.responseBody != null) {
+          try {
+            final body = jsonDecode(e.responseBody!);
+            if (body is Map && body.containsKey('error')) {
+              final error = body['error'];
+              if (error is Map &&
+                  (error['code'] == 429 ||
+                      error['status'] == 'RESOURCE_EXHAUSTED')) {
+                // Queue it
+                final queueProvider =
+                    Provider.of<MessageQueueProvider>(context, listen: false);
+                queueProvider.addMessage(session.id, controller.text);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "API Error: Resource Exhausted. Message queued for later.")));
+                }
+                handled = true;
+              }
+            }
+          } catch (_) {
+            // Ignore
+          }
+        }
+
+        if (!handled && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error sending message: $e')),
           );

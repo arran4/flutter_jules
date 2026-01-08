@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import '../models/queued_message.dart';
 import 'cache_service.dart';
 import 'jules_client.dart';
+import '../models.dart';
 
 class MessageQueueProvider extends ChangeNotifier {
   List<QueuedMessage> _queue = [];
@@ -44,7 +45,7 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  void addMessage(String sessionId, String content) {
+  String addMessage(String sessionId, String content) {
     final message = QueuedMessage(
       id: DateTime.now().millisecondsSinceEpoch.toString(),
       sessionId: sessionId,
@@ -54,6 +55,22 @@ class MessageQueueProvider extends ChangeNotifier {
     _queue.add(message);
     _saveQueue();
     notifyListeners();
+    return message.id;
+  }
+
+  String addCreateSessionRequest(Session session) {
+    final message = QueuedMessage(
+      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      sessionId: 'new_session', // Placeholder
+      content: session.prompt,
+      createdAt: DateTime.now(),
+      type: QueuedMessageType.sessionCreation,
+      metadata: session.toJson(),
+    );
+    _queue.add(message);
+    _saveQueue();
+    notifyListeners();
+    return message.id;
   }
 
   void updateMessage(String id, String newContent) {
@@ -104,7 +121,13 @@ class MessageQueueProvider extends ChangeNotifier {
 
     for (final msg in remaining) {
       try {
-        await client.sendMessage(msg.sessionId, msg.content);
+        if (msg.type == QueuedMessageType.sessionCreation) {
+          if (msg.metadata != null) {
+            await client.createSession(Session.fromJson(msg.metadata!));
+          }
+        } else {
+          await client.sendMessage(msg.sessionId, msg.content);
+        }
         toRemove.add(msg);
         if (onMessageSent != null) onMessageSent(msg.id);
       } catch (e) {
