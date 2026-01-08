@@ -185,8 +185,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showScheduleDialog(
-      BuildContext context, SettingsProvider settings,
+  void _showScheduleDialog(BuildContext context, SettingsProvider settings,
       [RefreshSchedule? schedule]) {
     final isEditing = schedule != null;
     final nameController = TextEditingController(text: schedule?.name ?? '');
@@ -210,8 +209,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   TextField(
                     controller: intervalController,
-                    decoration: const InputDecoration(
-                        labelText: 'Interval (minutes)'),
+                    decoration:
+                        const InputDecoration(labelText: 'Interval (minutes)'),
                     keyboardType: TextInputType.number,
                   ),
                   DropdownButtonFormField<ListRefreshPolicy>(
@@ -246,7 +245,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Show an error message if the interval is not a valid number.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content: Text('Please enter a valid number for the interval.'),
+                      content:
+                          Text('Please enter a valid number for the interval.'),
                     ),
                   );
                   return;

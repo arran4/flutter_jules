@@ -93,8 +93,7 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> _saveSchedules() async {
-    final jsonString =
-        jsonEncode(_schedules.map((s) => s.toJson()).toList());
+    final jsonString = jsonEncode(_schedules.map((s) => s.toJson()).toList());
     await _prefs?.setString(_refreshSchedulesKey, jsonString);
   }
 

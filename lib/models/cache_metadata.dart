@@ -1,3 +1,6 @@
+import 'pending_message.dart';
+import 'package:dartobjectutils/dartobjectutils.dart'; // Ensure this is available if not already
+
 class CacheMetadata {
   final DateTime firstSeen;
   final DateTime lastRetrieved;
@@ -9,6 +12,7 @@ class CacheMetadata {
   final bool isHidden;
   final bool
       hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
+  final List<PendingMessage> pendingMessages;
 
   CacheMetadata({
     required this.firstSeen,
@@ -20,6 +24,7 @@ class CacheMetadata {
     this.isWatched = false,
     this.hasPendingUpdates = false,
     this.isHidden = false,
+    this.pendingMessages = const [],
   });
 
   // Convenience Getters
@@ -67,6 +72,8 @@ class CacheMetadata {
       isWatched: json['isWatched'] ?? false,
       hasPendingUpdates: json['hasPendingUpdates'] ?? false,
       isHidden: json['isHidden'] ?? false,
+      pendingMessages: getObjectArrayPropOrDefaultFunction(
+          json, 'pendingMessages', PendingMessage.fromJson, () => []),
     );
   }
 
@@ -81,6 +88,7 @@ class CacheMetadata {
       'isWatched': isWatched,
       'hasPendingUpdates': hasPendingUpdates,
       'isHidden': isHidden,
+      'pendingMessages': pendingMessages.map((e) => e.toJson()).toList(),
     };
   }
 
@@ -93,7 +101,8 @@ class CacheMetadata {
     List<String>? labels,
     bool? isWatched,
     bool? hasPendingUpdates,
-    bool? isHidden,
+    bool? isHidden, // Fixed
+    List<PendingMessage>? pendingMessages,
   }) {
     return CacheMetadata(
       firstSeen: firstSeen ?? this.firstSeen,
@@ -105,6 +114,7 @@ class CacheMetadata {
       isWatched: isWatched ?? this.isWatched,
       hasPendingUpdates: hasPendingUpdates ?? this.hasPendingUpdates,
       isHidden: isHidden ?? this.isHidden,
+      pendingMessages: pendingMessages ?? this.pendingMessages,
     );
   }
 }

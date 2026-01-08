@@ -41,7 +41,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   final TextEditingController _messageController = TextEditingController();
   bool _isSending = false; // Track sending state
   bool _isCancelled = false; // Track cancellation
-  final List<Activity> _localActivities = []; // Client-side mock activites
+
   bool _isRefreshDisabled = false; // Track refresh button disabled state
 
   // Concurrency Control
@@ -306,7 +306,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
         _session = updatedSession!;
         // Clear local activities as we now have server state
-        _localActivities.clear();
       });
     }
 
@@ -360,21 +359,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       } else {
         if (mounted) {
           Provider.of<SessionProvider>(context, listen: false)
-              .markAsPendingUpdate(_session.id, auth.token!);
-
-          // Add Mock Activity
-          final mockActivity = Activity(
-            name: "local/${DateTime.now().millisecondsSinceEpoch}",
-            id: "local-${DateTime.now().millisecondsSinceEpoch}",
-            createTime: DateTime.now().toIso8601String(),
-            userMessaged: UserMessaged(userMessage: message),
-            description: "Client Side",
-            unmappedProps: {'isLocal': true},
-          );
-
-          setState(() {
-            _localActivities.add(mockActivity);
-          });
+              .addPendingMessage(_session.id, message, auth.token!);
         }
         _messageController.clear();
 
@@ -639,7 +624,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     }
                   } else if (value == 'copy_jules_url') {
                     if (_session.url != null) {
-                      await Clipboard.setData(ClipboardData(text: _session.url!));
+                      await Clipboard.setData(
+                          ClipboardData(text: _session.url!));
                       if (context.mounted) {
                         ScaffoldMessenger.of(context).showSnackBar(
                             const SnackBar(content: Text('Jules URL copied')));
@@ -872,10 +858,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         description: "Queued Message",
         unmappedProps: {'isQueued': true}));
 
+    // Merge pending messages (Optimistic updates)
+    final sessionProvider = Provider.of<SessionProvider>(context);
+    final sessionItem = sessionProvider.items.firstWhere(
+        (i) => i.data.id == _session.id,
+        orElse: () => CachedItem(
+            _session,
+            CacheMetadata(
+                firstSeen: DateTime.now(), lastRetrieved: DateTime.now())));
+    final pendingMessages = sessionItem.metadata.pendingMessages;
+
+    final pendingActivities = pendingMessages.map((m) => Activity(
+            name: "pending/${m.id}",
+            id: "pending-${m.id}",
+            createTime: m.timestamp.toIso8601String(),
+            userMessaged: UserMessaged(userMessage: m.content),
+            description: "Sending...",
+            unmappedProps: {
+              'isPending': true,
+              'hasMismatch': m.hasMismatch,
+              'pendingId': m.id
+            }));
+
     final allActivities = [
       ..._activities,
       ...queuedActivities,
-      ..._localActivities
+      ...pendingActivities,
     ];
     allActivities.sort((a, b) =>
         DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)));
@@ -1083,6 +1091,94 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 onLongPress: () => _showContextMenu(context, activity: a),
                 onSecondaryTap: () => _showContextMenu(context, activity: a),
                 child: item,
+              );
+            }
+            if (a.unmappedProps?['hasMismatch'] == true) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  item,
+                  Container(
+                    margin: const EdgeInsets.only(top: 4, right: 12, bottom: 8),
+                    padding:
+                        const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    decoration: BoxDecoration(
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Icon(Icons.warning_amber_rounded,
+                                size: 16, color: Colors.red.shade700),
+                            const SizedBox(width: 8),
+                            Text(
+                              "Message not synced",
+                              style: TextStyle(
+                                  color: Colors.red.shade900,
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 12),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 4),
+                        const Text(
+                          "This message doesn't appear in the server history yet.",
+                          style: TextStyle(fontSize: 12),
+                        ),
+                        const SizedBox(height: 8),
+                        Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8)),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(context,
+                                    listen: false);
+                                Provider.of<SessionProvider>(context,
+                                        listen: false)
+                                    .removePendingMessage(
+                                        _session.id,
+                                        a.unmappedProps?['pendingId'],
+                                        auth.token!);
+                              },
+                              child: const Text("Dismiss"),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                  visualDensity: VisualDensity.compact,
+                                  padding: const EdgeInsets.symmetric(
+                                      horizontal: 8)),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(context,
+                                    listen: false);
+                                final pId = a.unmappedProps?['pendingId'];
+                                final content = a.userMessaged!.userMessage;
+                                // Remove old one
+                                Provider.of<SessionProvider>(context,
+                                        listen: false)
+                                    .removePendingMessage(
+                                        _session.id, pId, auth.token!);
+                                // Resend (which adds new pending)
+                                _sendMessage(content);
+                              },
+                              child: const Text("Resend"),
+                            ),
+                          ],
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
               );
             }
             return item;

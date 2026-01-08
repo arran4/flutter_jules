@@ -5,3 +5,4 @@ export 'models/session.dart';
 export 'models/media.dart';
 export 'models/search_filter.dart';
 export 'models/queued_message.dart';
+export 'models/pending_message.dart';

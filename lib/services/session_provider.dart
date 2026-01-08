@@ -221,6 +221,10 @@ class SessionProvider extends ChangeNotifier {
             lastUpdated: DateTime.now());
       }
 
+      if (activities != null) {
+        metadata = _resolvePendingMessages(metadata, activities);
+      }
+
       final cachedItem = CachedItem(updatedSession, metadata);
 
       if (authToken != null && _cacheService != null) {
@@ -256,6 +260,59 @@ class SessionProvider extends ChangeNotifier {
     return item.metadata.lastRetrieved;
   }
 
+  CacheMetadata _resolvePendingMessages(
+      CacheMetadata metadata, List<Activity> activities) {
+    if (metadata.pendingMessages.isEmpty) {
+      return metadata;
+    }
+
+    final newPending = <PendingMessage>[];
+    bool changed = false;
+
+    // Latest activity timestamp from server (exclude local?)
+    // Activities from server usually have createTime.
+    DateTime? latestServerActivityTime;
+    for (var a in activities) {
+      if (a.createTime != null) {
+        final t = DateTime.parse(a.createTime!);
+        if (latestServerActivityTime == null ||
+            t.isAfter(latestServerActivityTime)) {
+          latestServerActivityTime = t;
+        }
+      }
+    }
+
+    for (var pending in metadata.pendingMessages) {
+      // Check for match
+      bool matched = activities.any((a) =>
+          a.userMessaged != null &&
+          a.userMessaged!.userMessage.trim() == pending.content.trim());
+
+      if (matched) {
+        changed = true;
+      } else {
+        // Not matched. Check for mismatch/stale.
+        // If we have newer activities than pending, and it's not matched -> Mismatch
+        bool mismatch = pending.hasMismatch;
+        if (!mismatch && latestServerActivityTime != null) {
+          if (latestServerActivityTime.isAfter(pending.timestamp)) {
+            mismatch = true;
+            changed = true;
+          }
+        }
+        newPending.add(pending.copyWith(hasMismatch: mismatch));
+      }
+    }
+
+    if (changed) {
+      return metadata.copyWith(
+          pendingMessages: newPending,
+          hasPendingUpdates: newPending.any((p) => !p.hasMismatch));
+    }
+
+    return metadata;
+  }
+
   void _sortItems() {
     _items.sort((a, b) {
       final timeA = _getEffectiveTime(a);
@@ -282,7 +339,8 @@ class SessionProvider extends ChangeNotifier {
           final index = _items.indexWhere((i) => i.data.id == item.data.id);
           if (index != -1) {
             final refreshedItem = _items[index];
-            if (refreshedItem.metadata.hasPendingUpdates) {
+            if (refreshedItem.metadata.hasPendingUpdates &&
+                refreshedItem.metadata.pendingMessages.isEmpty) {
               final newItem = CachedItem(refreshedItem.data,
                   refreshedItem.metadata.copyWith(hasPendingUpdates: false));
               _items[index] = newItem;
@@ -366,7 +424,60 @@ class SessionProvider extends ChangeNotifier {
   }
 
   // Called when sending a message
+  Future<void> addPendingMessage(
+      String sessionId, String content, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      final newPending =
+          List<PendingMessage>.from(item.metadata.pendingMessages);
+      newPending.add(PendingMessage(
+        id: DateTime.now().microsecondsSinceEpoch.toString(),
+        content: content,
+        timestamp: DateTime.now(),
+      ));
+
+      final newMetadata = item.metadata.copyWith(
+        hasPendingUpdates: true,
+        pendingMessages: newPending,
+      );
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
+  Future<void> removePendingMessage(
+      String sessionId, String pendingId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      final newPending =
+          List<PendingMessage>.from(item.metadata.pendingMessages);
+      newPending.removeWhere((p) => p.id == pendingId);
+
+      final newMetadata = item.metadata.copyWith(
+        hasPendingUpdates: newPending.any((p) => !p.hasMismatch),
+        pendingMessages: newPending,
+      );
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
+  @Deprecated("Use addPendingMessage")
   Future<void> markAsPendingUpdate(String sessionId, String authToken) async {
+    // Legacy support, maybe just set flag without content?
+    // But we prefer explicit content tracking now.
     final index = _items.indexWhere((item) => item.data.id == sessionId);
     if (index != -1) {
       final item = _items[index];

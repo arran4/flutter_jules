@@ -1768,24 +1768,45 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   launchUrl(Uri.parse(pr.url));
                                                 } else if (value == 'browser') {
                                                   _openSessionUrl(session);
-                                                } else if (value == 'copy_pr_url') {
+                                                } else if (value ==
+                                                    'copy_pr_url') {
                                                   final prUrl = session.outputs
-                                                      ?.firstWhere((o) => o.pullRequest != null, orElse: () => Output())
-                                                      .pullRequest?.url;
+                                                      ?.firstWhere(
+                                                          (o) =>
+                                                              o.pullRequest !=
+                                                              null,
+                                                          orElse: () =>
+                                                              Output())
+                                                      .pullRequest
+                                                      ?.url;
                                                   if (prUrl != null) {
-                                                    Clipboard.setData(ClipboardData(text: prUrl));
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('PR URL copied to clipboard')),
+                                                    Clipboard.setData(
+                                                        ClipboardData(
+                                                            text: prUrl));
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                          content: Text(
+                                                              'PR URL copied to clipboard')),
                                                     );
                                                   }
-                                                } else if (value == 'copy_jules_url') {
+                                                } else if (value ==
+                                                    'copy_jules_url') {
                                                   if (session.url != null) {
-                                                    Clipboard.setData(ClipboardData(text: session.url!));
-                                                    ScaffoldMessenger.of(context).showSnackBar(
-                                                      const SnackBar(content: Text('Jules URL copied to clipboard')),
+                                                    Clipboard.setData(
+                                                        ClipboardData(
+                                                            text:
+                                                                session.url!));
+                                                    ScaffoldMessenger.of(
+                                                            context)
+                                                        .showSnackBar(
+                                                      const SnackBar(
+                                                          content: Text(
+                                                              'Jules URL copied to clipboard')),
                                                     );
                                                   }
-                                                }else if (value == 'reply') {
+                                                } else if (value == 'reply') {
                                                   _quickReply(session);
                                                 } else if (value ==
                                                     'view_prompt') {
@@ -1869,7 +1890,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     const PopupMenuItem(
                                                       value: 'copy_pr_url',
                                                       child: Row(children: [
-                                                        Icon(Icons.copy, color: Colors.purple),
+                                                        Icon(Icons.copy,
+                                                            color:
+                                                                Colors.purple),
                                                         SizedBox(width: 8),
                                                         Text('Copy PR Link'),
                                                       ]),
