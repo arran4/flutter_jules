@@ -23,8 +23,14 @@ import '../../services/exceptions.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final Session session;
+  final List<Session>? sessions;
+  final int? currentIndex;
 
-  const SessionDetailScreen({super.key, required this.session});
+  const SessionDetailScreen(
+      {super.key,
+      required this.session,
+      this.sessions,
+      this.currentIndex});
 
   @override
   State<SessionDetailScreen> createState() => _SessionDetailScreenState();
@@ -32,6 +38,7 @@ class SessionDetailScreen extends StatefulWidget {
 
 class _SessionDetailScreenState extends State<SessionDetailScreen> {
   late Session _session;
+  late int _currentIndex;
   List<Activity> _activities = [];
   bool _isLoading = false;
   bool _isPromptExpanded = false;
@@ -90,6 +97,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       return KeyEventResult.ignored;
     };
     _session = widget.session;
+    _currentIndex = widget.currentIndex ?? 0;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
       switch (settings.refreshOnOpen) {
@@ -506,6 +514,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  void _navigateToSession(int index) {
+    if (widget.sessions != null &&
+        index >= 0 &&
+        index < widget.sessions!.length) {
+      setState(() {
+        _session = widget.sessions![index];
+        _currentIndex = index;
+        _activities = [];
+        _error = null;
+        _localActivities.clear();
+      });
+      _fetchActivities(force: true);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -531,6 +554,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               overflow: TextOverflow.ellipsis,
             ),
             actions: [
+              if (widget.sessions != null)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back),
+                  onPressed: _currentIndex > 0
+                      ? () => _navigateToSession(_currentIndex - 1)
+                      : null,
+                ),
+              if (widget.sessions != null)
+                IconButton(
+                  icon: const Icon(Icons.arrow_forward),
+                  onPressed: _currentIndex < widget.sessions!.length - 1
+                      ? () => _navigateToSession(_currentIndex + 1)
+                      : null,
+                ),
               if (_session.outputs != null &&
                   _session.outputs!.any((o) => o.pullRequest != null))
                 IconButton(

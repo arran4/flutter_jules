@@ -1395,11 +1395,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     onTap: () async {
                                       _markAsRead(session);
                                       await Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                              builder: (_) =>
-                                                  SessionDetailScreen(
-                                                      session: session)));
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => SessionDetailScreen(
+                                            session: session,
+                                            sessions: _displayItems
+                                                .map((e) => e.data)
+                                                .toList(),
+                                            currentIndex: index,
+                                          ),
+                                        ),
+                                      );
 
                                       // On Return
                                       if (!context.mounted) return;
