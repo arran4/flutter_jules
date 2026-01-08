@@ -4,6 +4,7 @@ import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
+import 'services/filter_bookmark_provider.dart';
 import 'services/message_queue_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
@@ -20,6 +21,7 @@ void main() {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
+        ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ProxyProvider<DevModeProvider, CacheService>(
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),

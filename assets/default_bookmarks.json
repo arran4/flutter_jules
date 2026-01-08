@@ -1,0 +1,110 @@
+[
+  {
+    "name": "Default View",
+    "description": "The standard view, sorted by last update.",
+    "filters": [],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Needs Attention",
+    "description": "Sessions that are new, updated, or awaiting approval.",
+    "filters": [
+      {
+        "id": "flag:new",
+        "type": "flag",
+        "label": "New",
+        "value": "new",
+        "mode": "include"
+      },
+      {
+        "id": "flag:updated",
+        "type": "flag",
+        "label": "Updated",
+        "value": "updated",
+        "mode": "include"
+      },
+      {
+        "id": "status:AWAITING_PLAN_APPROVAL",
+        "type": "status",
+        "label": "Awaiting Plan Approval",
+        "value": "AWAITING_PLAN_APPROVAL",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "In Progress",
+    "description": "All sessions currently in progress.",
+    "filters": [
+      {
+        "id": "status:IN_PROGRESS",
+        "type": "status",
+        "label": "In Progress",
+        "value": "IN_PROGRESS",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Completed & Updated",
+    "description": "Recently updated and completed sessions.",
+    "filters": [
+      {
+        "id": "status:COMPLETED",
+        "type": "status",
+        "label": "Completed",
+        "value": "COMPLETED",
+        "mode": "include"
+      },
+      {
+        "id": "flag:updated",
+        "type": "flag",
+        "label": "Updated",
+        "value": "updated",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "My Watched Items",
+    "description": "Sessions you are actively watching.",
+    "filters": [
+      {
+        "id": "flag:watched",
+        "type": "flag",
+        "label": "Watching",
+        "value": "watched",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  }
+]

@@ -1,5 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import '../../models/search_filter.dart';
+import '../../models/filter_bookmark.dart';
+import '../../services/filter_bookmark_provider.dart';
 import 'package:flutter/services.dart';
 
 class AdvancedSearchBar extends StatefulWidget {
@@ -52,6 +55,174 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         });
       }
     });
+  }
+
+  void _showBookmarksMenu(BuildContext context) {
+    // Access the provider
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+
+    // Get the button's position for the menu
+    final RenderBox? button = context.findRenderObject() as RenderBox?;
+    if (button == null) return;
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect position = RelativeRect.fromRect(
+      Rect.fromPoints(
+        button.localToGlobal(Offset.zero, ancestor: overlay),
+        button.localToGlobal(button.size.bottomRight(Offset.zero),
+            ancestor: overlay),
+      ),
+      Offset.zero & overlay.size,
+    );
+
+    showMenu(
+      context: context,
+      position: position,
+      items: [
+        // List existing bookmarks
+        ...bookmarkProvider.bookmarks.map((bookmark) {
+          return PopupMenuItem(
+            child: Text(bookmark.name),
+            onTap: () {
+              widget.onFiltersChanged(bookmark.filters);
+              widget.onSortsChanged(bookmark.sorts);
+            },
+          );
+        }),
+        if (bookmarkProvider.bookmarks.isNotEmpty) const PopupMenuDivider(),
+
+        // Save current filter
+        const PopupMenuItem(
+          value: 'save',
+          child: Row(
+            children: [
+              Icon(Icons.save, size: 16),
+              SizedBox(width: 8),
+              Text("Save current filters..."),
+            ],
+          ),
+        ),
+
+        // Manage bookmarks
+        const PopupMenuItem(
+          value: 'manage',
+          child: Row(
+            children: [
+              Icon(Icons.edit, size: 16),
+              SizedBox(width: 8),
+              Text("Manage presets..."),
+            ],
+          ),
+        ),
+      ],
+    ).then((value) {
+      if (value == 'save') {
+        _saveCurrentFilters();
+      } else if (value == 'manage') {
+        _manageBookmarks();
+      }
+    });
+  }
+
+  void _saveCurrentFilters() {
+    final nameController = TextEditingController();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Save Filter Preset'),
+        content: TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Preset Name',
+            hintText: 'e.g., "My High Priority View"',
+          ),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () {
+              final name = nameController.text.trim();
+              if (name.isNotEmpty) {
+                final bookmark = FilterBookmark(
+                  name: name,
+                  filters: widget.activeFilters,
+                  sorts: widget.activeSorts,
+                );
+                Provider.of<FilterBookmarkProvider>(context, listen: false)
+                    .addBookmark(bookmark);
+                Navigator.pop(context);
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(content: Text('Preset "$name" saved.')),
+                );
+              }
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  void _manageBookmarks() {
+    showDialog(
+      context: context,
+      builder: (context) {
+        // Use a Consumer to rebuild the dialog when bookmarks change
+        return Consumer<FilterBookmarkProvider>(
+          builder: (context, provider, child) {
+            return AlertDialog(
+              title: const Text('Manage Filter Presets'),
+              content: SizedBox(
+                width: 300,
+                height: 400,
+                child: provider.bookmarks.isEmpty
+                    ? const Center(child: Text("No saved presets."))
+                    : ListView(
+                        children: provider.bookmarks.map((bookmark) {
+                          return ListTile(
+                            title: Text(bookmark.name),
+                            trailing: IconButton(
+                              icon: const Icon(Icons.delete, color: Colors.red),
+                              onPressed: () {
+                                provider.deleteBookmark(bookmark.name);
+                                ScaffoldMessenger.of(context)
+                                    .hideCurrentSnackBar();
+                                ScaffoldMessenger.of(context).showSnackBar(
+                                  SnackBar(
+                                      content:
+                                          Text('Preset "${bookmark.name}" deleted.')),
+                                );
+                              },
+                            ),
+                          );
+                        }).toList(),
+                      ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    provider.resetToDefaults();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Presets reset to defaults.')),
+                    );
+                  },
+                  child: const Text('Reset to Defaults'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Done'),
+                ),
+              ],
+            );
+          },
+        );
+      },
+    );
   }
 
   @override
@@ -557,6 +728,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 ),
 
                 const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.bookmarks_outlined),
+                  onPressed: () => _showBookmarksMenu(context),
+                  tooltip: "Filter Presets",
+                ),
                 IconButton(
                   icon: const Icon(Icons.tune),
                   onPressed: widget.onOpenFilterMenu,
