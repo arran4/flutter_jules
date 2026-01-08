@@ -965,8 +965,72 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
         final itemWrapper = finalItems[finalItems.length - 1 - listIndex];
 
+        // Date Header Logic
+        Widget? dateHeader;
+        DateTime? itemTime;
+        if (itemWrapper is ActivityItemWrapper) {
+          itemTime = DateTime.parse(itemWrapper.activity.createTime).toLocal();
+        } else if (itemWrapper is ActivityGroupWrapper &&
+            itemWrapper.activities.isNotEmpty) {
+          itemTime =
+              DateTime.parse(itemWrapper.activities.first.createTime).toLocal();
+        }
+
+        if (itemTime != null) {
+          bool showHeader = false;
+          final int olderIndex = listIndex + 1;
+          if (olderIndex < finalItems.length) {
+            final olderWrapper = finalItems[finalItems.length - 1 - olderIndex];
+            DateTime? olderTime;
+            if (olderWrapper is ActivityItemWrapper) {
+              olderTime =
+                  DateTime.parse(olderWrapper.activity.createTime).toLocal();
+            } else if (olderWrapper is ActivityGroupWrapper &&
+                olderWrapper.activities.isNotEmpty) {
+              olderTime =
+                  DateTime.parse(olderWrapper.activities.first.createTime)
+                      .toLocal();
+            }
+
+            if (olderTime != null) {
+              if (olderTime.year != itemTime.year ||
+                  olderTime.month != itemTime.month ||
+                  olderTime.day != itemTime.day) {
+                showHeader = true;
+              }
+            }
+          } else {
+            // Oldest item
+            showHeader = true;
+          }
+
+          if (showHeader) {
+            dateHeader = Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(vertical: 12.0),
+                child: Container(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+                  decoration: BoxDecoration(
+                    color: Colors.grey.shade200,
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Text(
+                    DateFormat.yMMMd().format(itemTime),
+                    style: TextStyle(
+                        fontSize: 12,
+                        color: Colors.grey.shade700,
+                        fontWeight: FontWeight.bold),
+                  ),
+                ),
+              ),
+            );
+          }
+        }
+
+        Widget content;
         if (itemWrapper is ActivityGroupWrapper) {
-          return _buildGroupItem(itemWrapper, isDevMode);
+          content = _buildGroupItem(itemWrapper, isDevMode);
         } else if (itemWrapper is ActivityItemWrapper) {
           final activity = itemWrapper.activity;
           final item = ActivityItem(
@@ -975,7 +1039,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           );
 
           if (isDevMode) {
-            return GestureDetector(
+            content = GestureDetector(
               onLongPress: () => _showContextMenu(context, activity: activity),
               onSecondaryTap: () =>
                   _showContextMenu(context, activity: activity),
@@ -984,7 +1048,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           } else {
             final isQueued = activity.unmappedProps['isQueued'] == true;
             if (isQueued) {
-              return Opacity(
+              content = Opacity(
                   opacity: 0.6,
                   child: Stack(
                     children: [
@@ -996,52 +1060,63 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               size: 16, color: Colors.grey))
                     ],
                   ));
-            }
-            final isLocal = activity.unmappedProps['isLocal'] == true;
-            if (isLocal) {
-              return Stack(
-                children: [
-                  Opacity(
-                    opacity: 0.8,
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(
-                            color: Colors.blue.withValues(alpha: 0.3)),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: item,
-                    ),
-                  ),
-                  Positioned(
-                    right: 8,
-                    top: 8,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.cloud_upload_outlined,
-                            size: 14, color: Colors.blue),
-                        const SizedBox(width: 4),
-                        IconButton(
-                          visualDensity: VisualDensity.compact,
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          icon: const Icon(Icons.refresh,
-                              size: 16, color: Colors.blue),
-                          onPressed: (_isRefreshDisabled || _busyCount > 0)
-                              ? null
-                              : _handleRefresh,
-                          tooltip: "Refresh (Client Only)",
+            } else {
+              final isLocal = activity.unmappedProps['isLocal'] == true;
+              if (isLocal) {
+                content = Stack(
+                  children: [
+                    Opacity(
+                      opacity: 0.8,
+                      child: Container(
+                        decoration: BoxDecoration(
+                          border: Border.all(
+                              color: Colors.blue.withValues(alpha: 0.3)),
+                          borderRadius: BorderRadius.circular(8),
                         ),
-                      ],
+                        child: item,
+                      ),
                     ),
-                  ),
-                ],
-              );
+                    Positioned(
+                      right: 8,
+                      top: 8,
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(Icons.cloud_upload_outlined,
+                              size: 14, color: Colors.blue),
+                          const SizedBox(width: 4),
+                          IconButton(
+                            visualDensity: VisualDensity.compact,
+                            padding: EdgeInsets.zero,
+                            constraints: const BoxConstraints(),
+                            icon: const Icon(Icons.refresh,
+                                size: 16, color: Colors.blue),
+                            onPressed: (_isRefreshDisabled || _busyCount > 0)
+                                ? null
+                                : _handleRefresh,
+                            tooltip: "Refresh (Client Only)",
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                );
+              } else {
+                content = item;
+              }
             }
-            return item;
           }
+        } else {
+          content = const SizedBox.shrink();
         }
-        return const SizedBox.shrink();
+
+        if (dateHeader != null) {
+          return Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [dateHeader, content],
+          );
+        }
+        return content;
       },
     );
   }
