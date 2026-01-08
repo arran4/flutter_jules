@@ -135,7 +135,7 @@ void main() {
       provider.addMessage('session-1', 'Msg 1');
       provider.addMessage('session-2', 'Msg 2');
 
-      when(mockClient.sendMessage(any, any)).thenAnswer((_) async => {});
+      when(mockClient.sendMessage(any, any)).thenAnswer((_) async => null);
 
       await provider.sendQueue(mockClient);
 
@@ -155,7 +155,7 @@ void main() {
       // but here they are added in order so likely sorted by default (list order).
       // Actually provider sorts by createdAt. sequential adds should be fine.
 
-      when(mockClient.sendMessage('s1', 'Good')).thenAnswer((_) async => {});
+      when(mockClient.sendMessage('s1', 'Good')).thenAnswer((_) async => null);
       when(mockClient.sendMessage('s2', 'Bad')).thenThrow(Exception('Fail'));
 
       bool errorCalled = false;

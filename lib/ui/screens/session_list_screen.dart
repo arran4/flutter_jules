@@ -209,7 +209,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       error['status'] == 'RESOURCE_EXHAUSTED')) {
                 // Queue automatically
                 Provider.of<MessageQueueProvider>(context, listen: false)
-                    .addCreateSessionRequest(sessionToCreate);
+                    .addCreateSessionRequest(sessionToCreate,
+                        reason: 'resource_exhausted');
                 ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                     content:
                         Text("API Quota Exhausted. Session creation queued.")));
@@ -248,7 +249,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 TextButton(
                   onPressed: () {
                     Provider.of<MessageQueueProvider>(context, listen: false)
-                        .addCreateSessionRequest(sessionToCreate);
+                        .addCreateSessionRequest(sessionToCreate,
+                            reason: 'user_queued');
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                         content: Text("Session creation queued.")));
@@ -330,7 +332,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 // Queue it
                 final queueProvider =
                     Provider.of<MessageQueueProvider>(context, listen: false);
-                queueProvider.addMessage(session.id, controller.text);
+                queueProvider.addMessage(session.id, controller.text,
+                    reason: 'resource_exhausted');
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
                       content: Text(

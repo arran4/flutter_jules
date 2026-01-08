@@ -328,7 +328,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Offline Case
     if (queueProvider.isOffline) {
-      queueProvider.addMessage(_session.id, message);
+      queueProvider.addMessage(_session.id, message, reason: 'offline');
       _messageController.clear();
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -417,7 +417,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         "API Error: Resource Exhausted. Message restored to input.")));
               } else {
                 // Scenario: User navigated away. Queue it.
-                queueProvider.addMessage(_session.id, message);
+                queueProvider.addMessage(_session.id, message,
+                    reason: 'resource_exhausted');
               }
               handled = true;
             }
@@ -430,7 +431,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (!handled) {
         if (!mounted) {
           // Queue if user navigated away
-          queueProvider.addMessage(_session.id, message);
+          queueProvider.addMessage(_session.id, message,
+              reason: 'error_unmounted');
           return;
         }
 

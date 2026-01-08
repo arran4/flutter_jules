@@ -12,6 +12,8 @@ class QueuedMessage {
   final DateTime createdAt;
   final QueuedMessageType type;
   final Map<String, dynamic>? metadata;
+  final String? queueReason;
+  final List<String> processingErrors;
 
   QueuedMessage({
     required this.id,
@@ -20,6 +22,8 @@ class QueuedMessage {
     required this.createdAt,
     this.type = QueuedMessageType.message,
     this.metadata,
+    this.queueReason,
+    this.processingErrors = const [],
   });
 
   factory QueuedMessage.fromJson(Map<String, dynamic> json) {
@@ -31,6 +35,11 @@ class QueuedMessage {
       type: _getEnumPropOrDefault(
           json, 'type', QueuedMessageType.values, QueuedMessageType.message)!,
       metadata: json['metadata'] as Map<String, dynamic>?,
+      queueReason: getStringPropOrDefault(json, 'queueReason', null),
+      processingErrors: (json['processingErrors'] as List<dynamic>?)
+              ?.map((e) => e.toString())
+              .toList() ??
+          [],
     );
   }
 
@@ -42,12 +51,16 @@ class QueuedMessage {
       'createdAt': createdAt.toIso8601String(),
       'type': type.toString().split('.').last,
       if (metadata != null) 'metadata': metadata,
+      if (queueReason != null) 'queueReason': queueReason,
+      'processingErrors': processingErrors,
     };
   }
 
   QueuedMessage copyWith({
     String? content,
     Map<String, dynamic>? metadata,
+    String? queueReason,
+    List<String>? processingErrors,
   }) {
     return QueuedMessage(
       id: id,
@@ -56,6 +69,8 @@ class QueuedMessage {
       createdAt: createdAt,
       type: type,
       metadata: metadata ?? this.metadata,
+      queueReason: queueReason ?? this.queueReason,
+      processingErrors: processingErrors ?? this.processingErrors,
     );
   }
 }

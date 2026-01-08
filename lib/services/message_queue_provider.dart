@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 
 import 'cache_service.dart';
 import 'jules_client.dart';
+import 'exceptions.dart';
 import '../models.dart';
 
 class MessageQueueProvider extends ChangeNotifier {
@@ -45,12 +46,13 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  String addMessage(String sessionId, String content) {
+  String addMessage(String sessionId, String content, {String? reason}) {
     final message = QueuedMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: sessionId,
       content: content,
       createdAt: DateTime.now(),
+      queueReason: reason,
     );
     _queue.add(message);
     _saveQueue();
@@ -58,14 +60,15 @@ class MessageQueueProvider extends ChangeNotifier {
     return message.id;
   }
 
-  String addCreateSessionRequest(Session session) {
+  String addCreateSessionRequest(Session session, {String? reason}) {
     final message = QueuedMessage(
-      id: DateTime.now().millisecondsSinceEpoch.toString(),
+      id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: 'new_session', // Placeholder
       content: session.prompt,
       createdAt: DateTime.now(),
       type: QueuedMessageType.sessionCreation,
       metadata: session.toJson(),
+      queueReason: reason,
     );
     _queue.add(message);
     _saveQueue();
@@ -131,7 +134,52 @@ class MessageQueueProvider extends ChangeNotifier {
         toRemove.add(msg);
         if (onMessageSent != null) onMessageSent(msg.id);
       } catch (e) {
+        bool recovered = false;
+        if (e is JulesException && e.statusCode == 404) {
+          if (msg.sessionId == 'new_session') {
+            // Attempt recovery: The message was likely a session creation request
+            // that lost its type or was mishandled.
+            try {
+              Session sessionToCreate;
+              if (msg.metadata != null) {
+                sessionToCreate = Session.fromJson(msg.metadata!);
+              } else {
+                // Fallback: Create minimal session from content
+                sessionToCreate = Session(
+                  id: '',
+                  name: '',
+                  prompt: msg.content,
+                  sourceContext: SourceContext(source: ''),
+                );
+              }
+              await client.createSession(sessionToCreate);
+              recovered = true;
+              toRemove.add(msg);
+              if (onMessageSent != null) onMessageSent(msg.id);
+            } catch (_) {
+              // Recovery failed, fall through to normal error handling
+            }
+          }
+        }
+
+        if (recovered) {
+          continue;
+        }
+
         if (onError != null) onError(msg.id, e);
+
+        // Record error on the message
+        final index = _queue.indexWhere((m) => m.id == msg.id);
+        if (index != -1) {
+          final currentErrors =
+              List<String>.from(_queue[index].processingErrors);
+          currentErrors.add(e.toString());
+          _queue[index] =
+              _queue[index].copyWith(processingErrors: currentErrors);
+          await _saveQueue();
+          notifyListeners();
+        }
+
         // Stop on first error? Or continue? Usually stop to preserve order if dependent.
         // For now, let's stop on error to be safe.
         break;

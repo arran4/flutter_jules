@@ -62,8 +62,40 @@ class OfflineQueueScreen extends StatelessWidget {
               final msg = provider.queue[index];
               return ListTile(
                 title: Text(msg.content),
-                subtitle: Text(
-                    "Session: ${msg.sessionId}\nCreated: ${msg.createdAt}"),
+                subtitle: Builder(builder: (context) {
+                  final sb = StringBuffer();
+                  sb.write(
+                      "Session: ${msg.sessionId}\nCreated: ${msg.createdAt}");
+                  if (msg.queueReason != null) {
+                    sb.write("\nReason: ${msg.queueReason}");
+                  }
+                  if (msg.processingErrors.isNotEmpty) {
+                    sb.write("\nErrors: ${msg.processingErrors.length}");
+                  }
+                  return Text(sb.toString(),
+                      style: msg.processingErrors.isNotEmpty
+                          ? TextStyle(
+                              color: Theme.of(context).colorScheme.error)
+                          : null);
+                }),
+                onTap: msg.processingErrors.isNotEmpty
+                    ? () {
+                        // Show errors
+                        showDialog(
+                            context: context,
+                            builder: (context) => AlertDialog(
+                                  title: const Text("Processing Errors"),
+                                  content: SingleChildScrollView(
+                                      child: Text(
+                                          msg.processingErrors.join("\n\n"))),
+                                  actions: [
+                                    TextButton(
+                                        onPressed: () => Navigator.pop(context),
+                                        child: const Text("Close"))
+                                  ],
+                                ));
+                      }
+                    : null,
                 isThreeLine: true,
                 trailing: Row(
                   mainAxisSize: MainAxisSize.min,
