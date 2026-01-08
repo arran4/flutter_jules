@@ -9,6 +9,7 @@ import '../../services/source_provider.dart';
 import '../../services/cache_service.dart';
 import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
+import '../../models/cache_metadata.dart';
 import '../../models.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
@@ -19,6 +20,8 @@ import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import 'offline_queue_screen.dart';
+import 'dart:convert';
+import '../../services/exceptions.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -161,50 +164,113 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (sessionToCreate == null) return;
     if (!mounted) return;
 
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      await client.createSession(sessionToCreate);
+    Future<void> performCreate() async {
+      try {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        await client.createSession(sessionToCreate);
 
-      if (!mounted) return;
+        if (!mounted) return;
 
-      // Trigger refresh based on settings
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-      switch (settings.refreshOnCreate) {
-        case ListRefreshPolicy.none:
-          break;
-        case ListRefreshPolicy.dirty:
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          Provider.of<SessionProvider>(context, listen: false)
-              .refreshDirtySessions(client, authToken: auth.token!);
-          break;
-        case ListRefreshPolicy.watched:
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          Provider.of<SessionProvider>(context, listen: false)
-              .refreshWatchedSessions(client, authToken: auth.token!);
-          break;
-        case ListRefreshPolicy.quick:
-          _fetchSessions(force: true, shallow: true);
-          break;
-        case ListRefreshPolicy.full:
-          _fetchSessions(force: true, shallow: false);
-          break;
-      }
-    } catch (e) {
-      if (mounted) {
-        showDialog(
-          context: context,
-          builder: (context) => AlertDialog(
-            title: const Text('Error Creating Session'),
-            content: SingleChildScrollView(child: SelectableText(e.toString())),
-            actions: [
-              TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close')),
-            ],
-          ),
-        );
+        // Trigger refresh based on settings
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        switch (settings.refreshOnCreate) {
+          case ListRefreshPolicy.none:
+            break;
+          case ListRefreshPolicy.dirty:
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<SessionProvider>(context, listen: false)
+                .refreshDirtySessions(client, authToken: auth.token!);
+            break;
+          case ListRefreshPolicy.watched:
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<SessionProvider>(context, listen: false)
+                .refreshWatchedSessions(client, authToken: auth.token!);
+            break;
+          case ListRefreshPolicy.quick:
+            _fetchSessions(force: true, shallow: true);
+            break;
+          case ListRefreshPolicy.full:
+            _fetchSessions(force: true, shallow: false);
+            break;
+        }
+      } catch (e) {
+        if (!mounted) return;
+
+        bool handled = false;
+        if (e is JulesException && e.responseBody != null) {
+          try {
+            final body = jsonDecode(e.responseBody!);
+            if (body is Map && body.containsKey('error')) {
+              final error = body['error'];
+              if (error is Map &&
+                  (error['code'] == 429 ||
+                      error['status'] == 'RESOURCE_EXHAUSTED')) {
+                // Queue automatically
+                Provider.of<MessageQueueProvider>(context, listen: false)
+                    .addCreateSessionRequest(sessionToCreate);
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content:
+                        Text("API Quota Exhausted. Session creation queued.")));
+                handled = true;
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (!handled) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error Creating Session'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    SelectableText(e.toString()),
+                    const SizedBox(height: 16),
+                    const Divider(),
+                    const Text("Your Prompt:",
+                        style: TextStyle(fontWeight: FontWeight.bold)),
+                    const SizedBox(height: 8),
+                    Container(
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                            color: Colors.grey.shade100,
+                            borderRadius: BorderRadius.circular(4)),
+                        child: SelectableText(sessionToCreate.prompt)),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () {
+                    Provider.of<MessageQueueProvider>(context, listen: false)
+                        .addCreateSessionRequest(sessionToCreate);
+                    Navigator.pop(context);
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text("Session creation queued.")));
+                  },
+                  child: const Text('Queue'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    Navigator.pop(context);
+                    performCreate(); // Retry
+                  },
+                  child: const Text('Try Again'),
+                ),
+                TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Close')),
+              ],
+            ),
+          );
+        }
       }
     }
+
+    await performCreate();
   }
 
   Future<void> _quickReply(Session session) async {
@@ -249,7 +315,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
               force: true); // Refresh so list updates (e.g. timestamp)
         }
       } catch (e) {
-        if (mounted) {
+        if (!mounted) return;
+        bool handled = false;
+        if (e is JulesException && e.responseBody != null) {
+          try {
+            final body = jsonDecode(e.responseBody!);
+            if (body is Map && body.containsKey('error')) {
+              final error = body['error'];
+              if (error is Map &&
+                  (error['code'] == 429 ||
+                      error['status'] == 'RESOURCE_EXHAUSTED')) {
+                // Queue it
+                final queueProvider =
+                    Provider.of<MessageQueueProvider>(context, listen: false);
+                queueProvider.addMessage(session.id, controller.text);
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "API Error: Resource Exhausted. Message queued for later.")));
+                }
+                handled = true;
+              }
+            }
+          } catch (_) {
+            // Ignore
+          }
+        }
+
+        if (!handled && mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             SnackBar(content: Text('Error sending message: $e')),
           );
@@ -340,7 +433,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     if (sessionId != null && sessionId.trim().isNotEmpty) {
       if (!mounted) return;
-      
+
       // Show loading
       showDialog(
         context: context,
@@ -351,7 +444,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         final session = await client.getSession(sessionId.trim());
-        
+
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
 
@@ -364,7 +457,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       } catch (e) {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
-        
+
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load session: $e')),
         );
@@ -463,6 +556,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Watching',
         value: 'watched'));
+    suggestions.add(const FilterToken(
+        id: 'flag:hidden',
+        type: FilterType.flag,
+        label: 'Hidden',
+        value: 'hidden'));
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -833,6 +931,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final session = item.data;
           final metadata = item.metadata;
 
+          // Default hidden check:
+          // If the session is hidden, it should generally NOT be shown...
+          // UNLESS the user has explicitly requested to see hidden items via a filter.
+          final hasHiddenFilter = _activeFilters.any(
+              (f) => f.id == 'flag:hidden' && f.mode == FilterMode.include);
+          if (metadata.isHidden && !hasHiddenFilter) {
+            return false;
+          }
+
           // Text Search
           if (_searchText.isNotEmpty) {
             final query = _searchText.toLowerCase();
@@ -919,6 +1026,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'watched' && metadata.isWatched) {
                   matchesAny = true;
                 }
+                if (f.value == 'hidden' && metadata.isHidden) {
+                  matchesAny = true;
+                }
               }
               if (!matchesAny) return false;
             }
@@ -939,6 +1049,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   matchesAny = true;
                 }
                 if (f.value == 'watched' && metadata.isWatched) {
+                  matchesAny = true;
+                }
+                if (f.value == 'hidden' && metadata.isHidden) {
                   matchesAny = true;
                 }
               }
@@ -1293,10 +1406,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       }
                                     },
                                     onLongPress: () {
-                                      if (isDevMode) {
-                                        _showContextMenu(context,
-                                            session: session);
-                                      }
+                                      _showTileMenu(context, session, metadata,
+                                          isDevMode);
+                                    },
+                                    onSecondaryTapUp: (details) {
+                                      _showTileMenu(
+                                          context, session, metadata, isDevMode,
+                                          position: details.globalPosition);
                                     },
                                     child: Padding(
                                       padding: const EdgeInsets.all(12),
@@ -1406,6 +1522,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 ),
                                               ],
                                             )),
+                                            // Trailing Menu Button
+                                            InkWell(
+                                              borderRadius:
+                                                  BorderRadius.circular(16),
+                                              onTapDown: (details) {
+                                                _showTileMenu(context, session,
+                                                    metadata, isDevMode,
+                                                    position:
+                                                        details.globalPosition);
+                                              },
+                                              child: const Padding(
+                                                padding: EdgeInsets.all(8.0),
+                                                child: Icon(Icons.more_vert,
+                                                    size: 20),
+                                              ),
+                                            ),
                                             if (session.outputs != null &&
                                                 session.outputs!.any((o) =>
                                                     o.pullRequest != null))
@@ -1523,7 +1655,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           PopupMenuItem(
                                                             child: const Row(
                                                                 children: [
-                                                                  Icon(Icons.copy,
+                                                                  Icon(
+                                                                      Icons
+                                                                          .copy,
                                                                       size: 16),
                                                                   SizedBox(
                                                                       width: 8),
@@ -1533,17 +1667,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             onTap: () {
                                                               final pr = session
                                                                   .outputs!
-                                                                  .firstWhere(
-                                                                      (o) =>
-                                                                          o.pullRequest !=
-                                                                          null)
+                                                                  .firstWhere((o) =>
+                                                                      o.pullRequest !=
+                                                                      null)
                                                                   .pullRequest!;
                                                               Clipboard.setData(
                                                                   ClipboardData(
                                                                       text: pr
                                                                           .url));
-                                                              ScaffoldMessenger.of(
-                                                                      context)
+                                                              ScaffoldMessenger
+                                                                      .of(
+                                                                          context)
                                                                   .showSnackBar(
                                                                       const SnackBar(
                                                                 content: Text(
@@ -1858,6 +1992,138 @@ class _SessionListScreenState extends State<SessionListScreen> {
         );
       },
     );
+  }
+
+  void _showTileMenu(BuildContext context, Session session,
+      CacheMetadata metadata, bool isDevMode,
+      {Offset? position}) {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final RelativeRect finalPosition = position != null
+        ? RelativeRect.fromRect(
+            Rect.fromPoints(position, position),
+            Offset.zero & overlay.size,
+          )
+        : RelativeRect.fromLTRB(
+            overlay.size.width / 2,
+            overlay.size.height / 2,
+            overlay.size.width / 2,
+            overlay.size.height / 2,
+          ); // Center fallback
+
+    showMenu(context: context, position: finalPosition, items: [
+      PopupMenuItem(
+        child: Row(
+          children: [
+            Icon(metadata.isHidden ? Icons.visibility : Icons.visibility_off),
+            const SizedBox(width: 8),
+            Text(metadata.isHidden ? 'Unhide' : 'Hide'),
+          ],
+        ),
+        onTap: () async {
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          await Provider.of<SessionProvider>(context, listen: false)
+              .toggleHidden(session.id, auth.token!);
+        },
+      ),
+      if (session.url != null)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.open_in_browser),
+              SizedBox(width: 8),
+              Text('Open in Browser'),
+            ],
+          ),
+          onTap: () => _openSessionUrl(session),
+        ),
+      if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.mark_email_read),
+              SizedBox(width: 8),
+              Text('Mark as Read'),
+            ],
+          ),
+          onTap: () => _markAsRead(session),
+        ),
+      if (session.outputs != null &&
+          session.outputs!.any((o) => o.pullRequest != null))
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.merge_type),
+              SizedBox(width: 8),
+              Text('Open PR & Mark Read'),
+            ],
+          ),
+          onTap: () async {
+            final pr = session.outputs!
+                .firstWhere((o) => o.pullRequest != null)
+                .pullRequest!;
+            if (await launchUrl(Uri.parse(pr.url))) {
+              _markAsRead(session);
+            }
+          },
+        ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.reply),
+            SizedBox(width: 8),
+            Text('Quick Reply'),
+          ],
+        ),
+        onTap: () => _quickReply(session),
+      ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.refresh),
+            SizedBox(width: 8),
+            Text('Refresh Session'),
+          ],
+        ),
+        onTap: () {
+          Future.delayed(Duration.zero, () {
+            if (context.mounted) _refreshSession(session);
+          });
+        },
+      ),
+      const PopupMenuItem(
+        value: 'source',
+        child: Row(
+          children: [
+            Icon(Icons.source),
+            SizedBox(width: 8),
+            Text('View Source Repo'),
+          ],
+        ),
+      ),
+      if (isDevMode)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.developer_mode),
+              SizedBox(width: 8),
+              Text('Dev Tools'),
+            ],
+          ),
+          onTap: () {
+            // Wait for menu to close?
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                _showContextMenu(context, session: session);
+              }
+            });
+          },
+        ),
+    ]).then((value) {
+      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
+        _openSourceUrl(session.sourceContext.source);
+      }
+    });
   }
 }
 

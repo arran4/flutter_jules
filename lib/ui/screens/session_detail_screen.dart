@@ -18,6 +18,8 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
+import 'dart:convert';
+import '../../services/exceptions.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final Session session;
@@ -397,14 +399,44 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         return;
       }
 
-      if (!mounted) {
-        // Queue if user navigated away
-        queueProvider.addMessage(_session.id, message);
-        return;
+      bool handled = false;
+      // Check for RESOURCE_EXHAUSTED (429)
+      if (e is JulesException && e.responseBody != null) {
+        try {
+          final body = jsonDecode(e.responseBody!);
+          if (body is Map && body.containsKey('error')) {
+            final error = body['error'];
+            if (error is Map &&
+                (error['code'] == 429 ||
+                    error['status'] == 'RESOURCE_EXHAUSTED')) {
+              if (mounted) {
+                // Scenario: User is watching. Restore text, don't queue.
+                _messageController.text = message;
+                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                    content: Text(
+                        "API Error: Resource Exhausted. Message restored to input.")));
+              } else {
+                // Scenario: User navigated away. Queue it.
+                queueProvider.addMessage(_session.id, message);
+              }
+              handled = true;
+            }
+          }
+        } catch (_) {
+          // Ignore parsing errors
+        }
       }
 
-      ScaffoldMessenger.of(context)
-          .showSnackBar(SnackBar(content: Text("Error: $e")));
+      if (!handled) {
+        if (!mounted) {
+          // Queue if user navigated away
+          queueProvider.addMessage(_session.id, message);
+          return;
+        }
+
+        ScaffoldMessenger.of(context)
+            .showSnackBar(SnackBar(content: Text("Error: $e")));
+      }
     } finally {
       if (mounted) {
         setState(() {
@@ -413,6 +445,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         });
       }
     }
+  }
+
+  void _restoreDraft(QueuedMessage msg) {
+    if (_messageController.text.isNotEmpty) {
+      // Append? Or warn? Let's append with newline for now to be safe
+      _messageController.text = "${_messageController.text}\n${msg.content}";
+    } else {
+      _messageController.text = msg.content;
+    }
+    // Remove from queue
+    Provider.of<MessageQueueProvider>(context, listen: false)
+        .deleteMessage(msg.id);
   }
 
   Future<void> _approvePlan() async {
@@ -607,6 +651,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     await Provider.of<SessionProvider>(context, listen: false)
                         .toggleWatch(_session.id, auth.token!);
                     setState(() {}); // Rebuild to update menu icon
+                  } else if (value == 'hide_back') {
+                    final auth =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    await Provider.of<SessionProvider>(context, listen: false)
+                        .toggleHidden(_session.id, auth.token!);
+                    if (context.mounted) Navigator.pop(context);
                   }
                 },
                 itemBuilder: (context) => [
@@ -622,7 +672,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         ],
                       ),
                     ),
-                    if (_session.outputs != null &&
+                  if (_session.outputs != null &&
                       _session.outputs!.any((o) => o.pullRequest != null))
                     const PopupMenuItem(
                       value: 'copy_pr_url',
@@ -634,6 +684,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         ],
                       ),
                     ),
+                  const PopupMenuItem(
+                    value: 'hide_back',
+                    child: Row(
+                      children: [
+                        Icon(Icons.visibility_off),
+                        SizedBox(width: 8),
+                        Text('Hide and go back'),
+                      ],
+                    ),
+                  ),
                   const PopupMenuItem(
                     value: 'mark_unread_back',
                     child: Row(
@@ -1241,6 +1301,38 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.end,
           children: [
+            // Draft / Queue Indicator
+            Consumer<MessageQueueProvider>(
+              builder: (context, queueProvider, child) {
+                final sessionQueue = queueProvider.queue
+                    .where((m) => m.sessionId == _session.id)
+                    .toList();
+                if (sessionQueue.isNotEmpty) {
+                  return Padding(
+                    padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
+                    child: Badge(
+                      label: Text("${sessionQueue.length}"),
+                      child: IconButton(
+                        icon: const Icon(Icons.drafts_outlined,
+                            color: Colors.orange),
+                        tooltip: "Restore Draft",
+                        onPressed: () {
+                          // Restore the most recent one? Or show list?
+                          // "Restore it" implies taking one. Let's take the last one (most recent).
+                          if (sessionQueue.isNotEmpty) {
+                            // Sort by created at descending?
+                            sessionQueue.sort(
+                                (a, b) => b.createdAt.compareTo(a.createdAt));
+                            _restoreDraft(sessionQueue.first);
+                          }
+                        },
+                      ),
+                    ),
+                  );
+                }
+                return const SizedBox.shrink();
+              },
+            ),
             Expanded(
               child: TextField(
                 controller: _messageController,

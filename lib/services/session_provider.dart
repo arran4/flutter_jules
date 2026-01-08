@@ -348,6 +348,23 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> toggleHidden(String sessionId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      final newMetadata = item.metadata.copyWith(
+        isHidden: !item.metadata.isHidden,
+      );
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
   // Called when sending a message
   Future<void> markAsPendingUpdate(String sessionId, String authToken) async {
     final index = _items.indexWhere((item) => item.data.id == sessionId);
