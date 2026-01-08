@@ -48,7 +48,6 @@ class RefreshService extends ChangeNotifier {
   }
 
   void _executeRefresh(RefreshSchedule schedule) {
-
     final client = JulesClient(accessToken: _authProvider.token);
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:

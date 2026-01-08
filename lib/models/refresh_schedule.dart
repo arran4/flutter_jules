@@ -1,4 +1,3 @@
-
 import 'package:uuid/uuid.dart';
 import '../services/settings_provider.dart';
 
