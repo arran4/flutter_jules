@@ -214,6 +214,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     keyboardType: TextInputType.number,
                   ),
                   DropdownButtonFormField<ListRefreshPolicy>(
+                    // ignore: deprecated_member_use
                     value: refreshPolicy,
                     onChanged: (value) {
                       if (value != null) {

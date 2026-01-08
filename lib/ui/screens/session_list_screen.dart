@@ -9,7 +9,7 @@ import '../../services/source_provider.dart';
 import '../../services/cache_service.dart';
 import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
-import '../../models/cache_metadata.dart';
+
 import '../../models.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
@@ -1776,7 +1776,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               o.pullRequest !=
                                                               null,
                                                           orElse: () =>
-                                                              Output())
+                                                              SessionOutput())
                                                       .pullRequest
                                                       ?.url;
                                                   if (prUrl != null) {

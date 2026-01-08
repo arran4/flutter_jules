@@ -1093,7 +1093,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 child: item,
               );
             }
-            if (a.unmappedProps?['hasMismatch'] == true) {
+            if (a.unmappedProps['hasMismatch'] == true) {
               return Column(
                 mainAxisSize: MainAxisSize.min,
                 crossAxisAlignment: CrossAxisAlignment.end,
@@ -1147,7 +1147,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                         listen: false)
                                     .removePendingMessage(
                                         _session.id,
-                                        a.unmappedProps?['pendingId'],
+                                        a.unmappedProps['pendingId'],
                                         auth.token!);
                               },
                               child: const Text("Dismiss"),
@@ -1161,7 +1161,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               onPressed: () {
                                 final auth = Provider.of<AuthProvider>(context,
                                     listen: false);
-                                final pId = a.unmappedProps?['pendingId'];
+                                final pId = a.unmappedProps['pendingId'];
                                 final content = a.userMessaged!.userMessage;
                                 // Remove old one
                                 Provider.of<SessionProvider>(context,

@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
-import '../models/cache_metadata.dart';
+
 import 'jules_client.dart';
 import 'cache_service.dart';
 
@@ -273,12 +273,10 @@ class SessionProvider extends ChangeNotifier {
     // Activities from server usually have createTime.
     DateTime? latestServerActivityTime;
     for (var a in activities) {
-      if (a.createTime != null) {
-        final t = DateTime.parse(a.createTime!);
-        if (latestServerActivityTime == null ||
-            t.isAfter(latestServerActivityTime)) {
-          latestServerActivityTime = t;
-        }
+      final t = DateTime.parse(a.createTime);
+      if (latestServerActivityTime == null ||
+          t.isAfter(latestServerActivityTime)) {
+        latestServerActivityTime = t;
       }
     }
 

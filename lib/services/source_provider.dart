@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
-import '../models/cache_metadata.dart';
+
 import 'jules_client.dart';
 import 'cache_service.dart';
 
