@@ -635,6 +635,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     if (_session.url != null) {
                       launchUrl(Uri.parse(_session.url!));
                     }
+                  } else if (value == 'copy_jules_url') {
+                    if (_session.url != null) {
+                      await Clipboard.setData(ClipboardData(text: _session.url!));
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(content: Text('Jules URL copied')));
+                      }
+                    }
                   } else if (value == 'approve_plan') {
                     _approvePlan();
                   } else if (value == 'watch') {
@@ -755,6 +763,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           Icon(Icons.open_in_browser, color: Colors.grey),
                           SizedBox(width: 8),
                           Text('Open in Browser'),
+                        ],
+                      ),
+                    ),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                      value: 'copy_jules_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Copy Jules Link'),
                         ],
                       ),
                     ),

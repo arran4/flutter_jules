@@ -1706,6 +1706,242 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   ),
                                                 ),
                                               ),
+                                            PopupMenuButton<String>(
+                                              icon: const Icon(Icons.more_vert),
+                                              tooltip: 'Actions',
+                                              onSelected: (value) async {
+                                                final auth =
+                                                    Provider.of<AuthProvider>(
+                                                        context,
+                                                        listen: false);
+                                                if (value == 'pr') {
+                                                  final pr = session.outputs!
+                                                      .firstWhere((o) =>
+                                                          o.pullRequest != null)
+                                                      .pullRequest!;
+                                                  launchUrl(Uri.parse(pr.url));
+                                                } else if (value == 'pr_read') {
+                                                  final pr = session.outputs!
+                                                      .firstWhere((o) =>
+                                                          o.pullRequest != null)
+                                                      .pullRequest!;
+                                                  await sessionProvider
+                                                      .markPrAsOpened(
+                                                          session.id,
+                                                          auth.token!);
+                                                  launchUrl(Uri.parse(pr.url));
+                                                } else if (value == 'browser') {
+                                                  _openSessionUrl(session);
+                                                } else if (value == 'copy_pr_url') {
+                                                  final prUrl = session.outputs
+                                                      ?.firstWhere((o) => o.pullRequest != null, orElse: () => Output())
+                                                      .pullRequest?.url;
+                                                  if (prUrl != null) {
+                                                    Clipboard.setData(ClipboardData(text: prUrl));
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('PR URL copied to clipboard')),
+                                                    );
+                                                  }
+                                                } else if (value == 'copy_jules_url') {
+                                                  if (session.url != null) {
+                                                    Clipboard.setData(ClipboardData(text: session.url!));
+                                                    ScaffoldMessenger.of(context).showSnackBar(
+                                                      const SnackBar(content: Text('Jules URL copied to clipboard')),
+                                                    );
+                                                  }
+                                                }else if (value == 'reply') {
+                                                  _quickReply(session);
+                                                } else if (value ==
+                                                    'view_prompt') {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        AlertDialog(
+                                                      title: const Text(
+                                                          "Session Prompt"),
+                                                      content:
+                                                          SingleChildScrollView(
+                                                        child: SelectableText(
+                                                            session.prompt),
+                                                      ),
+                                                      actions: [
+                                                        TextButton(
+                                                          onPressed: () =>
+                                                              Navigator.pop(
+                                                                  context),
+                                                          child: const Text(
+                                                              "Close"),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  );
+                                                } else if (value == 'refresh') {
+                                                  _refreshSession(session);
+                                                } else if (value == 'source') {
+                                                  _openSourceUrl(session
+                                                      .sourceContext.source);
+                                                } else if (value == 'raw') {
+                                                  _showContextMenu(context,
+                                                      session: session);
+                                                } else if (value ==
+                                                    'mark_read') {
+                                                  await sessionProvider
+                                                      .markAsRead(session.id,
+                                                          auth.token!);
+                                                } else if (value ==
+                                                    'mark_unread') {
+                                                  await sessionProvider
+                                                      .markAsUnread(session.id,
+                                                          auth.token!);
+                                                } else if (value == 'watch') {
+                                                  await sessionProvider
+                                                      .toggleWatch(session.id,
+                                                          auth.token!);
+                                                }
+                                              },
+                                              itemBuilder: (context) {
+                                                final hasPr = session.outputs !=
+                                                        null &&
+                                                    session.outputs!.any((o) =>
+                                                        o.pullRequest != null);
+                                                return [
+                                                  if (hasPr) ...[
+                                                    const PopupMenuItem(
+                                                      value: 'pr',
+                                                      child: Row(children: [
+                                                        Icon(Icons.merge_type,
+                                                            color:
+                                                                Colors.purple),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                            'View Pull Request')
+                                                      ]),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'pr_read',
+                                                      child: Row(children: [
+                                                        Icon(
+                                                            Icons
+                                                                .mark_email_read,
+                                                            color:
+                                                                Colors.purple),
+                                                        SizedBox(width: 8),
+                                                        Text(
+                                                            'Open PR & Mark Read')
+                                                      ]),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'copy_pr_url',
+                                                      child: Row(children: [
+                                                        Icon(Icons.copy, color: Colors.purple),
+                                                        SizedBox(width: 8),
+                                                        Text('Copy PR Link'),
+                                                      ]),
+                                                    ),
+                                                  ],
+                                                  if (metadata.isUnread)
+                                                    const PopupMenuItem(
+                                                      value: 'mark_read',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .mark_email_read),
+                                                        SizedBox(width: 8),
+                                                        Text('Mark as Read')
+                                                      ]),
+                                                    )
+                                                  else
+                                                    const PopupMenuItem(
+                                                      value: 'mark_unread',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .mark_email_unread),
+                                                        SizedBox(width: 8),
+                                                        Text('Mark as Unread')
+                                                      ]),
+                                                    ),
+                                                  if (metadata.isWatched)
+                                                    const PopupMenuItem(
+                                                      value: 'watch',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .visibility_off),
+                                                        SizedBox(width: 8),
+                                                        Text('Unwatch')
+                                                      ]),
+                                                    )
+                                                  else
+                                                    const PopupMenuItem(
+                                                      value: 'watch',
+                                                      child: Row(children: [
+                                                        Icon(Icons.visibility),
+                                                        SizedBox(width: 8),
+                                                        Text('Watch')
+                                                      ]),
+                                                    ),
+                                                  const PopupMenuItem(
+                                                    value: 'reply',
+                                                    child: Row(children: [
+                                                      Icon(Icons.reply),
+                                                      SizedBox(width: 8),
+                                                      Text('Quick Reply')
+                                                    ]),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'view_prompt',
+                                                    child: Row(children: [
+                                                      Icon(Icons.description),
+                                                      SizedBox(width: 8),
+                                                      Text('View Prompt')
+                                                    ]),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'refresh',
+                                                    child: Row(children: [
+                                                      Icon(Icons.refresh),
+                                                      SizedBox(width: 8),
+                                                      Text('Refresh Session')
+                                                    ]),
+                                                  ),
+                                                  if (session.url != null)
+                                                    const PopupMenuItem(
+                                                      value: 'browser',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .open_in_browser),
+                                                        SizedBox(width: 8),
+                                                        Text('Open in Browser')
+                                                      ]),
+                                                    ),
+                                                  if (session.url != null)
+                                                    const PopupMenuItem(
+                                                      value: 'copy_jules_url',
+                                                      child: Row(children: [
+                                                        Icon(Icons.copy),
+                                                        SizedBox(width: 8),
+                                                        Text('Copy Jules Link'),
+                                                      ]),
+                                                    ),
+                                                  const PopupMenuItem(
+                                                    value: 'source',
+                                                    child: Row(children: [
+                                                      Icon(Icons.source),
+                                                      SizedBox(width: 8),
+                                                      Text('View Source Repo')
+                                                    ]),
+                                                  ),
+                                                  if (isDevMode)
+                                                    const PopupMenuItem(
+                                                      value: 'raw',
+                                                      child: Row(children: [
+                                                        Icon(Icons
+                                                            .developer_mode),
+                                                        SizedBox(width: 8),
+                                                        Text('Dev Tools')
+                                                      ]),
+                                                    ),
+                                                ];
+                                              },
+                                            ),
                                           ]),
                                           const SizedBox(height: 8),
                                           SessionMetaPills(
