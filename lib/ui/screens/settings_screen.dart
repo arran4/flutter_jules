@@ -1,17 +1,23 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
 
-class SettingsScreen extends StatelessWidget {
+class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
 
+  @override
+  State<SettingsScreen> createState() => _SettingsScreenState();
+}
+
+class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: const Text('Refresh Settings'),
+        title: const Text('Settings'),
       ),
       body: Consumer3<SettingsProvider, DevModeProvider, AuthProvider>(
         builder: (context, settings, devMode, auth, child) {
@@ -44,6 +50,8 @@ class SettingsScreen extends StatelessWidget {
                 value: settings.refreshOnCreate,
                 onChanged: settings.setRefreshOnCreate,
               ),
+              const Divider(),
+              _buildAutomaticRefreshSection(context, settings),
               const Divider(),
               _buildSectionHeader(context, 'Performance'),
               ListTile(
@@ -87,73 +95,13 @@ class SettingsScreen extends StatelessWidget {
               ListTile(
                 title: const Text('Update API Key'),
                 leading: const Icon(Icons.vpn_key),
-                onTap: () async {
-                  final controller = TextEditingController();
-                  final newKey = await showDialog<String>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Enter API Key'),
-                      content: TextField(
-                        controller: controller,
-                        decoration: const InputDecoration(
-                          labelText: 'API Key',
-                          hintText: 'Paste your API key here',
-                        ),
-                        obscureText: true,
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () =>
-                              Navigator.pop(context, controller.text),
-                          child: const Text('Save'),
-                        ),
-                      ],
-                    ),
-                  );
-
-                  if (newKey != null && newKey.isNotEmpty) {
-                    if (!context.mounted) return;
-                    await auth.setToken(newKey, TokenType.apiKey);
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                            content: Text('API Key updated successfully')),
-                      );
-                    }
-                  }
-                },
+                onTap: () => _showApiKeyDialog(context, auth),
               ),
               ListTile(
                 title:
                     const Text('Sign Out', style: TextStyle(color: Colors.red)),
                 leading: const Icon(Icons.logout, color: Colors.red),
-                onTap: () async {
-                  final confirm = await showDialog<bool>(
-                    context: context,
-                    builder: (context) => AlertDialog(
-                      title: const Text('Sign Out'),
-                      content: const Text('Are you sure you want to sign out?'),
-                      actions: [
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, false),
-                            child: const Text('Cancel')),
-                        TextButton(
-                            onPressed: () => Navigator.pop(context, true),
-                            child: const Text('Sign Out')),
-                      ],
-                    ),
-                  );
-                  if (confirm == true) {
-                    if (context.mounted) {
-                      Navigator.pop(context); // Close settings
-                      auth.logout();
-                    }
-                  }
-                },
+                onTap: () => _showSignOutDialog(context, auth),
               ),
             ],
           );
@@ -173,6 +121,221 @@ class SettingsScreen extends StatelessWidget {
             ),
       ),
     );
+  }
+
+  Widget _buildAutomaticRefreshSection(
+      BuildContext context, SettingsProvider settings) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Automatic Refresh',
+                style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => _showScheduleDialog(context, settings),
+              ),
+            ],
+          ),
+        ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: settings.schedules.length,
+          itemBuilder: (context, index) {
+            final schedule = settings.schedules[index];
+            return ListTile(
+              title: Text(schedule.name),
+              subtitle: Text(
+                  'Every ${schedule.intervalInMinutes} mins, ${_formatListPolicy(schedule.refreshPolicy)}'),
+              trailing: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Switch(
+                    value: schedule.isEnabled,
+                    onChanged: (value) {
+                      schedule.isEnabled = value;
+                      settings.updateSchedule(schedule);
+                    },
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.edit),
+                    onPressed: () =>
+                        _showScheduleDialog(context, settings, schedule),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.delete),
+                    onPressed: () => settings.deleteSchedule(schedule.id),
+                  ),
+                ],
+              ),
+            );
+          },
+        ),
+      ],
+    );
+  }
+
+  void _showScheduleDialog(
+      BuildContext context, SettingsProvider settings,
+      [RefreshSchedule? schedule]) {
+    final isEditing = schedule != null;
+    final nameController = TextEditingController(text: schedule?.name ?? '');
+    final intervalController = TextEditingController(
+        text: schedule?.intervalInMinutes.toString() ?? '');
+    var refreshPolicy = schedule?.refreshPolicy ?? ListRefreshPolicy.quick;
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: Text(isEditing ? 'Edit Schedule' : 'Add Schedule'),
+          content: StatefulBuilder(
+            builder: (BuildContext context, StateSetter setState) {
+              return Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  TextField(
+                    controller: nameController,
+                    decoration: const InputDecoration(labelText: 'Name'),
+                  ),
+                  TextField(
+                    controller: intervalController,
+                    decoration: const InputDecoration(
+                        labelText: 'Interval (minutes)'),
+                    keyboardType: TextInputType.number,
+                  ),
+                  DropdownButtonFormField<ListRefreshPolicy>(
+                    value: refreshPolicy,
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          refreshPolicy = value;
+                        });
+                      }
+                    },
+                    items: ListRefreshPolicy.values.map((policy) {
+                      return DropdownMenuItem(
+                        value: policy,
+                        child: Text(_formatListPolicy(policy)),
+                      );
+                    }).toList(),
+                  ),
+                ],
+              );
+            },
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('Cancel'),
+            ),
+            TextButton(
+              onPressed: () {
+                final interval = int.tryParse(intervalController.text);
+                if (interval == null) {
+                  // Show an error message if the interval is not a valid number.
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Please enter a valid number for the interval.'),
+                    ),
+                  );
+                  return;
+                }
+                final newSchedule = RefreshSchedule(
+                  id: schedule?.id,
+                  name: nameController.text,
+                  intervalInMinutes: interval,
+                  refreshPolicy: refreshPolicy,
+                  isEnabled: schedule?.isEnabled ?? true,
+                );
+
+                if (isEditing) {
+                  settings.updateSchedule(newSchedule);
+                } else {
+                  settings.addSchedule(newSchedule);
+                }
+                Navigator.pop(context);
+              },
+              child: const Text('Save'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  Future<void> _showApiKeyDialog(
+      BuildContext context, AuthProvider auth) async {
+    final controller = TextEditingController();
+    final newKey = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter API Key'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'API Key',
+            hintText: 'Paste your API key here',
+          ),
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (newKey != null && newKey.isNotEmpty) {
+      if (!context.mounted) return;
+      await auth.setToken(newKey, TokenType.apiKey);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('API Key updated successfully')),
+        );
+      }
+    }
+  }
+
+  Future<void> _showSignOutDialog(
+      BuildContext context, AuthProvider auth) async {
+    final confirm = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Sign Out'),
+        content: const Text('Are you sure you want to sign out?'),
+        actions: [
+          TextButton(
+              onPressed: () => Navigator.pop(context, false),
+              child: const Text('Cancel')),
+          TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              child: const Text('Sign Out')),
+        ],
+      ),
+    );
+    if (confirm == true) {
+      if (context.mounted) {
+        Navigator.pop(context); // Close settings
+        auth.logout();
+      }
+    }
   }
 
   Widget _buildSessionDropdown(
