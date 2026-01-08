@@ -4,6 +4,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:http/http.dart' as http;
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
@@ -33,6 +34,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   // Automation Option
   bool _autoCreatePr = false;
+
+  // Refresh State
+  bool _isRefreshing = false;
+  String _refreshStatus = '';
 
   // Custom Dropdown State
   final TextEditingController _sourceController = TextEditingController();
@@ -121,41 +126,63 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _fetchSources({bool force = false}) async {
+    if (_isRefreshing) return;
+
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    // If forcing or list is empty, fetch
-    if (force || sourceProvider.items.isEmpty) {
-      // Note: fetchSources acts as refresh if called again, or we might add force param to fetchSources
-      // For now, calling it is enough.
-      // Although I didn't add 'force' to fetchSources, it fetches if called fundamentally unless I added logic.
-      // My implementation of fetchSources: skips if loading, but otherwise fetches.
-      // And it loads from cache first.
-
-      await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+    // Only show loading state on explicit user action
+    if (force) {
+      setState(() {
+        _isRefreshing = true;
+        _refreshStatus = 'Refreshing...';
+      });
     }
 
-    // If we want to force network refresh, we might need a distinct method or param,
-    // but the user requirement was to load all on start.
-    // Usually cached data is fine for the dropdown unless the user explicitly refreshed in the main screen.
-    // The previous code called `refresh`.
+    try {
+      if (force || sourceProvider.items.isEmpty) {
+        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+      }
 
-    // Since fetchSources currently respects cache if available and loaded, we might need to rely on the main screen refresh.
-    // But for this dialog's "Refresh" button, we probably want to force a network hit.
-    // My refactored fetchSources doesn't expose `force` logic cleanly (it checks cache).
-
-    // Wait, my fetchSources executes:
-    // 1. Load from cache (if token provided).
-    // 2. Network call (do/while).
-    // 3. Save to cache.
-    // So it ALWAYS hits network! It's an eager fetch. Ideally it shouldn't be if data is fresh, but per instructions "pre download ... on first auth/login".
-    // But `SessionProvider` had logic to skip if fresh. `SourceProvider` refactor I wrote *always* fetches from network after loading cache.
-    // Ideally I should have added a freshness check or `force` param.
-    // But as written, it acts as a force refresh every time it's called unless `isLoading` is true.
-
-    if (mounted) {
-      final sources = sourceProvider.items.map((i) => i.data).toList();
-      _initializeSelection(sources);
+      if (mounted) {
+        final sources = sourceProvider.items.map((i) => i.data).toList();
+        _initializeSelection(sources);
+        if (force) {
+          setState(() {
+            _refreshStatus = 'Updated just now';
+          });
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        setState(() {
+          _refreshStatus = 'Error: ${e.toString().substring(0, 30)}...';
+        });
+      }
+    } finally {
+      if (mounted && force) {
+        setState(() {
+          _isRefreshing = false;
+        });
+        // Reset status after a few seconds
+        Future.delayed(const Duration(seconds: 5), () {
+          if (mounted && !_isRefreshing) {
+            final lastFetchTime = sourceProvider.lastFetchTime;
+            setState(() {
+              _refreshStatus = lastFetchTime != null
+                  ? 'Last updated: ${DateFormat.Hms().format(lastFetchTime)}'
+                  : '';
+            });
+          }
+        });
+      } else if (mounted) {
+        final lastFetchTime = sourceProvider.lastFetchTime;
+        setState(() {
+          _refreshStatus = lastFetchTime != null
+              ? 'Last updated: ${DateFormat.Hms().format(lastFetchTime)}'
+              : '';
+        });
+      }
     }
   }
 
@@ -596,22 +623,26 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                   // Context (Source & Branch)
                   Row(
                     mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    crossAxisAlignment: CrossAxisAlignment.center,
                     children: [
                       const Text('Context',
                           style: TextStyle(fontWeight: FontWeight.bold)),
-                      if (sourceProvider.isLoading)
-                        const SizedBox(
-                            width: 16,
-                            height: 16,
-                            child: CircularProgressIndicator(strokeWidth: 2))
-                      else
-                        IconButton(
-                          icon: const Icon(Icons.refresh, size: 16),
-                          tooltip: 'Refresh Sources',
-                          padding: EdgeInsets.zero,
-                          constraints: const BoxConstraints(),
-                          onPressed: () => _fetchSources(force: true),
-                        )
+                      TextButton.icon(
+                        style: TextButton.styleFrom(
+                          textStyle: const TextStyle(fontSize: 12),
+                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                        ),
+                        onPressed: _isRefreshing
+                            ? null
+                            : () => _fetchSources(force: true),
+                        icon: _isRefreshing
+                            ? const SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(strokeWidth: 2))
+                            : const Icon(Icons.refresh, size: 14),
+                        label: Text(_refreshStatus),
+                      ),
                     ],
                   ),
                   const SizedBox(height: 8),
