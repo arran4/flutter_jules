@@ -639,7 +639,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             ? const SizedBox(
                                 width: 12,
                                 height: 12,
-                                child: CircularProgressIndicator(strokeWidth: 2))
+                                child:
+                                    CircularProgressIndicator(strokeWidth: 2))
                             : const Icon(Icons.refresh, size: 14),
                         label: Text(_refreshStatus),
                       ),
