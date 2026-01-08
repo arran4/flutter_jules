@@ -391,21 +391,34 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           final body = jsonDecode(e.responseBody!);
           if (body is Map && body.containsKey('error')) {
             final error = body['error'];
-            if (error is Map &&
-                (error['code'] == 429 ||
-                    error['status'] == 'RESOURCE_EXHAUSTED')) {
-              if (mounted) {
-                // Scenario: User is watching. Restore text, don't queue.
-                _messageController.text = message;
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content: Text(
-                        "API Error: Resource Exhausted. Message restored to input.")));
-              } else {
-                // Scenario: User navigated away. Queue it.
-                queueProvider.addMessage(_session.id, message,
-                    reason: 'resource_exhausted');
+            if (error is Map) {
+              if (error['code'] == 429 ||
+                  error['status'] == 'RESOURCE_EXHAUSTED') {
+                if (mounted) {
+                  // Scenario: User is watching. Restore text, don't queue.
+                  _messageController.text = message;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "API Error: Resource Exhausted. Message restored to input.")));
+                } else {
+                  // Scenario: User navigated away. Queue it.
+                  queueProvider.addMessage(_session.id, message,
+                      reason: 'resource_exhausted');
+                }
+                handled = true;
+              } else if (error['code'] == 503 ||
+                  error['status'] == 'UNAVAILABLE') {
+                if (mounted) {
+                  _messageController.text = message;
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "API Error: Service Unavailable. Message restored to input.")));
+                } else {
+                  queueProvider.addMessage(_session.id, message,
+                      reason: 'service_unavailable');
+                }
+                handled = true;
               }
-              handled = true;
             }
           }
         } catch (_) {

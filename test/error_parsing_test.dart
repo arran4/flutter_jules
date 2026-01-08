@@ -25,4 +25,28 @@ void main() {
 
     expect(isResourceExhausted, true);
   });
+
+  test('Parses UNAVAILABLE error correctly', () {
+    const errorBody = '''
+{
+  "error": {
+    "code": 503,
+    "message": "The service is currently unavailable.",
+    "status": "UNAVAILABLE"
+  }
+}
+''';
+
+    final body = jsonDecode(errorBody);
+    bool isUnavailable = false;
+    if (body is Map && body.containsKey('error')) {
+      final error = body['error'];
+      if (error is Map &&
+          (error['code'] == 503 || error['status'] == 'UNAVAILABLE')) {
+        isUnavailable = true;
+      }
+    }
+
+    expect(isUnavailable, true);
+  });
 }

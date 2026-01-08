@@ -204,17 +204,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
             final body = jsonDecode(e.responseBody!);
             if (body is Map && body.containsKey('error')) {
               final error = body['error'];
-              if (error is Map &&
-                  (error['code'] == 429 ||
-                      error['status'] == 'RESOURCE_EXHAUSTED')) {
-                // Queue automatically
-                Provider.of<MessageQueueProvider>(context, listen: false)
-                    .addCreateSessionRequest(sessionToCreate,
-                        reason: 'resource_exhausted');
-                ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
-                    content:
-                        Text("API Quota Exhausted. Session creation queued.")));
-                handled = true;
+              if (error is Map) {
+                if (error['code'] == 429 ||
+                    error['status'] == 'RESOURCE_EXHAUSTED') {
+                  // Queue automatically
+                  Provider.of<MessageQueueProvider>(context, listen: false)
+                      .addCreateSessionRequest(sessionToCreate,
+                          reason: 'resource_exhausted');
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "API Quota Exhausted. Session creation queued.")));
+                  handled = true;
+                } else if (error['code'] == 503 ||
+                    error['status'] == 'UNAVAILABLE') {
+                  // Queue automatically
+                  Provider.of<MessageQueueProvider>(context, listen: false)
+                      .addCreateSessionRequest(sessionToCreate,
+                          reason: 'service_unavailable');
+                  ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                      content: Text(
+                          "Service Unavailable. Session creation queued.")));
+                  handled = true;
+                }
               }
             }
           } catch (_) {}

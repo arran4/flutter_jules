@@ -45,3 +45,9 @@ class ApiException extends JulesException {
       : super('API error occurred.',
             statusCode: statusCode, responseBody: responseBody);
 }
+
+class ServiceUnavailableException extends JulesException {
+  ServiceUnavailableException(String responseBody)
+      : super('Service unavailable.',
+            statusCode: 503, responseBody: responseBody);
+}

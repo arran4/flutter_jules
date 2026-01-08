@@ -71,6 +71,8 @@ class JulesClient {
       throw PermissionDeniedException(response.body);
     } else if (response.statusCode == 404) {
       throw NotFoundException(response.body);
+    } else if (response.statusCode == 503) {
+      throw ServiceUnavailableException(response.body);
     } else {
       throw ApiException(response.statusCode, response.body);
     }
