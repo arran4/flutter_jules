@@ -248,8 +248,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     Provider.of<MessageQueueProvider>(context, listen: false)
                         .addCreateSessionRequest(sessionToCreate);
                     Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("Session creation queued.")));
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content: Text("Session creation queued.")));
                   },
                   child: const Text('Queue'),
                 ),

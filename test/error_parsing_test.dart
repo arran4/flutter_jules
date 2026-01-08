@@ -12,18 +12,17 @@ void main() {
   }
 }
 ''';
-    
+
     final body = jsonDecode(errorBody);
     bool isResourceExhausted = false;
     if (body is Map && body.containsKey('error')) {
-        final error = body['error'];
-        if (error is Map &&
-            (error['code'] == 429 ||
-                error['status'] == 'RESOURCE_EXHAUSTED')) {
-           isResourceExhausted = true;
-        }
+      final error = body['error'];
+      if (error is Map &&
+          (error['code'] == 429 || error['status'] == 'RESOURCE_EXHAUSTED')) {
+        isResourceExhausted = true;
+      }
     }
-    
+
     expect(isResourceExhausted, true);
   });
 }

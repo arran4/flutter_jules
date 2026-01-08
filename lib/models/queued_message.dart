@@ -28,8 +28,8 @@ class QueuedMessage {
       sessionId: getStringPropOrThrow(json, 'sessionId'),
       content: getStringPropOrThrow(json, 'content'),
       createdAt: DateTime.parse(getStringPropOrThrow(json, 'createdAt')),
-      type: getEnumPropOrDefault(json, 'type', QueuedMessageType.values,
-          QueuedMessageType.message)!,
+      type: getEnumPropOrDefault(
+          json, 'type', QueuedMessageType.values, QueuedMessageType.message)!,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
   }

@@ -1301,8 +1301,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           // Restore the most recent one? Or show list?
                           // "Restore it" implies taking one. Let's take the last one (most recent).
                           if (sessionQueue.isNotEmpty) {
-                             // Sort by created at descending?
-                            sessionQueue.sort((a, b) => b.createdAt.compareTo(a.createdAt));
+                            // Sort by created at descending?
+                            sessionQueue.sort(
+                                (a, b) => b.createdAt.compareTo(a.createdAt));
                             _restoreDraft(sessionQueue.first);
                           }
                         },
