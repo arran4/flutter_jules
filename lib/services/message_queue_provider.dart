@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import '../models/queued_message.dart';
+
 import 'cache_service.dart';
 import 'jules_client.dart';
 import '../models.dart';

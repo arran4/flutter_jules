@@ -315,6 +315,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               force: true); // Refresh so list updates (e.g. timestamp)
         }
       } catch (e) {
+        if (!mounted) return;
         bool handled = false;
         if (e is JulesException && e.responseBody != null) {
           try {
