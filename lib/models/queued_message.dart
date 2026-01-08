@@ -28,7 +28,7 @@ class QueuedMessage {
       sessionId: getStringPropOrThrow(json, 'sessionId'),
       content: getStringPropOrThrow(json, 'content'),
       createdAt: DateTime.parse(getStringPropOrThrow(json, 'createdAt')),
-      type: getEnumPropOrDefault(
+      type: _getEnumPropOrDefault(
           json, 'type', QueuedMessageType.values, QueuedMessageType.message)!,
       metadata: json['metadata'] as Map<String, dynamic>?,
     );
@@ -61,7 +61,7 @@ class QueuedMessage {
 }
 
 // TODO update with dartobjectutils when it support this
-T? getEnumPropOrDefault<T>(
+T? _getEnumPropOrDefault<T>(
     Map<String, dynamic> json, String key, List<T> values, T? defaultValue) {
   if (json[key] == null) {
     return defaultValue;
