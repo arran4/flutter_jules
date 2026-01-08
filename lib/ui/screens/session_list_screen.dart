@@ -1800,6 +1800,36 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _openSessionUrl(session),
         ),
+      if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.mark_email_read),
+              SizedBox(width: 8),
+              Text('Mark as Read'),
+            ],
+          ),
+          onTap: () => _markAsRead(session),
+        ),
+      if (session.outputs != null &&
+          session.outputs!.any((o) => o.pullRequest != null))
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.merge_type),
+              SizedBox(width: 8),
+              Text('Open PR & Mark Read'),
+            ],
+          ),
+          onTap: () async {
+            final pr = session.outputs!
+                .firstWhere((o) => o.pullRequest != null)
+                .pullRequest!;
+            if (await launchUrl(Uri.parse(pr.url))) {
+              _markAsRead(session);
+            }
+          },
+        ),
       PopupMenuItem(
         child: const Row(
           children: [
