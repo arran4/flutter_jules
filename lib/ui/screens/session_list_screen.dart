@@ -1810,9 +1810,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   );
                                                 } else if (value == 'refresh') {
                                                   _refreshSession(session);
-                                                } else if (value == 'source') {
-                                                  _openSourceUrl(session
-                                                      .sourceContext.source);
+                                                } else if (value == 'view_raw_session') {
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        ModelViewer(
+                                                      data: session.toJson(),
+                                                      title: 'Raw Session Data',
+                                                    ),
+                                                  );
                                                 } else if (value == 'raw') {
                                                   _showContextMenu(context,
                                                       session: session);
@@ -1955,11 +1961,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       ]),
                                                     ),
                                                   const PopupMenuItem(
-                                                    value: 'source',
+                                                    value: 'view_raw_session',
                                                     child: Row(children: [
-                                                      Icon(Icons.source),
+                                                      Icon(Icons.data_object),
                                                       SizedBox(width: 8),
-                                                      Text('View Source Repo')
+                                                      Text('View Raw Session')
                                                     ]),
                                                   ),
                                                   if (isDevMode)
@@ -2125,12 +2131,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
         },
       ),
       const PopupMenuItem(
-        value: 'source',
+        value: 'view_raw_session',
         child: Row(
           children: [
-            Icon(Icons.source),
+            Icon(Icons.data_object),
             SizedBox(width: 8),
-            Text('View Source Repo'),
+            Text('View Raw Session'),
           ],
         ),
       ),
@@ -2153,8 +2159,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
     ]).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
-        _openSourceUrl(session.sourceContext.source);
+      if (value == 'view_raw_session') {
+        // Needs a delay or it closes immediately
+        Future.delayed(Duration.zero, () {
+          if (context.mounted) {
+            showDialog(
+              context: context,
+              builder: (context) => ModelViewer(
+                data: session.toJson(),
+                title: 'Raw Session Data',
+              ),
+            );
+          }
+        });
       }
     });
   }
