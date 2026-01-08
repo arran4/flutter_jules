@@ -424,6 +424,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  void _copySourceUrl(String sourceName) {
+    if (sourceName.startsWith("sources/github/")) {
+      final parts = sourceName.split('/');
+      if (parts.length >= 4) {
+        final owner = parts[2];
+        final repo = parts[3];
+        final url = "https://github.com/$owner/$repo";
+        Clipboard.setData(ClipboardData(text: url));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Source URL copied to clipboard')),
+        );
+        return;
+      }
+    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text('Cannot copy URL for source: $sourceName')),
+    );
+  }
+
   void _openSessionById() async {
     final controller = TextEditingController();
     final String? sessionId = await showDialog<String>(
@@ -1810,6 +1829,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   );
                                                 } else if (value == 'refresh') {
                                                   _refreshSession(session);
+                                                } else if (value == 'source') {
+                                                  _openSourceUrl(session.sourceContext.source);
+                                                } else if (value == 'copy_source_url') {
+                                                  _copySourceUrl(session.sourceContext.source);
                                                 } else if (value == 'view_raw_session') {
                                                   showDialog(
                                                     context: context,
@@ -1966,6 +1989,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       Icon(Icons.data_object),
                                                       SizedBox(width: 8),
                                                       Text('View Raw Session')
+                                                    ]),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'source',
+                                                    child: Row(children: [
+                                                      Icon(Icons.source),
+                                                      SizedBox(width: 8),
+                                                      Text('View Source Repo')
+                                                    ]),
+                                                  ),
+                                                  const PopupMenuItem(
+                                                    value: 'copy_source_url',
+                                                    child: Row(children: [
+                                                      Icon(Icons.link),
+                                                      SizedBox(width: 8),
+                                                      Text('Copy Source Repo Link')
                                                     ]),
                                                   ),
                                                   if (isDevMode)
@@ -2131,6 +2170,26 @@ class _SessionListScreenState extends State<SessionListScreen> {
         },
       ),
       const PopupMenuItem(
+        value: 'source',
+        child: Row(
+          children: [
+            Icon(Icons.source),
+            SizedBox(width: 8),
+            Text('View Source Repo'),
+          ],
+        ),
+      ),
+      const PopupMenuItem(
+        value: 'copy_source_url',
+        child: Row(
+          children: [
+            Icon(Icons.link),
+            SizedBox(width: 8),
+            Text('Copy Source Repo Link'),
+          ],
+        ),
+      ),
+      const PopupMenuItem(
         value: 'view_raw_session',
         child: Row(
           children: [
@@ -2159,7 +2218,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
     ]).then((value) {
-      if (value == 'view_raw_session') {
+      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
+        _openSourceUrl(session.sourceContext.source);
+      } else if (value == 'copy_source_url' &&
+          session.sourceContext.source.isNotEmpty) {
+        _copySourceUrl(session.sourceContext.source);
+      } else if (value == 'view_raw_session') {
         // Needs a delay or it closes immediately
         Future.delayed(Duration.zero, () {
           if (context.mounted) {
