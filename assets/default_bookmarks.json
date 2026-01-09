@@ -63,6 +63,44 @@
     ]
   },
   {
+    "name": "Pending Sessions",
+    "description": "Sessions queued and waiting to be sent to server.",
+    "filters": [
+      {
+        "id": "status:QUEUED",
+        "type": "status",
+        "label": "Pending",
+        "value": "QUEUED",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "created",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Draft Messages",
+    "description": "Sessions with unsent draft messages.",
+    "filters": [
+      {
+        "id": "flag:draft",
+        "type": "flag",
+        "label": "Has Drafts",
+        "value": "draft",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
     "name": "Completed & Updated",
     "description": "Recently updated and completed sessions.",
     "filters": [

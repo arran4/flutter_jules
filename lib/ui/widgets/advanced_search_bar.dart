@@ -4,6 +4,7 @@ import '../../models/search_filter.dart';
 import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
 import 'package:flutter/services.dart';
+import '../screens/bookmark_manager_screen.dart';
 
 class AdvancedSearchBar extends StatefulWidget {
   final List<FilterToken> activeFilters;
@@ -11,10 +12,11 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
   final List<FilterToken>
       availableSuggestions; // All possible filters for autocomplete
-  final VoidCallback onOpenFilterMenu;
+  final VoidCallback? onOpenFilterMenu;
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
+  final bool showBookmarksButton;
 
   const AdvancedSearchBar({
     super.key,
@@ -25,6 +27,7 @@ class AdvancedSearchBar extends StatefulWidget {
     required this.onOpenFilterMenu,
     required this.activeSorts,
     required this.onSortsChanged,
+    this.showBookmarksButton = true,
   });
 
   @override
@@ -169,60 +172,13 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   }
 
   void _manageBookmarks() {
-    showDialog(
-      context: context,
-      builder: (context) {
-        // Use a Consumer to rebuild the dialog when bookmarks change
-        return Consumer<FilterBookmarkProvider>(
-          builder: (context, provider, child) {
-            return AlertDialog(
-              title: const Text('Manage Filter Presets'),
-              content: SizedBox(
-                width: 300,
-                height: 400,
-                child: provider.bookmarks.isEmpty
-                    ? const Center(child: Text("No saved presets."))
-                    : ListView(
-                        children: provider.bookmarks.map((bookmark) {
-                          return ListTile(
-                            title: Text(bookmark.name),
-                            trailing: IconButton(
-                              icon: const Icon(Icons.delete, color: Colors.red),
-                              onPressed: () {
-                                provider.deleteBookmark(bookmark.name);
-                                ScaffoldMessenger.of(context)
-                                    .hideCurrentSnackBar();
-                                ScaffoldMessenger.of(context).showSnackBar(
-                                  SnackBar(
-                                      content: Text(
-                                          'Preset "${bookmark.name}" deleted.')),
-                                );
-                              },
-                            ),
-                          );
-                        }).toList(),
-                      ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    provider.resetToDefaults();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                          content: Text('Presets reset to defaults.')),
-                    );
-                  },
-                  child: const Text('Reset to Defaults'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Done'),
-                ),
-              ],
-            );
-          },
-        );
-      },
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => BookmarkManagerScreen(
+          availableSuggestions: widget.availableSuggestions,
+        ),
+      ),
     );
   }
 
@@ -729,11 +685,14 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 ),
 
                 const SizedBox(width: 8),
-                IconButton(
-                  icon: const Icon(Icons.bookmarks_outlined),
-                  onPressed: () => _showBookmarksMenu(context),
-                  tooltip: "Filter Presets",
-                ),
+                if (widget.showBookmarksButton)
+                  Builder(
+                    builder: (buttonContext) => IconButton(
+                      icon: const Icon(Icons.bookmarks_outlined),
+                      onPressed: () => _showBookmarksMenu(buttonContext),
+                      tooltip: "Filter Presets",
+                    ),
+                  ),
                 IconButton(
                   icon: const Icon(Icons.tune),
                   onPressed: widget.onOpenFilterMenu,

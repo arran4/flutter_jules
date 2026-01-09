@@ -87,9 +87,89 @@ class FilterBookmarkProvider with ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> resetToDefaults() async {
-    _bookmarks = List.from(_defaultBookmarks);
-    await _saveBookmarks();
-    notifyListeners();
+  bool isSystemBookmark(String name) {
+    return _defaultBookmarks.any((d) => d.name == name);
+  }
+
+  List<FilterBookmark> getRestorableSystemBookmarks() {
+    return _defaultBookmarks
+        .where((d) => !_bookmarks.any((b) => b.name == d.name))
+        .toList();
+  }
+
+  Future<void> restoreSystemBookmark(String name) async {
+    try {
+      final systemBookmark = _defaultBookmarks.firstWhere(
+        (d) => d.name == name,
+      );
+      // Ensure we don't have a duplicate name before adding (though getRestorable checks this)
+      if (!_bookmarks.any((b) => b.name == name)) {
+        await addBookmark(systemBookmark);
+      }
+    } catch (e) {
+      // Handle not found
+    }
+  }
+
+  Future<void> updateBookmark(
+      String oldName, FilterBookmark newBookmark) async {
+    final index = _bookmarks.indexWhere((b) => b.name == oldName);
+    if (index != -1) {
+      _bookmarks[index] = newBookmark;
+      await _saveBookmarks();
+      notifyListeners();
+    }
+  }
+
+  FilterBookmark? getBookmarkByName(String name) {
+    try {
+      return _bookmarks.firstWhere((b) => b.name == name);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  Future<void> copyBookmark(String sourceName, String newName) async {
+    final source = getBookmarkByName(sourceName);
+    if (source != null) {
+      final copy = FilterBookmark(
+        name: newName,
+        description: source.description,
+        filters: List.from(source.filters),
+        sorts: List.from(source.sorts),
+      );
+      await addBookmark(copy);
+    }
+  }
+
+  String exportToJson() {
+    final jsonList = _bookmarks.map((b) => b.toJson()).toList();
+    return const JsonEncoder.withIndent('  ').convert(jsonList);
+  }
+
+  Future<void> importFromJson(String jsonString, {bool merge = true}) async {
+    try {
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      final imported = jsonList
+          .map((json) => FilterBookmark.fromJson(json as Map<String, dynamic>))
+          .toList();
+
+      if (merge) {
+        // Merge: add new bookmarks, update existing ones by name
+        for (final bookmark in imported) {
+          _bookmarks.removeWhere((b) => b.name == bookmark.name);
+          _bookmarks.add(bookmark);
+        }
+      } else {
+        // Replace: completely replace current bookmarks
+        _bookmarks = imported;
+      }
+
+      _bookmarks.sort((a, b) => a.name.compareTo(b.name));
+      await _saveBookmarks();
+      notifyListeners();
+    } catch (e) {
+      throw Exception('Failed to import bookmarks: $e');
+    }
   }
 }

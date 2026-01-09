@@ -100,16 +100,88 @@ void main() {
       expect(savedList.any((b) => b['name'] == 'Test Bookmark 1'), isFalse);
     });
 
-    test('resetToDefaults restores the default bookmarks', () async {
+    test('validates export and import functionality', () async {
+      // Setup: Add bookmarks and export
       await provider.addBookmark(bookmark1);
       await provider.addBookmark(bookmark2);
+      final jsonExport = provider.exportToJson();
 
-      await provider.resetToDefaults();
-      expect(provider.bookmarks.length, 0); // Empty defaults in test
+      // Verify export is valid JSON
+      final List<dynamic> decoded = jsonDecode(jsonExport);
+      expect(decoded.length, 2);
 
-      final savedJson = prefs.getString('filter_bookmarks_v1');
-      final List<dynamic> savedList = jsonDecode(savedJson!);
-      expect(savedList.length, 0);
+      // Reset and Import
+      await prefs.clear();
+      provider = FilterBookmarkProvider();
+      await provider.initialized;
+
+      expect(provider.bookmarks.isEmpty, isTrue);
+
+      await provider.importFromJson(jsonExport, merge: false);
+      expect(provider.bookmarks.length, 2);
+      expect(provider.bookmarks.any((b) => b.name == bookmark1.name), isTrue);
+      expect(provider.bookmarks.any((b) => b.name == bookmark2.name), isTrue);
+    });
+
+    test('importFromJson merges correctly', () async {
+      await provider.addBookmark(bookmark1);
+
+      // Prepare import data: Modified bookmark1, New bookmark2
+      final modifiedBookmark1 = FilterBookmark(
+        name: bookmark1.name,
+        filters: [], // Changed
+        sorts: [],
+      );
+      final listToImport = [modifiedBookmark1, bookmark2];
+      final jsonImport =
+          jsonEncode(listToImport.map((b) => b.toJson()).toList());
+
+      // Import with merge=true
+      await provider.importFromJson(jsonImport, merge: true);
+
+      expect(provider.bookmarks.length, 2);
+
+      // Verify bookmark1 was updated
+      final b1 = provider.bookmarks.firstWhere((b) => b.name == bookmark1.name);
+      expect(b1.filters, isEmpty);
+
+      // Verify bookmark2 was added
+      expect(provider.bookmarks.any((b) => b.name == bookmark2.name), isTrue);
+    });
+
+    test('updateBookmark updates correctly', () async {
+      await provider.addBookmark(bookmark1);
+
+      final updated = FilterBookmark(
+        name: 'New Name',
+        filters: bookmark1.filters,
+        sorts: bookmark1.sorts,
+      );
+
+      // Note: provider.updateBookmark takes oldName to find it.
+      // But currently implementation replaces at index.
+      // If we change name, we need to be careful.
+      // The implementation: _bookmarks[index] = newBookmark;
+      // So checking logic...
+
+      await provider.updateBookmark(bookmark1.name, updated);
+
+      expect(provider.bookmarks.length, 1);
+      expect(provider.bookmarks.first.name, 'New Name');
+      expect(provider.bookmarks.any((b) => b.name == bookmark1.name), isFalse);
+    });
+
+    test('copyBookmark creates a copy', () async {
+      await provider.addBookmark(bookmark1);
+
+      await provider.copyBookmark(bookmark1.name, 'Copy of Bookmark 1');
+
+      expect(provider.bookmarks.length, 2);
+      final copy =
+          provider.bookmarks.firstWhere((b) => b.name == 'Copy of Bookmark 1');
+      expect(copy.description, bookmark1.description);
+      // Ensure specific fields match
+      expect(copy.filters.length, bookmark1.filters.length);
     });
   });
 }
