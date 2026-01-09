@@ -522,8 +522,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             }
             // Auto-save draft
             if (_messageController.text.trim().isNotEmpty) {
-                Provider.of<MessageQueueProvider>(context, listen: false)
-                    .saveDraft(_session.id, _messageController.text);
+              Provider.of<MessageQueueProvider>(context, listen: false)
+                  .saveDraft(_session.id, _messageController.text);
             }
           }
         },
@@ -875,12 +875,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
 
     final queuedActivities = queuedMessages.map((m) => Activity(
-        name: "queued/${m.id}",
-        id: "queued-${m.id}",
-        createTime: m.createdAt.toIso8601String(),
-        userMessaged: UserMessaged(userMessage: m.content),
-        description: "Queued Message",
-        unmappedProps: {
+            name: "queued/${m.id}",
+            id: "queued-${m.id}",
+            createTime: m.createdAt.toIso8601String(),
+            userMessaged: UserMessaged(userMessage: m.content),
+            description: "Queued Message",
+            unmappedProps: {
               'isQueued': true,
               'queueReason': m.queueReason,
               'processingErrors': m.processingErrors,
@@ -1079,15 +1079,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           content = _buildGroupItem(itemWrapper, isDevMode);
         } else if (itemWrapper is ActivityItemWrapper) {
           final activity = itemWrapper.activity;
-          
+
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal = activity.id.startsWith('pending-') || activity.id.startsWith('queued-');
+          final isLocal = activity.id.startsWith('pending-') ||
+              activity.id.startsWith('queued-');
 
           final item = ActivityItem(
             activity: activity,
-            onRefresh: isLocal 
-                ? () => _fetchActivities(force: true, shallow: true) 
+            onRefresh: isLocal
+                ? () => _fetchActivities(force: true, shallow: true)
                 : () => _refreshActivity(activity),
           );
 
@@ -1482,27 +1483,30 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         if (_session.createTime != null)
                           Chip(
                             avatar: const Icon(Icons.calendar_today, size: 16),
-                            label: Text("Created: ${DateFormat.yMMMd().add_jm().format(
-                                DateTime.parse(_session.createTime!)
-                                    .toLocal())}"),
+                            label: Text(
+                                "Created: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.createTime!).toLocal())}"),
                             side: BorderSide.none,
                           ),
                         if (_session.updateTime != null || _isLoading)
-                           Chip(
-                            avatar: _isLoading 
-                                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)) 
+                          Chip(
+                            avatar: _isLoading
+                                ? const SizedBox(
+                                    width: 12,
+                                    height: 12,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2))
                                 : const Icon(Icons.access_time, size: 16),
                             label: Builder(builder: (context) {
-                                final timeStr = _session.updateTime != null 
-                                    ? "Updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.updateTime!).toLocal())}"
-                                    : "Updating...";
-                                if (_isLoading && _loadingStatus.isNotEmpty) {
-                                    return Text("$timeStr ($_loadingStatus)");
-                                }
-                                return Text(timeStr);
+                              final timeStr = _session.updateTime != null
+                                  ? "Updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.updateTime!).toLocal())}"
+                                  : "Updating...";
+                              if (_isLoading && _loadingStatus.isNotEmpty) {
+                                return Text("$timeStr ($_loadingStatus)");
+                              }
+                              return Text(timeStr);
                             }),
                             side: BorderSide.none,
-                           ),
+                          ),
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
@@ -1692,18 +1696,19 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             ),
             const SizedBox(width: 8),
-             if (hasText && !_isSending)
-               IconButton(
-                 icon: const Icon(Icons.save_as, color: Colors.grey),
-                 tooltip: "Save as Draft",
-                 onPressed: () {
-                    final content = _messageController.text;
-                    Provider.of<MessageQueueProvider>(context, listen: false)
-                        .saveDraft(_session.id, content);
-                    _messageController.clear();
-                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Draft saved")));
-                 },
-               ),
+            if (hasText && !_isSending)
+              IconButton(
+                icon: const Icon(Icons.save_as, color: Colors.grey),
+                tooltip: "Save as Draft",
+                onPressed: () {
+                  final content = _messageController.text;
+                  Provider.of<MessageQueueProvider>(context, listen: false)
+                      .saveDraft(_session.id, content);
+                  _messageController.clear();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("Draft saved")));
+                },
+              ),
             if (hasText || _isSending)
               IconButton(
                 icon: const Icon(Icons.send),

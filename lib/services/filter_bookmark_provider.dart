@@ -62,8 +62,7 @@ class FilterBookmarkProvider with ChangeNotifier {
   Future<void> _saveBookmarks() async {
     try {
       final prefs = await SharedPreferences.getInstance();
-      final jsonString =
-          jsonEncode(_bookmarks.map((b) => b.toJson()).toList());
+      final jsonString = jsonEncode(_bookmarks.map((b) => b.toJson()).toList());
       await prefs.setString(_bookmarksKey, jsonString);
     } catch (e) {
       // Handle save error

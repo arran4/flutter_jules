@@ -541,13 +541,14 @@ class _ActivityItemState extends State<ActivityItem> {
                             padding: const EdgeInsets.only(top: 4, left: 22),
                             child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children: (activity
-                                        .unmappedProps['processingErrors']
-                                        as List)
-                                    .map<Widget>((e) => Text("• $e",
-                                        style: const TextStyle(
-                                            color: Colors.red, fontSize: 11)))
-                                    .toList()),
+                                children:
+                                    (activity.unmappedProps['processingErrors']
+                                            as List)
+                                        .map<Widget>((e) => Text("• $e",
+                                            style: const TextStyle(
+                                                color: Colors.red,
+                                                fontSize: 11)))
+                                        .toList()),
                           )
                       ]
                     ],

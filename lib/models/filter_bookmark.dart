@@ -69,31 +69,27 @@ Map<String, dynamic> _filterTokenToJson(FilterToken token) {
     'id': token.id,
     'type': token.type.name,
     'label': token.label,
-    'value':
-        token.type == FilterType.status && token.value is SessionState
-            ? (token.value as SessionState).name
-            : token.value,
+    'value': token.type == FilterType.status && token.value is SessionState
+        ? (token.value as SessionState).name
+        : token.value,
     'mode': token.mode.name,
   };
 }
 
 FilterToken _filterTokenFromJson(Map<String, dynamic> json) {
   final typeName = json['type'] as String;
-  final type =
-      FilterType.values.firstWhere((e) => e.name == typeName);
+  final type = FilterType.values.firstWhere((e) => e.name == typeName);
 
   dynamic value;
   if (type == FilterType.status) {
     final valueName = json['value'] as String;
-    value = SessionState.values
-        .firstWhere((e) => e.name == valueName);
+    value = SessionState.values.firstWhere((e) => e.name == valueName);
   } else {
     value = json['value'];
   }
 
   final modeName = json['mode'] as String;
-  final mode =
-      FilterMode.values.firstWhere((e) => e.name == modeName);
+  final mode = FilterMode.values.firstWhere((e) => e.name == modeName);
 
   return FilterToken(
     id: json['id'] as String,
@@ -114,12 +110,11 @@ Map<String, dynamic> _sortOptionToJson(SortOption option) {
 
 SortOption _sortOptionFromJson(Map<String, dynamic> json) {
   final fieldName = json['field'] as String;
-  final field =
-      SortField.values.firstWhere((e) => e.name == fieldName);
+  final field = SortField.values.firstWhere((e) => e.name == fieldName);
 
   final directionName = json['direction'] as String;
-  final direction = SortDirection.values
-      .firstWhere((e) => e.name == directionName);
+  final direction =
+      SortDirection.values.firstWhere((e) => e.name == directionName);
 
   return SortOption(
     field,

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/models/activity.dart'; 
+import 'package:jules_client/models/activity.dart';
 
 void main() {
   test('Activity parsing - agent message without description', () {
@@ -58,8 +58,9 @@ void main() {
 
     expect(activity.id, "a82553a4d3bf4e4f8c2ad49d665d8d11");
     expect(activity.sessionFailed, isNotNull);
-    expect(activity.sessionFailed!.reason, "Jules encountered an error when working on the task.");
-    
+    expect(activity.sessionFailed!.reason,
+        "Jules encountered an error when working on the task.");
+
     expect(activity.unmappedProps.containsKey('someUnknownProp'), true);
     expect(activity.unmappedProps['someUnknownProp'], "shouldBeFlagged");
   });

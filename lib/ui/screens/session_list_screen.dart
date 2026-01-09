@@ -115,17 +115,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
           // Success
           final queueProvider =
               Provider.of<MessageQueueProvider>(context, listen: false);
-          if (queueProvider.queue.isNotEmpty && !queueProvider.isOffline) {
-
-          }
+          if (queueProvider.queue.isNotEmpty && !queueProvider.isOffline) {}
         }
       }
     } catch (e) {
       // Provider handles error state
     }
   }
-
-
 
   Future<void> _createSession() async {
     // Determine pre-selected source from active filters
@@ -966,58 +962,61 @@ class _SessionListScreenState extends State<SessionListScreen> {
           if (m.metadata != null) {
             json = Map<String, dynamic>.from(m.metadata!);
           } else {
-             // Fallback for items without metadata
-             json = {
-                 'id': 'temp',
-                 'name': 'temp', 
-                 'prompt': m.content,
-                 'sourceContext': {'source': 'unknown'}
-             };
-          }
-          
-          // Override ID to avoid collision
-          json['id'] = 'DRAFT_CREATION_${m.id}';
-          
-          // Ensure prompt is set as title
-          if (json['title'] == null || json['title'].toString().isEmpty) {
-             json['title'] = (json['prompt'] as String?) ?? 'New Session (Draft)';
+            // Fallback for items without metadata
+            json = {
+              'id': 'temp',
+              'name': 'temp',
+              'prompt': m.content,
+              'sourceContext': {'source': 'unknown'}
+            };
           }
 
-          
-          
+          // Override ID to avoid collision
+          json['id'] = 'DRAFT_CREATION_${m.id}';
+
+          // Ensure prompt is set as title
+          if (json['title'] == null || json['title'].toString().isEmpty) {
+            json['title'] =
+                (json['prompt'] as String?) ?? 'New Session (Draft)';
+          }
+
           final isDraft = m.isDraft;
-          final isOffline = queueProvider.isOffline; // Uses provider from context
+          final isOffline =
+              queueProvider.isOffline; // Uses provider from context
 
           // Inject Flags based on queue state
           // User Definition: "Pending" is for all new sessions (draft, error, sending).
           // Status 'QUEUED' maps to "Pending" in UI usually.
-          
+
           json['state'] = 'QUEUED'; // Always QUEUED to match "Pending" filter
-          
+
           String statusReason;
           if (m.processingErrors.isNotEmpty) {
-             final lastError = m.processingErrors.last;
-             if (lastError.contains('429') || lastError.toLowerCase().contains('quota')) {
-                 statusReason = 'Quota limit reached';
-             } else if (lastError.contains('500') || lastError.contains('502') || lastError.contains('503')) {
-                  statusReason = 'Server error';
-             } else {
-                 statusReason = 'Failed: $lastError';
-             }
+            final lastError = m.processingErrors.last;
+            if (lastError.contains('429') ||
+                lastError.toLowerCase().contains('quota')) {
+              statusReason = 'Quota limit reached';
+            } else if (lastError.contains('500') ||
+                lastError.contains('502') ||
+                lastError.contains('503')) {
+              statusReason = 'Server error';
+            } else {
+              statusReason = 'Failed: $lastError';
+            }
           } else if (isDraft) {
-             statusReason = m.queueReason ?? 'Saved as draft';
+            statusReason = m.queueReason ?? 'Saved as draft';
           } else if (isOffline) {
-             // It's pending sending, but we are offline
-             statusReason = 'Pending (Offline)';
+            // It's pending sending, but we are offline
+            statusReason = 'Pending (Offline)';
           } else {
-             // Pending sending, online
-             statusReason = 'Sending to server...';
+            // Pending sending, online
+            statusReason = 'Sending to server...';
           }
-          
+
           json['currentAction'] = statusReason;
-          
+
           final session = Session.fromJson(json);
-          
+
           return CachedItem(
               session,
               CacheMetadata(
@@ -1288,8 +1287,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     _refreshVisibleSessions();
                   } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
-
-
                   } else if (value == 'sources') {
                     Navigator.pushNamed(context, '/sources_raw');
                   } else if (value == 'raw_data') {
@@ -1392,7 +1389,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ],
                       ),
                     ),
-
                     const PopupMenuItem(
                       value: 'sources',
                       child: Row(
@@ -1483,11 +1479,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     onTap: () async {
                                       if (session.id
                                           .startsWith('DRAFT_CREATION_')) {
-                                        final realId =
-                                            session.id.substring(15); // Length of DRAFT_CREATION_
+                                        final realId = session.id.substring(
+                                            15); // Length of DRAFT_CREATION_
                                         if (!queueProvider.queue
                                             .any((m) => m.id == realId)) {
-                                            return;
+                                          return;
                                         }
 
                                         // Reuse Logic inline
@@ -1526,18 +1522,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                           queueProvider.addCreateSessionRequest(
                                               result.session,
                                               isDraft: false);
-                                           // Also could call _createSession direct logic if online
-                                           // But queuing is safer/consistent.
-                                           // But if we want immediate feedback like "Creating...", we normally do that.
-                                           // But here we are in list.
-                                           // Let's try to send immediately if possible?
-                                           // Actually, just queuing as non-draft will trigger auto-send if online?
-                                           // MessageQueueProvider 'sendQueue' needs to be triggered.
-                                           // Or assume queue provider handles it?
-                                           // queueProvider.sendQueue() is usually manual or on connection.
-                                           // Let's trigger it.
-                                           final auth = Provider.of<AuthProvider>(context, listen: false);
-                                           queueProvider.sendQueue(auth.client);
+                                          // Also could call _createSession direct logic if online
+                                          // But queuing is safer/consistent.
+                                          // But if we want immediate feedback like "Creating...", we normally do that.
+                                          // But here we are in list.
+                                          // Let's try to send immediately if possible?
+                                          // Actually, just queuing as non-draft will trigger auto-send if online?
+                                          // MessageQueueProvider 'sendQueue' needs to be triggered.
+                                          // Or assume queue provider handles it?
+                                          // queueProvider.sendQueue() is usually manual or on connection.
+                                          // Let's trigger it.
+                                          final auth =
+                                              Provider.of<AuthProvider>(context,
+                                                  listen: false);
+                                          queueProvider.sendQueue(auth.client);
                                         }
                                         return;
                                       }
@@ -1606,14 +1604,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                             Expanded(
                                                 child: Row(
                                               children: [
-                                                if (Provider.of<MessageQueueProvider>(
+                                                if (Provider.of<
+                                                            MessageQueueProvider>(
                                                         context)
                                                     .getDrafts(session.id)
                                                     .isNotEmpty)
-                                                  _buildPill(context,
+                                                  _buildPill(
+                                                      context,
                                                       label: 'DRAFT',
-                                                      backgroundColor:
-                                                          Colors.orange,
+                                                      backgroundColor: Colors
+                                                          .orange,
                                                       textColor: Colors.white,
                                                       filterToken:
                                                           const FilterToken(

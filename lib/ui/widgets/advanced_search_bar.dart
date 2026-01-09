@@ -194,8 +194,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                     .hideCurrentSnackBar();
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   SnackBar(
-                                      content:
-                                          Text('Preset "${bookmark.name}" deleted.')),
+                                      content: Text(
+                                          'Preset "${bookmark.name}" deleted.')),
                                 );
                               },
                             ),
@@ -208,7 +208,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   onPressed: () {
                     provider.resetToDefaults();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Presets reset to defaults.')),
+                      const SnackBar(
+                          content: Text('Presets reset to defaults.')),
                     );
                   },
                   child: const Text('Reset to Defaults'),

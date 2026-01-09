@@ -278,8 +278,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (_selectedSource != null && widget.initialSession != null) {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
-          _selectedBranch = widget.initialSession!.sourceContext
-              .githubRepoContext!.startingBranch;
+          _selectedBranch = widget
+              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
         }
       } else {
         // Set default branch
@@ -508,11 +508,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _saveDraft() async {
-    // Similar to create but only needs prompt? 
-    // Allow saving incomplete drafts? 
+    // Similar to create but only needs prompt?
+    // Allow saving incomplete drafts?
     // User requirement: "When you are editing a draft, you have the option to 'delete' too."
     // implying meaningful content.
-    if (_prompt.isEmpty) return; 
+    if (_prompt.isEmpty) return;
 
     // Build session (even if incomplete, use defaults)
     // Map Mode to API fields
@@ -550,9 +550,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   void _deleteDraft() {
-     // Return dummy session but mark delete
-     final dummy = Session(name: '', id: '', prompt: '', sourceContext: SourceContext(source: ''));
-     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
+    // Return dummy session but mark delete
+    final dummy = Session(
+        name: '', id: '', prompt: '', sourceContext: SourceContext(source: ''));
+    Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
 
   String _getSourceDisplayLabel(Source s) {
@@ -627,233 +628,230 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (branches.isEmpty) branches.add('main');
 
       return AlertDialog(
-        title: Text(widget.initialSession != null ? "Edit Draft" : "New Session"),
+        title:
+            Text(widget.initialSession != null ? "Edit Draft" : "New Session"),
         content: SizedBox(
           width: MediaQuery.of(context).size.width * 0.8,
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-               if (widget.initialSession != null && widget.initialSession!.state == SessionState.FAILED && widget.initialSession!.currentAction != null)
-                 Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Row(
-                        children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text("Last Send Failed: ${widget.initialSession!.currentAction}", style: TextStyle(color: Colors.red.shade800)))
-                        ]
-                    ),
-                 ),
-
-                  const Text('New Session',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-
-                  // Mode Selection
-                  const Text('I want to...',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildModeChoice(0, 'Ask a Question'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(1, 'Create a Plan'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(2, 'Start Coding'),
-                    ],
+              if (widget.initialSession != null &&
+                  widget.initialSession!.state == SessionState.FAILED &&
+                  widget.initialSession!.currentAction != null)
+                Container(
+                  margin: const EdgeInsets.only(bottom: 16),
+                  padding: const EdgeInsets.all(8),
+                  decoration: BoxDecoration(
+                    color: Colors.red.shade50,
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.red.shade200),
                   ),
-                  const SizedBox(height: 16),
+                  child: Row(children: [
+                    const Icon(Icons.error_outline, color: Colors.red),
+                    const SizedBox(width: 8),
+                    Expanded(
+                        child: Text(
+                            "Last Send Failed: ${widget.initialSession!.currentAction}",
+                            style: TextStyle(color: Colors.red.shade800)))
+                  ]),
+                ),
 
-                  if (_selectedModeIndex == 2) ...[
-                    CheckboxListTile(
-                      title: const Text('Auto-create Pull Request'),
-                      subtitle: const Text(
-                          'Automatically create a PR when a final patch is generated'),
-                      value: _autoCreatePr,
-                      onChanged: (val) {
-                        setState(() {
-                          _autoCreatePr = val ?? false;
-                        });
-                      },
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
+              const Text('New Session',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 16),
 
-                  // Prompt
-                  CallbackShortcuts(
-                    bindings: {
-                      const SingleActivator(LogicalKeyboardKey.enter,
-                          control: true): () {
-                        if (_prompt.isNotEmpty && _selectedSource != null) {
-                          _create();
-                        } else if (_prompt.isNotEmpty) {
-                           _saveDraft();
-                        }
-                      },
-                    },
-                    child: TextField(
-                      autofocus: true,
-                      maxLines: 6,
-                      decoration: const InputDecoration(
-                        labelText: 'Prompt',
-                        hintText: 'Describe what you want to do...',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _prompt = val;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Image Attachment (URL for now)
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Image URL (Optional)',
-                      hintText: 'https://example.com/image.png',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.image),
-                    ),
-                    onChanged: (val) => _imageUrl = val,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Context (Source & Branch)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text('Context',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 12),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                        ),
-                        onPressed: _isRefreshing
-                            ? null
-                            : () => _fetchSources(force: true),
-                        icon: _isRefreshing
-                            ? const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.refresh, size: 14),
-                        label: Text(_refreshStatus),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: LayoutBuilder(builder: (context, constraints) {
-                          // Correctly capture width for overlay
-                          _dropdownWidth = constraints.maxWidth;
-                          return CompositedTransformTarget(
-                            link: _sourceLayerLink,
-                            child: TextField(
-                              controller: _sourceController,
-                              focusNode: _sourceFocusNode,
-                              decoration: InputDecoration(
-                                labelText: 'Repository',
-                                border: const OutlineInputBorder(),
-                                prefixIcon:
-                                    (_selectedSource?.githubRepo?.isPrivate ==
-                                            true)
-                                        ? const Icon(Icons.lock, size: 16)
-                                        : const Icon(Icons.source, size: 16),
-                                suffixIcon: IconButton(
-                                    icon: const Icon(Icons.close, size: 16),
-                                    onPressed: () {
-                                      _sourceController.clear();
-                                      _sourceFocusNode.requestFocus();
-                                      _onSourceTextChanged('');
-                                    }),
-                              ),
-                              onChanged: _onSourceTextChanged,
-                            ),
-                          );
-                        }),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Branch',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: _selectedBranch,
-                          items: branches
-                              .map((b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text(b,
-                                        overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedBranch = val;
-                            });
-                          },
-                        ),
-                      ),
-                    ],
-                  ),
-
-                  const SizedBox(height: 24),
-
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (widget.initialSession != null)
-                        TextButton(
-                          onPressed: _deleteDraft,
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text('Delete'),
-                        ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
-                        child: const Text('Save as Draft'),
-                      ),
-                      const SizedBox(width: 8),
-                      // Cancel acts as close without saving changes if not explicitly saving draft
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed:
-                            (_prompt.isNotEmpty && _selectedSource != null)
-                                ? _create
-                                : null,
-                        child: const Text('Send Now'),
-                      ),
-                    ],
-                  )
+              // Mode Selection
+              const Text('I want to...',
+                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  _buildModeChoice(0, 'Ask a Question'),
+                  const SizedBox(width: 8),
+                  _buildModeChoice(1, 'Create a Plan'),
+                  const SizedBox(width: 8),
+                  _buildModeChoice(2, 'Start Coding'),
                 ],
-            ),
-          ),
+              ),
+              const SizedBox(height: 16),
 
+              if (_selectedModeIndex == 2) ...[
+                CheckboxListTile(
+                  title: const Text('Auto-create Pull Request'),
+                  subtitle: const Text(
+                      'Automatically create a PR when a final patch is generated'),
+                  value: _autoCreatePr,
+                  onChanged: (val) {
+                    setState(() {
+                      _autoCreatePr = val ?? false;
+                    });
+                  },
+                  contentPadding: EdgeInsets.zero,
+                  controlAffinity: ListTileControlAffinity.leading,
+                ),
+                const SizedBox(height: 8),
+              ],
+
+              // Prompt
+              CallbackShortcuts(
+                bindings: {
+                  const SingleActivator(LogicalKeyboardKey.enter,
+                      control: true): () {
+                    if (_prompt.isNotEmpty && _selectedSource != null) {
+                      _create();
+                    } else if (_prompt.isNotEmpty) {
+                      _saveDraft();
+                    }
+                  },
+                },
+                child: TextField(
+                  autofocus: true,
+                  maxLines: 6,
+                  decoration: const InputDecoration(
+                    labelText: 'Prompt',
+                    hintText: 'Describe what you want to do...',
+                    border: OutlineInputBorder(),
+                    alignLabelWithHint: true,
+                  ),
+                  onChanged: (val) {
+                    setState(() {
+                      _prompt = val;
+                    });
+                  },
+                ),
+              ),
+              const SizedBox(height: 16),
+
+              // Image Attachment (URL for now)
+              TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Image URL (Optional)',
+                  hintText: 'https://example.com/image.png',
+                  border: OutlineInputBorder(),
+                  prefixIcon: Icon(Icons.image),
+                ),
+                onChanged: (val) => _imageUrl = val,
+              ),
+              const SizedBox(height: 16),
+
+              // Context (Source & Branch)
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                crossAxisAlignment: CrossAxisAlignment.center,
+                children: [
+                  const Text('Context',
+                      style: TextStyle(fontWeight: FontWeight.bold)),
+                  TextButton.icon(
+                    style: TextButton.styleFrom(
+                      textStyle: const TextStyle(fontSize: 12),
+                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                    ),
+                    onPressed:
+                        _isRefreshing ? null : () => _fetchSources(force: true),
+                    icon: _isRefreshing
+                        ? const SizedBox(
+                            width: 12,
+                            height: 12,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh, size: 14),
+                    label: Text(_refreshStatus),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              Row(
+                children: [
+                  Expanded(
+                    flex: 3,
+                    child: LayoutBuilder(builder: (context, constraints) {
+                      // Correctly capture width for overlay
+                      _dropdownWidth = constraints.maxWidth;
+                      return CompositedTransformTarget(
+                        link: _sourceLayerLink,
+                        child: TextField(
+                          controller: _sourceController,
+                          focusNode: _sourceFocusNode,
+                          decoration: InputDecoration(
+                            labelText: 'Repository',
+                            border: const OutlineInputBorder(),
+                            prefixIcon:
+                                (_selectedSource?.githubRepo?.isPrivate == true)
+                                    ? const Icon(Icons.lock, size: 16)
+                                    : const Icon(Icons.source, size: 16),
+                            suffixIcon: IconButton(
+                                icon: const Icon(Icons.close, size: 16),
+                                onPressed: () {
+                                  _sourceController.clear();
+                                  _sourceFocusNode.requestFocus();
+                                  _onSourceTextChanged('');
+                                }),
+                          ),
+                          onChanged: _onSourceTextChanged,
+                        ),
+                      );
+                    }),
+                  ),
+                  const SizedBox(width: 16),
+                  Expanded(
+                    flex: 1,
+                    child: DropdownButtonFormField<String>(
+                      isExpanded: true,
+                      decoration: const InputDecoration(
+                        labelText: 'Branch',
+                        border: OutlineInputBorder(),
+                      ),
+                      value: _selectedBranch,
+                      items: branches
+                          .map((b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(b, overflow: TextOverflow.ellipsis),
+                              ))
+                          .toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          _selectedBranch = val;
+                        });
+                      },
+                    ),
+                  ),
+                ],
+              ),
+
+              const SizedBox(height: 24),
+
+              // Actions
+              Row(
+                mainAxisAlignment: MainAxisAlignment.end,
+                children: [
+                  if (widget.initialSession != null)
+                    TextButton(
+                      onPressed: _deleteDraft,
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Delete'),
+                    ),
+                  const Spacer(),
+                  TextButton(
+                    onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
+                    child: const Text('Save as Draft'),
+                  ),
+                  const SizedBox(width: 8),
+                  // Cancel acts as close without saving changes if not explicitly saving draft
+                  TextButton(
+                    onPressed: () => Navigator.pop(context),
+                    child: const Text('Cancel'),
+                  ),
+                  const SizedBox(width: 8),
+                  FilledButton(
+                    onPressed: (_prompt.isNotEmpty && _selectedSource != null)
+                        ? _create
+                        : null,
+                    child: const Text('Send Now'),
+                  ),
+                ],
+              )
+            ],
+          ),
+        ),
       );
     });
   }

@@ -87,7 +87,8 @@ void main() {
 
     test('addBookmark adds a new bookmark and saves', () async {
       await provider.addBookmark(bookmark1);
-      expect(provider.bookmarks.any((b) => b.name == 'Test Bookmark 1'), isTrue);
+      expect(
+          provider.bookmarks.any((b) => b.name == 'Test Bookmark 1'), isTrue);
 
       final savedJson = prefs.getString('filter_bookmarks_v1');
       expect(savedJson, isNotNull);
@@ -105,8 +106,8 @@ void main() {
 
       await provider.addBookmark(updatedBookmark);
       expect(provider.bookmarks.length, 2); // Default + updated
-      final result = provider.bookmarks
-          .firstWhere((b) => b.name == 'Test Bookmark 1');
+      final result =
+          provider.bookmarks.firstWhere((b) => b.name == 'Test Bookmark 1');
       expect(result.filters, isEmpty);
     });
 
@@ -117,7 +118,8 @@ void main() {
       expect(provider.bookmarks.length, 3); // Default + 2 added
       await provider.deleteBookmark('Test Bookmark 1');
       expect(provider.bookmarks.length, 2);
-      expect(provider.bookmarks.any((b) => b.name == 'Test Bookmark 1'), isFalse);
+      expect(
+          provider.bookmarks.any((b) => b.name == 'Test Bookmark 1'), isFalse);
 
       final savedJson = prefs.getString('filter_bookmarks_v1');
       final List<dynamic> savedList = jsonDecode(savedJson!);
