@@ -46,13 +46,16 @@ void main() {
       // But Activity.fromJson exists.
 
       final activitiesList = json['activities'] as List;
-      final activities =
-          activitiesList.map((e) => Activity.fromJson(e)).toList();
+      final activities = activitiesList
+          .map((e) => Activity.fromJson(e))
+          .toList();
 
       expect(activities.length, 1);
       final activity = activities.first;
-      expect(activity.name,
-          "sessions/14550388554331055113/activities/02200cce44f746308651037e4a18caed");
+      expect(
+        activity.name,
+        "sessions/14550388554331055113/activities/02200cce44f746308651037e4a18caed",
+      );
       expect(activity.originator, "agent");
       expect(activity.planGenerated, isNotNull);
       expect(activity.planGenerated!.plan.steps.length, 3);

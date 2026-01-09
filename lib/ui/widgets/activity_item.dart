@@ -9,11 +9,7 @@ class ActivityItem extends StatefulWidget {
   final Activity activity;
   final Future<void> Function()? onRefresh;
 
-  const ActivityItem({
-    super.key,
-    required this.activity,
-    this.onRefresh,
-  });
+  const ActivityItem({super.key, required this.activity, this.onRefresh});
 
   @override
   State<ActivityItem> createState() => _ActivityItemState();
@@ -27,12 +23,7 @@ class _ActivityItemState extends State<ActivityItem> {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       clipBehavior: Clip.antiAlias,
-      child: Column(
-        children: [
-          _buildHeader(),
-          if (_isExpanded) _buildBody(),
-        ],
-      ),
+      child: Column(children: [_buildHeader(), if (_isExpanded) _buildBody()]),
     );
   }
 
@@ -193,33 +184,36 @@ class _ActivityItemState extends State<ActivityItem> {
               children: [
                 Row(
                   children: [
-                    Text(title,
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      title,
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     if (timestamp != null) ...[
                       const SizedBox(width: 8),
                       Text(
                         DateFormat.Hms().format(timestamp.toLocal()),
                         style: Theme.of(context).textTheme.bodySmall,
                       ),
-                    ]
+                    ],
                   ],
                 ),
                 if (!_isExpanded && summary != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(summary,
-                        maxLines: 10,
-                        overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context)
-                            .textTheme
-                            .bodyMedium!
-                            .copyWith(color: Colors.grey[600])),
+                    child: Text(
+                      summary,
+                      maxLines: 10,
+                      overflow: TextOverflow.ellipsis,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodyMedium!.copyWith(color: Colors.grey[600]),
+                    ),
                   ),
                 if (isCompactable && _isExpanded && summary != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2.0),
                     child: Text(summary, style: const TextStyle(fontSize: 13)),
-                  )
+                  ),
               ],
             ),
           ),
@@ -233,44 +227,52 @@ class _ActivityItemState extends State<ActivityItem> {
                     await widget.onRefresh!();
                   },
                 ),
-              Builder(builder: (context) {
-                final unknownProps =
-                    Map<String, dynamic>.from(widget.activity.unmappedProps)
-                      ..remove('isPending')
-                      ..remove('hasMismatch')
-                      ..remove('pendingId')
-                      ..remove('isQueued')
-                      ..remove('queueReason')
-                      ..remove('processingErrors');
+              Builder(
+                builder: (context) {
+                  final unknownProps =
+                      Map<String, dynamic>.from(widget.activity.unmappedProps)
+                        ..remove('isPending')
+                        ..remove('hasMismatch')
+                        ..remove('pendingId')
+                        ..remove('isQueued')
+                        ..remove('queueReason')
+                        ..remove('processingErrors');
 
-                if (unknownProps.isNotEmpty) {
-                  return IconButton(
-                    icon: const Icon(Icons.warning_amber,
-                        size: 18, color: Colors.orange),
-                    tooltip: 'Unknown Properties Found',
-                    onPressed: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) => AlertDialog(
-                          title: const Text("Unknown Properties"),
-                          content: SingleChildScrollView(
+                  if (unknownProps.isNotEmpty) {
+                    return IconButton(
+                      icon: const Icon(
+                        Icons.warning_amber,
+                        size: 18,
+                        color: Colors.orange,
+                      ),
+                      tooltip: 'Unknown Properties Found',
+                      onPressed: () {
+                        showDialog(
+                          context: context,
+                          builder: (context) => AlertDialog(
+                            title: const Text("Unknown Properties"),
+                            content: SingleChildScrollView(
                               child: SelectableText(
-                            const JsonEncoder.withIndent('  ')
-                                .convert(unknownProps),
-                            style: const TextStyle(fontFamily: 'monospace'),
-                          )),
-                          actions: [
-                            TextButton(
+                                const JsonEncoder.withIndent(
+                                  '  ',
+                                ).convert(unknownProps),
+                                style: const TextStyle(fontFamily: 'monospace'),
+                              ),
+                            ),
+                            actions: [
+                              TextButton(
                                 onPressed: () => Navigator.pop(context),
-                                child: const Text("Close"))
-                          ],
-                        ),
-                      );
-                    },
-                  );
-                }
-                return const SizedBox.shrink();
-              }),
+                                child: const Text("Close"),
+                              ),
+                            ],
+                          ),
+                        );
+                      },
+                    );
+                  }
+                  return const SizedBox.shrink();
+                },
+              ),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, size: 18),
                 padding: EdgeInsets.zero,
@@ -317,12 +319,13 @@ class _ActivityItemState extends State<ActivityItem> {
                 IconButton(
                   onPressed: () => setState(() => _isExpanded = !_isExpanded),
                   icon: Icon(
-                      _isExpanded ? Icons.expand_less : Icons.expand_more,
-                      size: 20,
-                      color: Colors.grey),
+                    _isExpanded ? Icons.expand_less : Icons.expand_more,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                 ),
             ],
-          )
+          ),
         ],
       ),
     );
@@ -385,15 +388,18 @@ class _ActivityItemState extends State<ActivityItem> {
           .changeSet;
       if (changeSet != null &&
           changeSet.gitPatch == null &&
-          activity.artifacts!.every((a) =>
-              a.bashOutput == null &&
-              a.changeSet != null &&
-              a.changeSet!.gitPatch == null)) {
+          activity.artifacts!.every(
+            (a) =>
+                a.bashOutput == null &&
+                a.changeSet != null &&
+                a.changeSet!.gitPatch == null,
+          )) {
         isCompactArtifact = true;
       }
     }
 
-    final hasOtherContent = activity.progressUpdated != null ||
+    final hasOtherContent =
+        activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;
@@ -418,172 +424,229 @@ class _ActivityItemState extends State<ActivityItem> {
               for (var artifact in activity.artifacts!) ...[
                 if (artifact.bashOutput != null) ...[
                   Container(
-                      decoration: BoxDecoration(
-                        color: Colors.black.withValues(alpha: 0.05),
-                        borderRadius: BorderRadius.circular(4),
-                        border: Border.all(color: Colors.black12),
-                      ),
-                      padding: const EdgeInsets.all(8),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text("\$ ${artifact.bashOutput!.command}",
-                              style: const TextStyle(
-                                  fontFamily: 'monospace',
-                                  fontWeight: FontWeight.bold)),
-                          if (artifact.bashOutput!.output.isNotEmpty) ...[
-                            const Divider(height: 12),
-                            Text(artifact.bashOutput!.output,
-                                style:
-                                    const TextStyle(fontFamily: 'monospace')),
-                          ],
-                          if (artifact.bashOutput!.exitCode != 0) ...[
-                            const SizedBox(height: 4),
-                            Text("Exit Code: ${artifact.bashOutput!.exitCode}",
-                                style: const TextStyle(
-                                    color: Colors.red,
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 12)),
-                          ]
+                    decoration: BoxDecoration(
+                      color: Colors.black.withValues(alpha: 0.05),
+                      borderRadius: BorderRadius.circular(4),
+                      border: Border.all(color: Colors.black12),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          "\$ ${artifact.bashOutput!.command}",
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        if (artifact.bashOutput!.output.isNotEmpty) ...[
+                          const Divider(height: 12),
+                          Text(
+                            artifact.bashOutput!.output,
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          ),
                         ],
-                      )),
+                        if (artifact.bashOutput!.exitCode != 0) ...[
+                          const SizedBox(height: 4),
+                          Text(
+                            "Exit Code: ${artifact.bashOutput!.exitCode}",
+                            style: const TextStyle(
+                              color: Colors.red,
+                              fontWeight: FontWeight.bold,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                  ),
                   const SizedBox(height: 8),
                 ],
                 if (artifact.changeSet != null) ...[
                   if (artifact.changeSet!.gitPatch != null) ...[
-                    Text("Change in ${artifact.changeSet!.source}",
-                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text(
+                      "Change in ${artifact.changeSet!.source}",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.all(8),
                       color: Colors.black.withValues(alpha: 0.05),
-                      child: Text(artifact.changeSet!.gitPatch!.unidiffPatch,
-                          style: const TextStyle(
-                              fontFamily: 'monospace', fontSize: 11),
-                          maxLines: 15,
-                          overflow: TextOverflow.ellipsis),
+                      child: Text(
+                        artifact.changeSet!.gitPatch!.unidiffPatch,
+                        style: const TextStyle(
+                          fontFamily: 'monospace',
+                          fontSize: 11,
+                        ),
+                        maxLines: 15,
+                        overflow: TextOverflow.ellipsis,
+                      ),
                     ),
                     const SizedBox(height: 8),
                   ] else ...[
                     Padding(
                       padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(children: [
-                        const Icon(Icons.insert_drive_file_outlined,
-                            size: 16, color: Colors.blueGrey),
-                        const SizedBox(width: 8),
-                        Flexible(
-                            child: Text(artifact.changeSet!.source,
-                                style: const TextStyle(
-                                    fontSize: 13,
-                                    color: Colors.blueGrey,
-                                    fontWeight: FontWeight.w500))),
-                      ]),
-                    )
-                  ]
-                ]
+                      child: Row(
+                        children: [
+                          const Icon(
+                            Icons.insert_drive_file_outlined,
+                            size: 16,
+                            color: Colors.blueGrey,
+                          ),
+                          const SizedBox(width: 8),
+                          Flexible(
+                            child: Text(
+                              artifact.changeSet!.source,
+                              style: const TextStyle(
+                                fontSize: 13,
+                                color: Colors.blueGrey,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ],
               ],
             if (activity.unmappedProps.isNotEmpty) ...[
-              Builder(builder: (context) {
-                final unknownProps =
-                    Map<String, dynamic>.from(activity.unmappedProps)
-                      ..remove('isPending')
-                      ..remove('hasMismatch')
-                      ..remove('pendingId')
-                      ..remove('isQueued')
-                      ..remove('queueReason')
-                      ..remove('processingErrors');
+              Builder(
+                builder: (context) {
+                  final unknownProps =
+                      Map<String, dynamic>.from(activity.unmappedProps)
+                        ..remove('isPending')
+                        ..remove('hasMismatch')
+                        ..remove('pendingId')
+                        ..remove('isQueued')
+                        ..remove('queueReason')
+                        ..remove('processingErrors');
 
-                if (unknownProps.isEmpty &&
-                    (activity.unmappedProps.containsKey('isPending') ||
-                        activity.unmappedProps.containsKey('isQueued'))) {
-                  return Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const SizedBox(height: 8),
-                      if (activity.unmappedProps['isPending'] == true)
-                        Row(children: [
-                          SizedBox(
-                              width: 12,
-                              height: 12,
-                              child: CircularProgressIndicator(
-                                  strokeWidth: 2, color: Colors.grey[400])),
-                          const SizedBox(width: 8),
-                          Text("Sending...",
-                              style: TextStyle(
+                  if (unknownProps.isEmpty &&
+                      (activity.unmappedProps.containsKey('isPending') ||
+                          activity.unmappedProps.containsKey('isQueued'))) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const SizedBox(height: 8),
+                        if (activity.unmappedProps['isPending'] == true)
+                          Row(
+                            children: [
+                              SizedBox(
+                                width: 12,
+                                height: 12,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                  color: Colors.grey[400],
+                                ),
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Sending...",
+                                style: TextStyle(
                                   color: Colors.grey[600],
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold)),
-                        ]),
-                      if (activity.unmappedProps['isQueued'] == true) ...[
-                        Row(children: [
-                          Icon(Icons.error_outline,
-                              size: 14, color: Colors.orange[700]),
-                          const SizedBox(width: 8),
-                          Text("Queued / Failed to Send",
-                              style: TextStyle(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                        if (activity.unmappedProps['isQueued'] == true) ...[
+                          Row(
+                            children: [
+                              Icon(
+                                Icons.error_outline,
+                                size: 14,
+                                color: Colors.orange[700],
+                              ),
+                              const SizedBox(width: 8),
+                              Text(
+                                "Queued / Failed to Send",
+                                style: TextStyle(
                                   color: Colors.orange[800],
                                   fontSize: 12,
-                                  fontWeight: FontWeight.bold)),
-                        ]),
-                        if (activity.unmappedProps['queueReason'] != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4, left: 22),
-                            child: Text(
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ],
+                          ),
+                          if (activity.unmappedProps['queueReason'] != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4, left: 22),
+                              child: Text(
                                 "Reason: ${activity.unmappedProps['queueReason']}",
                                 style: const TextStyle(
-                                    color: Colors.red, fontSize: 11)),
-                          ),
-                        if (activity.unmappedProps['processingErrors'] !=
-                                null &&
-                            (activity.unmappedProps['processingErrors'] as List)
-                                .isNotEmpty)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4, left: 22),
-                            child: Column(
+                                  color: Colors.red,
+                                  fontSize: 11,
+                                ),
+                              ),
+                            ),
+                          if (activity.unmappedProps['processingErrors'] !=
+                                  null &&
+                              (activity.unmappedProps['processingErrors']
+                                      as List)
+                                  .isNotEmpty)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 4, left: 22),
+                              child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children:
                                     (activity.unmappedProps['processingErrors']
                                             as List)
-                                        .map<Widget>((e) => Text("• $e",
+                                        .map<Widget>(
+                                          (e) => Text(
+                                            "• $e",
                                             style: const TextStyle(
-                                                color: Colors.red,
-                                                fontSize: 11)))
-                                        .toList()),
-                          )
-                      ]
+                                              color: Colors.red,
+                                              fontSize: 11,
+                                            ),
+                                          ),
+                                        )
+                                        .toList(),
+                              ),
+                            ),
+                        ],
+                      ],
+                    );
+                  }
+
+                  if (unknownProps.isEmpty) return const SizedBox.shrink();
+
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 12),
+                      const Text(
+                        "Unknown Data:",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          fontSize: 12,
+                          color: Colors.orange,
+                        ),
+                      ),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.orange.withValues(alpha: 0.1),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: Text(
+                          const JsonEncoder.withIndent(
+                            '  ',
+                          ).convert(unknownProps),
+                          style: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
                     ],
                   );
-                }
-
-                if (unknownProps.isEmpty) return const SizedBox.shrink();
-
-                return Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const SizedBox(height: 12),
-                    const Text("Unknown Data:",
-                        style: TextStyle(
-                            fontWeight: FontWeight.bold,
-                            fontSize: 12,
-                            color: Colors.orange)),
-                    Container(
-                      width: double.infinity,
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.orange.withValues(alpha: 0.1),
-                        borderRadius: BorderRadius.circular(4),
-                      ),
-                      child: Text(
-                        const JsonEncoder.withIndent('  ')
-                            .convert(unknownProps),
-                        style: const TextStyle(
-                            fontFamily: 'monospace', fontSize: 11),
-                      ),
-                    ),
-                  ],
-                );
-              })
-            ]
+                },
+              ),
+            ],
           ],
         ),
       ),

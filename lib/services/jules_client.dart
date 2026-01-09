@@ -19,10 +19,10 @@ class JulesClient {
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
-        if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
-      };
+    'Content-Type': 'application/json',
+    if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
+  };
 
   Future<http.Response> _performRequest(
     String method,
@@ -39,8 +39,11 @@ class JulesClient {
       if (method == 'GET') {
         response = await _client.get(url, headers: requestHeaders);
       } else if (method == 'POST') {
-        response =
-            await _client.post(url, headers: requestHeaders, body: requestBody);
+        response = await _client.post(
+          url,
+          headers: requestHeaders,
+          body: requestBody,
+        );
       } else {
         throw Exception('Unsupported method: $method');
       }
@@ -50,15 +53,17 @@ class JulesClient {
     }
 
     if (onDebug != null) {
-      onDebug(ApiExchange(
-        method: method,
-        url: url.toString(),
-        requestHeaders: requestHeaders,
-        requestBody: requestBody,
-        statusCode: response.statusCode,
-        responseHeaders: response.headers,
-        responseBody: response.body,
-      ));
+      onDebug(
+        ApiExchange(
+          method: method,
+          url: url.toString(),
+          requestHeaders: requestHeaders,
+          requestBody: requestBody,
+          statusCode: response.statusCode,
+          responseHeaders: response.headers,
+          responseBody: response.body,
+        ),
+      );
     }
 
     return response;
@@ -80,11 +85,17 @@ class JulesClient {
 
   // --- Sessions ---
 
-  Future<Session> createSession(Session session,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<Session> createSession(
+    Session session, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/sessions');
-    final response = await _performRequest('POST', url,
-        body: session.toJson(), onDebug: onDebug);
+    final response = await _performRequest(
+      'POST',
+      url,
+      body: session.toJson(),
+      onDebug: onDebug,
+    );
 
     if (response.statusCode == 200) {
       return Session.fromJson(jsonDecode(response.body));
@@ -94,8 +105,10 @@ class JulesClient {
     }
   }
 
-  Future<Session> getSession(String name,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<Session> getSession(
+    String name, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -117,8 +130,9 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse('$baseUrl/v1alpha/sessions')
-        .replace(queryParameters: queryParams);
+    final url = Uri.parse(
+      '$baseUrl/v1alpha/sessions',
+    ).replace(queryParameters: queryParams);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
@@ -152,22 +166,35 @@ class JulesClient {
     }
   }
 
-  Future<void> approvePlan(String sessionName,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<void> approvePlan(
+    String sessionName, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:approvePlan');
-    final response =
-        await _performRequest('POST', url, body: {}, onDebug: onDebug);
+    final response = await _performRequest(
+      'POST',
+      url,
+      body: {},
+      onDebug: onDebug,
+    );
 
     if (response.statusCode != 200) {
       _handleError(response);
     }
   }
 
-  Future<void> sendMessage(String sessionName, String message,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<void> sendMessage(
+    String sessionName,
+    String message, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/$sessionName:sendMessage');
-    final response = await _performRequest('POST', url,
-        body: {'prompt': message}, onDebug: onDebug);
+    final response = await _performRequest(
+      'POST',
+      url,
+      body: {'prompt': message},
+      onDebug: onDebug,
+    );
 
     if (response.statusCode != 200) {
       _handleError(response);
@@ -176,8 +203,10 @@ class JulesClient {
 
   // --- Activities ---
 
-  Future<Activity> getActivity(String name,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<Activity> getActivity(
+    String name, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -189,10 +218,12 @@ class JulesClient {
     }
   }
 
-  Future<List<Activity>> listActivities(String sessionName,
-      {void Function(ApiExchange)? onDebug,
-      void Function(int loadedCount)? onProgress,
-      bool Function(Activity)? shouldStop}) async {
+  Future<List<Activity>> listActivities(
+    String sessionName, {
+    void Function(ApiExchange)? onDebug,
+    void Function(int loadedCount)? onProgress,
+    bool Function(Activity)? shouldStop,
+  }) async {
     List<Activity> allActivities = [];
     String? nextPageToken;
 
@@ -202,8 +233,9 @@ class JulesClient {
         queryParams['pageToken'] = nextPageToken;
       }
 
-      final url = Uri.parse('$baseUrl/v1alpha/$sessionName/activities').replace(
-          queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      final url = Uri.parse(
+        '$baseUrl/v1alpha/$sessionName/activities',
+      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
 
       final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -211,7 +243,11 @@ class JulesClient {
         try {
           final json = jsonDecode(response.body);
           final activities = getObjectArrayPropOrDefaultFunction(
-              json, 'activities', Activity.fromJson, () => <Activity>[]);
+            json,
+            'activities',
+            Activity.fromJson,
+            () => <Activity>[],
+          );
 
           if (shouldStop != null) {
             bool stop = false;
@@ -237,7 +273,8 @@ class JulesClient {
           }
         } catch (e) {
           throw Exception(
-              'Failed to parse activities response: $e\nResponse body: ${response.body}');
+            'Failed to parse activities response: $e\nResponse body: ${response.body}',
+          );
         }
       } else {
         _handleError(response);
@@ -250,8 +287,10 @@ class JulesClient {
 
   // --- Sources ---
 
-  Future<Source> getSource(String name,
-      {void Function(ApiExchange)? onDebug}) async {
+  Future<Source> getSource(
+    String name, {
+    void Function(ApiExchange)? onDebug,
+  }) async {
     final url = Uri.parse('$baseUrl/v1alpha/$name');
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -272,8 +311,9 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse('$baseUrl/v1alpha/sources')
-        .replace(queryParameters: queryParams);
+    final url = Uri.parse(
+      '$baseUrl/v1alpha/sources',
+    ).replace(queryParameters: queryParams);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {

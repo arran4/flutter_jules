@@ -14,8 +14,12 @@ class RefreshService extends ChangeNotifier {
   final AuthProvider _authProvider;
   final Map<String, Timer> _timers = {};
 
-  RefreshService(this._settingsProvider, this._sessionProvider,
-      this._sourceProvider, this._authProvider) {
+  RefreshService(
+    this._settingsProvider,
+    this._sessionProvider,
+    this._sourceProvider,
+    this._authProvider,
+  ) {
     _settingsProvider.addListener(_onSettingsChanged);
     _initializeTimers();
   }

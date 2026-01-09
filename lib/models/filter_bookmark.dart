@@ -102,10 +102,7 @@ FilterToken _filterTokenFromJson(Map<String, dynamic> json) {
 
 // Private helper functions for SortOption serialization
 Map<String, dynamic> _sortOptionToJson(SortOption option) {
-  return {
-    'field': option.field.name,
-    'direction': option.direction.name,
-  };
+  return {'field': option.field.name, 'direction': option.direction.name};
 }
 
 SortOption _sortOptionFromJson(Map<String, dynamic> json) {
@@ -113,11 +110,9 @@ SortOption _sortOptionFromJson(Map<String, dynamic> json) {
   final field = SortField.values.firstWhere((e) => e.name == fieldName);
 
   final directionName = json['direction'] as String;
-  final direction =
-      SortDirection.values.firstWhere((e) => e.name == directionName);
-
-  return SortOption(
-    field,
-    direction,
+  final direction = SortDirection.values.firstWhere(
+    (e) => e.name == directionName,
   );
+
+  return SortOption(field, direction);
 }
