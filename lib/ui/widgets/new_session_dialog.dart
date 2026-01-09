@@ -14,11 +14,20 @@ import '../../models.dart';
 
 class NewSessionDialog extends StatefulWidget {
   final String? sourceFilter;
+  final Session? initialSession;
 
-  const NewSessionDialog({super.key, this.sourceFilter});
+  const NewSessionDialog({super.key, this.sourceFilter, this.initialSession});
 
   @override
   State<NewSessionDialog> createState() => _NewSessionDialogState();
+}
+
+class NewSessionResult {
+  final Session session;
+  final bool isDraft;
+  final bool isDelete;
+
+  NewSessionResult(this.session, {this.isDraft = false, this.isDelete = false});
 }
 
 class _NewSessionDialogState extends State<NewSessionDialog> {
@@ -52,6 +61,25 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
+    if (widget.initialSession != null) {
+      _prompt = widget.initialSession!.prompt;
+      // Initialize other fields based on initialSession logic
+      final mode = widget.initialSession!.automationMode ??
+          AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+      final requireApproval =
+          widget.initialSession!.requirePlanApproval ?? false;
+
+      if (mode == AutomationMode.AUTO_CREATE_PR) {
+        _selectedModeIndex = 2; // Start
+        _autoCreatePr = true;
+      } else if (requireApproval) {
+        _selectedModeIndex = 1; // Plan
+      } else {
+        _selectedModeIndex = 0; // Question (default)
+        // Check if it was "Start" without auto-PR? Hard to distinguish from Question without more data,
+        // but default is fine.
+      }
+    }
     _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
     _sourceFocusNode.addListener(() {
       if (!_sourceFocusNode.hasFocus) {
@@ -203,6 +231,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         }
       }
 
+      // Priority 1.5: Draft value
+      if (_selectedSource == null && widget.initialSession != null) {
+        try {
+          _selectedSource = sources.firstWhere(
+              (s) => s.name == widget.initialSession!.sourceContext.source);
+        } catch (_) {}
+      }
+
       // Priority 2: Already selected source (if re-fetching)
       if (_selectedSource != null) {
         try {
@@ -238,8 +274,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
       }
 
-      // Set default branch
-      _updateBranchFromSource(prefs: prefs);
+      // Validated selection
+      if (_selectedSource != null && widget.initialSession != null) {
+        // Try to match branch from draft
+        if (widget.initialSession!.sourceContext.githubRepoContext != null) {
+          _selectedBranch = widget.initialSession!.sourceContext
+              .githubRepoContext!.startingBranch;
+        }
+      } else {
+        // Set default branch
+        _updateBranchFromSource(prefs: prefs);
+      }
     });
   }
 
@@ -458,8 +503,56 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     );
 
     if (mounted) {
-      Navigator.pop(context, newSession);
+      Navigator.pop(context, NewSessionResult(newSession, isDraft: false));
     }
+  }
+
+  Future<void> _saveDraft() async {
+    // Similar to create but only needs prompt? 
+    // Allow saving incomplete drafts? 
+    // User requirement: "When you are editing a draft, you have the option to 'delete' too."
+    // implying meaningful content.
+    if (_prompt.isEmpty) return; 
+
+    // Build session (even if incomplete, use defaults)
+    // Map Mode to API fields
+    bool requirePlanApproval = false;
+    AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+
+    switch (_selectedModeIndex) {
+      case 1: // Plan
+        requirePlanApproval = true;
+        break;
+      case 2: // Start
+        automationMode = _autoCreatePr
+            ? AutomationMode.AUTO_CREATE_PR
+            : AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+    }
+
+    final newSession = Session(
+      name: widget.initialSession?.name ?? '',
+      id: widget.initialSession?.id ?? '',
+      prompt: _prompt,
+      sourceContext: SourceContext(
+        source: _selectedSource?.name ?? 'sources/default',
+        githubRepoContext: GitHubRepoContext(
+          startingBranch: _selectedBranch ?? 'main',
+        ),
+      ),
+      requirePlanApproval: requirePlanApproval,
+      automationMode: automationMode,
+    );
+
+    if (mounted) {
+      Navigator.pop(context, NewSessionResult(newSession, isDraft: true));
+    }
+  }
+
+  void _deleteDraft() {
+     // Return dummy session but mark delete
+     final dummy = Session(name: '', id: '', prompt: '', sourceContext: SourceContext(source: ''));
+     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
 
   String _getSourceDisplayLabel(Source s) {
@@ -533,16 +626,31 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
       if (branches.isEmpty) branches.add('main');
 
-      return Dialog(
-        child: SingleChildScrollView(
-          child: Padding(
-            padding: const EdgeInsets.all(24.0),
-            child: SizedBox(
-              width: MediaQuery.of(context).size.width * 0.8,
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
+      return AlertDialog(
+        title: Text(widget.initialSession != null ? "Edit Draft" : "New Session"),
+        content: SizedBox(
+          width: MediaQuery.of(context).size.width * 0.8,
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+               if (widget.initialSession != null && widget.initialSession!.state == SessionState.FAILED && widget.initialSession!.currentAction != null)
+                 Container(
+                    margin: const EdgeInsets.only(bottom: 16),
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                    ),
+                    child: Row(
+                        children: [
+                            const Icon(Icons.error_outline, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(child: Text("Last Send Failed: ${widget.initialSession!.currentAction}", style: TextStyle(color: Colors.red.shade800)))
+                        ]
+                    ),
+                 ),
+
                   const Text('New Session',
                       style:
                           TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
@@ -587,6 +695,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           control: true): () {
                         if (_prompt.isNotEmpty && _selectedSource != null) {
                           _create();
+                        } else if (_prompt.isNotEmpty) {
+                           _saveDraft();
                         }
                       },
                     },
@@ -713,6 +823,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                   Row(
                     mainAxisAlignment: MainAxisAlignment.end,
                     children: [
+                      if (widget.initialSession != null)
+                        TextButton(
+                          onPressed: _deleteDraft,
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          child: const Text('Delete'),
+                        ),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
+                        child: const Text('Save as Draft'),
+                      ),
+                      const SizedBox(width: 8),
+                      // Cancel acts as close without saving changes if not explicitly saving draft
                       TextButton(
                         onPressed: () => Navigator.pop(context),
                         child: const Text('Cancel'),
@@ -723,15 +846,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             (_prompt.isNotEmpty && _selectedSource != null)
                                 ? _create
                                 : null,
-                        child: const Text('Create Session'),
+                        child: const Text('Send Now'),
                       ),
                     ],
                   )
                 ],
-              ),
             ),
           ),
-        ),
+
       );
     });
   }

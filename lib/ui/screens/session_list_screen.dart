@@ -19,7 +19,7 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
-import 'offline_queue_screen.dart';
+
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -116,7 +116,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final queueProvider =
               Provider.of<MessageQueueProvider>(context, listen: false);
           if (queueProvider.queue.isNotEmpty && !queueProvider.isOffline) {
-            _promptSendQueue(context, queueProvider);
+
           }
         }
       }
@@ -125,25 +125,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _promptSendQueue(BuildContext context, MessageQueueProvider provider) {
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-      content: Text("You have ${provider.queue.length} pending messages."),
-      action: SnackBarAction(
-        label: "SEND ALL",
-        onPressed: () async {
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          await provider.sendQueue(auth.client, onError: (id, e) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(SnackBar(content: Text("Error: $e")));
-          });
-          if (context.mounted) {
-            ScaffoldMessenger.of(context)
-                .showSnackBar(const SnackBar(content: Text("Queue processed")));
-          }
-        },
-      ),
-    ));
-  }
+
 
   Future<void> _createSession() async {
     // Determine pre-selected source from active filters
@@ -158,13 +140,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
       }
     }
 
-    final Session? sessionToCreate = await showDialog<Session>(
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
       context: context,
       builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
     );
 
-    if (sessionToCreate == null) return;
+    if (result == null) return;
     if (!mounted) return;
+
+    if (result.isDraft) {
+      Provider.of<MessageQueueProvider>(context, listen: false)
+          .addCreateSessionRequest(result.session, isDraft: true);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(const SnackBar(content: Text("Draft saved")));
+      return;
+    }
+
+    final sessionToCreate = result.session;
 
     Future<void> performCreate() async {
       try {
@@ -595,6 +587,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Hidden',
         value: 'hidden'));
+    suggestions.add(const FilterToken(
+        id: 'flag:draft',
+        type: FilterType.flag,
+        label: 'Has Drafts',
+        value: 'draft'));
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -956,12 +953,88 @@ class _SessionListScreenState extends State<SessionListScreen> {
         final isLoading = sessionProvider.isLoading;
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
+        final queueProvider = Provider.of<MessageQueueProvider>(context);
+
+        // Inject draft sessions
+        // Inject draft and pending sessions
+        final draftSessions = queueProvider.queue
+            .where((m) =>
+                m.type == QueuedMessageType.sessionCreation ||
+                m.sessionId == 'new_session') // Include legacy or pending
+            .map((m) {
+          Map<String, dynamic> json;
+          if (m.metadata != null) {
+            json = Map<String, dynamic>.from(m.metadata!);
+          } else {
+             // Fallback for items without metadata
+             json = {
+                 'id': 'temp',
+                 'name': 'temp', 
+                 'prompt': m.content,
+                 'sourceContext': {'source': 'unknown'}
+             };
+          }
+          
+          // Override ID to avoid collision
+          json['id'] = 'DRAFT_CREATION_${m.id}';
+          
+          // Ensure prompt is set as title
+          if (json['title'] == null || json['title'].toString().isEmpty) {
+             json['title'] = (json['prompt'] as String?) ?? 'New Session (Draft)';
+          }
+
+          
+          
+          final isDraft = m.isDraft;
+          final isOffline = queueProvider.isOffline; // Uses provider from context
+
+          // Inject Flags based on queue state
+          // User Definition: "Pending" is for all new sessions (draft, error, sending).
+          // Status 'QUEUED' maps to "Pending" in UI usually.
+          
+          json['state'] = 'QUEUED'; // Always QUEUED to match "Pending" filter
+          
+          String statusReason;
+          if (m.processingErrors.isNotEmpty) {
+             final lastError = m.processingErrors.last;
+             if (lastError.contains('429') || lastError.toLowerCase().contains('quota')) {
+                 statusReason = 'Quota limit reached';
+             } else if (lastError.contains('500') || lastError.contains('502') || lastError.contains('503')) {
+                  statusReason = 'Server error';
+             } else {
+                 statusReason = 'Failed: $lastError';
+             }
+          } else if (isDraft) {
+             statusReason = m.queueReason ?? 'Saved as draft';
+          } else if (isOffline) {
+             // It's pending sending, but we are offline
+             statusReason = 'Pending (Offline)';
+          } else {
+             // Pending sending, online
+             statusReason = 'Sending to server...';
+          }
+          
+          json['currentAction'] = statusReason;
+          
+          final session = Session.fromJson(json);
+          
+          return CachedItem(
+              session,
+              CacheMetadata(
+                firstSeen: m.createdAt,
+                lastRetrieved: m.createdAt,
+                labels: isDraft ? ['DRAFT_CREATION'] : ['PENDING_CREATION'],
+                hasPendingUpdates: !isDraft,
+              ));
+        }).toList();
+
+        final allItems = [...draftSessions, ...cachedItems];
 
         // Populate suggestions once data is loaded (and if not done yet or data changed substantially)
         // Ideally we do this only when list changes, but 'build' is fine for now as it's cheap
-        _updateSuggestions(cachedItems.map((i) => i.data).toList());
+        _updateSuggestions(allItems.map((i) => i.data).toList());
 
-        _displayItems = cachedItems.where((item) {
+        _displayItems = allItems.where((item) {
           final session = item.data;
           final metadata = item.metadata;
 
@@ -1063,6 +1136,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (f.value == 'hidden' && metadata.isHidden) {
                   matchesAny = true;
                 }
+                if (f.value == 'draft') {
+                  if (queueProvider.getDrafts(session.id).isNotEmpty) {
+                    matchesAny = true;
+                  }
+                }
               }
               if (!matchesAny) return false;
             }
@@ -1087,6 +1165,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 }
                 if (f.value == 'hidden' && metadata.isHidden) {
                   matchesAny = true;
+                }
+                if (f.value == 'draft') {
+                  if (queueProvider.getDrafts(session.id).isNotEmpty) {
+                    matchesAny = true;
+                  }
+                  if (session.id.startsWith('DRAFT_CREATION_')) {
+                    matchesAny = true;
+                  }
                 }
               }
               if (matchesAny) return false;
@@ -1206,11 +1292,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     Navigator.pushNamed(context, '/sources_raw');
                   } else if (value == 'raw_data') {
                     _viewRawData(context);
-                  } else if (value == 'queue') {
-                    Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const OfflineQueueScreen()));
                   } else if (value == 'go_offline') {
                     final queueProvider = Provider.of<MessageQueueProvider>(
                         context,
@@ -1257,16 +1338,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ],
                         ),
                       ),
-                    const PopupMenuItem(
-                      value: 'queue',
-                      child: Row(
-                        children: [
-                          Icon(Icons.queue),
-                          SizedBox(width: 8),
-                          Text('Offline Message Queue'),
-                        ],
-                      ),
-                    ),
                     const PopupMenuItem(
                       value: 'open_by_id',
                       child: Row(
@@ -1407,6 +1478,66 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       horizontal: 8, vertical: 4),
                                   child: InkWell(
                                     onTap: () async {
+                                      if (session.id
+                                          .startsWith('DRAFT_CREATION_')) {
+                                        final realId =
+                                            session.id.substring(15); // Length of DRAFT_CREATION_
+                                        if (!queueProvider.queue
+                                            .any((m) => m.id == realId)) {
+                                            return;
+                                        }
+
+                                        // Reuse Logic inline
+                                        // We can't easily call _openDraft here without duplication or refactor.
+                                        // Let's implement inline for now.
+                                        final result =
+                                            await showDialog<NewSessionResult>(
+                                          context: context,
+                                          builder: (context) =>
+                                              NewSessionDialog(
+                                                  initialSession: session),
+                                        );
+
+                                        if (result == null || !mounted) return;
+
+                                        if (result.isDelete) {
+                                          queueProvider.deleteMessage(realId);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                                  content:
+                                                      Text("Draft deleted")));
+                                        } else if (result.isDraft) {
+                                          queueProvider
+                                              .updateCreateSessionRequest(
+                                                  realId, result.session,
+                                                  isDraft: true);
+                                          ScaffoldMessenger.of(context)
+                                              .showSnackBar(const SnackBar(
+                                                  content:
+                                                      Text("Draft updated")));
+                                        } else {
+                                          // Send Now: Delete draft, add new request (non-draft)
+                                          queueProvider.deleteMessage(realId);
+                                          // Add new request
+                                          queueProvider.addCreateSessionRequest(
+                                              result.session,
+                                              isDraft: false);
+                                           // Also could call _createSession direct logic if online
+                                           // But queuing is safer/consistent.
+                                           // But if we want immediate feedback like "Creating...", we normally do that.
+                                           // But here we are in list.
+                                           // Let's try to send immediately if possible?
+                                           // Actually, just queuing as non-draft will trigger auto-send if online?
+                                           // MessageQueueProvider 'sendQueue' needs to be triggered.
+                                           // Or assume queue provider handles it?
+                                           // queueProvider.sendQueue() is usually manual or on connection.
+                                           // Let's trigger it.
+                                           final auth = Provider.of<AuthProvider>(context, listen: false);
+                                           queueProvider.sendQueue(auth.client);
+                                        }
+                                        return;
+                                      }
+
                                       _markAsRead(session);
                                       await Navigator.push(
                                           context,
@@ -1471,6 +1602,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                             Expanded(
                                                 child: Row(
                                               children: [
+                                                if (Provider.of<MessageQueueProvider>(
+                                                        context)
+                                                    .getDrafts(session.id)
+                                                    .isNotEmpty)
+                                                  _buildPill(context,
+                                                      label: 'DRAFT',
+                                                      backgroundColor:
+                                                          Colors.orange,
+                                                      textColor: Colors.white,
+                                                      filterToken:
+                                                          const FilterToken(
+                                                              id: 'flag:draft',
+                                                              type: FilterType
+                                                                  .flag,
+                                                              label:
+                                                                  'Has Drafts',
+                                                              value: 'draft')),
                                                 if (metadata.isNew)
                                                   _buildPill(context,
                                                       label: 'NEW',

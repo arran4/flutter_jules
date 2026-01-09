@@ -30,7 +30,7 @@ enum SessionState {
       case SessionState.STATE_UNSPECIFIED:
         return 'Unspecified';
       case SessionState.QUEUED:
-        return 'Queued';
+        return 'Pending';
       case SessionState.PLANNING:
         return 'Planning';
       case SessionState.AWAITING_PLAN_APPROVAL:

@@ -36,7 +36,50 @@ class MessageQueueProvider extends ChangeNotifier {
   Future<void> _loadQueue() async {
     if (_cacheService != null && _authToken != null) {
       _queue = await _cacheService!.loadMessageQueue(_authToken!);
+      await _migrateQueue(); // Temporary migration
       notifyListeners();
+    }
+  }
+
+  Future<void> _migrateQueue() async {
+    bool changed = false;
+    for (var i = 0; i < _queue.length; i++) {
+        final m = _queue[i];
+        // Fix 1: 'new_session' messages that are not tagged as sessionCreation
+        // This was a previous bug where they were stored as simple messages
+        if (m.sessionId == 'new_session' && m.type == QueuedMessageType.message) {
+             // Convert to sessionCreation and Draft
+             // We need to ensure metadata exists. If not, try to recover from content?
+             // But content for new session IS the prompt.
+             Map<String, dynamic> metadata = m.metadata ?? {};
+             if (metadata.isEmpty) {
+                 // Create minimal session metadata
+                 metadata = Session(
+                     id: '',
+                     name: '',
+                     prompt: m.content,
+                     sourceContext: SourceContext(source: ''),
+                 ).toJson();
+             }
+
+             _queue[i] = QueuedMessage(
+                 id: m.id,
+                 sessionId: m.sessionId,
+                 content: m.content,
+                 createdAt: m.createdAt,
+                 type: QueuedMessageType.sessionCreation, // Fixed type
+                 metadata: metadata,
+                 queueReason: m.queueReason ?? 'migrated_legacy_item',
+                 isDraft: true, // Force to draft for review
+                 processingErrors: m.processingErrors,
+             );
+             changed = true;
+        }
+    }
+    
+    if (changed) {
+        await _saveQueue();
+        debugPrint("Message Queue migrated successfully.");
     }
   }
 
@@ -46,13 +89,15 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  String addMessage(String sessionId, String content, {String? reason}) {
+  String addMessage(String sessionId, String content,
+      {String? reason, bool isDraft = false}) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: sessionId,
       content: content,
       createdAt: DateTime.now(),
       queueReason: reason,
+      isDraft: isDraft,
     );
     _queue.add(message);
     _saveQueue();
@@ -60,7 +105,8 @@ class MessageQueueProvider extends ChangeNotifier {
     return message.id;
   }
 
-  String addCreateSessionRequest(Session session, {String? reason}) {
+  String addCreateSessionRequest(Session session,
+      {String? reason, bool isDraft = false}) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: 'new_session', // Placeholder
@@ -69,6 +115,7 @@ class MessageQueueProvider extends ChangeNotifier {
       type: QueuedMessageType.sessionCreation,
       metadata: session.toJson(),
       queueReason: reason,
+      isDraft: isDraft,
     );
     _queue.add(message);
     _saveQueue();
@@ -85,10 +132,38 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
+  void updateCreateSessionRequest(String id, Session session,
+      {bool? isDraft, String? reason}) {
+    final index = _queue.indexWhere((m) => m.id == id);
+    if (index != -1) {
+      _queue[index] = _queue[index].copyWith(
+        content: session.prompt,
+        metadata: session.toJson(),
+        isDraft: isDraft,
+        queueReason: reason,
+      );
+      _saveQueue();
+      notifyListeners();
+    }
+  }
+
   void deleteMessage(String id) {
     _queue.removeWhere((m) => m.id == id);
     _saveQueue();
     notifyListeners();
+  }
+
+  void saveDraft(String sessionId, String content) {
+    // Check if draft already exists? User might want multiple.
+    // Assuming adding new draft always for now, or updating if ID known.
+    // For simplicity, just add.
+    addMessage(sessionId, content, isDraft: true, reason: 'User saved as draft');
+  }
+
+  List<QueuedMessage> getDrafts(String sessionId) {
+    return _queue
+        .where((m) => m.sessionId == sessionId && m.isDraft)
+        .toList();
   }
 
   // Returns true if connection successful
@@ -116,7 +191,8 @@ class MessageQueueProvider extends ChangeNotifier {
       Function(String, Object)? onError}) async {
     if (_isOffline) return;
 
-    List<QueuedMessage> remaining = List.from(_queue);
+    List<QueuedMessage> remaining =
+        List.from(_queue.where((m) => !m.isDraft)); // Skip drafts
     List<QueuedMessage> toRemove = [];
 
     // Sort by creation time to send in order

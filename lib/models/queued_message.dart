@@ -14,6 +14,7 @@ class QueuedMessage {
   final Map<String, dynamic>? metadata;
   final String? queueReason;
   final List<String> processingErrors;
+  final bool isDraft;
 
   QueuedMessage({
     required this.id,
@@ -24,6 +25,7 @@ class QueuedMessage {
     this.metadata,
     this.queueReason,
     this.processingErrors = const [],
+    this.isDraft = false,
   });
 
   factory QueuedMessage.fromJson(Map<String, dynamic> json) {
@@ -40,6 +42,7 @@ class QueuedMessage {
               ?.map((e) => e.toString())
               .toList() ??
           [],
+      isDraft: getBooleanPropOrDefault(json, 'isDraft', false),
     );
   }
 
@@ -52,7 +55,9 @@ class QueuedMessage {
       'type': type.toString().split('.').last,
       if (metadata != null) 'metadata': metadata,
       if (queueReason != null) 'queueReason': queueReason,
+      if (queueReason != null) 'queueReason': queueReason,
       'processingErrors': processingErrors,
+      'isDraft': isDraft,
     };
   }
 
@@ -61,6 +66,7 @@ class QueuedMessage {
     Map<String, dynamic>? metadata,
     String? queueReason,
     List<String>? processingErrors,
+    bool? isDraft,
   }) {
     return QueuedMessage(
       id: id,
@@ -71,6 +77,7 @@ class QueuedMessage {
       metadata: metadata ?? this.metadata,
       queueReason: queueReason ?? this.queueReason,
       processingErrors: processingErrors ?? this.processingErrors,
+      isDraft: isDraft ?? this.isDraft,
     );
   }
 }

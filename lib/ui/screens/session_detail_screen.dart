@@ -520,15 +520,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               Provider.of<SessionProvider>(context, listen: false)
                   .markAsRead(_session.id, auth.token!);
             }
+            // Auto-save draft
+            if (_messageController.text.trim().isNotEmpty) {
+                Provider.of<MessageQueueProvider>(context, listen: false)
+                    .saveDraft(_session.id, _messageController.text);
+            }
           }
         },
         child: Scaffold(
           appBar: AppBar(
             leading: const BackButton(),
             title: Text(
-              _session.title ?? 'Session Detail',
+              _session.title ?? _session.name.split('/').last,
               maxLines: 1,
               overflow: TextOverflow.ellipsis,
+              style: const TextStyle(fontSize: 16),
             ),
             actions: [
               if (_session.outputs != null &&
@@ -590,7 +596,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     );
                   }
                   return IconButton(
-                    icon: const Icon(Icons.refresh),
+                    icon: _isRefreshDisabled
+                        ? const SizedBox(
+                            width: 20,
+                            height: 20,
+                            child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh),
                     // Disable/Gray out while "busy" (min 2s or until completion)
                     // Also blockout if any other network op is running
                     onPressed: (_isRefreshDisabled || _busyCount > 0)
@@ -1471,11 +1482,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         if (_session.createTime != null)
                           Chip(
                             avatar: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(DateFormat.yMMMd().add_jm().format(
+                            label: Text("Created: ${DateFormat.yMMMd().add_jm().format(
                                 DateTime.parse(_session.createTime!)
-                                    .toLocal())),
+                                    .toLocal())}"),
                             side: BorderSide.none,
                           ),
+                        if (_session.updateTime != null || _isLoading)
+                           Chip(
+                            avatar: _isLoading 
+                                ? const SizedBox(width: 12, height: 12, child: CircularProgressIndicator(strokeWidth: 2)) 
+                                : const Icon(Icons.access_time, size: 16),
+                            label: Builder(builder: (context) {
+                                final timeStr = _session.updateTime != null 
+                                    ? "Updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.updateTime!).toLocal())}"
+                                    : "Updating...";
+                                if (_isLoading && _loadingStatus.isNotEmpty) {
+                                    return Text("$timeStr ($_loadingStatus)");
+                                }
+                                return Text(timeStr);
+                            }),
+                            side: BorderSide.none,
+                           ),
                         if (_session.automationMode != null)
                           Chip(
                             avatar: const Icon(Icons.smart_toy, size: 16),
@@ -1598,27 +1625,50 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             // Draft / Queue Indicator
             Consumer<MessageQueueProvider>(
               builder: (context, queueProvider, child) {
-                final sessionQueue = queueProvider.queue
-                    .where((m) => m.sessionId == _session.id)
-                    .toList();
-                if (sessionQueue.isNotEmpty) {
+                final drafts = queueProvider.getDrafts(_session.id);
+                if (drafts.isNotEmpty) {
                   return Padding(
                     padding: const EdgeInsets.only(right: 8.0, bottom: 8.0),
                     child: Badge(
-                      label: Text("${sessionQueue.length}"),
-                      child: IconButton(
+                      label: Text("${drafts.length}"),
+                      child: PopupMenuButton<QueuedMessage>(
                         icon: const Icon(Icons.drafts_outlined,
                             color: Colors.orange),
-                        tooltip: "Restore Draft",
-                        onPressed: () {
-                          // Restore the most recent one? Or show list?
-                          // "Restore it" implies taking one. Let's take the last one (most recent).
-                          if (sessionQueue.isNotEmpty) {
-                            // Sort by created at descending?
-                            sessionQueue.sort(
-                                (a, b) => b.createdAt.compareTo(a.createdAt));
-                            _restoreDraft(sessionQueue.first);
-                          }
+                        tooltip: "Manage Drafts",
+                        onSelected: (draft) {
+                          // Handle selection in menu builder but we need action
+                        },
+                        itemBuilder: (context) {
+                          return drafts.map((d) {
+                            return PopupMenuItem(
+                              value: d,
+                              child: Row(
+                                children: [
+                                  Expanded(
+                                      child: Text(d.content,
+                                          maxLines: 1,
+                                          overflow: TextOverflow.ellipsis)),
+                                  IconButton(
+                                    icon: const Icon(Icons.restore, size: 20),
+                                    onPressed: () {
+                                      _restoreDraft(d);
+                                      Navigator.pop(context);
+                                    },
+                                    tooltip: "Restore",
+                                  ),
+                                  IconButton(
+                                    icon: const Icon(Icons.delete,
+                                        size: 20, color: Colors.red),
+                                    onPressed: () {
+                                      queueProvider.deleteMessage(d.id);
+                                      Navigator.pop(context); // Close menu
+                                    },
+                                    tooltip: "Delete",
+                                  ),
+                                ],
+                              ),
+                            );
+                          }).toList();
                         },
                       ),
                     ),
@@ -1642,6 +1692,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             ),
             const SizedBox(width: 8),
+             if (hasText && !_isSending)
+               IconButton(
+                 icon: const Icon(Icons.save_as, color: Colors.grey),
+                 tooltip: "Save as Draft",
+                 onPressed: () {
+                    final content = _messageController.text;
+                    Provider.of<MessageQueueProvider>(context, listen: false)
+                        .saveDraft(_session.id, content);
+                    _messageController.clear();
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text("Draft saved")));
+                 },
+               ),
             if (hasText || _isSending)
               IconButton(
                 icon: const Icon(Icons.send),
