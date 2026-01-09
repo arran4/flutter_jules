@@ -76,10 +76,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       Offset.zero & overlay.size,
     );
 
-    showMenu(
+    showMenu<dynamic>(
       context: context,
       position: position,
-      items: [
+      items: <PopupMenuEntry<dynamic>>[
         // List existing bookmarks
         ...bookmarkProvider.bookmarks.map((bookmark) {
           return PopupMenuItem(

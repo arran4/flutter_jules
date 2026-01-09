@@ -47,13 +47,17 @@ void main() {
 
       // Mock asset bundle
       TestWidgetsFlutterBinding.ensureInitialized();
-      const channel = MethodChannel('flutter/assets');
-      channel.setMockMethodCallHandler((MethodCall methodCall) async {
-        if (methodCall.method == 'loadString') {
-          return defaultBookmarksJson;
-        }
-        return null;
-      });
+      TestDefaultBinaryMessengerBinding.instance.defaultBinaryMessenger
+          .setMockMethodCallHandler(
+        const MethodChannel('flutter/assets'),
+        (MethodCall methodCall) async {
+          if (methodCall.method == 'loadString') {
+            return const StandardMethodCodec()
+                .encodeSuccessEnvelope(defaultBookmarksJson);
+          }
+          return null;
+        },
+      );
 
       provider = FilterBookmarkProvider();
       // Allow the provider to initialize

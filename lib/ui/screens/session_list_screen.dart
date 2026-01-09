@@ -1831,9 +1831,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
             Text(metadata.isHidden ? 'Unhide' : 'Hide'),
           ],
         ),
-        onTap: () async {
+        onTap: () {
           final auth = Provider.of<AuthProvider>(context, listen: false);
-          await Provider.of<SessionProvider>(context, listen: false)
+          Provider.of<SessionProvider>(context, listen: false)
               .toggleHidden(session.id, auth.token!);
         },
       ),
@@ -1971,9 +1971,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
             Text(metadata.isWatched ? 'Stop Watching' : 'Watch Session'),
           ],
         ),
-        onTap: () async {
+        onTap: () {
           final auth = Provider.of<AuthProvider>(context, listen: false);
-          await Provider.of<SessionProvider>(context, listen: false)
+          Provider.of<SessionProvider>(context, listen: false)
               .toggleWatch(session.id, auth.token!);
         },
       ),
@@ -1986,9 +1986,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
               Text('Mark as Unread'),
             ],
           ),
-          onTap: () async {
+          onTap: () {
             final auth = Provider.of<AuthProvider>(context, listen: false);
-            await Provider.of<SessionProvider>(context, listen: false)
+            Provider.of<SessionProvider>(context, listen: false)
                 .markAsUnread(session.id, auth.token!);
           },
         ),
