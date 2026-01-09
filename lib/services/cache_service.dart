@@ -68,6 +68,11 @@ class CacheService {
     return directory;
   }
 
+  Future<File> getMessageQueueFileForToken(String token) async {
+    final dir = await _getCacheDirectory(token);
+    return File(path.join(dir.path, 'message_queue.json'));
+  }
+
   Future<void> saveSessions(
       String token, List<CachedItem<Session>> items) async {
     final cacheDir = await _getCacheDirectory(token);

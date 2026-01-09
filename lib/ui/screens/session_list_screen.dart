@@ -1288,6 +1288,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     _refreshVisibleSessions();
                   } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
+
+
                   } else if (value == 'sources') {
                     Navigator.pushNamed(context, '/sources_raw');
                   } else if (value == 'raw_data') {
@@ -1390,6 +1392,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ],
                       ),
                     ),
+
                     const PopupMenuItem(
                       value: 'sources',
                       child: Row(
@@ -1498,7 +1501,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   initialSession: session),
                                         );
 
-                                        if (result == null || !mounted) return;
+                                        if (result == null) return;
+                                        if (!context.mounted) return;
 
                                         if (result.isDelete) {
                                           queueProvider.deleteMessage(realId);

@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/models/activity.dart';
+import 'package:jules_client/models/activity.dart'; 
 
 void main() {
   test('Activity parsing - agent message without description', () {
@@ -36,5 +36,31 @@ void main() {
     expect(activity.originator, 'agent');
     expect(activity.agentMessaged, isNotNull);
     expect(activity.agentMessaged!.agentMessage, contains('clarify'));
+  });
+
+  test('Parses SessionFailed activity correctly and flags unknown props', () {
+    const jsonStr = '''
+{
+  "name": "sessions/5785130943652494620/activities/a82553a4d3bf4e4f8c2ad49d665d8d11",
+  "id": "a82553a4d3bf4e4f8c2ad49d665d8d11",
+  "description": "",
+  "createTime": "2026-01-09T00:42:13.801699Z",
+  "originator": "agent",
+  "sessionFailed": {
+    "reason": "Jules encountered an error when working on the task."
+  },
+  "someUnknownProp": "shouldBeFlagged"
+}
+''';
+
+    final json = jsonDecode(jsonStr);
+    final activity = Activity.fromJson(json);
+
+    expect(activity.id, "a82553a4d3bf4e4f8c2ad49d665d8d11");
+    expect(activity.sessionFailed, isNotNull);
+    expect(activity.sessionFailed!.reason, "Jules encountered an error when working on the task.");
+    
+    expect(activity.unmappedProps.containsKey('someUnknownProp'), true);
+    expect(activity.unmappedProps['someUnknownProp'], "shouldBeFlagged");
   });
 }
