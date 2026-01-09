@@ -17,8 +17,11 @@ class FilterBookmarkProvider with ChangeNotifier {
   bool get isLoading => _isLoading;
 
   FilterBookmarkProvider() {
-    _init();
+    _initFuture = _init();
   }
+
+  Future<void>? _initFuture;
+  Future<void> get initialized => _initFuture ?? Future.value();
 
   Future<void> _init() async {
     await _loadDefaults();
