@@ -30,9 +30,7 @@ class _LoginScreenState extends State<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Connect to Jules API'),
-      ),
+      appBar: AppBar(title: const Text('Connect to Jules API')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Form(
@@ -111,15 +109,15 @@ class _LoginScreenState extends State<LoginScreen> {
               ElevatedButton.icon(
                 onPressed: () async {
                   try {
-                    final authProvider =
-                        Provider.of<AuthProvider>(context, listen: false);
+                    final authProvider = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    );
                     await authProvider.signInWithGoogle();
                   } catch (e) {
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(
-                          content: Text('Google Sign-In failed: $e'),
-                        ),
+                        SnackBar(content: Text('Google Sign-In failed: $e')),
                       );
                     }
                   }

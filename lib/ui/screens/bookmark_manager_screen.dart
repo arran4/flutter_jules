@@ -16,10 +16,7 @@ import '../../models/enums.dart';
 class BookmarkManagerScreen extends StatefulWidget {
   final List<FilterToken> availableSuggestions;
 
-  const BookmarkManagerScreen({
-    super.key,
-    required this.availableSuggestions,
-  });
+  const BookmarkManagerScreen({super.key, required this.availableSuggestions});
 
   @override
   State<BookmarkManagerScreen> createState() => _BookmarkManagerScreenState();
@@ -56,11 +53,13 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           }).toList();
 
           // 2. Restorable System Bookmarks
-          final restorableBookmarks =
-              provider.getRestorableSystemBookmarks().where((b) {
-            if (_searchQuery.isEmpty) return true;
-            return b.name.toLowerCase().contains(_searchQuery);
-          }).toList();
+          final restorableBookmarks = provider
+              .getRestorableSystemBookmarks()
+              .where((b) {
+                if (_searchQuery.isEmpty) return true;
+                return b.name.toLowerCase().contains(_searchQuery);
+              })
+              .toList();
 
           return Column(
             children: [
@@ -83,26 +82,34 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
                     if (activeBookmarks.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Text('Active Presets',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey)),
+                        child: Text(
+                          'Active Presets',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
-                      ...activeBookmarks
-                          .map((b) => _buildActiveTile(context, provider, b)),
+                      ...activeBookmarks.map(
+                        (b) => _buildActiveTile(context, provider, b),
+                      ),
                     ],
                     if (restorableBookmarks.isNotEmpty) ...[
                       const Padding(
                         padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text('Deleted System Presets',
-                            style: TextStyle(
-                                fontSize: 13,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.grey)),
+                        child: Text(
+                          'Deleted System Presets',
+                          style: TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.grey,
+                          ),
+                        ),
                       ),
                       ...restorableBookmarks.map(
-                          (b) => _buildRestorableTile(context, provider, b)),
+                        (b) => _buildRestorableTile(context, provider, b),
+                      ),
                     ],
                     if (activeBookmarks.isEmpty && restorableBookmarks.isEmpty)
                       Padding(
@@ -132,8 +139,11 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
     );
   }
 
-  Widget _buildActiveTile(BuildContext context, FilterBookmarkProvider provider,
-      FilterBookmark bookmark) {
+  Widget _buildActiveTile(
+    BuildContext context,
+    FilterBookmarkProvider provider,
+    FilterBookmark bookmark,
+  ) {
     final isSystem = provider.isSystemBookmark(bookmark.name);
 
     return Card(
@@ -143,8 +153,10 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           isSystem ? Icons.stars : Icons.bookmark,
           color: isSystem ? Colors.amber : Colors.blue,
         ),
-        title: Text(bookmark.name,
-            style: const TextStyle(fontWeight: FontWeight.bold)),
+        title: Text(
+          bookmark.name,
+          style: const TextStyle(fontWeight: FontWeight.bold),
+        ),
         subtitle: bookmark.description != null
             ? Text(
                 bookmark.description!,
@@ -183,8 +195,11 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
     );
   }
 
-  Widget _buildRestorableTile(BuildContext context,
-      FilterBookmarkProvider provider, FilterBookmark bookmark) {
+  Widget _buildRestorableTile(
+    BuildContext context,
+    FilterBookmarkProvider provider,
+    FilterBookmark bookmark,
+  ) {
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       color: Colors.grey.shade100,
@@ -217,7 +232,8 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
   }
 
   void _showBookmarkEditor(BuildContext context, FilterBookmark? existing) {
-    final isSystem = existing != null &&
+    final isSystem =
+        existing != null &&
         context.read<FilterBookmarkProvider>().isSystemBookmark(existing.name);
 
     showDialog(
@@ -244,9 +260,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           FilledButton(
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
-              context
-                  .read<FilterBookmarkProvider>()
-                  .deleteBookmark(bookmark.name);
+              context.read<FilterBookmarkProvider>().deleteBookmark(
+                bookmark.name,
+              );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Preset "${bookmark.name}" deleted')),
@@ -260,8 +276,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
   }
 
   void _copyBookmark(BuildContext context, FilterBookmark bookmark) {
-    final nameController =
-        TextEditingController(text: '${bookmark.name} (Copy)');
+    final nameController = TextEditingController(
+      text: '${bookmark.name} (Copy)',
+    );
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -269,24 +286,29 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
         content: TextField(
           controller: nameController,
           decoration: const InputDecoration(
-              labelText: 'New Preset Name', border: OutlineInputBorder()),
+            labelText: 'New Preset Name',
+            border: OutlineInputBorder(),
+          ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
           FilledButton(
             onPressed: () async {
               final newName = nameController.text.trim();
               if (newName.isNotEmpty) {
-                await context
-                    .read<FilterBookmarkProvider>()
-                    .copyBookmark(bookmark.name, newName);
+                await context.read<FilterBookmarkProvider>().copyBookmark(
+                  bookmark.name,
+                  newName,
+                );
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text('Preset "$newName" created')));
+                    SnackBar(content: Text('Preset "$newName" created')),
+                  );
                 }
               }
             },
@@ -309,8 +331,11 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
     _showExportDialog(context, jsonString, title: 'Export All Presets');
   }
 
-  void _showExportDialog(BuildContext context, String jsonString,
-      {required String title}) {
+  void _showExportDialog(
+    BuildContext context,
+    String jsonString, {
+    required String title,
+  }) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -333,8 +358,10 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
                 child: SingleChildScrollView(
                   child: SelectableText(
                     jsonString,
-                    style:
-                        const TextStyle(fontFamily: 'monospace', fontSize: 12),
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontSize: 12,
+                    ),
                   ),
                 ),
               ),
@@ -343,15 +370,17 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
         ),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close')),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Close'),
+          ),
           FilledButton.icon(
             icon: const Icon(Icons.copy),
             label: const Text('Copy to Clipboard'),
             onPressed: () {
               Clipboard.setData(ClipboardData(text: jsonString));
               ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Copied to clipboard!')));
+                const SnackBar(content: Text('Copied to clipboard!')),
+              );
               Navigator.pop(context);
             },
           ),
@@ -418,18 +447,22 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
                 }
 
                 try {
-                  await context
-                      .read<FilterBookmarkProvider>()
-                      .importFromJson(jsonString, merge: merge);
+                  await context.read<FilterBookmarkProvider>().importFromJson(
+                    jsonString,
+                    merge: merge,
+                  );
 
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext);
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
                         SnackBar(
-                            content: Text(merge
+                          content: Text(
+                            merge
                                 ? 'Presets imported and merged!'
-                                : 'Presets imported (replaced all)!')),
+                                : 'Presets imported (replaced all)!',
+                          ),
+                        ),
                       );
                     }
                   }
@@ -477,8 +510,9 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descController =
-        TextEditingController(text: widget.existing?.description ?? '');
+    _descController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
     _filters = List.from(widget.existing?.filters ?? []);
     _sorts = List.from(widget.existing?.sorts ?? []);
 
@@ -486,16 +520,24 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
   }
 
   void _updatePreview() {
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
-    final queueProvider =
-        Provider.of<MessageQueueProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final queueProvider = Provider.of<MessageQueueProvider>(
+      context,
+      listen: false,
+    );
 
     // Apply filters
     final allMatches = sessionProvider.items
         .where((item) {
           return FilterUtils.matches(
-              item.data, item.metadata, _filters, queueProvider);
+            item.data,
+            item.metadata,
+            _filters,
+            queueProvider,
+          );
         })
         .map((item) => item.data)
         .toList();
@@ -513,9 +555,11 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: Text(widget.isReadOnly
-          ? 'Preset Details (Read-Only)'
-          : (widget.existing == null ? 'New Preset' : 'Edit Preset')),
+      title: Text(
+        widget.isReadOnly
+            ? 'Preset Details (Read-Only)'
+            : (widget.existing == null ? 'New Preset' : 'Edit Preset'),
+      ),
       content: SizedBox(
         width: 600,
         height: 600,
@@ -525,28 +569,37 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
               TextField(
                 controller: _nameController,
                 decoration: const InputDecoration(
-                    labelText: 'Preset Name*', border: OutlineInputBorder()),
+                  labelText: 'Preset Name*',
+                  border: OutlineInputBorder(),
+                ),
                 enabled: !widget.isReadOnly,
               ),
               const SizedBox(height: 16),
               TextField(
                 controller: _descController,
                 decoration: const InputDecoration(
-                    labelText: 'Description', border: OutlineInputBorder()),
+                  labelText: 'Description',
+                  border: OutlineInputBorder(),
+                ),
                 enabled: !widget.isReadOnly,
               ),
             ] else ...[
               ListTile(
-                  title: const Text("Name"),
-                  subtitle: Text(widget.existing?.name ?? '')),
+                title: const Text("Name"),
+                subtitle: Text(widget.existing?.name ?? ''),
+              ),
               ListTile(
-                  title: const Text("Description"),
-                  subtitle:
-                      Text(widget.existing?.description ?? 'No description')),
+                title: const Text("Description"),
+                subtitle: Text(
+                  widget.existing?.description ?? 'No description',
+                ),
+              ),
             ],
             const SizedBox(height: 24),
-            const Text('Filters & Sorting:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Filters & Sorting:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             const SizedBox(height: 8),
             IgnorePointer(
               ignoring: widget.isReadOnly,
@@ -575,17 +628,21 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text('Preview Matches',
-                    style: TextStyle(fontWeight: FontWeight.bold)),
+                const Text(
+                  'Preview Matches',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
                 Text(
-                    '$_totalMatches sessions found${_totalMatches > 50 ? ' (showing top 50)' : ''}',
-                    style: const TextStyle(color: Colors.grey)),
+                  '$_totalMatches sessions found${_totalMatches > 50 ? ' (showing top 50)' : ''}',
+                  style: const TextStyle(color: Colors.grey),
+                ),
               ],
             ),
             Expanded(
               child: _matchingSessions.isEmpty
                   ? const Center(
-                      child: Text("No matches found for these filters."))
+                      child: Text("No matches found for these filters."),
+                    )
                   : ListView.builder(
                       itemCount: _matchingSessions.length,
                       itemBuilder: (context, index) {
@@ -599,15 +656,17 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
       ),
       actions: [
         TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Close')),
+          onPressed: () => Navigator.pop(context),
+          child: const Text('Close'),
+        ),
         if (!widget.isReadOnly)
           FilledButton.icon(
             onPressed: () {
               final name = _nameController.text.trim();
               if (name.isEmpty) {
                 ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Please enter a name')));
+                  const SnackBar(content: Text('Please enter a name')),
+                );
                 return;
               }
 
@@ -627,13 +686,13 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                 provider.updateBookmark(widget.existing!.name, newBookmark);
               }
               Navigator.pop(context);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(content: Text('Preset "$name" saved')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(SnackBar(content: Text('Preset "$name" saved')));
             },
             label: const Text('Save Preset'),
             icon: const Icon(Icons.save),
-          )
+          ),
       ],
     );
   }
@@ -662,10 +721,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
       leading: Container(
         width: 8,
         height: 8,
-        decoration: BoxDecoration(
-          color: statusColor,
-          shape: BoxShape.circle,
-        ),
+        decoration: BoxDecoration(color: statusColor, shape: BoxShape.circle),
       ),
       title: Text(
         session.title ?? session.name,
@@ -681,11 +737,12 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
             const Text("•", style: TextStyle(fontSize: 11, color: Colors.grey)),
             const SizedBox(width: 8),
             Text(
-              DateFormat('MM/dd HH:mm')
-                  .format(DateTime.parse(session.updateTime!).toLocal()),
+              DateFormat(
+                'MM/dd HH:mm',
+              ).format(DateTime.parse(session.updateTime!).toLocal()),
               style: const TextStyle(fontSize: 11, color: Colors.grey),
             ),
-          ]
+          ],
         ],
       ),
     );

@@ -2,7 +2,7 @@ enum FilterType {
   status,
   source,
   flag, // New, Updated, Unread
-  text
+  text,
 }
 
 enum FilterMode {
@@ -27,13 +27,14 @@ class FilterToken {
 
   FilterToken toggleMode() {
     return FilterToken(
-        id: id,
-        type: type,
-        label: label,
-        value: value,
-        mode: mode == FilterMode.include
-            ? FilterMode.exclude
-            : FilterMode.include);
+      id: id,
+      type: type,
+      label: label,
+      value: value,
+      mode: mode == FilterMode.include
+          ? FilterMode.exclude
+          : FilterMode.include,
+    );
   }
 
   @override
@@ -51,18 +52,9 @@ class FilterToken {
       id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
 }
 
-enum SortField {
-  updated,
-  created,
-  name,
-  source,
-  status,
-}
+enum SortField { updated, created, name, source, status }
 
-enum SortDirection {
-  ascending,
-  descending,
-}
+enum SortDirection { ascending, descending }
 
 class SortOption {
   final SortField field;

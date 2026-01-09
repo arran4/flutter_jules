@@ -49,8 +49,9 @@ class CacheService {
         } else {
           final home = Platform.environment['HOME'];
           if (home != null) {
-            baseDir =
-                Directory(path.join(home, '.cache', 'flutter_jules_agent'));
+            baseDir = Directory(
+              path.join(home, '.cache', 'flutter_jules_agent'),
+            );
           } else {
             baseDir = await getApplicationCacheDirectory();
           }
@@ -74,7 +75,9 @@ class CacheService {
   }
 
   Future<void> saveSessions(
-      String token, List<CachedItem<Session>> items) async {
+    String token,
+    List<CachedItem<Session>> items,
+  ) async {
     final cacheDir = await _getCacheDirectory(token);
     final sessionsDir = Directory(path.join(cacheDir.path, 'sessions'));
     if (!await sessionsDir.exists()) {
@@ -156,22 +159,13 @@ class CacheService {
             lastUpdated: lastUpdated,
           );
         } catch (e) {
-          metadata = CacheMetadata(
-            firstSeen: now,
-            lastRetrieved: now,
-          );
+          metadata = CacheMetadata(firstSeen: now, lastRetrieved: now);
         }
       } else {
-        metadata = CacheMetadata(
-          firstSeen: now,
-          lastRetrieved: now,
-        );
+        metadata = CacheMetadata(firstSeen: now, lastRetrieved: now);
       }
 
-      final dataToSave = {
-        'data': newJson,
-        'metadata': metadata.toJson(),
-      };
+      final dataToSave = {'data': newJson, 'metadata': metadata.toJson()};
 
       await file.writeAsString(jsonEncode(dataToSave));
     }
@@ -211,9 +205,7 @@ class CacheService {
       final json = jsonDecode(content);
       final metadata = CacheMetadata.fromJson(json['metadata']);
 
-      final newMetadata = metadata.copyWith(
-        lastOpened: DateTime.now(),
-      );
+      final newMetadata = metadata.copyWith(lastOpened: DateTime.now());
 
       json['metadata'] = newMetadata.toJson();
       await file.writeAsString(jsonEncode(json));
@@ -252,9 +244,7 @@ class CacheService {
       final json = jsonDecode(content);
       final metadata = CacheMetadata.fromJson(json['metadata']);
 
-      final newMetadata = metadata.copyWith(
-        lastPrOpened: DateTime.now(),
-      );
+      final newMetadata = metadata.copyWith(lastPrOpened: DateTime.now());
 
       json['metadata'] = newMetadata.toJson();
       await file.writeAsString(jsonEncode(json));
@@ -263,7 +253,10 @@ class CacheService {
 
   // New methods for session details (activities) cache
   Future<void> saveSessionDetails(
-      String token, Session session, List<Activity> activities) async {
+    String token,
+    Session session,
+    List<Activity> activities,
+  ) async {
     final cacheDir = await _getCacheDirectory(token);
     final detailsDir = Directory(path.join(cacheDir.path, 'session_details'));
     if (!await detailsDir.exists()) {
@@ -284,7 +277,9 @@ class CacheService {
   }
 
   Future<CachedSessionDetails?> loadSessionDetails(
-      String token, String sessionId) async {
+    String token,
+    String sessionId,
+  ) async {
     final cacheDir = await _getCacheDirectory(token);
     final fileName = '${Uri.encodeComponent(sessionId)}.json';
     final file = File(path.join(cacheDir.path, 'session_details', fileName));
@@ -298,7 +293,8 @@ class CacheService {
       final json = jsonDecode(content);
 
       final session = Session.fromJson(json['session']);
-      final activities = (json['activities'] as List<dynamic>?)
+      final activities =
+          (json['activities'] as List<dynamic>?)
               ?.map((e) => Activity.fromJson(e))
               .toList() ??
           [];

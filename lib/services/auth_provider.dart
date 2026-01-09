@@ -8,10 +8,7 @@ enum TokenType { apiKey, accessToken }
 class AuthProvider extends ChangeNotifier {
   final AuthService _authService = AuthService();
   final GoogleSignIn _googleSignIn = GoogleSignIn(
-    scopes: [
-      'email',
-      'https://www.googleapis.com/auth/cloud-platform',
-    ],
+    scopes: ['email', 'https://www.googleapis.com/auth/cloud-platform'],
   );
 
   String? _token;
@@ -49,8 +46,9 @@ class AuthProvider extends ChangeNotifier {
 
   Future<void> setToken(String token, TokenType type) async {
     await _authService.saveToken(token);
-    await _authService
-        .saveTokenType(type == TokenType.apiKey ? 'apiKey' : 'accessToken');
+    await _authService.saveTokenType(
+      type == TokenType.apiKey ? 'apiKey' : 'accessToken',
+    );
     _token = token;
     _tokenType = type;
     notifyListeners();

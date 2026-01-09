@@ -11,7 +11,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<List<FilterToken>> onFiltersChanged;
   final ValueChanged<String> onSearchChanged;
   final List<FilterToken>
-      availableSuggestions; // All possible filters for autocomplete
+  availableSuggestions; // All possible filters for autocomplete
   final VoidCallback? onOpenFilterMenu;
 
   final List<SortOption> activeSorts;
@@ -62,8 +62,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _showBookmarksMenu(BuildContext context) {
     // Access the provider
-    final bookmarkProvider =
-        Provider.of<FilterBookmarkProvider>(context, listen: false);
+    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
+      context,
+      listen: false,
+    );
 
     // Get the button's position for the menu
     final RenderBox? button = context.findRenderObject() as RenderBox?;
@@ -73,8 +75,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
         button.localToGlobal(Offset.zero, ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -156,8 +160,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   filters: widget.activeFilters,
                   sorts: widget.activeSorts,
                 );
-                Provider.of<FilterBookmarkProvider>(context, listen: false)
-                    .addBookmark(bookmark);
+                Provider.of<FilterBookmarkProvider>(
+                  context,
+                  listen: false,
+                ).addBookmark(bookmark);
                 Navigator.pop(context);
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(content: Text('Preset "$name" saved.')),
@@ -217,8 +223,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
       setState(() {
         _filteredSuggestions = widget.availableSuggestions.where((s) {
-          if (widget.activeFilters
-              .any((af) => af.id == s.id && af.type == s.type)) {
+          if (widget.activeFilters.any(
+            (af) => af.id == s.id && af.type == s.type,
+          )) {
             return false;
           }
           return s.label.toLowerCase().contains(query);
@@ -255,9 +262,14 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
     // Try exact match first
     final exactMatch = widget.availableSuggestions.firstWhere(
-        (s) => s.label.toLowerCase() == query,
-        orElse: () => const FilterToken(
-            id: '', type: FilterType.text, label: '', value: ''));
+      (s) => s.label.toLowerCase() == query,
+      orElse: () => const FilterToken(
+        id: '',
+        type: FilterType.text,
+        label: '',
+        value: '',
+      ),
+    );
 
     if (exactMatch.id.isNotEmpty) {
       _selectSuggestion(exactMatch);
@@ -287,7 +299,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         setState(() {
           _highlightedIndex =
               (_highlightedIndex - 1 + _filteredSuggestions.length) %
-                  _filteredSuggestions.length;
+              _filteredSuggestions.length;
           _showOverlay();
         });
         return KeyEventResult.handled;
@@ -348,8 +360,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   final isHighlighted = index == _highlightedIndex;
 
                   return Container(
-                    color:
-                        isHighlighted ? Theme.of(context).highlightColor : null,
+                    color: isHighlighted
+                        ? Theme.of(context).highlightColor
+                        : null,
                     child: ListTile(
                       dense: true,
                       leading: _getIconForType(suggestion.type),
@@ -481,9 +494,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
               boxShadow: isDragging
                   ? const [
                       BoxShadow(
-                          color: Colors.black26,
-                          blurRadius: 4,
-                          offset: Offset(0, 2))
+                        color: Colors.black26,
+                        blurRadius: 4,
+                        offset: Offset(0, 2),
+                      ),
                     ]
                   : null,
             ),
@@ -503,7 +517,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 InkWell(
                   onTap: () => _removeSort(sort),
                   child: const Icon(Icons.close, size: 14, color: Colors.grey),
-                )
+                ),
               ],
             ),
           ),
@@ -515,8 +529,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   void _addSort() {
     // Show menu to pick a field not in list
     final existingFields = widget.activeSorts.map((s) => s.field).toSet();
-    final availableFields =
-        SortField.values.where((f) => !existingFields.contains(f)).toList();
+    final availableFields = SortField.values
+        .where((f) => !existingFields.contains(f))
+        .toList();
 
     if (availableFields.isEmpty) return; // All fields added
 
@@ -529,12 +544,15 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     showMenu<SortField>(
       context: context,
       position: RelativeRect.fromLTRB(
-          offset.dx + size.width - 50, offset.dy + size.height, 0, 0),
+        offset.dx + size.width - 50,
+        offset.dy + size.height,
+        0,
+        0,
+      ),
       items: availableFields
-          .map((f) => PopupMenuItem(
-                value: f,
-                child: Text(_getSortFieldLabel(f)),
-              ))
+          .map(
+            (f) => PopupMenuItem(value: f, child: Text(_getSortFieldLabel(f))),
+          )
           .toList(),
     ).then((value) {
       if (value != null) {
@@ -653,8 +671,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           details.data != sort,
                       onAcceptWithDetails: (details) {
                         final incoming = details.data;
-                        final incomingIndex =
-                            widget.activeSorts.indexOf(incoming);
+                        final incomingIndex = widget.activeSorts.indexOf(
+                          incoming,
+                        );
                         final targetIndex = index;
                         _reorderSorts(incomingIndex, targetIndex);
                       },
@@ -665,9 +684,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             // Visual indicator for drop
                             if (candidateData.isNotEmpty)
                               Container(
-                                  width: 4,
-                                  height: 24,
-                                  color: Colors.blueAccent),
+                                width: 4,
+                                height: 24,
+                                color: Colors.blueAccent,
+                              ),
                             _buildSortPill(sort),
                           ],
                         );
@@ -678,8 +698,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                 // Add Sort Button
                 IconButton(
-                  icon: const Icon(Icons.add_circle_outline,
-                      size: 20, color: Colors.grey),
+                  icon: const Icon(
+                    Icons.add_circle_outline,
+                    size: 20,
+                    color: Colors.grey,
+                  ),
                   onPressed: _addSort,
                   tooltip: "Add Sort Criteria",
                 ),
@@ -697,7 +720,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   icon: const Icon(Icons.tune),
                   onPressed: widget.onOpenFilterMenu,
                   tooltip: "All Filters",
-                )
+                ),
               ],
             ),
           ],

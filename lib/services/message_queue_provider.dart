@@ -53,13 +53,15 @@ class MessageQueueProvider extends ChangeNotifier {
       if (msg.sessionId == 'new_session' &&
           msg.type != QueuedMessageType.sessionCreation) {
         debugPrint(
-            "Migrating legacy message ${msg.id} to sessionCreation type");
+          "Migrating legacy message ${msg.id} to sessionCreation type",
+        );
         try {
           final session = Session(
-              id: '',
-              name: '',
-              prompt: msg.content,
-              sourceContext: SourceContext(source: ''));
+            id: '',
+            name: '',
+            prompt: msg.content,
+            sourceContext: SourceContext(source: ''),
+          );
           final newMsg = QueuedMessage(
             id: msg.id,
             sessionId: msg.sessionId,
@@ -96,9 +98,12 @@ class MessageQueueProvider extends ChangeNotifier {
         // But we don't want to auto-send really old stuff?
         // Let's mark as draft to be safe for user review
         debugPrint(
-            "Marking unsent session creation request ${msg.id} as draft.");
-        _queue[i] =
-            _queue[i].copyWith(isDraft: true, queueReason: "Restored as draft");
+          "Marking unsent session creation request ${msg.id} as draft.",
+        );
+        _queue[i] = _queue[i].copyWith(
+          isDraft: true,
+          queueReason: "Restored as draft",
+        );
         changed = true;
       }
     }
@@ -122,8 +127,12 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  String addMessage(String sessionId, String content,
-      {String? reason, bool isDraft = false}) {
+  String addMessage(
+    String sessionId,
+    String content, {
+    String? reason,
+    bool isDraft = false,
+  }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: sessionId,
@@ -138,8 +147,11 @@ class MessageQueueProvider extends ChangeNotifier {
     return message.id;
   }
 
-  String addCreateSessionRequest(Session session,
-      {String? reason, bool isDraft = false}) {
+  String addCreateSessionRequest(
+    Session session, {
+    String? reason,
+    bool isDraft = false,
+  }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: 'new_session', // Placeholder
@@ -165,8 +177,12 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  void updateCreateSessionRequest(String id, Session session,
-      {bool? isDraft, String? reason}) {
+  void updateCreateSessionRequest(
+    String id,
+    Session session, {
+    bool? isDraft,
+    String? reason,
+  }) {
     final index = _queue.indexWhere((m) => m.id == id);
     if (index != -1) {
       _queue[index] = _queue[index].copyWith(
@@ -190,8 +206,12 @@ class MessageQueueProvider extends ChangeNotifier {
     // Check if draft already exists? User might want multiple.
     // Assuming adding new draft always for now, or updating if ID known.
     // For simplicity, just add.
-    addMessage(sessionId, content,
-        isDraft: true, reason: 'User saved as draft');
+    addMessage(
+      sessionId,
+      content,
+      isDraft: true,
+      reason: 'User saved as draft',
+    );
   }
 
   List<QueuedMessage> getDrafts(String sessionId) {
@@ -218,13 +238,16 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> sendQueue(JulesClient client,
-      {Function(String)? onMessageSent,
-      Function(String, Object)? onError}) async {
+  Future<void> sendQueue(
+    JulesClient client, {
+    Function(String)? onMessageSent,
+    Function(String, Object)? onError,
+  }) async {
     if (_isOffline) return;
 
-    List<QueuedMessage> remaining =
-        List.from(_queue.where((m) => !m.isDraft)); // Skip drafts
+    List<QueuedMessage> remaining = List.from(
+      _queue.where((m) => !m.isDraft),
+    ); // Skip drafts
     List<QueuedMessage> toRemove = [];
 
     // Sort by creation time to send in order
@@ -279,11 +302,13 @@ class MessageQueueProvider extends ChangeNotifier {
         // Record error on the message
         final index = _queue.indexWhere((m) => m.id == msg.id);
         if (index != -1) {
-          final currentErrors =
-              List<String>.from(_queue[index].processingErrors);
+          final currentErrors = List<String>.from(
+            _queue[index].processingErrors,
+          );
           currentErrors.add(e.toString());
-          _queue[index] =
-              _queue[index].copyWith(processingErrors: currentErrors);
+          _queue[index] = _queue[index].copyWith(
+            processingErrors: currentErrors,
+          );
           await _saveQueue();
           notifyListeners();
         }

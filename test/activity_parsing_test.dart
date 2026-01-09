@@ -28,8 +28,10 @@ void main() {
     expect(activities.length, 1);
 
     final activity = activities[0];
-    expect(activity.name,
-        'sessions/1611661874528033998/activities/0586f72ed78d42cfbd1d0ce5a0fbd53c');
+    expect(
+      activity.name,
+      'sessions/1611661874528033998/activities/0586f72ed78d42cfbd1d0ce5a0fbd53c',
+    );
     expect(activity.id, '0586f72ed78d42cfbd1d0ce5a0fbd53c');
     expect(activity.description, ''); // Should default to empty string
     expect(activity.createTime, '2025-12-20T12:34:53.104126Z');
@@ -58,8 +60,10 @@ void main() {
 
     expect(activity.id, "a82553a4d3bf4e4f8c2ad49d665d8d11");
     expect(activity.sessionFailed, isNotNull);
-    expect(activity.sessionFailed!.reason,
-        "Jules encountered an error when working on the task.");
+    expect(
+      activity.sessionFailed!.reason,
+      "Jules encountered an error when working on the task.",
+    );
 
     expect(activity.unmappedProps.containsKey('someUnknownProp'), true);
     expect(activity.unmappedProps['someUnknownProp'], "shouldBeFlagged");

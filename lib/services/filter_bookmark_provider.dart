@@ -35,8 +35,9 @@ class FilterBookmarkProvider with ChangeNotifier {
       final jsonString = await rootBundle.loadString(_defaultsAssetPath);
       final List<dynamic> jsonList = jsonDecode(jsonString);
       _defaultBookmarks.clear();
-      _defaultBookmarks
-          .addAll(jsonList.map((json) => FilterBookmark.fromJson(json)));
+      _defaultBookmarks.addAll(
+        jsonList.map((json) => FilterBookmark.fromJson(json)),
+      );
     } catch (e) {
       // Failed to load or parse default bookmarks, continue with empty list
       _defaultBookmarks.clear();
@@ -49,8 +50,9 @@ class FilterBookmarkProvider with ChangeNotifier {
       final jsonString = prefs.getString(_bookmarksKey);
       if (jsonString != null) {
         final List<dynamic> jsonList = jsonDecode(jsonString);
-        _bookmarks =
-            jsonList.map((json) => FilterBookmark.fromJson(json)).toList();
+        _bookmarks = jsonList
+            .map((json) => FilterBookmark.fromJson(json))
+            .toList();
       } else {
         // No saved bookmarks, initialize with defaults
         _bookmarks = List.from(_defaultBookmarks);
@@ -112,7 +114,9 @@ class FilterBookmarkProvider with ChangeNotifier {
   }
 
   Future<void> updateBookmark(
-      String oldName, FilterBookmark newBookmark) async {
+    String oldName,
+    FilterBookmark newBookmark,
+  ) async {
     final index = _bookmarks.indexWhere((b) => b.name == oldName);
     if (index != -1) {
       _bookmarks[index] = newBookmark;

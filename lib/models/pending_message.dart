@@ -31,10 +31,7 @@ class PendingMessage {
     };
   }
 
-  PendingMessage copyWith({
-    String? content,
-    bool? hasMismatch,
-  }) {
+  PendingMessage copyWith({String? content, bool? hasMismatch}) {
     return PendingMessage(
       id: id,
       content: content ?? this.content,
