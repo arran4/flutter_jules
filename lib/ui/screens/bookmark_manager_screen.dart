@@ -1,16 +1,17 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../../models/filter_bookmark.dart';
 import '../../models/search_filter.dart';
 import '../../models/session.dart';
 import '../../services/session_provider.dart';
-
 import '../../services/message_queue_provider.dart';
 import '../../utils/filter_utils.dart';
 import '../widgets/advanced_search_bar.dart';
+import '../../models/enums.dart';
 
 class BookmarkManagerScreen extends StatefulWidget {
   final List<FilterToken> availableSuggestions;
@@ -55,8 +56,6 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           }).toList();
 
           // 2. Restorable System Bookmarks
-          // Only show if not searching (or if we want them searchable too? Let's hide if searching to focus on main list)
-          // Actually, if user searches for "Pending", they might want to find the deleted one to restore.
           final restorableBookmarks =
               provider.getRestorableSystemBookmarks().where((b) {
             if (_searchQuery.isEmpty) return true;
@@ -153,7 +152,7 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
                 overflow: TextOverflow.ellipsis,
               )
             : null,
-        onTap: () => _showBookmarkEditor(context, bookmark), // Tap to View/Edit
+        onTap: () => _showBookmarkEditor(context, bookmark),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
@@ -218,18 +217,8 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
   }
 
   void _showBookmarkEditor(BuildContext context, FilterBookmark? existing) {
-    // Only user presets or new presets are fully editable.
-    // System presets are view-only (except copy).
     final isSystem = existing != null &&
         context.read<FilterBookmarkProvider>().isSystemBookmark(existing.name);
-
-    if (isSystem) {
-      // Show simplified read-only view or explain
-      // Or just let them open it but disable 'Save'?
-      // The requirement says: "You can't modify a preset...".
-      // I will implement a "Preset Preview" mode for system bookmarks?
-      // Reuse editor but disable fields.
-    }
 
     showDialog(
       context: context,
@@ -240,9 +229,6 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
       ),
     );
   }
-
-  // ... (copy, delete, export/import methods same as before, adapted if needed)
-  // ...
 
   void _deleteBookmark(BuildContext context, FilterBookmark bookmark) {
     showDialog(
@@ -485,6 +471,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
   late List<FilterToken> _filters;
   late List<SortOption> _sorts;
   List<Session> _matchingSessions = [];
+  int _totalMatches = 0;
 
   @override
   void initState() {
@@ -495,7 +482,6 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
     _filters = List.from(widget.existing?.filters ?? []);
     _sorts = List.from(widget.existing?.sorts ?? []);
 
-    // Initial preview calc (post frame to access provider)
     WidgetsBinding.instance.addPostFrameCallback((_) => _updatePreview());
   }
 
@@ -505,7 +491,8 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
     final queueProvider =
         Provider.of<MessageQueueProvider>(context, listen: false);
 
-    final matches = sessionProvider.items
+    // Apply filters
+    final allMatches = sessionProvider.items
         .where((item) {
           return FilterUtils.matches(
               item.data, item.metadata, _filters, queueProvider);
@@ -513,8 +500,13 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
         .map((item) => item.data)
         .toList();
 
+    _totalMatches = allMatches.length;
+
+    // Limit to 50 for preview
+    final topMatches = allMatches.take(50).toList();
+
     setState(() {
-      _matchingSessions = matches;
+      _matchingSessions = topMatches;
     });
   }
 
@@ -556,14 +548,6 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
             const Text('Filters & Sorting:',
                 style: TextStyle(fontWeight: FontWeight.bold)),
             const SizedBox(height: 8),
-
-            // Advanced Search Bar
-            // We use it to edit filters/sorts.
-            // If readOnly, we maybe disable it? Or use it in read-only mode?
-            // AdvancedSearchBar doesn't have read-only mode.
-            // But we can just IgnorePointer if readOnly? Or show as chips.
-            // The user said "enclosed window with a 'count' and a simple list of content".
-            // So editing functionality IS required here for non-system.
             IgnorePointer(
               ignoring: widget.isReadOnly,
               child: Opacity(
@@ -574,20 +558,18 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                     setState(() => _filters = f);
                     _updatePreview();
                   },
-                  onSearchChanged: (_) {}, // Ignore search text
+                  onSearchChanged: (_) {},
                   availableSuggestions: widget.availableSuggestions,
-                  // We will set showBookmarksButton: false and onOpenFilterMenu: null in updated AdvancedSearchBar
                   activeSorts: _sorts,
                   onSortsChanged: (s) {
                     setState(() => _sorts = s);
                     _updatePreview();
                   },
-                  showBookmarksButton: false, // Will be supported
-                  onOpenFilterMenu: null, // Will be supported
+                  showBookmarksButton: false,
+                  onOpenFilterMenu: null,
                 ),
               ),
             ),
-
             const SizedBox(height: 24),
             const Divider(),
             Row(
@@ -595,7 +577,8 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
               children: [
                 const Text('Preview Matches',
                     style: TextStyle(fontWeight: FontWeight.bold)),
-                Text('${_matchingSessions.length} sessions found',
+                Text(
+                    '$_totalMatches sessions found${_totalMatches > 50 ? ' (showing top 50)' : ''}',
                     style: const TextStyle(color: Colors.grey)),
               ],
             ),
@@ -607,11 +590,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                       itemCount: _matchingSessions.length,
                       itemBuilder: (context, index) {
                         final s = _matchingSessions[index];
-                        return ListTile(
-                          dense: true,
-                          title: Text(s.title ?? s.name),
-                          // subtitle: Text(s.state.displayName),
-                        );
+                        return _buildLiteSessionTile(s);
                       },
                     ),
             ),
@@ -656,6 +635,51 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
             icon: const Icon(Icons.save),
           )
       ],
+    );
+  }
+
+  Widget _buildLiteSessionTile(Session session) {
+    Color statusColor = Colors.grey;
+    if (session.state == SessionState.SUCCEEDED) statusColor = Colors.green;
+    if (session.state == SessionState.FAILED) statusColor = Colors.red;
+    if (session.state == SessionState.RUNNING ||
+        session.state == SessionState.IN_PROGRESS) statusColor = Colors.blue;
+    if (session.state == SessionState.QUEUED ||
+        session.state == SessionState.PENDING) statusColor = Colors.amber;
+
+    return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      contentPadding: const EdgeInsets.symmetric(horizontal: 8, vertical: 0),
+      leading: Container(
+        width: 8,
+        height: 8,
+        decoration: BoxDecoration(
+          color: statusColor,
+          shape: BoxShape.circle,
+        ),
+      ),
+      title: Text(
+        session.title ?? session.name,
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 13),
+      ),
+      subtitle: Row(
+        children: [
+          Text(session.state.displayName, style: const TextStyle(fontSize: 11)),
+          if (session.updateTime != null) ...[
+            const SizedBox(width: 8),
+            const Text("•", style: TextStyle(fontSize: 11, color: Colors.grey)),
+            const SizedBox(width: 8),
+            Text(
+              DateFormat('MM/dd HH:mm')
+                  .format(DateTime.parse(session.updateTime!).toLocal()),
+              style: const TextStyle(fontSize: 11, color: Colors.grey),
+            ),
+          ]
+        ],
+      ),
     );
   }
 }
