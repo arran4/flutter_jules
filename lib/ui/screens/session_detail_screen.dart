@@ -869,7 +869,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         createTime: m.createdAt.toIso8601String(),
         userMessaged: UserMessaged(userMessage: m.content),
         description: "Queued Message",
-        unmappedProps: {'isQueued': true}));
+        unmappedProps: {
+              'isQueued': true,
+              'queueReason': m.queueReason,
+              'processingErrors': m.processingErrors,
+            }));
 
     // Merge pending messages (Optimistic updates)
     final sessionProvider = Provider.of<SessionProvider>(context);
@@ -881,17 +885,35 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 firstSeen: DateTime.now(), lastRetrieved: DateTime.now())));
     final pendingMessages = sessionItem.metadata.pendingMessages;
 
-    final pendingActivities = pendingMessages.map((m) => Activity(
+    // If session is FAILED, pending messages are effectively failed/queued
+    final isSessionFailed = _session.state == SessionState.FAILED;
+
+    final pendingActivities = pendingMessages.map((m) {
+      if (isSessionFailed) {
+        return Activity(
             name: "pending/${m.id}",
             id: "pending-${m.id}",
             createTime: m.timestamp.toIso8601String(),
             userMessaged: UserMessaged(userMessage: m.content),
-            description: "Sending...",
+            description: "Sending Failed",
             unmappedProps: {
-              'isPending': true,
-              'hasMismatch': m.hasMismatch,
+              'isQueued': true,
+              'queueReason': 'Session is in FAILED state',
               'pendingId': m.id
-            }));
+            });
+      }
+      return Activity(
+          name: "pending/${m.id}",
+          id: "pending-${m.id}",
+          createTime: m.timestamp.toIso8601String(),
+          userMessaged: UserMessaged(userMessage: m.content),
+          description: "Sending...",
+          unmappedProps: {
+            'isPending': true,
+            'hasMismatch': m.hasMismatch,
+            'pendingId': m.id
+          });
+    });
 
     final allActivities = [
       ..._activities,
@@ -1046,9 +1068,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           content = _buildGroupItem(itemWrapper, isDevMode);
         } else if (itemWrapper is ActivityItemWrapper) {
           final activity = itemWrapper.activity;
+          
+          // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
+          // instead of trying to hit the API for a non-existent ID.
+          final isLocal = activity.id.startsWith('pending-') || activity.id.startsWith('queued-');
+
           final item = ActivityItem(
             activity: activity,
-            onRefresh: () => _refreshActivity(activity),
+            onRefresh: isLocal 
+                ? () => _fetchActivities(force: true, shallow: true) 
+                : () => _refreshActivity(activity),
           );
 
           if (isDevMode) {
@@ -1061,18 +1090,97 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           } else {
             final isQueued = activity.unmappedProps['isQueued'] == true;
             if (isQueued) {
-              content = Opacity(
-                  opacity: 0.6,
-                  child: Stack(
-                    children: [
-                      item,
-                      const Positioned(
-                          right: 8,
-                          top: 8,
-                          child: Icon(Icons.cloud_off,
-                              size: 16, color: Colors.grey))
-                    ],
-                  ));
+              content = Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.end,
+                children: [
+                  Opacity(
+                      opacity: 0.6,
+                      child: Stack(
+                        children: [
+                          item,
+                          const Positioned(
+                              right: 8,
+                              top: 8,
+                              child: Icon(Icons.cloud_off,
+                                  size: 16, color: Colors.grey))
+                        ],
+                      )),
+                  if (activity.unmappedProps.containsKey('pendingId'))
+                    Container(
+                      margin:
+                          const EdgeInsets.only(top: 4, right: 12, bottom: 8),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 8),
+                      decoration: BoxDecoration(
+                        color: Colors.red.shade50,
+                        borderRadius: BorderRadius.circular(8),
+                        border: Border.all(color: Colors.red.shade200),
+                      ),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          TextButton(
+                            style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (context) => ModelViewer(
+                                  data: activity.toJson(),
+                                  title: 'Activity Data',
+                                ),
+                              );
+                            },
+                            child: const Text("View Data"),
+                          ),
+                          const SizedBox(width: 8),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () {
+                              final auth = Provider.of<AuthProvider>(context,
+                                  listen: false);
+                              Provider.of<SessionProvider>(context,
+                                      listen: false)
+                                  .removePendingMessage(
+                                      _session.id,
+                                      activity.unmappedProps['pendingId'],
+                                      auth.token!);
+                            },
+                            child: const Text("Dismiss"),
+                          ),
+                          const SizedBox(width: 8),
+                          FilledButton(
+                            style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding:
+                                    const EdgeInsets.symmetric(horizontal: 8)),
+                            onPressed: () {
+                              final auth = Provider.of<AuthProvider>(context,
+                                  listen: false);
+                              final pId = activity.unmappedProps['pendingId'];
+                              final content =
+                                  activity.userMessaged!.userMessage;
+                              // Remove old one
+                              Provider.of<SessionProvider>(context,
+                                      listen: false)
+                                  .removePendingMessage(
+                                      _session.id, pId, auth.token!);
+                              // Resend (which adds new pending)
+                              _sendMessage(content);
+                            },
+                            child: const Text("Resend"),
+                          ),
+                        ],
+                      ),
+                    ),
+                ],
+              );
             } else {
               final isLocal = activity.unmappedProps['isLocal'] == true;
               if (isLocal) {

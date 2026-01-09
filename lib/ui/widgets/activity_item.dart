@@ -78,7 +78,21 @@ class _ActivityItemState extends State<ActivityItem> {
       icon = Icons.smart_toy;
       iconColor = Colors.blue;
     } else if (activity.userMessaged != null) {
-      title = "User";
+      final isPending = activity.unmappedProps['isPending'] == true;
+      final isQueued = activity.unmappedProps['isQueued'] == true;
+      if (isPending) {
+        title = "Sending...";
+        icon = Icons.hourglass_empty;
+        iconColor = Colors.grey;
+      } else if (isQueued) {
+        title = "Sending Failed";
+        icon = Icons.cloud_off;
+        iconColor = Colors.orange;
+      } else {
+        title = "User";
+        icon = Icons.person;
+        iconColor = Colors.green;
+      }
       final msg = activity.userMessaged!.userMessage;
       summary = msg;
       if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
@@ -88,8 +102,6 @@ class _ActivityItemState extends State<ActivityItem> {
       } else {
         summary = msg.split('\n').first;
       }
-      icon = Icons.person;
-      iconColor = Colors.green;
     } else if (activity.progressUpdated != null) {
       title = activity.progressUpdated!.title;
       summary = activity.progressUpdated!.description;
@@ -221,31 +233,44 @@ class _ActivityItemState extends State<ActivityItem> {
                     await widget.onRefresh!();
                   },
                 ),
-              if (widget.activity.unmappedProps.isNotEmpty)
-                IconButton(
-                  icon: const Icon(Icons.warning_amber,
-                      size: 18, color: Colors.orange),
-                  tooltip: 'Unknown Properties Found',
-                  onPressed: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) => AlertDialog(
-                        title: const Text("Unknown Properties"),
-                        content: SingleChildScrollView(
-                            child: SelectableText(
-                          const JsonEncoder.withIndent('  ')
-                              .convert(widget.activity.unmappedProps),
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        )),
-                        actions: [
-                          TextButton(
-                              onPressed: () => Navigator.pop(context),
-                              child: const Text("Close"))
-                        ],
-                      ),
-                    );
-                  },
-                ),
+              Builder(builder: (context) {
+                final unknownProps =
+                    Map<String, dynamic>.from(widget.activity.unmappedProps)
+                      ..remove('isPending')
+                      ..remove('hasMismatch')
+                      ..remove('pendingId')
+                      ..remove('isQueued')
+                      ..remove('queueReason')
+                      ..remove('processingErrors');
+
+                if (unknownProps.isNotEmpty) {
+                  return IconButton(
+                    icon: const Icon(Icons.warning_amber,
+                        size: 18, color: Colors.orange),
+                    tooltip: 'Unknown Properties Found',
+                    onPressed: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) => AlertDialog(
+                          title: const Text("Unknown Properties"),
+                          content: SingleChildScrollView(
+                              child: SelectableText(
+                            const JsonEncoder.withIndent('  ')
+                                .convert(unknownProps),
+                            style: const TextStyle(fontFamily: 'monospace'),
+                          )),
+                          actions: [
+                            TextButton(
+                                onPressed: () => Navigator.pop(context),
+                                child: const Text("Close"))
+                          ],
+                        ),
+                      );
+                    },
+                  );
+                }
+                return const SizedBox.shrink();
+              }),
               PopupMenuButton<String>(
                 icon: const Icon(Icons.more_vert, size: 18),
                 padding: EdgeInsets.zero,
@@ -458,25 +483,105 @@ class _ActivityItemState extends State<ActivityItem> {
                 ]
               ],
             if (activity.unmappedProps.isNotEmpty) ...[
-              const SizedBox(height: 12),
-              const Text("Unknown Data:",
-                  style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      fontSize: 12,
-                      color: Colors.orange)),
-              Container(
-                width: double.infinity,
-                padding: const EdgeInsets.all(8),
-                decoration: BoxDecoration(
-                  color: Colors.orange.withValues(alpha: 0.1),
-                  borderRadius: BorderRadius.circular(4),
-                ),
-                child: Text(
-                  const JsonEncoder.withIndent('  ')
-                      .convert(activity.unmappedProps),
-                  style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
-                ),
-              )
+              Builder(builder: (context) {
+                final unknownProps =
+                    Map<String, dynamic>.from(activity.unmappedProps)
+                      ..remove('isPending')
+                      ..remove('hasMismatch')
+                      ..remove('pendingId')
+                      ..remove('isQueued')
+                      ..remove('queueReason')
+                      ..remove('processingErrors');
+
+                if (unknownProps.isEmpty &&
+                    (activity.unmappedProps.containsKey('isPending') ||
+                        activity.unmappedProps.containsKey('isQueued'))) {
+                  return Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const SizedBox(height: 8),
+                      if (activity.unmappedProps['isPending'] == true)
+                        Row(children: [
+                          SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(
+                                  strokeWidth: 2, color: Colors.grey[400])),
+                          const SizedBox(width: 8),
+                          Text("Sending...",
+                              style: TextStyle(
+                                  color: Colors.grey[600],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ]),
+                      if (activity.unmappedProps['isQueued'] == true) ...[
+                        Row(children: [
+                          Icon(Icons.error_outline,
+                              size: 14, color: Colors.orange[700]),
+                          const SizedBox(width: 8),
+                          Text("Queued / Failed to Send",
+                              style: TextStyle(
+                                  color: Colors.orange[800],
+                                  fontSize: 12,
+                                  fontWeight: FontWeight.bold)),
+                        ]),
+                        if (activity.unmappedProps['queueReason'] != null)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 22),
+                            child: Text(
+                                "Reason: ${activity.unmappedProps['queueReason']}",
+                                style: const TextStyle(
+                                    color: Colors.red, fontSize: 11)),
+                          ),
+                        if (activity.unmappedProps['processingErrors'] !=
+                                null &&
+                            (activity.unmappedProps['processingErrors'] as List)
+                                .isNotEmpty)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4, left: 22),
+                            child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: (activity
+                                        .unmappedProps['processingErrors']
+                                        as List)
+                                    .map<Widget>((e) => Text("• $e",
+                                        style: const TextStyle(
+                                            color: Colors.red, fontSize: 11)))
+                                    .toList()),
+                          )
+                      ]
+                    ],
+                  );
+                }
+
+                if (unknownProps.isEmpty) return const SizedBox.shrink();
+
+                return Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 12),
+                    const Text("Unknown Data:",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 12,
+                            color: Colors.orange)),
+                    Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(8),
+                      decoration: BoxDecoration(
+                        color: Colors.orange.withValues(alpha: 0.1),
+                        borderRadius: BorderRadius.circular(4),
+                      ),
+                      child: Text(
+                        const JsonEncoder.withIndent('  ')
+                            .convert(unknownProps),
+                        style: const TextStyle(
+                            fontFamily: 'monospace', fontSize: 11),
+                      ),
+                    ),
+                  ],
+                );
+              })
             ]
           ],
         ),
