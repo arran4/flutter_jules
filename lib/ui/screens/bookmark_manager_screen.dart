@@ -640,12 +640,20 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
 
   Widget _buildLiteSessionTile(Session session) {
     Color statusColor = Colors.grey;
-    if (session.state == SessionState.SUCCEEDED) statusColor = Colors.green;
-    if (session.state == SessionState.FAILED) statusColor = Colors.red;
-    if (session.state == SessionState.RUNNING ||
-        session.state == SessionState.IN_PROGRESS) statusColor = Colors.blue;
-    if (session.state == SessionState.QUEUED ||
-        session.state == SessionState.PENDING) statusColor = Colors.amber;
+    final state = session.state ?? SessionState.STATE_UNSPECIFIED;
+
+    if (state == SessionState.COMPLETED) {
+      statusColor = Colors.green;
+    }
+    if (state == SessionState.FAILED) {
+      statusColor = Colors.red;
+    }
+    if (state == SessionState.IN_PROGRESS) {
+      statusColor = Colors.blue;
+    }
+    if (state == SessionState.QUEUED) {
+      statusColor = Colors.amber;
+    }
 
     return ListTile(
       dense: true,
@@ -667,7 +675,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
       ),
       subtitle: Row(
         children: [
-          Text(session.state.displayName, style: const TextStyle(fontSize: 11)),
+          Text(state.displayName, style: const TextStyle(fontSize: 11)),
           if (session.updateTime != null) ...[
             const SizedBox(width: 8),
             const Text("•", style: TextStyle(fontSize: 11, color: Colors.grey)),
