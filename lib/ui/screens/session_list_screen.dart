@@ -1884,13 +1884,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
               Text('Open PR & Mark Read'),
             ],
           ),
-          onTap: () async {
+          onTap: () {
             final pr = session.outputs!
                 .firstWhere((o) => o.pullRequest != null)
                 .pullRequest!;
-            if (await launchUrl(Uri.parse(pr.url))) {
-              _markAsRead(session);
-            }
+            launchUrl(Uri.parse(pr.url)).then((success) {
+              if (success) {
+                _markAsRead(session);
+              }
+            });
           },
         ),
         PopupMenuItem(
