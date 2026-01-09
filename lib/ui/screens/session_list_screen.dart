@@ -2152,7 +2152,29 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ],
         ),
       ),
-      if (isDevMode)
+      if (isDevMode) ...[
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.data_object),
+              SizedBox(width: 8),
+              Text('View Raw Session'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: session.toJson(),
+                    title: 'Raw Session Data',
+                  ),
+                );
+              }
+            });
+          },
+        ),
         PopupMenuItem(
           child: const Row(
             children: [
@@ -2170,6 +2192,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             });
           },
         ),
+      ]
     ]).then((value) {
       if (value == 'source' && session.sourceContext.source.isNotEmpty) {
         _openSourceUrl(session.sourceContext.source);
