@@ -1,11 +1,11 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:jules_client/services/message_queue_provider.dart';
-import 'package:jules_client/services/jules_client.dart';
-import 'package:jules_client/services/cache_service.dart';
-import 'package:jules_client/models/api_exchange.dart';
-import 'package:jules_client/models/queued_message.dart';
-import 'package:jules_client/models/session.dart'; // Needed for listSessions return type
+import 'package:flutter_jules/services/message_queue_provider.dart';
+import 'package:flutter_jules/services/jules_client.dart';
+import 'package:flutter_jules/services/cache_service.dart';
+import 'package:flutter_jules/models/api_exchange.dart';
+import 'package:flutter_jules/models/queued_message.dart';
+import 'package:flutter_jules/models/session.dart'; // Needed for listSessions return type
 
 // Mock JulesClient
 class MockJulesClient extends Mock implements JulesClient {

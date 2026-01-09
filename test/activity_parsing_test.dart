@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/models/activity.dart';
+import 'package:flutter_jules/models/activity.dart';
 
 void main() {
   test('Activity parsing - agent message without description', () {

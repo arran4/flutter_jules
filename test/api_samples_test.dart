@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/models.dart';
+import 'package:flutter_jules/models.dart';
 
 void main() {
   group('API Samples Tests', () {

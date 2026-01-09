@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/services/filter_bookmark_provider.dart';
-import 'package:jules_client/models/filter_bookmark.dart';
-import 'package:jules_client/models/search_filter.dart';
+import 'package:flutter_jules/services/filter_bookmark_provider.dart';
+import 'package:flutter_jules/models/filter_bookmark.dart';
+import 'package:flutter_jules/models/search_filter.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'dart:convert';
 

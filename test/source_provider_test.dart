@@ -1,9 +1,9 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:jules_client/services/source_provider.dart';
-import 'package:jules_client/services/jules_client.dart';
-import 'package:jules_client/models/source.dart';
-import 'package:jules_client/models/api_exchange.dart';
+import 'package:flutter_jules/services/source_provider.dart';
+import 'package:flutter_jules/services/jules_client.dart';
+import 'package:flutter_jules/models/source.dart';
+import 'package:flutter_jules/models/api_exchange.dart';
 
 // Mock JulesClient
 class MockJulesClient extends Mock implements JulesClient {

@@ -49,13 +49,13 @@ jobs:
       matrix:
         include:
           - os: ubuntu-latest
-            artifact_name: jules_client-linux.tar.gz
+            artifact_name: flutter_jules-linux.tar.gz
             asset_content_type: application/gzip
           - os: windows-latest
-            artifact_name: jules_client-windows.zip
+            artifact_name: flutter_jules-windows.zip
             asset_content_type: application/zip
           - os: macos-latest
-            artifact_name: jules_client-macos.zip
+            artifact_name: flutter_jules-macos.zip
             asset_content_type: application/zip
 
     runs-on: ${{ matrix.os }}
@@ -82,16 +82,16 @@ jobs:
         run: |
           flutter config --enable-linux-desktop
           flutter build linux --release
-          mv build/linux/x64/release/bundle jules_client
-          tar -czf ${{ matrix.artifact_name }} jules_client
+          mv build/linux/x64/release/bundle flutter_jules
+          tar -czf ${{ matrix.artifact_name }} flutter_jules
 
       - name: Build Windows
         if: runner.os == 'Windows'
         run: |
           flutter config --enable-windows-desktop
           flutter build windows --release
-          Rename-Item build\windows\x64\runner\Release jules_client
-          Compress-Archive -Path build\windows\x64\runner\jules_client -DestinationPath ${{ matrix.artifact_name }}
+          Rename-Item build\windows\x64\runner\Release flutter_jules
+          Compress-Archive -Path build\windows\x64\runner\flutter_jules -DestinationPath ${{ matrix.artifact_name }}
 
       - name: Build macOS
         if: runner.os == 'macOS'
@@ -99,7 +99,7 @@ jobs:
           flutter config --enable-macos-desktop
           flutter build macos --release
           pushd build/macos/Build/Products/Release
-          zip -r $GITHUB_WORKSPACE/${{ matrix.artifact_name }} jules_client.app
+          zip -r $GITHUB_WORKSPACE/${{ matrix.artifact_name }} flutter_jules.app
           popd
 
       - name: Release
