@@ -103,6 +103,18 @@ class FilterElementWidget extends StatelessWidget {
         Colors.orange.shade800,
         Icons.merge,
       );
+    } else if (element is PrStatusElement) {
+      final label = element.label;
+      final displayLabel =
+          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
+      return _buildLeafElement(
+        context,
+        element,
+        displayLabel,
+        Colors.teal.shade100,
+        Colors.teal.shade800,
+        Icons.merge_type,
+      );
     }
 
     return const SizedBox.shrink();
