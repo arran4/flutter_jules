@@ -32,10 +32,10 @@ class NewSessionResult {
 
 class _NewSessionDialogState extends State<NewSessionDialog> {
   // Form State
-  String _prompt = '';
+  late final TextEditingController _promptController;
   Source? _selectedSource;
   String? _selectedBranch;
-  String _imageUrl = '';
+  late final TextEditingController _imageUrlController;
 
   // Task Mode
   // Options: Question (No Plan), Plan (Verify Plan), Start (Auto)
@@ -61,8 +61,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
+    _promptController = TextEditingController();
+    _imageUrlController = TextEditingController();
+
     if (widget.initialSession != null) {
-      _prompt = widget.initialSession!.prompt;
+      _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
       final mode =
           widget.initialSession!.automationMode ??
@@ -77,8 +80,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         _selectedModeIndex = 1; // Plan
       } else {
         _selectedModeIndex = 0; // Question (default)
-        // Check if it was "Start" without auto-PR? Hard to distinguish from Question without more data,
-        // but default is fine.
       }
     }
     _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
@@ -111,6 +112,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _removeSourceOverlay();
     _sourceController.dispose();
     _sourceFocusNode.dispose();
+    _promptController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -145,6 +148,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _loadPreferences() async {
+    if (widget.initialSession != null) return;
+
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
@@ -451,10 +456,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
     // Handle Image
+    final imageUrl = _imageUrlController.text.trim();
     List<Media>? images;
-    if (_imageUrl.isNotEmpty) {
+    if (imageUrl.isNotEmpty) {
       try {
-        final response = await http.get(Uri.parse(_imageUrl));
+        final response = await http.get(Uri.parse(imageUrl));
         if (response.statusCode == 200) {
           final bytes = response.bodyBytes;
           final base64Image = base64Encode(bytes);
@@ -505,7 +511,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final newSession = Session(
       name: '', // Server assigns
       id: '', // Server assigns
-      prompt: _prompt,
+      prompt: _promptController.text,
       sourceContext: SourceContext(
         source: _selectedSource!.name,
         githubRepoContext: GitHubRepoContext(
@@ -527,7 +533,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // Allow saving incomplete drafts?
     // User requirement: "When you are editing a draft, you have the option to 'delete' too."
     // implying meaningful content.
-    if (_prompt.isEmpty) return;
+    if (_promptController.text.isEmpty) return;
 
     // Build session (even if incomplete, use defaults)
     // Map Mode to API fields
@@ -548,7 +554,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final newSession = Session(
       name: widget.initialSession?.name ?? '',
       id: widget.initialSession?.id ?? '',
-      prompt: _prompt,
+      prompt: _promptController.text,
       sourceContext: SourceContext(
         source: _selectedSource?.name ?? 'sources/default',
         githubRepoContext: GitHubRepoContext(
@@ -729,14 +735,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       LogicalKeyboardKey.enter,
                       control: true,
                     ): () {
-                      if (_prompt.isNotEmpty && _selectedSource != null) {
+                      if (_promptController.text.isNotEmpty &&
+                          _selectedSource != null) {
                         _create();
-                      } else if (_prompt.isNotEmpty) {
+                      } else if (_promptController.text.isNotEmpty) {
                         _saveDraft();
                       }
                     },
                   },
                   child: TextField(
+                    controller: _promptController,
                     autofocus: true,
                     maxLines: 6,
                     decoration: const InputDecoration(
@@ -745,24 +753,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       border: OutlineInputBorder(),
                       alignLabelWithHint: true,
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        _prompt = val;
-                      });
-                    },
+                    onChanged: (val) => setState(() {}),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Image Attachment (URL for now)
                 TextField(
+                  controller: _imageUrlController,
                   decoration: const InputDecoration(
                     labelText: 'Image URL (Optional)',
                     hintText: 'https://example.com/image.png',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.image),
                   ),
-                  onChanged: (val) => _imageUrl = val,
+                  onChanged: (val) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
 
@@ -875,7 +880,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       ),
                     const Spacer(),
                     TextButton(
-                      onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
+                      onPressed: (_promptController.text.isNotEmpty) ? _saveDraft : null,
                       child: const Text('Save as Draft'),
                     ),
                     const SizedBox(width: 8),
@@ -886,7 +891,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_prompt.isNotEmpty && _selectedSource != null)
+                      onPressed: (_promptController.text.isNotEmpty && _selectedSource != null)
                           ? _create
                           : null,
                       child: const Text('Send Now'),
