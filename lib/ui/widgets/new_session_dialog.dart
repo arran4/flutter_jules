@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
+import 'multi_select_dialog.dart';
 import '../../models.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
@@ -446,7 +447,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     await prefs.setInt('new_session_last_mode', _selectedModeIndex);
     await prefs.setString('new_session_last_source', _selectedSource!.name);
     if (_selectedBranch != null) {
-      prefs.setString('new_session_last_branch', _selectedBranch!);
+      await prefs.setString('new_session_last_branch', _selectedBranch!);
     }
     await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
@@ -502,20 +503,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         break;
     }
 
-    final newSession = Session(
-      name: '', // Server assigns
-      id: '', // Server assigns
-      prompt: _prompt,
-      sourceContext: SourceContext(
-        source: _selectedSource!.name,
-        githubRepoContext: GitHubRepoContext(
-          startingBranch: _selectedBranch ?? 'main',
-        ),
-      ),
-      requirePlanApproval: requirePlanApproval,
-      automationMode: automationMode,
-      images: images,
-    );
+    final newSession = _buildSession(images: images);
 
     if (mounted) {
       Navigator.pop(context, NewSessionResult(newSession, isDraft: false));
@@ -580,6 +568,117 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       return '${s.githubRepo!.owner}/${s.githubRepo!.repo}';
     }
     return s.name;
+  }
+
+  Future<void> _showBulkDialog(List<Source> sources) async {
+    final selectedSources = await showDialog<List<Source>>(
+      context: context,
+      builder: (context) => MultiSelectDialog(sources: sources),
+    );
+
+    if (!mounted) return;
+
+    if (selectedSources != null && selectedSources.isNotEmpty) {
+      // Save preferences (without source)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+      if (_selectedBranch != null) {
+        await prefs.setString('new_session_last_branch', _selectedBranch!);
+      }
+      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+
+      // Show progress dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return const AlertDialog(
+            title: Text('Creating Sessions...'),
+            content: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        },
+      );
+
+      int successCount = 0;
+      int errorCount = 0;
+
+      for (final source in selectedSources) {
+        try {
+          final newSession = _buildSession(source: source);
+          final auth = Provider.of<AuthProvider>(context, listen: false);
+          await auth.client.createSession(newSession);
+          successCount++;
+        } catch (e) {
+          errorCount++;
+          // Log the error or show a notification
+          print('Failed to create session for ${source.name}: $e');
+        }
+      }
+
+      if (!mounted) return;
+
+      // Close the progress dialog
+      Navigator.pop(context);
+
+      // Show summary
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Bulk Creation Complete'),
+            content: Text(
+              '$successCount sessions created successfully.\n$errorCount sessions failed.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  Session _buildSession({Source? source, List<Media>? images}) {
+    // Map Mode to API fields
+    bool requirePlanApproval = false;
+    AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+
+    switch (_selectedModeIndex) {
+      case 0: // Question
+        requirePlanApproval = false;
+        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+      case 1: // Plan
+        requirePlanApproval = true;
+        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+      case 2: // Start
+        requirePlanApproval = false;
+        automationMode = _autoCreatePr
+            ? AutomationMode.AUTO_CREATE_PR
+            : AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+        break;
+    }
+
+    return Session(
+      name: '', // Server assigns
+      id: '', // Server assigns
+      prompt: _prompt,
+      sourceContext: SourceContext(
+        source: source?.name ?? _selectedSource!.name,
+        githubRepoContext: GitHubRepoContext(
+          startingBranch: _selectedBranch ?? 'main',
+        ),
+      ),
+      requirePlanApproval: requirePlanApproval,
+      automationMode: automationMode,
+      images: images,
+    );
   }
 
   @override
@@ -831,7 +930,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         },
                       ),
                     ),
-                    const SizedBox(width: 16),
+                    const SizedBox(width: 8),
+                    TextButton(
+                      onPressed: () => _showBulkDialog(sources),
+                      child: const Text('Bulk'),
+                    ),
+                    const SizedBox(width: 8),
                     Expanded(
                       flex: 1,
                       child: DropdownButtonFormField<String>(
