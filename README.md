@@ -25,6 +25,16 @@ A comprehensive Flutter-based client application for interacting with the Google
 - **Context Integration:** Start new sessions directly from a source context.
 - **Search:** Client-side filtering with strict substring matching.
 
+### ⚡ Bulk Operations
+- **Powerful Automation:** Perform complex sequences of actions across hundreds of sessions simultaneously.
+- **Advanced Targeting:** Use the full power of the search and filter system to select target sessions.
+- **Flexible Execution:**
+    - **Parallelism:** Configure multiple concurrent queries to speed up processing.
+    - **Dynamic Delays:** Adjust inter-job wait times (ms, s, min) in real-time.
+    - **Execution Control:** Set limits, skip offsets, randomize orders, and toggle 'stop-on-error' behavior.
+- **Real-time Monitoring:** Activity logs, progress bars, and estimated time remaining calculations keep you informed.
+- **Action Sequencing:** Chain multiple operations (e.g., *Refresh -> Quick Reply -> Mark as Read*) for each session.
+
 ### 🛠️ Developer Tools (Dev Mode)
 Enabled via the Settings screen, **Dev Mode** unlocks powerful inspection tools:
 - **API Viewer:** Real-time inspection of HTTP requests and responses (headers, bodies, status codes) with sensitive token redaction.
@@ -70,6 +80,18 @@ Create and save filter presets to organize your workspace efficiently.
 Start new tasks with specific modes (Plan, Question, Automate) using the creation wizard.
 ![New Session](docs/Screenshot_20260110_201004.png)
 
+### Bulk Actions Configuration
+Configure complex automation workflows with advanced targeting and execution controls.
+![Bulk Actions Config](docs/Screenshot_20260110_234928.png)
+
+### Bulk Execution Progress
+Monitor real-time progress, logs, and estimated time for long-running bulk operations.
+![Bulk Progress](docs/Screenshot_20260110_235057.png)
+
+### Action Library
+Choose from a wide variety of supported actions to build your automation sequence.
+![Action Library](docs/Screenshot_20260110_235146.png)
+
 ## Architecture
 
 The application is built with **Flutter** and follows a scalable, maintainable architecture:
@@ -77,6 +99,7 @@ The application is built with **Flutter** and follows a scalable, maintainable a
 - **State Management:** **Provider** pattern.
     - `SessionProvider`: Manages session state, pagination, and implements a **2-minute cache** to optimize network usage.
     - `AuthProvider`: Handles credential persistence and validation.
+    - `BulkActionExecutor`: Manages the queue and state of long-running bulk operations.
     - `DevModeProvider`: Toggles developer tooling visibility.
 - **Networking:** Custom `JulesClient` service wrapping the `http` package, handling:
     - Automatic pagination (following `nextPageToken`).
@@ -93,8 +116,9 @@ lib/
 ├── services/
 │   ├── jules_client.dart     # Core API client
 │   ├── auth_provider.dart    # Auth state management
+│   ├── bulk_action_executor.dart # Bulk operation management
 │   └── session_provider.dart # Session business logic & caching
-├── models/                   # Data models (Session, Source, Activity, Media)
+├── models/                   # Data models (Session, Source, Activity, Media, Bulk)
 ├── ui/
 │   ├── screens/              # Full-screen widgets (SessionList, Detail, Login)
 │   └── widgets/              # Reusable components (ApiViewer, NewSessionDialog)
