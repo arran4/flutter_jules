@@ -3,6 +3,7 @@ enum FilterType {
   source,
   flag, // New, Updated, Unread
   prStatus, // PR: Open, Closed, Merged, etc.
+  branch,
   text,
 }
 

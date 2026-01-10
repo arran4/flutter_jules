@@ -103,9 +103,11 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
 
-        // PR Status (for Open/Draft - non-final states)
+        // PR Status (for Open/Draft/Merged)
         if (session.prStatus != null &&
-            (session.prStatus == 'Open' || session.prStatus == 'Draft'))
+            (session.prStatus == 'Open' ||
+                session.prStatus == 'Draft' ||
+                session.prStatus == 'Merged'))
           _buildChip(
             context,
             label: 'PR: ${session.prStatus}',
@@ -115,7 +117,9 @@ class SessionMetaPills extends StatelessWidget {
             ),
             backgroundColor: session.prStatus == 'Draft'
                 ? Colors.amber.shade50
-                : Colors.blue.shade50,
+                : (session.prStatus == 'Merged'
+                    ? Colors.purple.shade50
+                    : Colors.blue.shade50),
             filterToken: FilterToken(
               id: 'prStatus:${session.prStatus}',
               type: FilterType.prStatus,
@@ -145,8 +149,8 @@ class SessionMetaPills extends StatelessWidget {
             label: session.sourceContext.githubRepoContext!.startingBranch,
             avatar: const Icon(Icons.call_split, size: 16),
             filterToken: FilterToken(
-              id: 'text:${session.sourceContext.githubRepoContext!.startingBranch}',
-              type: FilterType.text,
+              id: 'branch:${session.sourceContext.githubRepoContext!.startingBranch}',
+              type: FilterType.branch,
               label: session.sourceContext.githubRepoContext!.startingBranch,
               value: session.sourceContext.githubRepoContext!.startingBranch,
             ),
@@ -180,6 +184,21 @@ class SessionMetaPills extends StatelessWidget {
       padding: compact ? const EdgeInsets.all(0) : null,
       visualDensity: compact ? VisualDensity.compact : null,
     );
+
+    if (filterToken != null) {
+      chip = Draggable<FilterToken>(
+        data: filterToken,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Opacity(
+            opacity: 0.8,
+            child: chip,
+          ),
+        ),
+        childWhenDragging: chip,
+        child: chip,
+      );
+    }
 
     if (filterToken == null && sortField == null) return chip;
 

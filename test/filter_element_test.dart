@@ -193,41 +193,32 @@ void main() {
 
   group('FilterElementBuilder - Remove Tests', () {
     test('Remove only element returns null', () {
-      final root = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.removeFilter(
-        root,
-        LabelElement('Unread', 'unread'),
-      );
+      final target = LabelElement('Unread', 'unread');
+      final result = FilterElementBuilder.removeFilter(target, target);
 
       expect(result, isNull);
     });
 
     test('Remove from OR reduces to single element', () {
-      final root = OrElement([
-        LabelElement('Unread', 'unread'),
-        LabelElement('New', 'new'),
-      ]);
+      final keep = LabelElement('Unread', 'unread');
+      final remove = LabelElement('New', 'new');
+      final root = OrElement([keep, remove]);
 
-      final result = FilterElementBuilder.removeFilter(
-        root,
-        LabelElement('New', 'new'),
-      );
+      final result = FilterElementBuilder.removeFilter(root, remove);
 
       expect(result, isA<LabelElement>());
       expect((result as LabelElement).value, 'unread');
     });
 
     test('Remove from OR with 3+ elements', () {
+      final remove = LabelElement('New', 'new');
       final root = OrElement([
         LabelElement('Unread', 'unread'),
-        LabelElement('New', 'new'),
+        remove,
         LabelElement('Updated', 'updated'),
       ]);
 
-      final result = FilterElementBuilder.removeFilter(
-        root,
-        LabelElement('New', 'new'),
-      );
+      final result = FilterElementBuilder.removeFilter(root, remove);
 
       expect(result, isA<OrElement>());
       final or = result as OrElement;
@@ -235,29 +226,28 @@ void main() {
     });
 
     test('Remove from AND reduces correctly', () {
+      final remove = HasPrElement();
       final root = AndElement([
         LabelElement('Unread', 'unread'),
-        HasPrElement(),
+        remove,
       ]);
 
-      final result = FilterElementBuilder.removeFilter(root, HasPrElement());
+      final result = FilterElementBuilder.removeFilter(root, remove);
 
       expect(result, isA<LabelElement>());
     });
 
     test('Remove from nested structure', () {
+      final remove = LabelElement('New', 'new');
       final root = AndElement([
         OrElement([
           LabelElement('Unread', 'unread'),
-          LabelElement('New', 'new'),
+          remove,
         ]),
         HasPrElement(),
       ]);
 
-      final result = FilterElementBuilder.removeFilter(
-        root,
-        LabelElement('New', 'new'),
-      );
+      final result = FilterElementBuilder.removeFilter(root, remove);
 
       expect(result, isA<AndElement>());
       final and = result as AndElement;
@@ -271,11 +261,8 @@ void main() {
 
   group('FilterElementBuilder - Toggle NOT Tests', () {
     test('Toggle NOT on simple element', () {
-      final root = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.toggleNot(
-        root,
-        LabelElement('Unread', 'unread'),
-      );
+      final target = LabelElement('Unread', 'unread');
+      final result = FilterElementBuilder.toggleNot(target, target);
 
       expect(result, isA<NotElement>());
       final not = result as NotElement;
@@ -283,26 +270,23 @@ void main() {
     });
 
     test('Toggle NOT twice returns to original', () {
-      final root = LabelElement('Unread', 'unread');
-      final wrapped = FilterElementBuilder.toggleNot(
-        root,
-        LabelElement('Unread', 'unread'),
-      );
-      final unwrapped = FilterElementBuilder.toggleNot(
-        wrapped,
-        LabelElement('Unread', 'unread'),
-      );
+      final target = LabelElement('Unread', 'unread');
+      final wrapped = FilterElementBuilder.toggleNot(target, target);
+      // wrapped is NotElement(target)
 
-      expect(unwrapped, isA<LabelElement>());
+      final unwrapped = FilterElementBuilder.toggleNot(wrapped, target);
+
+      expect(unwrapped, equals(target));
     });
 
     test('Toggle NOT in nested structure', () {
+      final target = HasPrElement();
       final root = AndElement([
         LabelElement('Unread', 'unread'),
-        HasPrElement(),
+        target,
       ]);
 
-      final result = FilterElementBuilder.toggleNot(root, HasPrElement());
+      final result = FilterElementBuilder.toggleNot(root, target);
 
       expect(result, isA<AndElement>());
       final and = result as AndElement;
@@ -341,6 +325,24 @@ void main() {
       expect(result, isA<AndElement>());
       final and = result as AndElement;
       expect(and.children[0], isA<LabelElement>()); // OR unwrapped
+    });
+
+    test('Simplify flattens nested ORs', () {
+      final nested = OrElement([
+        LabelElement('A', 'a'),
+        OrElement([
+          LabelElement('B', 'b'),
+          LabelElement('C', 'c'),
+        ]),
+        LabelElement('D', 'd'),
+      ]);
+
+      final result = FilterElementBuilder.simplify(nested);
+
+      expect(result, isA<OrElement>());
+      final or = result as OrElement;
+      expect(or.children.length, 4);
+      expect(or.children.every((c) => c is! OrElement), isTrue);
     });
   });
 

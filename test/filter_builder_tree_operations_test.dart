@@ -109,5 +109,35 @@ void main() {
       final not = and.children[0] as NotElement;
       expect(not.child, equals(child1));
     });
+
+    test('Context Menu Operation: Add Alternative', () {
+      final target = LabelElement('New', 'new');
+      final alternative = LabelElement('Updated', 'updated');
+      final root = AndElement([target]);
+
+      // Operation simulating 'Add Alternative'
+      final newTree = FilterElementBuilder.groupFilters(
+          root, target, alternative,
+          isAnd: false);
+      final simplified = FilterElementBuilder.simplify(newTree);
+
+      expect(simplified, isA<OrElement>());
+      final or = simplified as OrElement;
+      expect(or.children, contains(target));
+      expect(or.children, contains(alternative));
+    });
+
+    test('Context Menu Operation: Toggle NOT Invert/Uninvert', () {
+      final a = LabelElement('A', 'a');
+
+      // Invert
+      final inverted = FilterElementBuilder.toggleNot(a, a);
+      expect(inverted, isA<NotElement>());
+      expect((inverted as NotElement).child, equals(a));
+
+      // Uninvert
+      final uninverted = FilterElementBuilder.toggleNot(inverted, a);
+      expect(uninverted, equals(a));
+    });
   });
 }
