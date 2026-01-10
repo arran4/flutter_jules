@@ -4,22 +4,22 @@ import 'media.dart';
 class PlanStep {
   final String id;
   final String title;
-  final String description;
-  final int index;
+  final String? description;
+  final int? index;
 
   PlanStep({
     required this.id,
     required this.title,
-    required this.description,
-    required this.index,
+    this.description,
+    this.index,
   });
 
   factory PlanStep.fromJson(Map<String, dynamic> json) {
     return PlanStep(
       id: getStringPropOrThrow(json, 'id'),
       title: getStringPropOrThrow(json, 'title'),
-      description: getStringPropOrThrow(json, 'description'),
-      index: getNumberPropOrThrow(json, 'index')!.toInt(),
+      description: getStringPropOrDefault(json, 'description', null),
+      index: getNumberPropOrDefault<num?>(json, 'index', null)?.toInt(),
     );
   }
 

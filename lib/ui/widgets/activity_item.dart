@@ -411,6 +411,16 @@ class _ActivityItemState extends State<ActivityItem> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
+            if (activity.planGenerated != null)
+              ...activity.planGenerated!.plan.steps.map(
+                (step) => ListTile(
+                  leading: CircleAvatar(child: Text('${step.index ?? 0 + 1}')),
+                  title: Text(step.title),
+                  subtitle: step.description != null
+                      ? Text(step.description!)
+                      : null,
+                ),
+              ),
             if (activity.progressUpdated != null) ...[
               MarkdownBody(data: activity.progressUpdated!.description),
               const SizedBox(height: 8),
@@ -472,14 +482,15 @@ class _ActivityItemState extends State<ActivityItem> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       color: Colors.black.withValues(alpha: 0.05),
-                      child: Text(
-                        artifact.changeSet!.gitPatch!.unidiffPatch,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
+                      child: MarkdownBody(
+                        data:
+                            "```diff\n${artifact.changeSet!.gitPatch!.unidiffPatch}\n```",
+                        styleSheet: MarkdownStyleSheet(
+                          code: const TextStyle(
+                            fontFamily: 'monospace',
+                            fontSize: 11,
+                          ),
                         ),
-                        maxLines: 15,
-                        overflow: TextOverflow.ellipsis,
                       ),
                     ),
                     const SizedBox(height: 8),
@@ -509,6 +520,14 @@ class _ActivityItemState extends State<ActivityItem> {
                     ),
                   ],
                 ],
+                if (artifact.media != null) ...[
+                  if (artifact.media!.data.isNotEmpty)
+                    Image.memory(
+                      base64Decode(artifact.media!.data),
+                      errorBuilder: (context, error, stackTrace) =>
+                          const Icon(Icons.error),
+                    )
+                ]
               ],
             if (activity.unmappedProps.isNotEmpty) ...[
               Builder(
