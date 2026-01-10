@@ -145,7 +145,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
       builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
     );
 
-    if (result == null) return;
+    if (result != null) {
+      await _handleNewSessionResult(result);
+    }
+  }
+
+  Future<void> _resubmitSession(Session oldSession) async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: oldSession),
+    );
+
+    if (result != null) {
+      await _handleNewSessionResult(result);
+    }
+  }
+
+  Future<void> _handleNewSessionResult(NewSessionResult result) async {
     if (!mounted) return;
 
     if (result.isDraft) {
@@ -2070,6 +2086,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ],
         ),
         onTap: () => _quickReply(session),
+      ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.replay_circle_filled),
+            SizedBox(width: 8),
+            Text('Resubmit as new session'),
+          ],
+        ),
+        onTap: () {
+          Future.delayed(Duration.zero, () {
+            if (context.mounted) _resubmitSession(session);
+          });
+        },
       ),
       PopupMenuItem(
         child: const Row(
