@@ -136,6 +136,10 @@ class FilterElementBuilder {
   // Helper methods
 
   static bool _isSameFilterType(FilterElement a, FilterElement b) {
+    // NOT elements should always be isolated (ANDed), never ORed
+    if (a is NotElement || b is NotElement) {
+      return false;
+    }
     return a.groupingType == b.groupingType;
   }
 
@@ -258,6 +262,66 @@ class FilterElementBuilder {
     }).toList();
 
     return constructor(newChildren);
+  }
+
+  /// Replaces a specific filter element with a new one
+  static FilterElement? replaceFilter(
+    FilterElement? root,
+    FilterElement target,
+    FilterElement replacement,
+  ) {
+    if (root == null) return null;
+
+    if (root == target) {
+      return replacement;
+    }
+
+    if (root is AndElement) {
+      final newChildren =
+          root.children.map((c) => replaceFilter(c, target, replacement) ?? c).toList();
+      return AndElement(newChildren);
+    } else if (root is OrElement) {
+      final newChildren =
+          root.children.map((c) => replaceFilter(c, target, replacement) ?? c).toList();
+      return OrElement(newChildren);
+    } else if (root is NotElement) {
+      final newChild = replaceFilter(root.child, target, replacement);
+      return NotElement(newChild ?? root.child);
+    }
+
+    return root;
+  }
+
+  /// Groups two filters with either AND or OR
+  static FilterElement? groupFilters(
+      FilterElement? root, FilterElement target, FilterElement source,
+      {bool isAnd = false}) {
+    if (root == null) return root;
+
+    final group =
+        isAnd ? AndElement([target, source]) : OrElement([target, source]);
+    
+    // If source is already in the tree (Move operation), remove it first
+    // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
+    // However, replaceFilter replaces 'target' with 'group'. 
+    // If 'source' was elsewhere, we should remove it separately.
+    
+    return replaceFilter(root, target, group);
+  }
+
+  /// Adds a filter to an existing composite element
+  static FilterElement? addFilterToComposite(
+      FilterElement? root, FilterElement targetComposite, FilterElement source) {
+    if (root == null) return null;
+    
+    // We can use replaceFilter to swap the old composite with a new one containing the source
+    if (targetComposite is AndElement) {
+       return replaceFilter(root, targetComposite, AndElement([...targetComposite.children, source]));
+    } else if (targetComposite is OrElement) {
+       return replaceFilter(root, targetComposite, OrElement([...targetComposite.children, source]));
+    }
+    
+    return root;
   }
 
   /// Migrate from old FilterToken list to new FilterElement tree

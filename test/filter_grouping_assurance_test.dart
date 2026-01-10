@@ -123,6 +123,22 @@ void main() {
       expect(root, isA<AndElement>());
       final and = root as AndElement;
       expect(and.children.length, 2);
+      expect(and.children[1], isA<LabelElement>());
+    });
+
+    test('NOT filters should group with AND', () {
+      // Exclude New AND Exclude Updated
+      // label:new (exclude) -> NotElement(LabelElement('new'))
+      // label:updated (exclude) -> NotElement(LabelElement('updated'))
+      
+      var root = FilterElementBuilder.addFilter(null, NotElement(LabelElement('New', 'new')));
+      root = FilterElementBuilder.addFilter(root, NotElement(LabelElement('Updated', 'updated')));
+
+      expect(root, isA<AndElement>(), reason: "Multiple NOT filters should be AND'd");
+      final and = root as AndElement;
+      expect(and.children.length, 2);
+      expect(and.children[0], isA<NotElement>());
+      expect(and.children[1], isA<NotElement>());
     });
 
     test('PR Statuses should group with OR', () {
