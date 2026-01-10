@@ -688,6 +688,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
       ),
     );
 
+    // PR Statuses
+    final prStatuses = sessions
+        .where((s) => s.prStatus != null)
+        .map((s) => s.prStatus!)
+        .toSet();
+    for (final status in prStatuses) {
+      suggestions.add(
+        FilterToken(
+          id: 'prStatus:$status',
+          type: FilterType.text,
+          label: 'PR: $status',
+          value: status,
+        ),
+      );
+    }
+
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
     _availableSuggestions.sort((a, b) {
@@ -1370,6 +1386,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 if (metadata.labels.any((l) => l.toLowerCase() == val)) {
                   return true;
                 }
+                if (session.prStatus?.toLowerCase() == val) {
+                  return true;
+                }
                 // Check title/name
                 if (session.title?.toLowerCase().contains(val) ?? false) {
                   return true;
@@ -1918,6 +1937,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           label: 'Watching',
                                                           value: 'watched',
                                                         ),
+                                                  ),
+                                                if (session.prStatus != null)
+                                                  _buildPill(
+                                                    context,
+                                                    label:
+                                                        'PR: ${session.prStatus}',
+                                                    backgroundColor:
+                                                        Colors.blueGrey,
+                                                    textColor: Colors.white,
+                                                    filterToken: FilterToken(
+                                                      id:
+                                                          'prStatus:${session.prStatus}',
+                                                      type: FilterType.text,
+                                                      label:
+                                                          'PR: ${session.prStatus}',
+                                                      value: session.prStatus!,
+                                                    ),
                                                   ),
 
                                                 // Render custom labels

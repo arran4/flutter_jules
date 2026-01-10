@@ -69,6 +69,7 @@ class Session {
   final int? currentStep;
   final int? totalSteps;
   final String? currentAction;
+  final String? prStatus;
 
   Session({
     required this.name,
@@ -87,6 +88,7 @@ class Session {
     this.currentStep,
     this.totalSteps,
     this.currentAction,
+    this.prStatus,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -143,6 +145,7 @@ class Session {
         null,
       )?.toInt(),
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
+      prStatus: getStringPropOrDefault(json, 'prStatus', null),
     );
   }
 
@@ -175,7 +178,48 @@ class Session {
     if (currentStep != null) map['currentStep'] = currentStep;
     if (totalSteps != null) map['totalSteps'] = totalSteps;
     if (currentAction != null) map['currentAction'] = currentAction;
+    if (prStatus != null) map['prStatus'] = prStatus;
     return map;
+  }
+
+  Session copyWith({
+    String? name,
+    String? id,
+    String? prompt,
+    SourceContext? sourceContext,
+    String? title,
+    bool? requirePlanApproval,
+    AutomationMode? automationMode,
+    String? createTime,
+    String? updateTime,
+    SessionState? state,
+    String? url,
+    List<SessionOutput>? outputs,
+    List<Media>? images,
+    int? currentStep,
+    int? totalSteps,
+    String? currentAction,
+    String? prStatus,
+  }) {
+    return Session(
+      name: name ?? this.name,
+      id: id ?? this.id,
+      prompt: prompt ?? this.prompt,
+      sourceContext: sourceContext ?? this.sourceContext,
+      title: title ?? this.title,
+      requirePlanApproval: requirePlanApproval ?? this.requirePlanApproval,
+      automationMode: automationMode ?? this.automationMode,
+      createTime: createTime ?? this.createTime,
+      updateTime: updateTime ?? this.updateTime,
+      state: state ?? this.state,
+      url: url ?? this.url,
+      outputs: outputs ?? this.outputs,
+      images: images ?? this.images,
+      currentStep: currentStep ?? this.currentStep,
+      totalSteps: totalSteps ?? this.totalSteps,
+      currentAction: currentAction ?? this.currentAction,
+      prStatus: prStatus ?? this.prStatus,
+    );
   }
 }
 
