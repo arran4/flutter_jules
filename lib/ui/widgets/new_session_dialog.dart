@@ -613,7 +613,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         } catch (e) {
           errorCount++;
           // Log the error or show a notification
-          print('Failed to create session for ${source.name}: $e');
+          // print('Failed to create session for ${source.name}: $e');
         }
       }
 

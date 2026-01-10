@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:provider/provider.dart';
 import '../../models.dart';
-import '../../services/source_provider.dart';
 import '../../utils/search_helper.dart';
 
 class MultiSelectDialog extends StatefulWidget {
