@@ -133,33 +133,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  Future<void> _createSession() async {
-    // Determine pre-selected source from active filters
-    String? preSelectedSource = widget.sourceFilter;
-    if (preSelectedSource == null) {
-      final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
-      final activeSource = activeFilters.firstWhere(
-        (f) => f.type == FilterType.source && f.mode == FilterMode.include,
-        orElse: () => const FilterToken(
-          id: '',
-          type: FilterType.flag,
-          label: '',
-          value: '',
-        ),
-      );
-      if (activeSource.id.isNotEmpty) {
-        preSelectedSource = activeSource.value;
-      }
-    }
-
-    final NewSessionResult? result = await showDialog<NewSessionResult>(
-      context: context,
-      builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
-    );
-
-    if (result == null) return;
-    if (!mounted) return;
-
+  Future<void> _handleNewSessionResult(NewSessionResult result) async {
     if (result.isDraft) {
       Provider.of<MessageQueueProvider>(
         context,
@@ -323,6 +297,65 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
 
     await performCreate();
+  }
+
+  Future<void> _createSession() async {
+    // Determine pre-selected source from active filters
+    String? preSelectedSource = widget.sourceFilter;
+    if (preSelectedSource == null) {
+      final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
+      final activeSource = activeFilters.firstWhere(
+        (f) => f.type == FilterType.source && f.mode == FilterMode.include,
+        orElse: () => const FilterToken(
+          id: '',
+          type: FilterType.flag,
+          label: '',
+          value: '',
+        ),
+      );
+      if (activeSource.id.isNotEmpty) {
+        preSelectedSource = activeSource.value;
+      }
+    }
+
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
+    );
+
+    if (result == null) return;
+    if (!mounted) return;
+
+    await _handleNewSessionResult(result);
+  }
+
+  Future<void> _resubmitSession(
+    Session session, {
+    bool hideOriginal = false,
+  }) async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: session),
+    );
+
+    if (result == null) return;
+    if (!mounted) return;
+
+    await _handleNewSessionResult(result);
+
+    if (hideOriginal) {
+      if (!mounted) return;
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.token != null) {
+        Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).toggleHidden(session.id, auth.token!);
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("Original session hidden")),
+        );
+      }
+    }
   }
 
   Future<void> _quickReply(Session session) async {
@@ -2352,6 +2385,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
       context: context,
       position: finalPosition,
       items: [
+        // New Resubmit Actions
+        const PopupMenuItem(
+          value: 'resubmit',
+          child: Row(
+            children: [
+              Icon(Icons.restart_alt),
+              SizedBox(width: 8),
+              Text('Resubmit as New Session'),
+            ],
+          ),
+        ),
+        const PopupMenuItem(
+          value: 'resubmit_hide',
+          child: Row(
+            children: [
+              Icon(Icons.restart_alt_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit and Hide'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
 
         PopupMenuItem(
           child: Row(
@@ -2589,7 +2644,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ],
       ],
     ).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
+      if (value == 'resubmit') {
+        Future.delayed(Duration.zero, () {
+          if (context.mounted) _resubmitSession(session);
+        });
+      } else if (value == 'resubmit_hide') {
+        Future.delayed(Duration.zero, () {
+          if (context.mounted) _resubmitSession(session, hideOriginal: true);
+        });
+      } else if (value == 'source' && session.sourceContext.source.isNotEmpty) {
         _openSourceUrl(session.sourceContext.source);
       }
     });

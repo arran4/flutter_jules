@@ -18,6 +18,7 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
+import '../widgets/new_session_dialog.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -556,6 +557,61 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _resubmitSession({bool hideOriginal = false}) async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: _session),
+    );
+
+    if (result == null) return;
+    if (!mounted) return;
+
+    if (result.isDraft) {
+      Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      ).addCreateSessionRequest(result.session, isDraft: true);
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Draft saved")));
+    } else {
+      // Use Queue for robust creation (consistency with list screen drafts/offline handling)
+      // "Fire and forget" from UI perspective, but user stays on current page.
+      // Or show "Creating..."?
+      // Simple approach: Add to queue (non-draft) which triggers send.
+      Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      ).addCreateSessionRequest(result.session, isDraft: false);
+
+      // Trigger send if online
+       final auth = Provider.of<AuthProvider>(context, listen: false);
+       if (auth.client != null) { // auth.client is always non-null but check for safety
+          Provider.of<MessageQueueProvider>(context, listen: false).sendQueue(auth.client);
+       }
+
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("New session queued for creation")));
+    }
+
+    if (hideOriginal) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      if (auth.token != null) {
+        Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).toggleHidden(_session.id, auth.token!);
+        if (mounted) {
+          Navigator.pop(context); // Go back to list
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Original session hidden")),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -738,9 +794,35 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     listen: false,
                   ).toggleHidden(_session.id, auth.token!);
                   if (context.mounted) Navigator.pop(context);
+                } else if (value == 'resubmit') {
+                  _resubmitSession();
+                } else if (value == 'resubmit_hide') {
+                  _resubmitSession(hideOriginal: true);
                 }
               },
               itemBuilder: (context) => [
+                const PopupMenuItem(
+                  value: 'resubmit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.restart_alt, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Resubmit as New'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'resubmit_hide',
+                  child: Row(
+                    children: [
+                      Icon(Icons.restart_alt_outlined, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Resubmit and Hide'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+
                 if (_session.outputs != null &&
                     _session.outputs!.any((o) => o.pullRequest != null))
                   const PopupMenuItem(
