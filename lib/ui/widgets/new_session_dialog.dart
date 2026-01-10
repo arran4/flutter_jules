@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
-import 'multi_select_dialog.dart';
 import '../../models.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
@@ -34,7 +33,7 @@ class NewSessionResult {
 class _NewSessionDialogState extends State<NewSessionDialog> {
   // Form State
   String _prompt = '';
-  Source? _selectedSource;
+  final List<Source> _selectedSources = [];
   String? _selectedBranch;
   String _imageUrl = '';
 
@@ -222,10 +221,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (!mounted) return;
 
     setState(() {
+      Source? initialSource;
       // Priority 1: Filter provided by widget (e.g. from context)
       if (widget.sourceFilter != null) {
         try {
-          _selectedSource = sources.firstWhere(
+          initialSource = sources.firstWhere(
             (s) => s.name == widget.sourceFilter,
           );
         } catch (e) {
@@ -234,53 +234,61 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       // Priority 1.5: Draft value
-      if (_selectedSource == null && widget.initialSession != null) {
+      if (initialSource == null && widget.initialSession != null) {
         try {
-          _selectedSource = sources.firstWhere(
+          initialSource = sources.firstWhere(
             (s) => s.name == widget.initialSession!.sourceContext.source,
           );
         } catch (_) {}
       }
 
       // Priority 2: Already selected source (if re-fetching)
-      if (_selectedSource != null) {
+      if (_selectedSources.isNotEmpty) {
         try {
-          _selectedSource = sources.firstWhere(
-            (s) => s.name == _selectedSource!.name,
-          );
+          final rehydrated = _selectedSources
+              .map((ss) => sources.firstWhere((s) => s.name == ss.name))
+              .toList();
+          _selectedSources.clear();
+          _selectedSources.addAll(rehydrated);
         } catch (_) {
-          _selectedSource = null;
+          _selectedSources.clear();
         }
       }
 
       // Priority 3: Last used source from prefs
-      if (_selectedSource == null) {
+      if (initialSource == null && _selectedSources.isEmpty) {
         final lastSource = prefs.getString('new_session_last_source');
         if (lastSource != null) {
           try {
-            _selectedSource = sources.firstWhere((s) => s.name == lastSource);
+            initialSource = sources.firstWhere((s) => s.name == lastSource);
           } catch (_) {}
         }
       }
 
       // Priority 4: 'sources/default' or first available
-      if (_selectedSource == null && sources.isNotEmpty) {
+      if (initialSource == null &&
+          _selectedSources.isEmpty &&
+          sources.isNotEmpty) {
         try {
-          _selectedSource = sources.firstWhere(
+          initialSource = sources.firstWhere(
             (s) => s.name == 'sources/default',
           );
         } catch (_) {
-          _selectedSource = sources.first;
+          initialSource = sources.first;
         }
       }
 
+      if (initialSource != null && _selectedSources.isEmpty) {
+        _selectedSources.add(initialSource);
+      }
+
       // Update Controller
-      if (_selectedSource != null) {
-        _sourceController.text = _getSourceDisplayLabel(_selectedSource!);
+      if (_selectedSources.length == 1) {
+        _sourceController.text = _getSourceDisplayLabel(_selectedSources.first);
       }
 
       // Validated selection
-      if (_selectedSource != null && widget.initialSession != null) {
+      if (_selectedSources.isNotEmpty && widget.initialSession != null) {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
@@ -390,7 +398,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   void _selectSource(Source source) {
     setState(() {
-      _selectedSource = source;
+      _selectedSources.clear();
+      _selectedSources.add(source);
       _sourceController.text = _getSourceDisplayLabel(source);
       _updateBranchFromSource();
     });
@@ -400,12 +409,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   void _updateBranchFromSource({SharedPreferences? prefs}) {
     // If selected source is null, clear branch
-    if (_selectedSource == null) {
+    if (_selectedSources.isEmpty) {
       _selectedBranch = 'main';
       return;
     }
 
-    final repo = _selectedSource!.githubRepo;
+    final repo = _selectedSources.first.githubRepo;
     if (repo == null) {
       _selectedBranch = 'main';
       return;
@@ -440,73 +449,125 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _create() async {
-    if (_selectedSource == null) return;
+    if (_selectedSources.isEmpty) return;
 
-    // Save preferences
-    final prefs = await SharedPreferences.getInstance();
-    await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-    await prefs.setString('new_session_last_source', _selectedSource!.name);
-    if (_selectedBranch != null) {
-      await prefs.setString('new_session_last_branch', _selectedBranch!);
-    }
-    await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+    // Handle single session creation
+    if (_selectedSources.length == 1) {
+      // Save preferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+      await prefs.setString(
+          'new_session_last_source', _selectedSources.first.name);
+      if (_selectedBranch != null) {
+        await prefs.setString('new_session_last_branch', _selectedBranch!);
+      }
+      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
-    // Handle Image
-    List<Media>? images;
-    if (_imageUrl.isNotEmpty) {
-      try {
-        final response = await http.get(Uri.parse(_imageUrl));
-        if (response.statusCode == 200) {
-          final bytes = response.bodyBytes;
-          final base64Image = base64Encode(bytes);
-          final mimeType = response.headers['content-type'] ?? 'image/png';
+      // Handle Image
+      List<Media>? images;
+      if (_imageUrl.isNotEmpty) {
+        try {
+          final response = await http.get(Uri.parse(_imageUrl));
+          if (response.statusCode == 200) {
+            final bytes = response.bodyBytes;
+            final base64Image = base64Encode(bytes);
+            final mimeType = response.headers['content-type'] ?? 'image/png';
 
-          images = [Media(data: base64Image, mimeType: mimeType)];
-        } else {
+            images = [Media(data: base64Image, mimeType: mimeType)];
+          } else {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content:
+                      Text('Failed to load image: ${response.statusCode}'),
+                ),
+              );
+              return;
+            }
+          }
+        } catch (e) {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to load image: ${response.statusCode}'),
-              ),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
             return;
           }
         }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
-          return;
+      }
+
+      final newSession = _buildSession(images: images);
+
+      if (mounted) {
+        Navigator.pop(context, NewSessionResult(newSession, isDraft: false));
+      }
+    } else {
+      // Handle bulk session creation
+      // Save preferences (without source)
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+      if (_selectedBranch != null) {
+        await prefs.setString('new_session_last_branch', _selectedBranch!);
+      }
+      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+
+      if (!mounted) return;
+
+      // Show progress dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) {
+          return const AlertDialog(
+            title: Text('Creating Sessions...'),
+            content: Center(
+              child: CircularProgressIndicator(),
+            ),
+          );
+        },
+      );
+
+      int successCount = 0;
+      int errorCount = 0;
+
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      for (final source in _selectedSources) {
+        try {
+          final newSession = _buildSession(source: source);
+          await auth.client.createSession(newSession);
+          successCount++;
+        } catch (e) {
+          errorCount++;
+          // Log the error or show a notification
+          // print('Failed to create session for ${source.name}: $e');
         }
       }
-    }
 
-    // Map Mode to API fields
-    bool requirePlanApproval = false;
-    AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+      if (!mounted) return;
 
-    switch (_selectedModeIndex) {
-      case 0: // Question
-        requirePlanApproval = false;
-        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-        break;
-      case 1: // Plan
-        requirePlanApproval = true;
-        automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-        break;
-      case 2: // Start
-        requirePlanApproval = false;
-        automationMode = _autoCreatePr
-            ? AutomationMode.AUTO_CREATE_PR
-            : AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-        break;
-    }
+      // Close the progress dialog
+      Navigator.pop(context);
 
-    final newSession = _buildSession(images: images);
-
-    if (mounted) {
-      Navigator.pop(context, NewSessionResult(newSession, isDraft: false));
+      // Show summary
+      showDialog(
+        context: context,
+        builder: (context) {
+          return AlertDialog(
+            title: const Text('Bulk Creation Complete'),
+            content: Text(
+              '$successCount sessions created successfully.\n$errorCount sessions failed.',
+            ),
+            actions: [
+              TextButton(
+                onPressed: () {
+                  Navigator.pop(context);
+                  Navigator.pop(context);
+                },
+                child: const Text('OK'),
+              ),
+            ],
+          );
+        },
+      );
     }
   }
 
@@ -538,7 +599,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       id: widget.initialSession?.id ?? '',
       prompt: _prompt,
       sourceContext: SourceContext(
-        source: _selectedSource?.name ?? 'sources/default',
+        source: _selectedSources.isNotEmpty
+            ? _selectedSources.first.name
+            : 'sources/default',
         githubRepoContext: GitHubRepoContext(
           startingBranch: _selectedBranch ?? 'main',
         ),
@@ -571,75 +634,25 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _showBulkDialog(List<Source> sources) async {
-    final selectedSources = await showDialog<List<Source>>(
+    final result = await showDialog<List<Source>>(
       context: context,
-      builder: (context) => MultiSelectDialog(sources: sources),
+      builder: (context) => MultiSelectDialog(
+        sources: sources,
+        initialSelected: _selectedSources,
+      ),
     );
 
-    if (!mounted) return;
-
-    if (selectedSources != null && selectedSources.isNotEmpty) {
-      // Save preferences (without source)
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      if (_selectedBranch != null) {
-        await prefs.setString('new_session_last_branch', _selectedBranch!);
-      }
-      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
-
-      // Show progress dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return const AlertDialog(
-            title: Text('Creating Sessions...'),
-            content: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        },
-      );
-
-      int successCount = 0;
-      int errorCount = 0;
-
-      for (final source in selectedSources) {
-        try {
-          final newSession = _buildSession(source: source);
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          await auth.client.createSession(newSession);
-          successCount++;
-        } catch (e) {
-          errorCount++;
-          // Log the error or show a notification
-          // print('Failed to create session for ${source.name}: $e');
-        }
-      }
-
+    if (result != null) {
       if (!mounted) return;
-
-      // Close the progress dialog
-      Navigator.pop(context);
-
-      // Show summary
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Bulk Creation Complete'),
-            content: Text(
-              '$successCount sessions created successfully.\n$errorCount sessions failed.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+      setState(() {
+        _selectedSources.clear();
+        _selectedSources.addAll(result);
+        if (_selectedSources.length == 1) {
+          _sourceController.text =
+              _getSourceDisplayLabel(_selectedSources.first);
+        }
+        _updateBranchFromSource();
+      });
     }
   }
 
@@ -670,7 +683,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       id: '', // Server assigns
       prompt: _prompt,
       sourceContext: SourceContext(
-        source: source?.name ?? _selectedSource!.name,
+        source: source?.name ?? _selectedSources.first.name,
         githubRepoContext: GitHubRepoContext(
           startingBranch: _selectedBranch ?? 'main',
         ),
@@ -894,9 +907,57 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                   ],
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
+                if (_selectedSources.length > 1)
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                        children: [
+                          Text(
+                            '${_selectedSources.length} Repositories Selected',
+                            style: Theme.of(context).textTheme.titleMedium,
+                          ),
+                          TextButton(
+                            onPressed: () => _showBulkDialog(sources),
+                            child: const Text('Edit'),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        height: 100,
+                        child: Container(
+                          decoration: BoxDecoration(
+                            border: Border.all(color: Colors.grey),
+                            borderRadius: BorderRadius.circular(4),
+                          ),
+                          child: SingleChildScrollView(
+                            child: Wrap(
+                              spacing: 8,
+                              runSpacing: 8,
+                              children: _selectedSources.map((source) {
+                                return Chip(
+                                  label: Text(
+                                    '${_getSourceDisplayLabel(source)}${_selectedBranch != null ? ' ($_selectedBranch)' : ''}',
+                                  ),
+                                  onDeleted: () {
+                                    setState(() {
+                                      _selectedSources.remove(source);
+                                    });
+                                  },
+                                );
+                              }).toList(),
+                            ),
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+                if (_selectedSources.length <= 1)
+                  Row(
+                    children: [
+                      Expanded(
                       flex: 3,
                       child: LayoutBuilder(
                         builder: (context, constraints) {
@@ -962,7 +1023,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                   ],
                 ),
-
                 const SizedBox(height: 24),
 
                 // Actions
@@ -990,7 +1050,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_prompt.isNotEmpty && _selectedSource != null)
+                      onPressed: (_prompt.isNotEmpty && _selectedSources.isNotEmpty)
                           ? _create
                           : null,
                       child: const Text('Send Now'),

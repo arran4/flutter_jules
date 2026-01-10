@@ -4,8 +4,13 @@ import '../../utils/search_helper.dart';
 
 class MultiSelectDialog extends StatefulWidget {
   final List<Source> sources;
+  final List<Source> initialSelected;
 
-  const MultiSelectDialog({super.key, required this.sources});
+  const MultiSelectDialog({
+    super.key,
+    required this.sources,
+    this.initialSelected = const [],
+  });
 
   @override
   State<MultiSelectDialog> createState() => _MultiSelectDialogState();
@@ -20,6 +25,7 @@ class _MultiSelectDialogState extends State<MultiSelectDialog> {
   void initState() {
     super.initState();
     _filteredSources = widget.sources;
+    _selectedSourceNames.addAll(widget.initialSelected.map((s) => s.name));
     _searchController.addListener(_onSearchChanged);
   }
 
