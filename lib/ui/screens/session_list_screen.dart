@@ -1667,7 +1667,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               });
                             },
                             availableSuggestions: _availableSuggestions,
-                            onOpenFilterMenu: _showFilterMenu,
                             activeSorts: _activeSorts,
                             onSortsChanged: (sorts) {
                               setState(() {

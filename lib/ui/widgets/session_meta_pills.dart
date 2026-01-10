@@ -182,7 +182,12 @@ class SessionMetaPills extends StatelessWidget {
                 children: [
                   const Icon(Icons.filter_alt, size: 16),
                   const SizedBox(width: 8),
-                  Text("Filter '${filterToken.label}'"),
+                  Expanded(
+                    child: Text(
+                      "Filter '${filterToken.label}'",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               onTap: () => onAddFilter?.call(
@@ -200,7 +205,12 @@ class SessionMetaPills extends StatelessWidget {
                 children: [
                   const Icon(Icons.filter_alt_off, size: 16),
                   const SizedBox(width: 8),
-                  Text("Exclude '${filterToken.label}'"),
+                  Expanded(
+                    child: Text(
+                      "Exclude '${filterToken.label}'",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
                 ],
               ),
               onTap: () => onAddFilter?.call(

@@ -21,7 +21,6 @@ class AdvancedSearchBar extends StatefulWidget {
 
   final List<FilterToken>
       availableSuggestions; // All possible filters for autocomplete
-  final VoidCallback? onOpenFilterMenu;
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -34,7 +33,6 @@ class AdvancedSearchBar extends StatefulWidget {
     required this.searchText,
     required this.onSearchChanged,
     required this.availableSuggestions,
-    required this.onOpenFilterMenu,
     required this.activeSorts,
     required this.onSortsChanged,
     this.showBookmarksButton = true,
@@ -163,9 +161,23 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   void _showOverlay() {
     _removeOverlay();
 
+    // Group suggestions by type
+    final flagSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.flag)
+        .toList();
+    final statusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.status)
+        .toList();
+    final sourceSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.source)
+        .toList();
+    final otherSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.text)
+        .toList();
+
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        width: 300,
+        width: 600, // Wider for multi-column layout
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
@@ -174,51 +186,70 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             elevation: 4,
             borderRadius: BorderRadius.circular(8),
             child: Container(
-              constraints: const BoxConstraints(maxHeight: 200),
+              constraints: const BoxConstraints(maxHeight: 300),
               decoration: BoxDecoration(
                 color: Colors.white,
                 borderRadius: BorderRadius.circular(8),
                 border: Border.all(color: Colors.grey.shade300),
               ),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: _filteredSuggestions.length,
-                itemBuilder: (context, index) {
-                  final suggestion = _filteredSuggestions[index];
-                  final isHighlighted = index == _highlightedIndex;
-
-                  return InkWell(
-                    onTap: () => _selectSuggestion(suggestion),
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 8,
-                      ),
-                      decoration: BoxDecoration(
-                        color: isHighlighted
-                            ? Colors.blue.shade50
-                            : Colors.transparent,
-                      ),
-                      child: Row(
-                        children: [
-                          Icon(
-                            _getIconForType(suggestion.type),
-                            size: 16,
-                            color: _getColorForType(suggestion.type),
+              child: SingleChildScrollView(
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Flags column
+                      if (flagSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Flags',
+                            flagSuggestions,
+                            Colors.orange,
                           ),
-                          const SizedBox(width: 8),
-                          Expanded(
-                            child: Text(
-                              suggestion.label,
-                              style: const TextStyle(fontSize: 13),
-                            ),
+                        ),
+                      if (flagSuggestions.isNotEmpty && 
+                          (statusSuggestions.isNotEmpty || sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+                      
+                      // Status column
+                      if (statusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Status',
+                            statusSuggestions,
+                            Colors.blue,
                           ),
-                        ],
-                      ),
-                    ),
-                  );
-                },
+                        ),
+                      if (statusSuggestions.isNotEmpty && sourceSuggestions.isNotEmpty)
+                        const VerticalDivider(width: 1),
+                      
+                      // Sources column
+                      if (sourceSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Sources',
+                            sourceSuggestions,
+                            Colors.green,
+                          ),
+                        ),
+                      
+                      // Other/Text column
+                      if (otherSuggestions.isNotEmpty) ...[
+                        if (flagSuggestions.isNotEmpty || 
+                            statusSuggestions.isNotEmpty || 
+                            sourceSuggestions.isNotEmpty)
+                          const VerticalDivider(width: 1),
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Other',
+                            otherSuggestions,
+                            Colors.purple,
+                          ),
+                        ),
+                      ],
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
@@ -227,6 +258,68 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     );
 
     Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  Widget _buildFilterColumn(
+    String title,
+    List<FilterToken> suggestions,
+    Color accentColor,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        Padding(
+          padding: const EdgeInsets.only(left: 8, bottom: 4),
+          child: Text(
+            title,
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: accentColor,
+            ),
+          ),
+        ),
+        ...suggestions.asMap().entries.map((entry) {
+          final suggestion = entry.value;
+          final globalIndex = _filteredSuggestions.indexOf(suggestion);
+          final isHighlighted = globalIndex == _highlightedIndex;
+
+          return InkWell(
+            onTap: () => _selectSuggestion(suggestion),
+            child: Container(
+              padding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 6,
+              ),
+              decoration: BoxDecoration(
+                color: isHighlighted
+                    ? Colors.blue.shade50
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(4),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    _getIconForType(suggestion.type),
+                    size: 14,
+                    color: accentColor,
+                  ),
+                  const SizedBox(width: 6),
+                  Expanded(
+                    child: Text(
+                      suggestion.label,
+                      style: const TextStyle(fontSize: 12),
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }).toList(),
+      ],
+    );
   }
 
   void _removeOverlay() {
@@ -295,18 +388,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
-  Color _getColorForType(FilterType type) {
-    switch (type) {
-      case FilterType.flag:
-        return Colors.green;
-      case FilterType.status:
-        return Colors.blue;
-      case FilterType.source:
-        return Colors.purple;
-      case FilterType.text:
-        return Colors.grey;
-    }
-  }
 
   @override
   Widget build(BuildContext context) {
@@ -365,14 +446,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 ),
 
                 const SizedBox(width: 8),
-
-                // Filter menu button
-                if (widget.onOpenFilterMenu != null)
-                  IconButton(
-                    icon: const Icon(Icons.filter_alt_outlined),
-                    onPressed: widget.onOpenFilterMenu,
-                    tooltip: 'Show Filter Options',
-                  ),
 
                 // Bookmarks button
                 if (widget.showBookmarksButton)
