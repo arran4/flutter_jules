@@ -28,14 +28,22 @@ enum FilterState {
   bool get isExplicit => priority == 2;
 
   static FilterState combineAnd(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value < b.value ? a : b;
   }
 
   static FilterState combineOr(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value > b.value ? a : b;
   }
 
@@ -151,7 +159,9 @@ class AndElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineAnd(result, children[i].evaluate(context));
@@ -195,7 +205,9 @@ class OrElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineOr(result, children[i].evaluate(context));
@@ -342,7 +354,9 @@ class LabelElement extends FilterElement {
     if (value == 'watched') return 'label:watched';
 
     // Group "queue" type labels (Drafts, Pending)
-    if (value == 'draft' || value == 'pending') return 'label:queue';
+    if (value == 'draft' || value == 'pending') {
+      return 'label:queue';
+    }
 
     // Standard labels group together (New, Updated, Unread)
     return 'label:standard';
@@ -416,10 +430,14 @@ class LabelElement extends FilterElement {
     } else if (v == 'draft') {
       if (queueProvider != null) {
         try {
-          if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
+          if (queueProvider.getDrafts(session.id).isNotEmpty) {
+            matched = true;
+          }
         } catch (_) {}
       }
-      if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
+      if (session.id.startsWith('DRAFT_CREATION_')) {
+        matched = true;
+      }
     } else {
       matched = metadata.labels.any(
         (l) => l.toLowerCase() == value.toLowerCase(),
@@ -478,7 +496,9 @@ class StatusElement extends FilterElement {
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
-      if (context.metadata.isHidden) return FilterState.implicitOut;
+      if (context.metadata.isHidden) {
+        return FilterState.implicitOut;
+      }
       return FilterState.explicitOut;
     }
 
