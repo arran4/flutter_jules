@@ -21,8 +21,7 @@ class FilterElementWidget extends StatelessWidget {
     FilterElement target,
     FilterDropAction action,
     bool isCopy,
-  )?
-  onDrop;
+  )? onDrop;
 
   const FilterElementWidget({
     super.key,
@@ -110,9 +109,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is PrStatusElement) {
       final label = element.label;
-      final displayLabel = label.toUpperCase().startsWith('PR:')
-          ? label
-          : 'PR: $label';
+      final displayLabel =
+          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
       return _buildLeafElement(
         context,
         element,
@@ -432,11 +430,11 @@ class FilterElementWidget extends StatelessWidget {
 
     final isCtrlPressed =
         ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlLeft,
-        ) ||
-        ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlRight,
-        );
+              LogicalKeyboardKey.controlLeft,
+            ) ||
+            ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
+              LogicalKeyboardKey.controlRight,
+            );
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
