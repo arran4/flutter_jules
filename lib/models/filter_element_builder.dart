@@ -120,6 +120,7 @@ class FilterElementBuilder {
     if (root == null) return null;
 
     if (root is AndElement || root is OrElement) {
+      final isAnd = root is AndElement;
       final children =
           root is AndElement ? root.children : (root as OrElement).children;
 
@@ -130,9 +131,19 @@ class FilterElementBuilder {
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
 
-      return root is AndElement
-          ? AndElement(simplifiedChildren)
-          : OrElement(simplifiedChildren);
+      // Flatten nested groups of the same type
+      final flatChildren = <FilterElement>[];
+      for (final child in simplifiedChildren) {
+        if (isAnd && child is AndElement) {
+          flatChildren.addAll(child.children);
+        } else if (!isAnd && child is OrElement) {
+          flatChildren.addAll(child.children);
+        } else {
+          flatChildren.add(child);
+        }
+      }
+
+      return isAnd ? AndElement(flatChildren) : OrElement(flatChildren);
     } else if (root is NotElement) {
       final simplified = simplify(root.child);
       return simplified != null ? NotElement(simplified) : null;
@@ -362,6 +373,9 @@ class FilterElementBuilder {
           break;
         case FilterType.prStatus:
           element = PrStatusElement(token.label, token.value.toString());
+          break;
+        case FilterType.branch:
+          element = BranchElement(token.label, token.value.toString());
           break;
         case FilterType.text:
           element = TextElement(token.value.toString());
