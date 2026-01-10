@@ -1,4 +1,4 @@
-# Jules Client
+# Flutter Jules Client
 
 A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.
 
@@ -34,13 +34,6 @@ A comprehensive Flutter-based client application for interacting with the Google
     - **Execution Control:** Set limits, skip offsets, randomize orders, and toggle 'stop-on-error' behavior.
 - **Real-time Monitoring:** Activity logs, progress bars, and estimated time remaining calculations keep you informed.
 - **Action Sequencing:** Chain multiple operations (e.g., *Refresh -> Quick Reply -> Mark as Read*) for each session.
-
-### 🛠️ Developer Tools (Dev Mode)
-Enabled via the Settings screen, **Dev Mode** unlocks powerful inspection tools:
-- **API Viewer:** Real-time inspection of HTTP requests and responses (headers, bodies, status codes) with sensitive token redaction.
-
-- **Model Viewer:** Inspect the raw JSON data underlying any Session or Activity object.
-- **Deep Linking:** Long-press on chat items for advanced context actions.
 
 ## Screenshots
 
@@ -92,40 +85,6 @@ Monitor real-time progress, logs, and estimated time for long-running bulk opera
 Choose from a wide variety of supported actions to build your automation sequence.
 ![Action Library](docs/Screenshot_20260110_235146.png)
 
-## Architecture
-
-The application is built with **Flutter** and follows a scalable, maintainable architecture:
-
-- **State Management:** **Provider** pattern.
-    - `SessionProvider`: Manages session state, pagination, and implements a **2-minute cache** to optimize network usage.
-    - `AuthProvider`: Handles credential persistence and validation.
-    - `BulkActionExecutor`: Manages the queue and state of long-running bulk operations.
-    - `DevModeProvider`: Toggles developer tooling visibility.
-- **Networking:** Custom `JulesClient` service wrapping the `http` package, handling:
-    - Automatic pagination (following `nextPageToken`).
-    - Error handling with detailed logging.
-    - JSON serialization/deserialization.
-- **Data Safety:** Uses `dartobjectutils` for robust, type-safe JSON parsing, preventing runtime crashes due to unexpected API schema changes.
-
-## Project Structure
-
-```text
-lib/
-├── main.dart                 # Application entry point & Provider setup
-├── models.dart               # Export file for all models
-├── services/
-│   ├── jules_client.dart     # Core API client
-│   ├── auth_provider.dart    # Auth state management
-│   ├── bulk_action_executor.dart # Bulk operation management
-│   └── session_provider.dart # Session business logic & caching
-├── models/                   # Data models (Session, Source, Activity, Media, Bulk)
-├── ui/
-│   ├── screens/              # Full-screen widgets (SessionList, Detail, Login)
-│   └── widgets/              # Reusable components (ApiViewer, NewSessionDialog)
-└── utils/
-    └── search_helper.dart    # Generic search & filtering logic
-```
-
 ## Setup & Development
 
 ### Prerequisites
@@ -138,27 +97,12 @@ If building on Linux, ensure the following system dependencies are installed:
 ```bash
 sudo apt-get install clang cmake ninja-build pkg-config libgtk-3-dev libsecret-1-dev
 ```
-*Note: The app requires `uses-material-design: true` in `pubspec.yaml` for correct icon rendering.*
-
-### Installation
-
-1.  Clone the repository.
-2.  Install dependencies:
-    ```bash
-    flutter pub get
-    ```
 
 ### Running the App
 
 **Desktop & Mobile:**
 ```bash
 flutter run
-```
-
-**Web (Headless/Verification):**
-To run in a headless web environment (e.g., for automated verification):
-```bash
-flutter run -d web-server --web-port=8080
 ```
 
 ### Building for Release
@@ -187,9 +131,3 @@ The project enforces strict code quality standards via CI:
     ```bash
     flutter test
     ```
-
-## Configuration
-
-On first launch, the app routes to the Login screen. Credentials (API Key, Bearer Token) are stored securely on the device.
-- To reset credentials, use the **Logout** button in the Settings screen.
-- **Dev Mode** can be toggled in Settings to enable advanced debugging features.
