@@ -146,6 +146,36 @@
     ]
   },
   {
+    "name": "Open PRs",
+    "description": "Sessions with open pull requests.",
+    "filters": [
+      {
+        "id": "prStatus:Open",
+        "type": "text",
+        "label": "PR: Open",
+        "value": "Open",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Merged PRs",
+    "description": "Sessions with merged pull requests.",
+    "filters": [
+      {
+        "id": "prStatus:Merged",
+        "type": "text",
+        "label": "PR: Merged",
+        "value": "Merged",
+        "mode": "include"
+      }
+    ],
     "name": "Completed w/ PR (Unread/Updated)",
     "description": "Completed sessions with PRs that are unread or recently updated.",
     "filters": [
@@ -186,6 +216,17 @@
     ]
   },
   {
+    "name": "Closed PRs",
+    "description": "Sessions with closed pull requests.",
+    "filters": [
+      {
+        "id": "prStatus:Closed",
+        "type": "text",
+        "label": "PR: Closed",
+        "value": "Closed",
+        "mode": "include"
+      }
+    ],
     "name": "Completed w/o PR (Unread/Updated)",
     "description": "Completed sessions without PRs that are unread or recently updated.",
     "filters": [
