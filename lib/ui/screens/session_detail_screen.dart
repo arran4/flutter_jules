@@ -18,6 +18,7 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
+import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
@@ -557,6 +558,120 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _createNewSessionFromCurrent() async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: _session),
+    );
+
+    if (result == null || !mounted) return;
+
+    _handleNewSessionResult(result);
+  }
+
+  Future<void> _handleNewSessionResult(NewSessionResult result) async {
+    if (result.isDraft) {
+      // Handle drafts
+      final queueProvider =
+          Provider.of<MessageQueueProvider>(context, listen: false);
+      for (final session in result.sessions) {
+        queueProvider.addCreateSessionRequest(session, isDraft: true);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+          content:
+              Text('${result.sessions.length} draft(s) saved successfully')));
+      return;
+    }
+
+    // Handle session creation
+    final sessionsToCreate = result.sessions;
+    if (sessionsToCreate.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+            content:
+                Text('Starting creation of ${sessionsToCreate.length} sessions...')),
+      );
+    }
+
+    for (final session in sessionsToCreate) {
+      await _performCreate(session, sessionsToCreate.length > 1);
+    }
+  }
+
+  Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      await client.createSession(sessionToCreate);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session created successfully!')),
+      );
+
+      // Optionally, refresh the main list in the background
+      final sessionProvider =
+          Provider.of<SessionProvider>(context, listen: false);
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      sessionProvider.fetchSessions(client,
+          force: true, shallow: true, authToken: auth.token);
+    } catch (e) {
+      if (!mounted) return;
+
+      bool handled = false;
+      if (e is JulesException && e.responseBody != null) {
+        try {
+          final body = jsonDecode(e.responseBody!);
+          if (body is Map && body.containsKey('error')) {
+            final error = body['error'];
+            if (error is Map) {
+              final status = error['status'];
+              if (status == 'RESOURCE_EXHAUSTED' ||
+                  status == 'UNAVAILABLE') {
+                Provider.of<MessageQueueProvider>(context, listen: false)
+                    .addCreateSessionRequest(
+                  sessionToCreate,
+                  reason: status.toLowerCase(),
+                );
+                if (!isBulk) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                        content: Text(
+                            'API limit reached. Session creation queued.')),
+                  );
+                }
+                handled = true;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!handled) {
+        Provider.of<MessageQueueProvider>(context, listen: false)
+            .addCreateSessionRequest(
+          sessionToCreate,
+          reason: 'creation_failed',
+        );
+        if (!isBulk) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error Creating Session'),
+              content: SelectableText(e.toString()),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -592,6 +707,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'New Session',
+              onPressed: _createNewSessionFromCurrent,
+            ),
             if (_session.outputs != null &&
                 _session.outputs!.any((o) => o.pullRequest != null))
               IconButton(
