@@ -122,7 +122,7 @@ class FilterElementBuilder {
     if (root is AndElement || root is OrElement) {
       final isAnd = root is AndElement;
       final children =
-          root is AndElement ? root.children : (root as OrElement).children;
+          root is AndElement ? root.children : root.children;
 
       // Simplify all children first
       final simplifiedChildren =
