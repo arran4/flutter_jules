@@ -374,6 +374,9 @@ class FilterElementBuilder {
         case FilterType.prStatus:
           element = PrStatusElement(token.label, token.value.toString());
           break;
+        case FilterType.branch:
+          element = BranchElement(token.label, token.value.toString());
+          break;
         case FilterType.text:
           element = TextElement(token.value.toString());
           break;
