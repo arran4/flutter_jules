@@ -389,26 +389,56 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     // Filter Tree (Expanded)
                     Expanded(
                       child: widget.filterTree != null
-                          ? FilterElementWidget(
-                              element: widget.filterTree,
-                              onRemove: (element) {
-                                final newTree =
-                                    FilterElementBuilder.removeFilter(
-                                  widget.filterTree,
-                                  element,
-                                );
-                                final simplified =
-                                    FilterElementBuilder.simplify(newTree);
-                                widget.onFilterTreeChanged(simplified);
-                              },
-                              onToggleNot: (element) {
-                                final newTree = FilterElementBuilder.toggleNot(
-                                  widget.filterTree!,
-                                  element,
-                                );
-                                widget.onFilterTreeChanged(newTree);
-                              },
-                              onTap: null,
+                          ? Theme(
+                              data: Theme.of(context).copyWith(
+                                dividerColor: Colors.transparent,
+                                splashColor: Colors.transparent,
+                                highlightColor: Colors.transparent,
+                              ),
+                              child: ExpansionTile(
+                                title: const Text(
+                                  "Active Filters",
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w500,
+                                    color: Colors.grey,
+                                  ),
+                                ),
+                                tilePadding: EdgeInsets.zero,
+                                childrenPadding: EdgeInsets.zero,
+                                showTrailingIcon: true,
+                                shape: const Border(),
+                                collapsedShape: const Border(),
+                                initiallyExpanded: true,
+                                children: [
+                                  Align(
+                                    alignment: Alignment.topLeft,
+                                    child: FilterElementWidget(
+                                      element: widget.filterTree,
+                                      onRemove: (element) {
+                                        final newTree =
+                                            FilterElementBuilder.removeFilter(
+                                          widget.filterTree,
+                                          element,
+                                        );
+                                        final simplified =
+                                            FilterElementBuilder.simplify(
+                                                newTree);
+                                        widget.onFilterTreeChanged(simplified);
+                                      },
+                                      onToggleNot: (element) {
+                                        final newTree =
+                                            FilterElementBuilder.toggleNot(
+                                          widget.filterTree!,
+                                          element,
+                                        );
+                                        widget.onFilterTreeChanged(newTree);
+                                      },
+                                      onTap: null,
+                                    ),
+                                  ),
+                                ],
+                              ),
                             )
                           : const SizedBox.shrink(),
                     ),
