@@ -985,91 +985,199 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   Widget _buildPill(
     BuildContext context, {
+    required Session session,
+    required CacheMetadata metadata,
     required String label,
     required Color backgroundColor,
     required Color textColor,
     required FilterToken filterToken,
     SortField? sortField,
   }) {
-    return GestureDetector(
-      onSecondaryTapUp: (details) {
-        final RenderBox overlay =
-            Overlay.of(context).context.findRenderObject() as RenderBox;
-        final RelativeRect position = RelativeRect.fromRect(
-          Rect.fromPoints(details.globalPosition, details.globalPosition),
-          Offset.zero & overlay.size,
-        );
+    void showPillMenu(Offset globalPosition) {
+      final queueProvider = Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      );
+      final hasDrafts = queueProvider.getDrafts(session.id).isNotEmpty;
+      final hasPr = session.outputs?.any((o) => o.pullRequest != null) ?? false;
 
-        showMenu(
-          context: context,
-          position: position,
-          items: <PopupMenuEntry>[
-            PopupMenuItem(
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt, size: 16),
-                  const SizedBox(width: 8),
-                  Text("Filter '${filterToken.label}'"),
-                ],
-              ),
-              onTap: () => _addFilterToken(
-                FilterToken(
-                  id: filterToken.id,
-                  type: filterToken.type,
-                  label: filterToken.label,
-                  value: filterToken.value,
-                  mode: FilterMode.include,
+      final List<Map<String, dynamic>> allFlags = [
+        {
+          'id': 'flag:new',
+          'label': 'New',
+          'value': 'new',
+          'active': metadata.isNew,
+        },
+        {
+          'id': 'flag:updated',
+          'label': 'Updated',
+          'value': 'updated',
+          'active': metadata.isUpdated,
+        },
+        {
+          'id': 'flag:unread',
+          'label': 'Unread',
+          'value': 'unread',
+          'active': metadata.isUnread,
+        },
+        {
+          'id': 'flag:watched',
+          'label': 'Watching',
+          'value': 'watched',
+          'active': metadata.isWatched,
+        },
+        {
+          'id': 'flag:draft',
+          'label': 'Has Drafts',
+          'value': 'draft',
+          'active': hasDrafts,
+        },
+        {
+          'id': 'flag:has_pr',
+          'label': 'Has PR',
+          'value': 'has_pr',
+          'active': hasPr,
+        },
+      ];
+
+      final activeFlags = allFlags.where((f) => f['active'] == true).toList();
+      final otherFlags = allFlags.where((f) => f['active'] == false).toList();
+      final customLabels = metadata.labels;
+
+      final List<PopupMenuEntry> menuItems = [];
+
+      void addTokenOptions(FilterToken token, {bool isActive = false}) {
+        menuItems.add(
+          PopupMenuItem(
+            child: Row(
+              children: [
+                Icon(
+                  isActive ? Icons.check_circle : Icons.add_circle_outline,
+                  size: 16,
+                  color: isActive ? Colors.green : null,
                 ),
-              ),
+                const SizedBox(width: 8),
+                Text("Filter ${token.label}"),
+              ],
             ),
-            PopupMenuItem(
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt_off, size: 16),
-                  const SizedBox(width: 8),
-                  Text("Exclude '${filterToken.label}'"),
-                ],
-              ),
-              onTap: () => _addFilterToken(
-                FilterToken(
-                  id: filterToken.id,
-                  type: filterToken.type,
-                  label: filterToken.label,
-                  value: filterToken.value,
-                  mode: FilterMode.exclude,
-                ),
-              ),
-            ),
-            if (sortField != null) ...[
-              const PopupMenuDivider(),
-              PopupMenuItem(
-                child: const Row(
-                  children: [
-                    Icon(Icons.arrow_upward, size: 16),
-                    SizedBox(width: 8),
-                    Text("Sort Ascending"),
-                  ],
-                ),
-                onTap: () => _addSortOption(
-                  SortOption(sortField, SortDirection.ascending),
-                ),
-              ),
-              PopupMenuItem(
-                child: const Row(
-                  children: [
-                    Icon(Icons.arrow_downward, size: 16),
-                    SizedBox(width: 8),
-                    Text("Sort Descending"),
-                  ],
-                ),
-                onTap: () => _addSortOption(
-                  SortOption(sortField, SortDirection.descending),
-                ),
-              ),
-            ],
-          ],
+            onTap: () => _addFilterToken(token.copyWith(mode: FilterMode.include)),
+          ),
         );
-      },
+        menuItems.add(
+          PopupMenuItem(
+            child: Row(
+              children: [
+                const Icon(Icons.remove_circle_outline, size: 16, color: Colors.red),
+                const SizedBox(width: 8),
+                Text("Exclude ${token.label}"),
+              ],
+            ),
+            onTap: () => _addFilterToken(token.copyWith(mode: FilterMode.exclude)),
+          ),
+        );
+      }
+
+      if (activeFlags.isNotEmpty || customLabels.isNotEmpty) {
+        menuItems.add(
+          const PopupMenuItem(
+            enabled: false,
+            child: Text(
+              'ACTIVE LABELS',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                color: Colors.blue,
+              ),
+            ),
+          ),
+        );
+        for (final flag in activeFlags) {
+          addTokenOptions(
+            FilterToken(
+              id: flag['id'],
+              type: FilterType.flag,
+              label: flag['label'],
+              value: flag['value'],
+            ),
+            isActive: true,
+          );
+        }
+        for (final l in customLabels) {
+          addTokenOptions(
+            FilterToken(id: 'text:$l', type: FilterType.text, label: l, value: l),
+            isActive: true,
+          );
+        }
+      }
+
+      if (otherFlags.isNotEmpty) {
+        if (menuItems.isNotEmpty) menuItems.add(const PopupMenuDivider());
+        menuItems.add(
+          const PopupMenuItem(
+            enabled: false,
+            child: Text(
+              'ALTERNATIVES',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                color: Colors.grey,
+              ),
+            ),
+          ),
+        );
+        for (final flag in otherFlags) {
+          addTokenOptions(
+            FilterToken(
+              id: flag['id'],
+              type: FilterType.flag,
+              label: flag['label'],
+              value: flag['value'],
+            ),
+          );
+        }
+      }
+
+      if (sortField != null) {
+        if (menuItems.isNotEmpty) menuItems.add(const PopupMenuDivider());
+        menuItems.add(
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.arrow_upward, size: 16),
+                SizedBox(width: 8),
+                Text("Sort Ascending"),
+              ],
+            ),
+            onTap: () => _addSortOption(SortOption(sortField, SortDirection.ascending)),
+          ),
+        );
+        menuItems.add(
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.arrow_downward, size: 16),
+                SizedBox(width: 8),
+                Text("Sort Descending"),
+              ],
+            ),
+            onTap: () => _addSortOption(SortOption(sortField, SortDirection.descending)),
+          ),
+        );
+      }
+
+      final RenderBox overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
+      final RelativeRect position = RelativeRect.fromRect(
+        Rect.fromPoints(globalPosition, globalPosition),
+        Offset.zero & overlay.size,
+      );
+
+      showMenu(context: context, position: position, items: menuItems);
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapUp: (details) => showPillMenu(details.globalPosition),
       child: Container(
         margin: const EdgeInsets.only(right: 6),
         padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 2),
@@ -1840,6 +1948,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     .isNotEmpty)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: 'DRAFT',
                                                     backgroundColor:
                                                         Colors.orange,
@@ -1855,6 +1965,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 if (metadata.isNew)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: 'NEW',
                                                     backgroundColor:
                                                         Colors.green,
@@ -1873,6 +1985,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     !metadata.isNew)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: 'UPDATED',
                                                     backgroundColor:
                                                         Colors.amber,
@@ -1892,6 +2006,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     !metadata.isUpdated)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: 'UNREAD',
                                                     backgroundColor:
                                                         Colors.blueAccent,
@@ -1907,6 +2023,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 if (metadata.isWatched)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: 'WATCHING',
                                                     backgroundColor:
                                                         Colors.deepPurple,
@@ -1925,6 +2043,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     in metadata.labels)
                                                   _buildPill(
                                                     context,
+                                                    session: session,
+                                                    metadata: metadata,
                                                     label: label.toUpperCase(),
                                                     backgroundColor:
                                                         Colors.grey.shade700,
