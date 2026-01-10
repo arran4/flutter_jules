@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
+import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {
   groupOr,
@@ -22,6 +23,9 @@ class FilterElementWidget extends StatelessWidget {
     FilterDropAction action,
     bool isCopy,
   )? onDrop;
+  final Function(FilterElement target, FilterElement alternative)?
+      onAddAlternative;
+  final bool isNegated;
 
   const FilterElementWidget({
     super.key,
@@ -30,6 +34,8 @@ class FilterElementWidget extends StatelessWidget {
     this.onToggleNot,
     this.onTap,
     this.onDrop,
+    this.onAddAlternative,
+    this.isNegated = false,
   });
 
   @override
@@ -227,6 +233,9 @@ class FilterElementWidget extends StatelessWidget {
                       onToggleNot: onToggleNot,
                       onTap: onTap,
                       onDrop: onDrop,
+                      onAddAlternative: onAddAlternative,
+                      // Children of composite are not negated by the composite itself
+                      isNegated: false,
                     );
                   }).toList(),
                 ),
@@ -308,11 +317,79 @@ class FilterElementWidget extends StatelessWidget {
               onToggleNot: onToggleNot,
               onTap: onTap,
               onDrop: onDrop,
+              onAddAlternative: onAddAlternative,
+              isNegated: true,
             ),
           ),
         ],
       ),
     );
+  }
+
+  void _showContextMenu(
+    BuildContext context,
+    TapUpDetails details,
+    FilterElement element,
+  ) async {
+    final RenderBox overlay =
+        Overlay.of(context).context.findRenderObject() as RenderBox;
+    final alternatives = FilterUtils.getAlternatives(element);
+
+    final items = <PopupMenuEntry<int>>[];
+
+    // 1. Exclude/Include logic
+    items.add(
+      PopupMenuItem(
+        value: 1,
+        child: Text(isNegated ? "Include this" : "Exclude this"),
+      ),
+    );
+
+    if (alternatives.isNotEmpty) {
+      items.add(const PopupMenuDivider());
+      for (int i = 0; i < alternatives.length; i++) {
+        final alt = alternatives[i];
+        String label = "Add Option";
+        if (alt is PrStatusElement) {
+          label = "Add PR: ${alt.label}";
+        } else if (alt is StatusElement) {
+          label = "Add ${alt.label}";
+        } else if (alt is LabelElement) {
+          label = "Add ${alt.label}";
+        } else if (alt is SourceElement) {
+          label = "Add Source: ${alt.label}";
+        }
+
+        items.add(PopupMenuItem(value: 100 + i, child: Text(label)));
+      }
+    }
+
+    final selected = await showMenu<int>(
+      context: context,
+      position: RelativeRect.fromRect(
+        details.globalPosition & Size.zero,
+        Offset.zero & overlay.size,
+      ),
+      items: items,
+    );
+
+    if (selected == null) return;
+
+    if (selected == 1) {
+      // Toggle NOT
+      if (onToggleNot != null) {
+        onToggleNot!(element);
+      }
+    } else if (selected >= 100) {
+      // Alternative selected
+      final altIndex = selected - 100;
+      if (altIndex >= 0 && altIndex < alternatives.length) {
+        final alt = alternatives[altIndex];
+        if (onAddAlternative != null) {
+          onAddAlternative!(element, alt);
+        }
+      }
+    }
   }
 
   Widget _buildLeafVisual(
@@ -323,9 +400,10 @@ class FilterElementWidget extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
-    return InkWell(
+    return GestureDetector(
+      onSecondaryTapUp: (details) =>
+          _showContextMenu(context, details, element),
       onTap: onTap != null ? () => onTap!(element) : null,
-      borderRadius: BorderRadius.circular(16),
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(

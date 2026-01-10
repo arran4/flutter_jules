@@ -547,6 +547,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                     alignment: Alignment.topLeft,
                                     child: FilterElementWidget(
                                       element: widget.filterTree,
+                                      onAddAlternative: (target, alternative) {
+                                        final newTree =
+                                            FilterElementBuilder.groupFilters(
+                                          widget.filterTree,
+                                          target,
+                                          alternative,
+                                          isAnd: false,
+                                        );
+                                        final simplified =
+                                            FilterElementBuilder.simplify(
+                                          newTree,
+                                        );
+                                        widget.onFilterTreeChanged(simplified);
+                                      },
                                       onDrop: (source, target, action,
                                           isCtrlPressed) {
                                         var newTree = widget.filterTree;

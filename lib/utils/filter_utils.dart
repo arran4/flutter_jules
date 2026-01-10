@@ -2,6 +2,8 @@ import '../models/session.dart';
 import '../models/search_filter.dart';
 import '../models/cache_metadata.dart';
 import '../services/message_queue_provider.dart';
+import '../models/filter_element.dart';
+import '../models/enums.dart';
 
 class FilterUtils {
   static bool matches(
@@ -173,5 +175,33 @@ class FilterUtils {
     }
 
     return true;
+  }
+
+  static List<FilterElement> getAlternatives(FilterElement element) {
+    if (element is PrStatusElement) {
+      return [
+        PrStatusElement('Draft', 'draft'),
+        PrStatusElement('Open', 'open'),
+        PrStatusElement('Merged', 'merged'),
+        PrStatusElement('Closed', 'closed'),
+      ].where((e) => e.value != element.value).toList();
+    } else if (element is StatusElement) {
+      return SessionState.values
+          .where((s) => s != SessionState.STATE_UNSPECIFIED)
+          .map((s) => StatusElement(s.displayName, s.name))
+          .where((e) => e.value != element.value)
+          .toList();
+    } else if (element is LabelElement) {
+      final stdLabels = [
+        LabelElement('New', 'new'),
+        LabelElement('Updated', 'updated'),
+        LabelElement('Unread', 'unread'),
+        LabelElement('Hidden', 'hidden'),
+        LabelElement('Watching', 'watched'),
+        LabelElement('Pending', 'pending'),
+      ];
+      return stdLabels.where((e) => e.value != element.value).toList();
+    }
+    return [];
   }
 }
