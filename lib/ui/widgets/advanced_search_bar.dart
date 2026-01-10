@@ -171,6 +171,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final sourceSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.source)
         .toList();
+    final prStatusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.prStatus)
+        .toList();
     final otherSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.text)
         .toList();
@@ -232,13 +235,24 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             Colors.green,
                           ),
                         ),
+                      if (sourceSuggestions.isNotEmpty && 
+                          (prStatusSuggestions.isNotEmpty || otherSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+                      
+                      // PR Status column
+                      if (prStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'PR Status',
+                            prStatusSuggestions,
+                            Colors.purple,
+                          ),
+                        ),
+                      if (prStatusSuggestions.isNotEmpty && otherSuggestions.isNotEmpty)
+                        const VerticalDivider(width: 1),
                       
                       // Other/Text column
                       if (otherSuggestions.isNotEmpty) ...[
-                        if (flagSuggestions.isNotEmpty || 
-                            statusSuggestions.isNotEmpty || 
-                            sourceSuggestions.isNotEmpty)
-                          const VerticalDivider(width: 1),
                         Expanded(
                           child: _buildFilterColumn(
                             'Other',
@@ -345,6 +359,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.source:
         newElement = SourceElement(token.label, token.value.toString());
         break;
+      case FilterType.prStatus:
+        newElement = PrStatusElement(token.label, token.value.toString());
+        break;
       case FilterType.text:
         // Text search is handled separately, not in tree
         return;
@@ -383,6 +400,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.info_outline;
       case FilterType.source:
         return Icons.source;
+      case FilterType.prStatus:
+        return Icons.merge; // PR icon
       case FilterType.text:
         return Icons.text_fields;
     }

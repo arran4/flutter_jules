@@ -363,12 +363,11 @@ class FilterElementBuilder {
         case FilterType.source:
           element = SourceElement(token.label, token.value.toString());
           break;
+        case FilterType.prStatus:
+          element = PrStatusElement(token.label, token.value.toString());
+          break;
         case FilterType.text:
-          if (token.id.startsWith('prStatus:')) {
-            element = PrStatusElement(token.label, token.value.toString());
-          } else {
-            element = TextElement(token.value.toString());
-          }
+          element = TextElement(token.value.toString());
           break;
       }
 
@@ -444,7 +443,7 @@ class FilterElementBuilder {
     } else if (element is PrStatusElement) {
       tokens.add(FilterToken(
         id: 'prStatus:${element.value}',
-        type: FilterType.text,
+        type: FilterType.prStatus,
         label: element.label,
         value: element.value,
         mode: mode,

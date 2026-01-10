@@ -16,6 +16,7 @@ import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
 import '../widgets/api_viewer.dart';
+import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
@@ -608,12 +609,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
-    // PR Statuses (Common ones)
+    // PR Statuses (Common ones - always available to filter by)
     for (final status in ['Open', 'Closed', 'Merged', 'Draft']) {
        suggestions.add(
         FilterToken(
           id: 'prStatus:$status',
-          type: FilterType.text,
+          type: FilterType.prStatus,
           label: 'PR: $status',
           value: status,
         ),
@@ -710,21 +711,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
       ),
     );
 
-    // PR Statuses
-    final prStatuses = sessions
-        .where((s) => s.prStatus != null)
-        .map((s) => s.prStatus!)
-        .toSet();
-    for (final status in prStatuses) {
-      suggestions.add(
-        FilterToken(
-          id: 'prStatus:$status',
-          type: FilterType.text,
-          label: 'PR: $status',
-          value: status,
-        ),
-      );
-    }
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -926,6 +912,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
         return const Icon(Icons.info_outline, size: 16);
       case FilterType.source:
         return const Icon(Icons.source, size: 16);
+      case FilterType.prStatus:
+        return const Icon(Icons.merge, size: 16); // PR icon
       case FilterType.flag:
         return const Icon(Icons.flag, size: 16);
       case FilterType.text:
@@ -940,6 +928,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
         context,
         listen: false,
       ).markAsRead(session.id, auth.token!);
+    }
+  }
+
+  Future<void> _refreshPrStatus(Session session) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Authentication required")),
+      );
+      return;
+    }
+
+    try {
+      await Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      ).refreshPrStatus(session.id, auth.token!);
+      
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text("PR status refreshed")),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to refresh PR status: $e")),
+        );
+      }
     }
   }
 
@@ -1016,6 +1033,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         break;
       case FilterType.source:
         element = SourceElement(token.label, token.value.toString());
+        break;
+      case FilterType.prStatus:
+        element = PrStatusElement(token.label, token.value.toString());
         break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
@@ -1509,6 +1529,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   );
                 },
               ),
+
               PopupMenuButton<String>(
                 onSelected: (value) {
                   if (value == 'full_refresh') {
@@ -1549,6 +1570,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     );
                   } else if (value == 'open_by_id') {
                     _openSessionById();
+                  } else if (value == 'github_status') {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => const GithubQueuePane(),
+                    );
                   }
                 },
                 itemBuilder: (context) {
@@ -1585,6 +1611,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           Icon(Icons.input),
                           SizedBox(width: 8),
                           Text('Open by Session ID'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'github_status',
+                      child: Row(
+                        children: [
+                          Icon(Icons.dashboard_customize),
+                          SizedBox(width: 8),
+                          Text('GitHub Status & Queue'),
                         ],
                       ),
                     ),
@@ -1982,20 +2018,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           value: 'watched',
                                                         ),
                                                   ),
-                                                if (session.prStatus != null)
+                                                // PR Status - only for final states (Closed/Merged)
+                                                if (session.prStatus != null &&
+                                                    (session.prStatus == 'Closed' ||
+                                                        session.prStatus == 'Merged'))
                                                   _buildPill(
                                                     context,
                                                     metadata: metadata,
                                                     session: session,
                                                     label:
-                                                        'PR: ${session.prStatus}',
+                                                        '${session.prStatus}',
                                                     backgroundColor:
-                                                        Colors.blueGrey,
+                                                        session.prStatus == 'Merged'
+                                                            ? Colors.green
+                                                            : Colors.red,
                                                     textColor: Colors.white,
                                                     filterToken: FilterToken(
                                                       id:
                                                           'prStatus:${session.prStatus}',
-                                                      type: FilterType.text,
+                                                      type: FilterType.prStatus,
                                                       label:
                                                           'PR: ${session.prStatus}',
                                                       value: session.prStatus!,
@@ -2447,6 +2488,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 const SnackBar(content: Text("PR URL copied to clipboard")),
               );
             },
+          ),
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.refresh),
+                SizedBox(width: 8),
+                Text('Refresh PR Status'),
+              ],
+            ),
+            onTap: () => _refreshPrStatus(session),
           ),
         ],
         PopupMenuItem(
