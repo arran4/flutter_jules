@@ -6,11 +6,11 @@ import 'package:flutter_jules/ui/widgets/filter_element_widget.dart';
 void main() {
   group('FilterElementWidget Rendering Coverage', () {
     Future<void> pumpElement(WidgetTester tester, FilterElement element) async {
-      await tester.pumpWidget(MaterialApp(
-        home: Scaffold(
-          body: FilterElementWidget(element: element),
+      await tester.pumpWidget(
+        MaterialApp(
+          home: Scaffold(body: FilterElementWidget(element: element)),
         ),
-      ));
+      );
     }
 
     testWidgets('Should render TextElement', (tester) async {
@@ -62,8 +62,9 @@ void main() {
       expect(find.byIcon(Icons.merge_type), findsOneWidget);
     });
 
-    testWidgets('Should handle redundant prefix in PrStatusElement label',
-        (tester) async {
+    testWidgets('Should handle redundant prefix in PrStatusElement label', (
+      tester,
+    ) async {
       final element = PrStatusElement('PR: Draft', 'draft');
       await pumpElement(tester, element);
 
@@ -72,10 +73,7 @@ void main() {
     });
 
     testWidgets('Should render AndElement (Composite)', (tester) async {
-      final element = AndElement([
-        TextElement('A'),
-        TextElement('B'),
-      ]);
+      final element = AndElement([TextElement('A'), TextElement('B')]);
       await pumpElement(tester, element);
 
       expect(find.text('AND'), findsOneWidget);
@@ -85,10 +83,7 @@ void main() {
     });
 
     testWidgets('Should render OrElement (Composite)', (tester) async {
-      final element = OrElement([
-        TextElement('A'),
-        TextElement('B'),
-      ]);
+      final element = OrElement([TextElement('A'), TextElement('B')]);
       await pumpElement(tester, element);
 
       expect(find.text('OR'), findsOneWidget);

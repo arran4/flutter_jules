@@ -5,7 +5,9 @@ import 'search_filter.dart';
 class FilterElementBuilder {
   /// Adds a new filter element to the tree using smart nesting rules
   static FilterElement? addFilter(
-      FilterElement? root, FilterElement newElement) {
+    FilterElement? root,
+    FilterElement newElement,
+  ) {
     // Case 1: Empty root - just return the new element
     if (root == null) {
       return newElement;
@@ -57,10 +59,16 @@ class FilterElementBuilder {
     // Check composite elements
     if (root is AndElement) {
       return _removeFromComposite(
-          root, target, (children) => AndElement(children));
+        root,
+        target,
+        (children) => AndElement(children),
+      );
     } else if (root is OrElement) {
       return _removeFromComposite(
-          root, target, (children) => OrElement(children));
+        root,
+        target,
+        (children) => OrElement(children),
+      );
     } else if (root is NotElement) {
       if (root.child == target) {
         return null;
@@ -112,12 +120,15 @@ class FilterElementBuilder {
     if (root == null) return null;
 
     if (root is AndElement || root is OrElement) {
-      final children =
-          root is AndElement ? root.children : (root as OrElement).children;
+      final children = root is AndElement
+          ? root.children
+          : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren =
-          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
+      final simplifiedChildren = children
+          .map((c) => simplify(c))
+          .whereType<FilterElement>()
+          .toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -178,7 +189,9 @@ class FilterElementBuilder {
   }
 
   static FilterElement _addToAndElement(
-      AndElement root, FilterElement newElement) {
+    AndElement root,
+    FilterElement newElement,
+  ) {
     // ... existing implementation
     // Wait, I should probably copy the existing implementation to be safe since I'm targeting a large block or keep it separate?
     // I can just include _addToAndElement as is if I target around it or reuse the logic.
@@ -192,7 +205,9 @@ class FilterElementBuilder {
   }
 
   static FilterElement _addToAndElementInternal(
-      AndElement root, FilterElement newElement) {
+    AndElement root,
+    FilterElement newElement,
+  ) {
     // Find if there's an OR group of the same type
     final sameTypeOrIndex = root.children.indexWhere((c) {
       if (c is OrElement && c.children.isNotEmpty) {
@@ -207,8 +222,10 @@ class FilterElementBuilder {
 
       if (child is OrElement) {
         // Add to existing OR
-        updatedChildren[sameTypeOrIndex] =
-            OrElement([...child.children, newElement]);
+        updatedChildren[sameTypeOrIndex] = OrElement([
+          ...child.children,
+          newElement,
+        ]);
       } else {
         // Convert single element to OR
         updatedChildren[sameTypeOrIndex] = OrElement([child, newElement]);
@@ -311,12 +328,16 @@ class FilterElementBuilder {
 
   /// Groups two filters with either AND or OR
   static FilterElement? groupFilters(
-      FilterElement? root, FilterElement target, FilterElement source,
-      {bool isAnd = false}) {
+    FilterElement? root,
+    FilterElement target,
+    FilterElement source, {
+    bool isAnd = false,
+  }) {
     if (root == null) return root;
 
-    final group =
-        isAnd ? AndElement([target, source]) : OrElement([target, source]);
+    final group = isAnd
+        ? AndElement([target, source])
+        : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
@@ -327,17 +348,26 @@ class FilterElementBuilder {
   }
 
   /// Adds a filter to an existing composite element
-  static FilterElement? addFilterToComposite(FilterElement? root,
-      FilterElement targetComposite, FilterElement source) {
+  static FilterElement? addFilterToComposite(
+    FilterElement? root,
+    FilterElement targetComposite,
+    FilterElement source,
+  ) {
     if (root == null) return null;
 
     // We can use replaceFilter to swap the old composite with a new one containing the source
     if (targetComposite is AndElement) {
-      return replaceFilter(root, targetComposite,
-          AndElement([...targetComposite.children, source]));
+      return replaceFilter(
+        root,
+        targetComposite,
+        AndElement([...targetComposite.children, source]),
+      );
     } else if (targetComposite is OrElement) {
-      return replaceFilter(root, targetComposite,
-          OrElement([...targetComposite.children, source]));
+      return replaceFilter(
+        root,
+        targetComposite,
+        OrElement([...targetComposite.children, source]),
+      );
     }
 
     return root;
@@ -414,45 +444,55 @@ class FilterElementBuilder {
       // Text elements don't map to tokens in the old system normally,
       // but standard texts might not be tokens.
     } else if (element is LabelElement) {
-      tokens.add(FilterToken(
-        id: 'flag:${element.value}',
-        type: FilterType.flag,
-        label: element.label,
-        value: element.value,
-        mode: mode,
-      ));
+      tokens.add(
+        FilterToken(
+          id: 'flag:${element.value}',
+          type: FilterType.flag,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
     } else if (element is StatusElement) {
-      tokens.add(FilterToken(
-        id: 'status:${element.value}',
-        type: FilterType.status,
-        label: element.label,
-        value: element.value,
-        mode: mode,
-      ));
+      tokens.add(
+        FilterToken(
+          id: 'status:${element.value}',
+          type: FilterType.status,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
     } else if (element is SourceElement) {
-      tokens.add(FilterToken(
-        id: 'source:${element.value}',
-        type: FilterType.source,
-        label: element.label,
-        value: element.value,
-        mode: mode,
-      ));
+      tokens.add(
+        FilterToken(
+          id: 'source:${element.value}',
+          type: FilterType.source,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
     } else if (element is HasPrElement) {
-      tokens.add(FilterToken(
-        id: 'flag:has_pr',
-        type: FilterType.flag,
-        label: 'Has PR',
-        value: 'has_pr',
-        mode: mode,
-      ));
+      tokens.add(
+        FilterToken(
+          id: 'flag:has_pr',
+          type: FilterType.flag,
+          label: 'Has PR',
+          value: 'has_pr',
+          mode: mode,
+        ),
+      );
     } else if (element is PrStatusElement) {
-      tokens.add(FilterToken(
-        id: 'prStatus:${element.value}',
-        type: FilterType.prStatus,
-        label: element.label,
-        value: element.value,
-        mode: mode,
-      ));
+      tokens.add(
+        FilterToken(
+          id: 'prStatus:${element.value}',
+          type: FilterType.prStatus,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
     }
   }
 }

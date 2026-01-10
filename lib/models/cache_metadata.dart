@@ -11,7 +11,7 @@ class CacheMetadata {
   final bool isWatched;
   final bool isHidden;
   final bool
-      hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
+  hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
 
   CacheMetadata({
@@ -65,7 +65,8 @@ class CacheMetadata {
       lastUpdated: json['lastUpdated'] != null
           ? DateTime.parse(json['lastUpdated'])
           : null,
-      labels: (json['labels'] as List<dynamic>?)
+      labels:
+          (json['labels'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

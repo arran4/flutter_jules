@@ -34,14 +34,18 @@ class _FilterElementDemoState extends State<FilterElementDemo> {
 
     // Add first label
     filter = FilterElementBuilder.addFilter(
-        filter, LabelElement('Unread', 'unread'));
+      filter,
+      LabelElement('Unread', 'unread'),
+    );
 
     // Add second label (will create OR)
     filter = FilterElementBuilder.addFilter(filter, LabelElement('New', 'new'));
 
     // Add status (will create AND)
     filter = FilterElementBuilder.addFilter(
-        filter, StatusElement('Completed', 'COMPLETED'));
+      filter,
+      StatusElement('Completed', 'COMPLETED'),
+    );
 
     // Add HasPR
     filter = FilterElementBuilder.addFilter(filter, HasPrElement());
@@ -56,8 +60,10 @@ class _FilterElementDemoState extends State<FilterElementDemo> {
 
   void _handleRemove(FilterElement element) {
     setState(() {
-      _currentFilter =
-          FilterElementBuilder.removeFilter(_currentFilter, element);
+      _currentFilter = FilterElementBuilder.removeFilter(
+        _currentFilter,
+        element,
+      );
       _currentFilter = FilterElementBuilder.simplify(_currentFilter);
     });
   }
@@ -138,9 +144,9 @@ class _FilterElementDemoState extends State<FilterElementDemo> {
             const SizedBox(height: 8),
             Text(
               'This demonstrates how filters are rendered with proper nesting.',
-              style: Theme.of(context).textTheme.bodyMedium?.copyWith(
-                    color: Colors.grey[600],
-                  ),
+              style: Theme.of(
+                context,
+              ).textTheme.bodyMedium?.copyWith(color: Colors.grey[600]),
             ),
             const SizedBox(height: 24),
 
@@ -252,7 +258,8 @@ class _FilterElementDemoState extends State<FilterElementDemo> {
                     ),
                     const SizedBox(height: 8),
                     const Text(
-                        '• Filters of the same type are grouped with OR'),
+                      '• Filters of the same type are grouped with OR',
+                    ),
                     const Text('• Different types are combined with AND'),
                     const Text('• Click ❌ to remove a filter'),
                     const Text('• Click ↶ on NOT to unwrap'),

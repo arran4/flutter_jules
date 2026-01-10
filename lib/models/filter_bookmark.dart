@@ -30,8 +30,9 @@ class FilterBookmark {
     } else if (json.containsKey('filterTree') && json['filterTree'] != null) {
       // Temporary backward compatibility during migration if json is still on disk
       try {
-        final tree =
-            FilterElement.fromJson(json['filterTree'] as Map<String, dynamic>);
+        final tree = FilterElement.fromJson(
+          json['filterTree'] as Map<String, dynamic>,
+        );
         expression = tree.toExpression();
       } catch (_) {}
     }
