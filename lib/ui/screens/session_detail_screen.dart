@@ -1063,7 +1063,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               child: Padding(
                 padding: const EdgeInsets.symmetric(vertical: 8.0),
                 child: Text(
-                  "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
+                  _isLoading
+                      ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
+                      : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
                         color:
                             DateTime.now().difference(updateTime).inMinutes > 15
@@ -1672,9 +1674,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                                 final timeStr = _session.updateTime != null
                                     ? "Updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.updateTime!).toLocal())}"
                                     : "Updating...";
-                                if (_isLoading && _loadingStatus.isNotEmpty) {
-                                  return Text("$timeStr ($_loadingStatus)");
-                                }
                                 return Text(timeStr);
                               },
                             ),
