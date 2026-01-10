@@ -114,38 +114,39 @@ class SessionPreviewModal extends StatelessWidget {
                       ],
 
                       // Source Details (Foldable)
-                      Card(
-                        elevation: 0,
-                        shape: RoundedRectangleBorder(
-                          side: BorderSide(color: Colors.grey.shade300),
-                          borderRadius: BorderRadius.circular(8),
-                        ),
-                        child: ExpansionTile(
-                          title: const Text(
-                            "Source Details",
-                            style: TextStyle(fontWeight: FontWeight.bold),
+                      if (session.sourceContext != null)
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(
+                            side: BorderSide(color: Colors.grey.shade300),
+                            borderRadius: BorderRadius.circular(8),
                           ),
-                          leading: const Icon(Icons.code),
-                          children: [
-                            ListTile(
-                              title: const Text("Source"),
-                              subtitle: Text(session.sourceContext.source),
+                          child: ExpansionTile(
+                            title: const Text(
+                              "Source Details",
+                              style: TextStyle(fontWeight: FontWeight.bold),
                             ),
-                            if (session.sourceContext.githubRepoContext !=
-                                null) ...[
-                              if (session.sourceContext.githubRepoContext!
-                                  .startingBranch.isNotEmpty)
-                                ListTile(
-                                  title: const Text("Branch"),
-                                  subtitle: Text(
-                                    session.sourceContext.githubRepoContext!
-                                        .startingBranch,
+                            leading: const Icon(Icons.code),
+                            children: [
+                              ListTile(
+                                title: const Text("Source"),
+                                subtitle: Text(session.sourceContext!.source),
+                              ),
+                              if (session.sourceContext!.githubRepoContext !=
+                                  null) ...[
+                                if (session.sourceContext!.githubRepoContext!
+                                    .startingBranch.isNotEmpty)
+                                  ListTile(
+                                    title: const Text("Branch"),
+                                    subtitle: Text(
+                                      session.sourceContext!.githubRepoContext!
+                                          .startingBranch,
+                                    ),
                                   ),
-                                ),
+                              ],
                             ],
-                          ],
+                          ),
                         ),
-                      ),
                       const SizedBox(height: 16),
 
                       const Text(

@@ -617,7 +617,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
 
     // Sources (from sessions)
-    final sources = sessions.map((s) => s.sourceContext.source).toSet();
+    final sources = sessions
+        .where((s) => s.sourceContext != null)
+        .map((s) => s.sourceContext!.source)
+        .toSet();
     for (final source in sources) {
       if (source.startsWith("sources/github/")) {
         suggestions.add(
@@ -791,8 +794,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
           break;
         case SortField.source:
-          cmp = a.data.sourceContext.source.compareTo(
-            b.data.sourceContext.source,
+          cmp = (a.data.sourceContext?.source ?? '').compareTo(
+            b.data.sourceContext?.source ?? '',
           );
           break;
         case SortField.status:
@@ -2448,8 +2451,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ],
       ],
     ).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
-        _openSourceUrl(session.sourceContext.source);
+      if (value == 'source' && session.sourceContext?.source.isNotEmpty == true) {
+        _openSourceUrl(session.sourceContext!.source);
       }
     });
   }

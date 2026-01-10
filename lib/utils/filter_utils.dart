@@ -58,14 +58,14 @@ class FilterUtils {
 
       if (includes.isNotEmpty) {
         final matchesAny = includes.any(
-          (f) => session.sourceContext.source == f.value,
+          (f) => session.sourceContext?.source == f.value,
         );
         if (!matchesAny) return false;
       }
 
       if (excludes.isNotEmpty) {
         final matchesAny = excludes.any(
-          (f) => session.sourceContext.source == f.value,
+          (f) => session.sourceContext?.source == f.value,
         );
         if (matchesAny) return false;
       }

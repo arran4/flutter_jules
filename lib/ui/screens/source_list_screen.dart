@@ -142,7 +142,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
     _lastUsed.clear();
 
     for (final session in sessions) {
-      final sourceName = session.sourceContext.source;
+      if (session.sourceContext == null) continue;
+      final sourceName = session.sourceContext!.source;
       _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
 
       DateTime? sessionTime;

@@ -439,12 +439,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _create() async {
-    if (_selectedSource == null) return;
-
     // Save preferences
     final prefs = await SharedPreferences.getInstance();
     await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-    await prefs.setString('new_session_last_source', _selectedSource!.name);
+    if (_selectedSource != null) {
+      await prefs.setString('new_session_last_source', _selectedSource!.name);
+    }
     if (_selectedBranch != null) {
       prefs.setString('new_session_last_branch', _selectedBranch!);
     }
@@ -507,12 +507,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       name: '', // Server assigns
       id: '', // Server assigns
       prompt: _promptController.text,
-      sourceContext: SourceContext(
-        source: _selectedSource!.name,
-        githubRepoContext: GitHubRepoContext(
-          startingBranch: _selectedBranch ?? 'main',
-        ),
-      ),
+      sourceContext: _selectedSource == null
+          ? null
+          : SourceContext(
+              source: _selectedSource!.name,
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: _selectedBranch ?? 'main',
+              ),
+            ),
       requirePlanApproval: requirePlanApproval,
       automationMode: automationMode,
       images: images,
@@ -550,12 +552,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       name: widget.initialSession?.name ?? '',
       id: widget.initialSession?.id ?? '',
       prompt: _promptController.text,
-      sourceContext: SourceContext(
-        source: _selectedSource?.name ?? 'sources/default',
-        githubRepoContext: GitHubRepoContext(
-          startingBranch: _selectedBranch ?? 'main',
-        ),
-      ),
+      sourceContext: _selectedSource == null
+          ? null
+          : SourceContext(
+              source: _selectedSource!.name,
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: _selectedBranch ?? 'main',
+              ),
+            ),
       requirePlanApproval: requirePlanApproval,
       automationMode: automationMode,
     );
@@ -571,7 +575,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       name: '',
       id: '',
       prompt: '',
-      sourceContext: SourceContext(source: ''),
     );
     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
@@ -849,11 +852,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               ),
                             )
                             .toList(),
-                        onChanged: (val) {
-                          setState(() {
-                            _selectedBranch = val;
-                          });
-                        },
+                        onChanged: (_selectedSource == null)
+                            ? null
+                            : (val) {
+                                setState(() {
+                                  _selectedBranch = val;
+                                });
+                              },
                       ),
                     ),
                   ],
@@ -888,10 +893,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_promptController.text.isNotEmpty &&
-                              _selectedSource != null)
-                          ? _create
-                          : null,
+                      onPressed:
+                          (_promptController.text.isNotEmpty) ? _create : null,
                       child: const Text('Send Now'),
                     ),
                   ],

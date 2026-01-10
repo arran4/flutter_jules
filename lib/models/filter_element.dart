@@ -524,7 +524,11 @@ class SourceElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.sourceContext.source.toLowerCase() ==
+    if (context.session.sourceContext == null) {
+      if (context.metadata.isHidden) return FilterState.implicitOut;
+      return FilterState.explicitOut;
+    }
+    final matches = context.session.sourceContext!.source.toLowerCase() ==
         value.toLowerCase();
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -598,7 +602,7 @@ class BranchElement extends FilterElement {
   @override
   FilterState evaluate(FilterContext context) {
     final branch =
-        context.session.sourceContext.githubRepoContext?.startingBranch;
+        context.session.sourceContext?.githubRepoContext?.startingBranch;
     final matches = branch?.toLowerCase() == value.toLowerCase();
 
     if (context.metadata.isHidden) {
