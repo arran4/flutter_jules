@@ -15,6 +15,8 @@ import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
+import '../widgets/bulk_action_dialog.dart';
+import '../../models/bulk_action.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
@@ -132,6 +134,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
     } catch (e) {
       // Provider handles error state
     }
+  }
+
+  void _openBulkActionDialog({
+    BulkTargetType initialTarget = BulkTargetType.visible,
+  }) {
+    showDialog(
+      context: context,
+      builder: (context) => BulkActionDialog(
+        currentFilterTree: _filterTree,
+        currentSorts: _activeSorts,
+        availableSuggestions: _availableSuggestions,
+        visibleSessions: List<Session>.from(_displayItems.map((i) => i.data)),
+        mainSearchText: _searchText,
+        initialTarget: initialTarget,
+      ),
+    );
   }
 
   Future<void> _createSession() async {
@@ -441,24 +459,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
           SnackBar(content: Text('Failed to refresh session: $e')),
         );
       }
-    }
-  }
-
-  Future<void> _refreshVisibleSessions() async {
-    final count = _displayItems.length;
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Refreshing $count visible sessions...')),
-    );
-
-    for (final item in _displayItems) {
-      await _refreshSession(item.data);
-    }
-
-    if (mounted) {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Visible sessions refreshed')),
-      );
     }
   }
 
@@ -1342,8 +1342,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 onSelected: (value) {
                   if (value == 'full_refresh') {
                     _fetchSessions(force: true, shallow: false);
-                  } else if (value == 'refresh_visible') {
-                    _refreshVisibleSessions();
+                  } else if (value == 'bulk_visible') {
+                    _openBulkActionDialog(initialTarget: BulkTargetType.visible);
+                  } else if (value == 'bulk_filtered') {
+                    _openBulkActionDialog(initialTarget: BulkTargetType.filtered);
                   } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'sources') {
@@ -1401,17 +1403,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ],
                       ),
                     ),
-                    if (_displayItems.isNotEmpty)
+                    if (_displayItems.isNotEmpty) ...[
                       const PopupMenuItem(
-                        value: 'refresh_visible',
+                        value: 'bulk_visible',
                         child: Row(
                           children: [
-                            Icon(Icons.sync),
+                            Icon(Icons.checklist),
                             SizedBox(width: 8),
-                            Text('Refresh Visible Sessions'),
+                            Text('With Visible Items...'),
                           ],
                         ),
                       ),
+                      const PopupMenuItem(
+                        value: 'bulk_filtered',
+                        child: Row(
+                          children: [
+                            Icon(Icons.filter_alt),
+                            SizedBox(width: 8),
+                            Text('With Filtered Items...'),
+                          ],
+                        ),
+                      ),
+                    ],
                     const PopupMenuItem(
                       value: 'open_by_id',
                       child: Row(
