@@ -727,20 +727,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
   }
 
-
-  Icon _getIconForType(FilterType type) {
-    switch (type) {
-      case FilterType.status:
-        return const Icon(Icons.info_outline, size: 16);
-      case FilterType.source:
-        return const Icon(Icons.source, size: 16);
-      case FilterType.flag:
-        return const Icon(Icons.flag, size: 16);
-      case FilterType.text:
-        return const Icon(Icons.text_fields, size: 16);
-    }
-  }
-
   void _markAsRead(Session session) {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token != null) {
