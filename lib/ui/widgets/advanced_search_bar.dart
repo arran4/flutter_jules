@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
 import '../../models/filter_element_builder.dart';
+import '../../models/filter_expression_parser.dart';
 import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'sort_pills_widget.dart';
@@ -45,16 +46,19 @@ class AdvancedSearchBar extends StatefulWidget {
 
 class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   final TextEditingController _textController = TextEditingController();
+  final TextEditingController _expressionController = TextEditingController();
   late final FocusNode _focusNode;
   final LayerLink _layerLink = LayerLink();
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
+  bool _isFilterExpanded = true;
 
   @override
   void initState() {
     super.initState();
     _textController.text = widget.searchText;
+    _expressionController.text = widget.filterTree?.toExpression() ?? '';
     _focusNode = FocusNode(onKeyEvent: _handleFocusKey);
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(() {
@@ -69,9 +73,21 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   }
 
   @override
+  void didUpdateWidget(AdvancedSearchBar oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.filterTree != oldWidget.filterTree) {
+      final newExpr = widget.filterTree?.toExpression() ?? '';
+      if (_expressionController.text != newExpr) {
+        _expressionController.text = newExpr;
+      }
+    }
+  }
+
+  @override
   void dispose() {
     _removeOverlay();
     _textController.dispose();
+    _expressionController.dispose();
     _focusNode.dispose();
     super.dispose();
   }
@@ -396,20 +412,45 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                 highlightColor: Colors.transparent,
                               ),
                               child: ExpansionTile(
-                                title: const Text(
-                                  "Active Filters",
-                                  style: TextStyle(
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey,
-                                  ),
-                                ),
+                                title: _isFilterExpanded
+                                    ? const Text(
+                                        "Active Filters",
+                                        style: TextStyle(
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w500,
+                                          color: Colors.grey,
+                                        ),
+                                      )
+                                    : TextField(
+                                        controller: _expressionController,
+                                        style: const TextStyle(
+                                          fontSize: 12,
+                                          color: Colors.blueAccent,
+                                          fontFamily: 'monospace',
+                                        ),
+                                        decoration: const InputDecoration(
+                                          isDense: true,
+                                          border: InputBorder.none,
+                                          contentPadding: EdgeInsets.zero,
+                                        ),
+                                        onSubmitted: (value) {
+                                          final newTree =
+                                              FilterExpressionParser.parse(
+                                                  value);
+                                          widget.onFilterTreeChanged(newTree);
+                                        },
+                                      ),
                                 tilePadding: EdgeInsets.zero,
                                 childrenPadding: EdgeInsets.zero,
                                 showTrailingIcon: true,
                                 shape: const Border(),
                                 collapsedShape: const Border(),
-                                initiallyExpanded: true,
+                                initiallyExpanded: _isFilterExpanded,
+                                onExpansionChanged: (expanded) {
+                                  setState(() {
+                                    _isFilterExpanded = expanded;
+                                  });
+                                },
                                 children: [
                                   Align(
                                     alignment: Alignment.topLeft,

@@ -41,6 +41,21 @@ abstract class FilterElement {
   /// Returns true if this element matches the given criteria
   bool evaluate(FilterContext context);
 
+  /// Returns the string expression representation of this element
+  String toExpression();
+
+  static String _quote(String s) {
+    if (s.isEmpty) return '()';
+    // If it contains unbalanced parentheses or commas that might be misinterpreted, 
+    // or if it starts/ends with whitespace, we use the bracket quoting.
+    // However, the user wants minimal brackets.
+    // We'll only use brackets if the string contains ')' or ',' or starts/ends with whitespace.
+    if (!s.contains(')') && !s.contains(',') && s.trim() == s) {
+      return s;
+    }
+    return '(${s.replaceAll('\\', '\\\\').replaceAll(')', '\\)')})';
+  }
+
   /// Factory method to create FilterElement from JSON
   static FilterElement fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;
@@ -82,6 +97,11 @@ class AndElement extends FilterElement {
   String get groupingType => 'composite_and';
 
   @override
+  String toExpression() {
+    return 'AND(${children.map((c) => c.toExpression()).join(' ')})';
+  }
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'and',
         'children': children.map((c) => c.toJson()).toList(),
@@ -114,6 +134,11 @@ class OrElement extends FilterElement {
 
   @override
   String get groupingType => 'composite_or';
+
+  @override
+  String toExpression() {
+    return 'OR(${children.map((c) => c.toExpression()).join(' ')})';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -149,6 +174,11 @@ class NotElement extends FilterElement {
   String get groupingType => 'composite_not';
 
   @override
+  String toExpression() {
+    return 'NOT(${child.toExpression()})';
+  }
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'not',
         'child': child.toJson(),
@@ -177,6 +207,11 @@ class TextElement extends FilterElement {
 
   @override
   String get groupingType => 'text';
+
+  @override
+  String toExpression() {
+    return 'TEXT(${FilterElement._quote(text)})';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -213,6 +248,11 @@ class PrStatusElement extends FilterElement {
 
   @override
   String get groupingType => 'pr_status';
+
+  @override
+  String toExpression() {
+    return 'PR(${FilterElement._quote(value)})';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -255,6 +295,31 @@ class LabelElement extends FilterElement {
 
     // Standard labels group together (New, Updated, Unread)
     return 'label:standard';
+  }
+
+  @override
+  String toExpression() {
+    final v = value.toLowerCase();
+    switch (v) {
+      case 'new':
+        return 'New()';
+      case 'updated':
+        return 'Updated()';
+      case 'unread':
+        return 'Unread()';
+      case 'hidden':
+        return 'Hidden()';
+      case 'watched':
+        return 'Watching()';
+      case 'pending':
+        return 'Pending()';
+      case 'draft':
+        return 'Has(Drafts)';
+      case 'has_pr':
+        return 'Has(PR)';
+      default:
+        return 'Label(${FilterElement._quote(value)})';
+    }
   }
 
   @override
@@ -320,6 +385,17 @@ class StatusElement extends FilterElement {
   String get groupingType => 'status';
 
   @override
+  String toExpression() {
+    String cleanValue = value;
+    if (cleanValue.startsWith('SessionState.')) {
+      cleanValue = cleanValue.substring(13);
+    } else if (cleanValue.startsWith('State.')) {
+      cleanValue = cleanValue.substring(6);
+    }
+    return 'State(${FilterElement._quote(cleanValue)})';
+  }
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'status',
         'label': label,
@@ -328,10 +404,13 @@ class StatusElement extends FilterElement {
 
   @override
   bool evaluate(FilterContext context) {
-    return context.session.state.toString().toLowerCase() ==
-            value.toLowerCase() ||
-        (context.session.state?.name.toLowerCase() ?? '') ==
-            value.toLowerCase();
+    final query = value.toLowerCase();
+    final state = context.session.state;
+    if (state == null) return false;
+    
+    return state.toString().toLowerCase() == query ||
+        state.name.toLowerCase() == query ||
+        state.displayName.toLowerCase() == query;
   }
 
   factory StatusElement.fromJson(Map<String, dynamic> json) {
@@ -354,6 +433,11 @@ class SourceElement extends FilterElement {
 
   @override
   String get groupingType => 'source';
+
+  @override
+  String toExpression() {
+    return 'Source(${FilterElement._quote(value)})';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -385,6 +469,11 @@ class HasPrElement extends FilterElement {
 
   @override
   String get groupingType => 'has_pr';
+
+  @override
+  String toExpression() {
+    return 'Has(PR)';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
