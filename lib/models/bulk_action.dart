@@ -67,7 +67,7 @@ class BulkActionStep {
   final BulkActionType type;
   final String? message; // For quickReply or sleep (seconds)
 
-  BulkActionStep({required this.type, this.message});
+  const BulkActionStep({required this.type, this.message});
 
   Map<String, dynamic> toJson() => {
         'type': type.index,
@@ -89,14 +89,14 @@ class BulkJobConfig {
   final List<BulkActionStep> actions;
   final int parallelQueries;
   final int waitBetweenSeconds;
-  
+
   // Execution control
   final int? limit; // Maximum number of sessions to process
   final int offset; // Skip first N sessions
   final bool randomize; // Randomize order before processing
   final bool stopOnError; // Stop entire job if any session fails
 
-  BulkJobConfig({
+  const BulkJobConfig({
     required this.targetType,
     this.filterTree,
     required this.sorts,
@@ -118,9 +118,10 @@ class BulkLogEntry {
   final bool isError;
   final String? sessionId;
 
-  BulkLogEntry({
+  const BulkLogEntry({
     required this.message,
+    required this.timestamp,
     this.isError = false,
     this.sessionId,
-  }) : timestamp = DateTime.now();
+  });
 }

@@ -16,19 +16,22 @@ class BulkActionProgressDialog extends StatefulWidget {
   });
 
   @override
-  State<BulkActionProgressDialog> createState() => _BulkActionProgressDialogState();
+  State<BulkActionProgressDialog> createState() =>
+      _BulkActionProgressDialogState();
 }
 
 class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
   final TextEditingController _delayController = TextEditingController();
   String _delayUnit = 's'; // 'ms', 's', or 'min'
-  
+
   @override
   void initState() {
     super.initState();
     _delayController.text = widget.config.waitBetweenSeconds.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      context.read<BulkActionExecutor>().startJob(widget.config, widget.targets);
+      context
+          .read<BulkActionExecutor>()
+          .startJob(widget.config, widget.targets);
     });
   }
 
@@ -45,7 +48,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
         final total = executor.totalToProcess;
         final completed = executor.completed.length;
         final progress = total > 0 ? completed / total : 0.0;
-        final isDone = executor.status == BulkJobStatus.completed || executor.status == BulkJobStatus.canceled;
+        final isDone = executor.status == BulkJobStatus.completed ||
+            executor.status == BulkJobStatus.canceled;
 
         return AlertDialog(
           title: Text(isDone ? 'Bulk Job Finished' : 'Executing Bulk Actions'),
@@ -57,7 +61,7 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                 // 1. Dashboard / Stats
                 _buildDashboard(executor, progress, completed, total),
                 const SizedBox(height: 16),
-                
+
                 // 2. Controls
                 if (!isDone) _buildMainControls(executor),
                 const SizedBox(height: 16),
@@ -88,7 +92,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
             if (!isDone)
               TextButton(
                 onPressed: () => _confirmCancel(context, executor),
-                child: const Text('Cancel Job', style: TextStyle(color: Colors.red)),
+                child: const Text('Cancel Job',
+                    style: TextStyle(color: Colors.red)),
               ),
             if (isDone)
               FilledButton(
@@ -101,7 +106,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     );
   }
 
-  Widget _buildDashboard(BulkActionExecutor executor, double progress, int completed, int total) {
+  Widget _buildDashboard(
+      BulkActionExecutor executor, double progress, int completed, int total) {
     return Card(
       elevation: 0,
       color: Colors.blue.shade50,
@@ -115,15 +121,21 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    Text("Total Progress: ${(progress * 100).toStringAsFixed(1)}%", style: const TextStyle(fontWeight: FontWeight.bold)),
-                    Text("$completed / $total sessions processed", style: const TextStyle(fontSize: 12)),
+                    Text(
+                        "Total Progress: ${(progress * 100).toStringAsFixed(1)}%",
+                        style: const TextStyle(fontWeight: FontWeight.bold)),
+                    Text("$completed / $total sessions processed",
+                        style: const TextStyle(fontSize: 12)),
                   ],
                 ),
                 Column(
                   crossAxisAlignment: CrossAxisAlignment.end,
                   children: [
-                    const Text("Estimated Time Remaining", style: TextStyle(fontSize: 11, color: Colors.grey)),
-                    Text(executor.estimatedTimeRemaining, style: const TextStyle(fontWeight: FontWeight.bold, color: Colors.blue)),
+                    const Text("Estimated Time Remaining",
+                        style: TextStyle(fontSize: 11, color: Colors.grey)),
+                    Text(executor.estimatedTimeRemaining,
+                        style: const TextStyle(
+                            fontWeight: FontWeight.bold, color: Colors.blue)),
                   ],
                 ),
               ],
@@ -152,7 +164,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                 onPressed: executor.pauseJob,
                 icon: const Icon(Icons.pause),
                 label: const Text("Pause Job"),
-                style: FilledButton.styleFrom(backgroundColor: Colors.orange.shade700),
+                style: FilledButton.styleFrom(
+                    backgroundColor: Colors.orange.shade700),
               )
             else if (executor.status == BulkJobStatus.paused)
               FilledButton.icon(
@@ -172,7 +185,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
               width: 80,
               child: TextField(
                 controller: _delayController,
-                decoration: const InputDecoration(isDense: true, border: OutlineInputBorder()),
+                decoration: const InputDecoration(
+                    isDense: true, border: OutlineInputBorder()),
                 keyboardType: TextInputType.number,
                 style: const TextStyle(fontSize: 12),
               ),
@@ -183,9 +197,15 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
               isDense: true,
               underline: const SizedBox(),
               items: const [
-                DropdownMenuItem(value: 'ms', child: Text('ms', style: TextStyle(fontSize: 12))),
-                DropdownMenuItem(value: 's', child: Text('s', style: TextStyle(fontSize: 12))),
-                DropdownMenuItem(value: 'min', child: Text('min', style: TextStyle(fontSize: 12))),
+                DropdownMenuItem(
+                    value: 'ms',
+                    child: Text('ms', style: TextStyle(fontSize: 12))),
+                DropdownMenuItem(
+                    value: 's',
+                    child: Text('s', style: TextStyle(fontSize: 12))),
+                DropdownMenuItem(
+                    value: 'min',
+                    child: Text('min', style: TextStyle(fontSize: 12))),
               ],
               onChanged: (val) {
                 if (val != null) {
@@ -198,7 +218,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
               onPressed: () => _applyDelayChange(executor),
               icon: const Icon(Icons.check, size: 16),
               label: const Text('Apply'),
-              style: FilledButton.styleFrom(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+              style: FilledButton.styleFrom(
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
             ),
           ],
         ),
@@ -210,26 +232,37 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text("Activity Log", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        const Text("Activity Log",
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 8),
         Expanded(
           child: Container(
-            decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade200)),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.grey.shade200)),
             child: ListView.builder(
               itemCount: executor.logs.length,
               itemBuilder: (context, index) {
                 final log = executor.logs[index];
                 return Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 8.0, vertical: 2.0),
+                  padding: const EdgeInsets.symmetric(
+                      horizontal: 8.0, vertical: 2.0),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Text(DateFormat('HH:mm:ss').format(log.timestamp), style: TextStyle(fontSize: 10, color: Colors.grey.shade500, fontFamily: 'monospace')),
+                      Text(DateFormat('HH:mm:ss').format(log.timestamp),
+                          style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey.shade500,
+                              fontFamily: 'monospace')),
                       const SizedBox(width: 8),
                       Expanded(
                         child: Text(
                           log.message,
-                          style: TextStyle(fontSize: 11, color: log.isError ? Colors.red : Colors.black87),
+                          style: TextStyle(
+                              fontSize: 11,
+                              color: log.isError ? Colors.red : Colors.black87),
                         ),
                       ),
                     ],
@@ -247,20 +280,25 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text("Queue (${executor.queue.length} remaining)", style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        Text("Queue (${executor.queue.length} remaining)",
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
         const SizedBox(height: 8),
         Expanded(
           child: Container(
-            decoration: BoxDecoration(color: Colors.grey.shade50, borderRadius: BorderRadius.circular(4), border: Border.all(color: Colors.grey.shade200)),
+            decoration: BoxDecoration(
+                color: Colors.grey.shade50,
+                borderRadius: BorderRadius.circular(4),
+                border: Border.all(color: Colors.grey.shade200)),
             child: ListView.builder(
               itemCount: executor.queue.length,
               itemBuilder: (context, index) {
                 final session = executor.queue[index];
                 final isPaused = executor.pausedSessionIds.contains(session.id);
                 final isDraft = session.id.startsWith('DRAFT_CREATION_');
-                
+
                 return GestureDetector(
-                  onSecondaryTapUp: (details) => _showQueueItemMenu(context, details.globalPosition, executor, session),
+                  onSecondaryTapUp: (details) => _showQueueItemMenu(
+                      context, details.globalPosition, executor, session),
                   child: ListTile(
                     dense: true,
                     visualDensity: VisualDensity.compact,
@@ -270,15 +308,21 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                       overflow: TextOverflow.ellipsis,
                       style: TextStyle(
                         fontSize: 11,
-                        color: isPaused ? Colors.orange.shade700 : Colors.black87,
-                        fontWeight: isPaused ? FontWeight.w600 : FontWeight.normal,
+                        color:
+                            isPaused ? Colors.orange.shade700 : Colors.black87,
+                        fontWeight:
+                            isPaused ? FontWeight.w600 : FontWeight.normal,
                       ),
                     ),
                     subtitle: Text(
                       "ID: ${session.id.length > 20 ? '${session.id.substring(0, 10)}...${session.id.substring(session.id.length - 10)}' : session.id} • ${session.state?.displayName ?? 'Unknown'}",
-                      style: TextStyle(fontSize: 9, color: Colors.grey.shade600),
+                      style:
+                          TextStyle(fontSize: 9, color: Colors.grey.shade600),
                     ),
-                    trailing: isPaused ? const Icon(Icons.pause_circle, size: 18, color: Colors.orange) : null,
+                    trailing: isPaused
+                        ? const Icon(Icons.pause_circle,
+                            size: 18, color: Colors.orange)
+                        : null,
                   ),
                 );
               },
@@ -289,18 +333,28 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     );
   }
 
-  void _showQueueItemMenu(BuildContext context, Offset position, BulkActionExecutor executor, Session session) {
+  void _showQueueItemMenu(BuildContext context, Offset position,
+      BulkActionExecutor executor, Session session) {
     final isPaused = executor.pausedSessionIds.contains(session.id);
     showMenu(
       context: context,
-      position: RelativeRect.fromLTRB(position.dx, position.dy, position.dx, position.dy),
+      position: RelativeRect.fromLTRB(
+          position.dx, position.dy, position.dx, position.dy),
       items: [
         PopupMenuItem(
-          child: Row(children: [Icon(isPaused ? Icons.play_arrow : Icons.pause, size: 18), const SizedBox(width: 8), Text(isPaused ? "Resume" : "Pause")]),
+          child: Row(children: [
+            Icon(isPaused ? Icons.play_arrow : Icons.pause, size: 18),
+            const SizedBox(width: 8),
+            Text(isPaused ? "Resume" : "Pause")
+          ]),
           onTap: () => executor.togglePauseSession(session.id),
         ),
         PopupMenuItem(
-          child: const Row(children: [Icon(Icons.remove_circle_outline, size: 18, color: Colors.red), SizedBox(width: 8), Text("Remove", style: TextStyle(color: Colors.red))]),
+          child: const Row(children: [
+            Icon(Icons.remove_circle_outline, size: 18, color: Colors.red),
+            SizedBox(width: 8),
+            Text("Remove", style: TextStyle(color: Colors.red))
+          ]),
           onTap: () => executor.removeFromQueue(session.id),
         ),
       ],
@@ -312,9 +366,12 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Cancel Bulk Job'),
-        content: const Text('Are you sure you want to stop the remaining operations? The current session being processed will complete.'),
+        content: const Text(
+            'Are you sure you want to stop the remaining operations? The current session being processed will complete.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context), child: const Text('No, continue')),
+          TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text('No, continue')),
           FilledButton(
             onPressed: () {
               executor.cancelJob();

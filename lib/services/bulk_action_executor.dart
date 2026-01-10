@@ -55,18 +55,24 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   String get estimatedTimeRemaining {
-    if (_status != BulkJobStatus.running || _completed.isEmpty) return "Calculating...";
-    
+    if (_status != BulkJobStatus.running || _completed.isEmpty) {
+      return "Calculating...";
+    }
+
     final elapsed = DateTime.now().difference(_startTime!);
     final msPerSession = elapsed.inMilliseconds / _completed.length;
     final remainingCount = _queue.length - _pausedSessionIds.length;
     final remainingMs = msPerSession * remainingCount;
-    
+
     if (remainingMs < 0) return "0s";
-    
+
     final duration = Duration(milliseconds: remainingMs.toInt());
-    if (duration.inHours > 0) return "${duration.inHours}h ${duration.inMinutes % 60}m";
-    if (duration.inMinutes > 0) return "${duration.inMinutes}m ${duration.inSeconds % 60}s";
+    if (duration.inHours > 0) {
+      return "${duration.inHours}h ${duration.inMinutes % 60}m";
+    }
+    if (duration.inMinutes > 0) {
+      return "${duration.inMinutes}m ${duration.inSeconds % 60}s";
+    }
     return "${duration.inSeconds}s";
   }
 
@@ -79,7 +85,7 @@ class BulkActionExecutor extends ChangeNotifier {
     _status = BulkJobStatus.running;
     _startTime = DateTime.now();
     _currentParallelCount = 0;
-    
+
     _addLog("Starting bulk job with ${_queue.length} sessions.", false);
     _processNext();
     notifyListeners();
@@ -126,7 +132,13 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   void _addLog(String message, bool isError, [String? sessionId]) {
-    _logs.insert(0, BulkLogEntry(message: message, isError: isError, sessionId: sessionId));
+    _logs.insert(
+        0,
+        BulkLogEntry(
+            message: message,
+            isError: isError,
+            sessionId: sessionId,
+            timestamp: DateTime.now()));
     if (_logs.length > 500) _logs.removeLast();
     notifyListeners();
   }
@@ -181,27 +193,32 @@ class BulkActionExecutor extends ChangeNotifier {
     final authToken = authProvider.token;
 
     for (var step in _config!.actions) {
-      if (_status != BulkJobStatus.running && _status != BulkJobStatus.paused) break; // Allow finishing current session even if paused? No, stop actions in sequence.
-      
+      if (_status != BulkJobStatus.running && _status != BulkJobStatus.paused) {
+        break; // Allow finishing current session even if paused? No, stop actions in sequence.
+      }
+
       try {
         await _executeStep(session, step, authToken);
       } catch (e) {
-        _addLog("Error executing ${step.type.displayName} on ${session.id}: $e", true, session.id);
-        
+        _addLog("Error executing ${step.type.displayName} on ${session.id}: $e",
+            true, session.id);
+
         // Check if we should stop the entire job on error
         if (_config!.stopOnError) {
           _addLog("Stop-on-error is enabled. Canceling entire job.", true);
           cancelJob();
           return;
         }
-        
-        _addLog("Aborting remaining actions for this session.", true, session.id);
+
+        _addLog(
+            "Aborting remaining actions for this session.", true, session.id);
         break; // Stop execution for THIS session if one step fails.
       }
     }
   }
 
-  Future<void> _executeStep(Session session, BulkActionStep step, String? authToken) async {
+  Future<void> _executeStep(
+      Session session, BulkActionStep step, String? authToken) async {
     switch (step.type) {
       case BulkActionType.openPrInBrowser:
         final url = _getPrUrl(session);
@@ -212,51 +229,69 @@ class BulkActionExecutor extends ChangeNotifier {
         }
         break;
       case BulkActionType.markAsRead:
-        if (authToken != null) await sessionProvider.markAsRead(session.id, authToken);
+        if (authToken != null) {
+          await sessionProvider.markAsRead(session.id, authToken);
+        }
         break;
       case BulkActionType.markAsUnread:
-        if (authToken != null) await sessionProvider.markAsUnread(session.id, authToken);
+        if (authToken != null) {
+          await sessionProvider.markAsUnread(session.id, authToken);
+        }
         break;
       case BulkActionType.hide:
-        if (authToken != null) await sessionProvider.toggleHidden(session.id, authToken);
+        if (authToken != null) {
+          await sessionProvider.toggleHidden(session.id, authToken);
+        }
         break;
       case BulkActionType.unhide:
         // Assume toggleHidden works for both, but maybe we should be explicit
         // If we want to ENSURE unhide, we might need a specific method in provider or check state
-        if (authToken != null) await sessionProvider.toggleHidden(session.id, authToken);
+        if (authToken != null) {
+          await sessionProvider.toggleHidden(session.id, authToken);
+        }
         break;
       case BulkActionType.refreshSession:
-        await sessionProvider.refreshSession(julesClient, session.name, authToken: authToken);
+        await sessionProvider.refreshSession(julesClient, session.name,
+            authToken: authToken);
         break;
       case BulkActionType.deepRefresh:
-        await sessionProvider.refreshSession(julesClient, session.name, authToken: authToken);
+        await sessionProvider.refreshSession(julesClient, session.name,
+            authToken: authToken);
         // Activities are already refreshed inside refreshSession!
         break;
       case BulkActionType.watchSession:
         if (authToken != null) {
-           // Ensure it's watched
-           final item = sessionProvider.items.firstWhere((i) => i.data.id == session.id);
-           if (!item.metadata.isWatched) {
-             await sessionProvider.toggleWatch(session.id, authToken);
-           }
+          // Ensure it's watched
+          final item =
+              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          if (!item.metadata.isWatched) {
+            await sessionProvider.toggleWatch(session.id, authToken);
+          }
         }
         break;
       case BulkActionType.unwatchSession:
         if (authToken != null) {
-           final item = sessionProvider.items.firstWhere((i) => i.data.id == session.id);
-           if (item.metadata.isWatched) {
-             await sessionProvider.toggleWatch(session.id, authToken);
-           }
+          final item =
+              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          if (item.metadata.isWatched) {
+            await sessionProvider.toggleWatch(session.id, authToken);
+          }
         }
         break;
       case BulkActionType.openJulesLink:
-        final url = "https://jules.corp.google.com/session/${session.id}"; // Placeholder, check real URL
+        final url =
+            "https://jules.corp.google.com/session/${session.id}"; // Placeholder, check real URL
         await launchUrl(Uri.parse(url));
         break;
       case BulkActionType.quickReply:
-        if (step.message == null || step.message!.isEmpty) throw Exception("Message required for quick reply");
+        if (step.message == null || step.message!.isEmpty) {
+          throw Exception("Message required for quick reply");
+        }
         await julesClient.sendMessage(session.name, step.message!);
-        if (authToken != null) await sessionProvider.addPendingMessage(session.id, step.message!, authToken);
+        if (authToken != null) {
+          await sessionProvider.addPendingMessage(
+              session.id, step.message!, authToken);
+        }
         break;
       case BulkActionType.viewSourceRepo:
         final url = _getSourceRepoUrl(session);
@@ -267,7 +302,9 @@ class BulkActionExecutor extends ChangeNotifier {
         }
         break;
       case BulkActionType.forceRefreshPrStatus:
-        if (authToken != null) await sessionProvider.refreshPrStatus(session.id, authToken);
+        if (authToken != null) {
+          await sessionProvider.refreshPrStatus(session.id, authToken);
+        }
         break;
       case BulkActionType.forceApprovePlan:
         await julesClient.approvePlan(session.name);
