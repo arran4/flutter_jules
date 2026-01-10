@@ -589,6 +589,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _updateSuggestions(List<Session> sessions) {
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
     final Set<FilterToken> suggestions = {};
 
     // Statuses
@@ -616,25 +617,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
-    // Sources (from sessions)
-    final sources = sessions.map((s) => s.sourceContext.source).toSet();
-    for (final source in sources) {
-      if (source.startsWith("sources/github/")) {
+    // Sources (from SourceProvider for completeness)
+    final allSources = sourceProvider.items.map((i) => i.data);
+    for (final source in allSources) {
+      if (source.name.startsWith("sources/github/")) {
         suggestions.add(
           FilterToken(
-            id: 'source:$source',
+            id: 'source:${source.name}',
             type: FilterType.source,
-            label: source.replaceFirst('sources/github/', ''),
-            value: source,
+            label: source.name.replaceFirst('sources/github/', ''),
+            value: source.name,
           ),
         );
       } else {
         suggestions.add(
           FilterToken(
-            id: 'source:$source',
+            id: 'source:${source.name}',
             type: FilterType.source,
-            label: source,
-            value: source,
+            label: source.name,
+            value: source.name,
           ),
         );
       }

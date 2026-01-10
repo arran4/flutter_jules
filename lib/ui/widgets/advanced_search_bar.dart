@@ -197,20 +197,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Flags column
-                      if (flagSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Flags',
-                            flagSuggestions,
-                            Colors.orange,
-                          ),
-                        ),
-                      if (flagSuggestions.isNotEmpty &&
-                          (statusSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
                       // Status column
                       if (statusSuggestions.isNotEmpty)
                         Expanded(
@@ -221,6 +207,35 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (statusSuggestions.isNotEmpty &&
+                          (prStatusSuggestions.isNotEmpty ||
+                              flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // PR Status column
+                      if (prStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'PR Status',
+                            prStatusSuggestions,
+                            Colors.purple,
+                          ),
+                        ),
+                      if (prStatusSuggestions.isNotEmpty &&
+                          (flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // Flags column
+                      if (flagSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Flags',
+                            flagSuggestions,
+                            Colors.orange,
+                          ),
+                        ),
+                      if (flagSuggestions.isNotEmpty &&
                           sourceSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
@@ -234,33 +249,18 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (sourceSuggestions.isNotEmpty &&
-                          (prStatusSuggestions.isNotEmpty ||
-                              otherSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // PR Status column
-                      if (prStatusSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'PR Status',
-                            prStatusSuggestions,
-                            Colors.purple,
-                          ),
-                        ),
-                      if (prStatusSuggestions.isNotEmpty &&
                           otherSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
                       // Other/Text column
-                      if (otherSuggestions.isNotEmpty) ...[
+                      if (otherSuggestions.isNotEmpty)
                         Expanded(
                           child: _buildFilterColumn(
                             'Other',
                             otherSuggestions,
-                            Colors.purple,
+                            Colors.grey,
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),
