@@ -187,6 +187,14 @@ class BulkActionExecutor extends ChangeNotifier {
         await _executeStep(session, step, authToken);
       } catch (e) {
         _addLog("Error executing ${step.type.displayName} on ${session.id}: $e", true, session.id);
+        
+        // Check if we should stop the entire job on error
+        if (_config!.stopOnError) {
+          _addLog("Stop-on-error is enabled. Canceling entire job.", true);
+          cancelJob();
+          return;
+        }
+        
         _addLog("Aborting remaining actions for this session.", true, session.id);
         break; // Stop execution for THIS session if one step fails.
       }

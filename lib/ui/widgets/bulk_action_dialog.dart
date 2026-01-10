@@ -13,8 +13,6 @@ class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;
   final List<SortOption> currentSorts;
   final List<FilterToken> availableSuggestions;
-  final BulkTargetType initialTarget;
-  final List<Session> visibleSessions;
   final String mainSearchText;
 
   const BulkActionDialog({
@@ -22,9 +20,7 @@ class BulkActionDialog extends StatefulWidget {
     required this.currentFilterTree,
     required this.currentSorts,
     required this.availableSuggestions,
-    required this.visibleSessions,
     required this.mainSearchText,
-    this.initialTarget = BulkTargetType.visible,
   });
 
   @override
@@ -32,7 +28,6 @@ class BulkActionDialog extends StatefulWidget {
 }
 
 class _BulkActionDialogState extends State<BulkActionDialog> {
-  late BulkTargetType _targetType;
   FilterElement? _filterTree;
   late List<SortOption> _sorts;
   final List<BulkActionStep> _actions = [];
@@ -40,13 +35,19 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   int _waitBetweenSeconds = 2;
   String _searchText = '';
   
+  // Execution control
+  int? _limit;
+  int _offset = 0;
+  bool _randomize = false;
+  bool _stopOnError = false;
+  
   List<Session> _previewSessions = [];
   int _totalMatches = 0;
+  int _effectiveCount = 0; // After limit/offset
 
   @override
   void initState() {
     super.initState();
-    _targetType = widget.initialTarget;
     _filterTree = widget.currentFilterTree;
     _sorts = List.from(widget.currentSorts);
     _searchText = widget.mainSearchText;
@@ -61,12 +62,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     final sessionProvider = context.read<SessionProvider>();
     final queueProvider = context.read<MessageQueueProvider>();
 
-    List<Session> allMatches = [];
-    if (_targetType == BulkTargetType.visible) {
-      allMatches = List<Session>.from(widget.visibleSessions);
-    } else {
-      // Sessions based on the CUSTOM filter tree and search text in this dialog
-      allMatches = sessionProvider.items.where((item) {
+    final allMatches = sessionProvider.items.where((item) {
         final session = item.data;
         final metadata = item.metadata;
 
@@ -98,15 +94,28 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           ),
         );
 
-        final finalState = FilterState.combineAnd(initialState, treeResult);
-        return finalState.isIn;
-      }).map((item) => item.data).toList();
-    }
+      final finalState = FilterState.combineAnd(initialState, treeResult);
+      return finalState.isIn;
+    }).map((item) => item.data).toList();
 
     if (mounted) {
       setState(() {
         _totalMatches = allMatches.length;
-        _previewSessions = allMatches.take(50).toList();
+        
+        // Apply offset and limit for preview
+        var effectiveMatches = allMatches;
+        if (_offset > 0 && _offset < effectiveMatches.length) {
+          effectiveMatches = effectiveMatches.sublist(_offset);
+        } else if (_offset >= effectiveMatches.length) {
+          effectiveMatches = [];
+        }
+        
+        if (_limit != null && _limit! > 0) {
+          effectiveMatches = effectiveMatches.take(_limit!).toList();
+        }
+        
+        _effectiveCount = effectiveMatches.length;
+        _previewSessions = effectiveMatches.take(50).toList();
       });
     }
   }
@@ -129,21 +138,12 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     _buildSectionHeader('1. Target Sessions'),
-                    SegmentedButton<BulkTargetType>(
-                      segments: const [
-                        ButtonSegment(value: BulkTargetType.visible, label: Text('Visible Items'), icon: Icon(Icons.visibility)),
-                        ButtonSegment(value: BulkTargetType.filtered, label: Text('Filtered Items'), icon: Icon(Icons.filter_alt)),
-                      ],
-                      selected: {_targetType},
-                      onSelectionChanged: (val) {
-                         setState(() => _targetType = val.first);
-                         _updatePreview();
-                      },
+                    Text(
+                      'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
+                      style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
                     ),
-                    const SizedBox(height: 16),
-                    if (_targetType == BulkTargetType.filtered) ...[
-                      const Text("Customize Filters:", style: TextStyle(fontSize: 12, color: Colors.grey)),
-                      AdvancedSearchBar(
+                    const SizedBox(height: 12),
+                    AdvancedSearchBar(
                         filterTree: _filterTree,
                         onFilterTreeChanged: (tree) {
                           setState(() => _filterTree = tree);
@@ -160,10 +160,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                           setState(() => _sorts = s);
                           _updatePreview();
                         },
-                        showBookmarksButton: false,
-                      ),
-                      const SizedBox(height: 16),
-                    ],
+                      showBookmarksButton: false,
+                    ),
+                    const SizedBox(height: 16),
 
                     _buildSectionHeader('2. Actions to Perform'),
                     const Text("Actions run in order. If one fails, the rest for that session are skipped.", style: TextStyle(fontSize: 11, color: Colors.grey)),
@@ -200,6 +199,73 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                         ),
                       ],
                     ),
+                    
+                    const SizedBox(height: 24),
+                    _buildSectionHeader('4. Execution Control'),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Row(
+                          children: [
+                            Expanded(
+                              child: TextField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Limit',
+                                  hintText: 'Max sessions (blank = all)',
+                                  isDense: true,
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(fontSize: 12),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _limit = val.isEmpty ? null : int.tryParse(val);
+                                  });
+                                  _updatePreview();
+                                },
+                              ),
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: TextField(
+                                decoration: const InputDecoration(
+                                  labelText: 'Offset',
+                                  hintText: 'Skip first N',
+                                  isDense: true,
+                                  border: OutlineInputBorder(),
+                                ),
+                                keyboardType: TextInputType.number,
+                                style: const TextStyle(fontSize: 12),
+                                controller: TextEditingController(text: _offset > 0 ? _offset.toString() : ''),
+                                onChanged: (val) {
+                                  setState(() {
+                                    _offset = val.isEmpty ? 0 : (int.tryParse(val) ?? 0);
+                                  });
+                                  _updatePreview();
+                                },
+                              ),
+                            ),
+                          ],
+                        ),
+                        const SizedBox(height: 12),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          value: _randomize,
+                          onChanged: (val) => setState(() => _randomize = val ?? false),
+                          title: const Text('Randomize order', style: TextStyle(fontSize: 12)),
+                          subtitle: const Text('Process sessions in random order (useful for sampling)', style: TextStyle(fontSize: 10)),
+                        ),
+                        CheckboxListTile(
+                          dense: true,
+                          contentPadding: EdgeInsets.zero,
+                          value: _stopOnError,
+                          onChanged: (val) => setState(() => _stopOnError = val ?? false),
+                          title: const Text('Stop on first error', style: TextStyle(fontSize: 12)),
+                          subtitle: const Text('Cancel entire job if any session fails', style: TextStyle(fontSize: 10)),
+                        ),
+                      ],
+                    ),
                   ],
                 ),
               ),
@@ -212,9 +278,22 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
                   _buildSectionHeader('Preview Matches'),
-                  Text(
-                    '$_totalMatches sessions total${_totalMatches > 50 ? ' (showing top 50)' : ''}',
-                    style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                  RichText(
+                    text: TextSpan(
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                      children: [
+                        TextSpan(text: '$_totalMatches total'),
+                        if (_effectiveCount != _totalMatches) ...[
+                          const TextSpan(text: ' → ', style: TextStyle(fontWeight: FontWeight.bold)),
+                          TextSpan(
+                            text: '$_effectiveCount will run',
+                            style: TextStyle(color: Colors.blue.shade700, fontWeight: FontWeight.bold),
+                          ),
+                        ],
+                        if (_effectiveCount > 50)
+                          const TextSpan(text: ' (showing top 50)'),
+                      ],
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Expanded(
@@ -376,22 +455,22 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
   void _startJob() {
     final config = BulkJobConfig(
-      targetType: _targetType,
+      targetType: BulkTargetType.filtered,
       filterTree: _filterTree,
       sorts: _sorts,
       actions: _actions,
       parallelQueries: _parallelQueries,
       waitBetweenSeconds: _waitBetweenSeconds,
+      limit: _limit,
+      offset: _offset,
+      randomize: _randomize,
+      stopOnError: _stopOnError,
     );
     
-    final List<Session> targets;
-    if (_targetType == BulkTargetType.visible) {
-      targets = List<Session>.from(widget.visibleSessions);
-    } else {
-      final sessionProvider = context.read<SessionProvider>();
-      final queueProvider = context.read<MessageQueueProvider>();
+    final sessionProvider = context.read<SessionProvider>();
+    final queueProvider = context.read<MessageQueueProvider>();
 
-      targets = sessionProvider.items.where((item) {
+    var targets = sessionProvider.items.where((item) {
         final session = item.data;
         final metadata = item.metadata;
 
@@ -421,9 +500,25 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           ),
         );
 
-        final finalState = FilterState.combineAnd(initialState, treeResult);
-        return finalState.isIn;
-      }).map((item) => item.data).toList();
+      final finalState = FilterState.combineAnd(initialState, treeResult);
+      return finalState.isIn;
+    }).map((item) => item.data).toList();
+
+    // Apply offset
+    if (_offset > 0 && _offset < targets.length) {
+      targets = targets.sublist(_offset);
+    } else if (_offset >= targets.length) {
+      targets = [];
+    }
+
+    // Apply limit
+    if (_limit != null && _limit! > 0 && targets.length > _limit!) {
+      targets = targets.take(_limit!).toList();
+    }
+
+    // Apply randomization
+    if (_randomize && targets.isNotEmpty) {
+      targets.shuffle();
     }
 
     Navigator.pop(context); // Close config dialog

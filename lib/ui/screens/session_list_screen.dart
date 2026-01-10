@@ -16,7 +16,6 @@ import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
 import '../widgets/bulk_action_dialog.dart';
-import '../../models/bulk_action.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
@@ -136,18 +135,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _openBulkActionDialog({
-    BulkTargetType initialTarget = BulkTargetType.visible,
-  }) {
+  void _openBulkActionDialog() {
     showDialog(
       context: context,
       builder: (context) => BulkActionDialog(
         currentFilterTree: _filterTree,
         currentSorts: _activeSorts,
         availableSuggestions: _availableSuggestions,
-        visibleSessions: List<Session>.from(_displayItems.map((i) => i.data)),
         mainSearchText: _searchText,
-        initialTarget: initialTarget,
       ),
     );
   }
@@ -1342,10 +1337,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 onSelected: (value) {
                   if (value == 'full_refresh') {
                     _fetchSessions(force: true, shallow: false);
-                  } else if (value == 'bulk_visible') {
-                    _openBulkActionDialog(initialTarget: BulkTargetType.visible);
-                  } else if (value == 'bulk_filtered') {
-                    _openBulkActionDialog(initialTarget: BulkTargetType.filtered);
+                  } else if (value == 'bulk_actions') {
+                    _openBulkActionDialog();
                   } else if (value == 'settings') {
                     Navigator.pushNamed(context, '/settings');
                   } else if (value == 'sources') {
@@ -1403,28 +1396,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ],
                       ),
                     ),
-                    if (_displayItems.isNotEmpty) ...[
+                    if (_displayItems.isNotEmpty)
                       const PopupMenuItem(
-                        value: 'bulk_visible',
+                        value: 'bulk_actions',
                         child: Row(
                           children: [
                             Icon(Icons.checklist),
                             SizedBox(width: 8),
-                            Text('With Visible Items...'),
+                            Text('Bulk Actions...'),
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'bulk_filtered',
-                        child: Row(
-                          children: [
-                            Icon(Icons.filter_alt),
-                            SizedBox(width: 8),
-                            Text('With Filtered Items...'),
-                          ],
-                        ),
-                      ),
-                    ],
                     const PopupMenuItem(
                       value: 'open_by_id',
                       child: Row(

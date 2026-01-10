@@ -89,6 +89,12 @@ class BulkJobConfig {
   final List<BulkActionStep> actions;
   final int parallelQueries;
   final int waitBetweenSeconds;
+  
+  // Execution control
+  final int? limit; // Maximum number of sessions to process
+  final int offset; // Skip first N sessions
+  final bool randomize; // Randomize order before processing
+  final bool stopOnError; // Stop entire job if any session fails
 
   BulkJobConfig({
     required this.targetType,
@@ -97,6 +103,10 @@ class BulkJobConfig {
     required this.actions,
     this.parallelQueries = 1,
     this.waitBetweenSeconds = 2,
+    this.limit,
+    this.offset = 0,
+    this.randomize = false,
+    this.stopOnError = false,
   });
 }
 
