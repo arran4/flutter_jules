@@ -95,14 +95,16 @@ class GithubQueuePane extends StatelessWidget {
                           return ListTile(
                             leading: _buildStatusIcon(job.status),
                             title: Text(job.description),
-                            subtitle:
-                                Text(job.status.toString().split('.').last),
+                            subtitle: Text(
+                              job.status.toString().split('.').last,
+                            ),
                             trailing: job.status == GithubJobStatus.running
                                 ? const SizedBox(
                                     width: 16,
                                     height: 16,
                                     child: CircularProgressIndicator(
-                                        strokeWidth: 2),
+                                      strokeWidth: 2,
+                                    ),
                                   )
                                 : null,
                           );
@@ -150,10 +152,7 @@ class GithubQueuePane extends StatelessWidget {
             ],
           ),
           const SizedBox(height: 8),
-          Text(
-            value,
-            style: Theme.of(context).textTheme.titleMedium,
-          ),
+          Text(value, style: Theme.of(context).textTheme.titleMedium),
         ],
       ),
     );

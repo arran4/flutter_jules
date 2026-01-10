@@ -107,13 +107,15 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed = (oldSession!.updateTime != session.updateTime) ||
+            final changed =
+                (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated:
-                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+              lastUpdated: changed
+                  ? DateTime.now()
+                  : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -131,8 +133,9 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl =
-                  oldSession != null ? _getPrUrl(oldSession) : null;
+              final oldPrUrl = oldSession != null
+                  ? _getPrUrl(oldSession)
+                  : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
@@ -216,7 +219,8 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed = (oldItem.data.updateTime != session.updateTime) ||
+      final changed =
+          (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -269,7 +273,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-                (oldItem.data.state != updatedSession.state);
+            (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -457,8 +461,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -665,8 +670,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
@@ -694,10 +700,7 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Update in memory
-    _items[index] = CachedItem(
-      updatedSession,
-      _items[index].metadata,
-    );
+    _items[index] = CachedItem(updatedSession, _items[index].metadata);
 
     notifyListeners();
   }
@@ -727,7 +730,10 @@ class SessionProvider extends ChangeNotifier {
   }
 
   Future<void> _refreshPrStatusInBackground(
-      String sessionId, String prUrl, String authToken) async {
+    String sessionId,
+    String prUrl,
+    String authToken,
+  ) async {
     // Avoid multiple concurrent refreshes for same session if not already queued
     // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
     if (_isPrFetchQueued(prUrl)) return;

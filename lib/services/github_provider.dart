@@ -40,7 +40,10 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getPrStatus(
-      String owner, String repo, String prNumber) async {
+    String owner,
+    String repo,
+    String prNumber,
+  ) async {
     if (_apiKey == null) {
       return null;
     }
@@ -50,7 +53,8 @@ class GithubProvider extends ChangeNotifier {
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
         final url = Uri.parse(
-            'https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+        );
         final response = await http.get(
           url,
           headers: {
@@ -97,8 +101,9 @@ class GithubProvider extends ChangeNotifier {
     if (headers.containsKey('x-ratelimit-reset')) {
       final resetEpoch = int.tryParse(headers['x-ratelimit-reset']!);
       if (resetEpoch != null) {
-        _rateLimitReset =
-            DateTime.fromMillisecondsSinceEpoch(resetEpoch * 1000);
+        _rateLimitReset = DateTime.fromMillisecondsSinceEpoch(
+          resetEpoch * 1000,
+        );
       }
     }
     notifyListeners();
@@ -135,10 +140,12 @@ class GithubProvider extends ChangeNotifier {
         }
       }
 
-      final job = _queue.firstWhere((j) => j.status == GithubJobStatus.pending,
-          orElse: () =>
-              GithubJob(id: 'none', description: '', action: () async {})
-                ..status = GithubJobStatus.completed);
+      final job = _queue.firstWhere(
+        (j) => j.status == GithubJobStatus.pending,
+        orElse: () =>
+            GithubJob(id: 'none', description: '', action: () async {})
+              ..status = GithubJobStatus.completed,
+      );
 
       if (job.id == 'none') {
         break;
@@ -180,6 +187,9 @@ class GithubJob {
   dynamic result;
   String? error;
 
-  GithubJob(
-      {required this.id, required this.description, required this.action});
+  GithubJob({
+    required this.id,
+    required this.description,
+    required this.action,
+  });
 }

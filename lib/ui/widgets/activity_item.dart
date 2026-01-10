@@ -398,7 +398,8 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     }
 
-    final hasOtherContent = activity.progressUpdated != null ||
+    final hasOtherContent =
+        activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;

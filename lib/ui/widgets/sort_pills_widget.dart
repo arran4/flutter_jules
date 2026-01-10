@@ -104,8 +104,11 @@ class SortPillsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSortPill(BuildContext context, SortOption sort,
-      {bool isDragging = false}) {
+  Widget _buildSortPill(
+    BuildContext context,
+    SortOption sort, {
+    bool isDragging = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0),
       child: Tooltip(
@@ -174,8 +177,9 @@ class SortPillsWidget extends StatelessWidget {
 
   void _showAddSortMenu(BuildContext context) {
     final existingFields = activeSorts.map((s) => s.field).toSet();
-    final availableFields =
-        SortField.values.where((f) => !existingFields.contains(f)).toList();
+    final availableFields = SortField.values
+        .where((f) => !existingFields.contains(f))
+        .toList();
 
     if (availableFields.isEmpty) return; // All fields added
 

@@ -59,10 +59,14 @@ class BookmarkMenuHelper {
 
     final RelativeRect position = RelativeRect.fromRect(
       Rect.fromPoints(
-        button.localToGlobal(button.size.bottomLeft(Offset.zero),
-            ancestor: overlay),
-        button.localToGlobal(button.size.bottomRight(Offset.zero),
-            ancestor: overlay),
+        button.localToGlobal(
+          button.size.bottomLeft(Offset.zero),
+          ancestor: overlay,
+        ),
+        button.localToGlobal(
+          button.size.bottomRight(Offset.zero),
+          ancestor: overlay,
+        ),
       ),
       Offset.zero & overlay.size,
     );
@@ -171,9 +175,8 @@ class BookmarkMenuHelper {
     } else if (action.type == _BookmarkActionType.manage) {
       Navigator.of(context).push(
         MaterialPageRoute(
-          builder: (context) => BookmarkManagerScreen(
-            availableSuggestions: availableSuggestions,
-          ),
+          builder: (context) =>
+              BookmarkManagerScreen(availableSuggestions: availableSuggestions),
         ),
       );
     }

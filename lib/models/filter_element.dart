@@ -57,7 +57,7 @@ class FilterContext {
   final Session session;
   final CacheMetadata metadata;
   final dynamic
-      queueProvider; // Using dynamic to avoid hard dependency on provider
+  queueProvider; // Using dynamic to avoid hard dependency on provider
 
   FilterContext({
     required this.session,
@@ -142,9 +142,9 @@ class AndElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'and',
-        'children': children.map((c) => c.toJson()).toList(),
-      };
+    'type': 'and',
+    'children': children.map((c) => c.toJson()).toList(),
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -186,9 +186,9 @@ class OrElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'or',
-        'children': children.map((c) => c.toJson()).toList(),
-      };
+    'type': 'or',
+    'children': children.map((c) => c.toJson()).toList(),
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -228,10 +228,7 @@ class NotElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'not',
-        'child': child.toJson(),
-      };
+  Map<String, dynamic> toJson() => {'type': 'not', 'child': child.toJson()};
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -263,16 +260,14 @@ class TextElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'text',
-        'text': text,
-      };
+  Map<String, dynamic> toJson() => {'type': 'text', 'text': text};
 
   @override
   FilterState evaluate(FilterContext context) {
     final query = text.toLowerCase();
     final session = context.session;
-    final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
+    final matches =
+        (session.title?.toLowerCase().contains(query) ?? false) ||
         (session.name.toLowerCase().contains(query)) ||
         (session.id.toLowerCase().contains(query)) ||
         (session.state.toString().toLowerCase().contains(query)) ||
@@ -310,10 +305,10 @@ class PrStatusElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'pr_status',
-        'label': label,
-        'value': value,
-      };
+    'type': 'pr_status',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -324,10 +319,7 @@ class PrStatusElement extends FilterElement {
   }
 
   factory PrStatusElement.fromJson(Map<String, dynamic> json) {
-    return PrStatusElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return PrStatusElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -381,10 +373,10 @@ class LabelElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'label',
-        'label': label,
-        'value': value,
-      };
+    'type': 'label',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -427,8 +419,9 @@ class LabelElement extends FilterElement {
       }
       if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
     } else {
-      matched =
-          metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
+      matched = metadata.labels.any(
+        (l) => l.toLowerCase() == value.toLowerCase(),
+      );
     }
 
     // Standard rule: can only see *In (Explicitly exclude otherwise)
@@ -439,10 +432,7 @@ class LabelElement extends FilterElement {
   }
 
   factory LabelElement.fromJson(Map<String, dynamic> json) {
-    return LabelElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return LabelElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -472,10 +462,10 @@ class StatusElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'status',
-        'label': label,
-        'value': value,
-      };
+    'type': 'status',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -490,7 +480,8 @@ class StatusElement extends FilterElement {
       return FilterState.explicitOut;
     }
 
-    final matches = state.toString().toLowerCase() == query ||
+    final matches =
+        state.toString().toLowerCase() == query ||
         state.name.toLowerCase() == query ||
         state.displayName.toLowerCase() == query;
 
@@ -501,10 +492,7 @@ class StatusElement extends FilterElement {
   }
 
   factory StatusElement.fromJson(Map<String, dynamic> json) {
-    return StatusElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return StatusElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -528,14 +516,15 @@ class SourceElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'source',
-        'label': label,
-        'value': value,
-      };
+    'type': 'source',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.sourceContext.source.toLowerCase() ==
+    final matches =
+        context.session.sourceContext.source.toLowerCase() ==
         value.toLowerCase();
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -544,10 +533,7 @@ class SourceElement extends FilterElement {
   }
 
   factory SourceElement.fromJson(Map<String, dynamic> json) {
-    return SourceElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return SourceElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -567,9 +553,7 @@ class HasPrElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'has_pr',
-      };
+  Map<String, dynamic> toJson() => {'type': 'has_pr'};
 
   @override
   FilterState evaluate(FilterContext context) {

@@ -103,8 +103,10 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'visible-feature', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature', 'visible-new']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('hidden-bug')));
       expect(results.map((r) => r.data.id), isNot(contains('hidden-feature')));
     });
@@ -124,8 +126,10 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id),
-          containsAll(['hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['hidden-bug', 'hidden-feature']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('visible-bug')));
     });
 
@@ -162,12 +166,13 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'visible-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature']),
+      );
     });
 
-    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items',
-        () {
+    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items', () {
       final filterTree = OrElement([
         LabelElement('Bug', 'bug'),
         LabelElement('Hidden', 'hidden'),
@@ -180,8 +185,10 @@ void main() {
       // hidden-feature: Label(Bug) -> Explicit Out, Hidden() -> Explicit In, OR -> Explicit In
       // Result: visible-bug, hidden-bug, hidden-feature
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'hidden-bug', 'hidden-feature']),
+      );
     });
 
     test('State(IN_PROGRESS): shows only visible in-progress items', () {
@@ -190,22 +197,26 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-new']),
+      );
     });
 
-    test('AND(State(IN_PROGRESS), Hidden()): shows hidden in-progress items',
-        () {
-      final filterTree = AndElement([
-        StatusElement('In Progress', 'IN_PROGRESS'),
-        LabelElement('Hidden', 'hidden'),
-      ]);
+    test(
+      'AND(State(IN_PROGRESS), Hidden()): shows hidden in-progress items',
+      () {
+        final filterTree = AndElement([
+          StatusElement('In Progress', 'IN_PROGRESS'),
+          LabelElement('Hidden', 'hidden'),
+        ]);
 
-      final results = _applyFilter(testSessions, filterTree, queueProvider);
+        final results = _applyFilter(testSessions, filterTree, queueProvider);
 
-      expect(results.length, 1);
-      expect(results.first.data.id, 'hidden-bug');
-    });
+        expect(results.length, 1);
+        expect(results.first.data.id, 'hidden-bug');
+      },
+    );
 
     test('NOT(Hidden()): shows only visible items (double negative)', () {
       final filterTree = NotElement(LabelElement('Hidden', 'hidden'));
@@ -215,8 +226,10 @@ void main() {
       // visible items: NOT(Explicit Out) -> Explicit In
       // hidden items: NOT(Explicit In) -> Explicit Out
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'visible-feature', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature', 'visible-new']),
+      );
     });
 
     test('NOT(Label(Bug)): shows visible non-bug items', () {
@@ -230,8 +243,10 @@ void main() {
       // hidden-bug: Label(Bug) -> Implicit Out, NOT -> Implicit In, AND(Implicit Out, Implicit In) -> Implicit Out (hidden)
       // hidden-feature: Label(Bug) -> Explicit Out, NOT -> Explicit In, AND(Implicit Out, Explicit In) -> Explicit In (visible!)
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-feature', 'visible-new', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-feature', 'visible-new', 'hidden-feature']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('visible-bug')));
       expect(results.map((r) => r.data.id), isNot(contains('hidden-bug')));
     });
@@ -242,8 +257,10 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id),
-          containsAll(['visible-bug', 'visible-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature']),
+      );
     });
 
     test('AND(Source(src1), Hidden()): shows hidden items from src1', () {
@@ -255,8 +272,10 @@ void main() {
       final results = _applyFilter(testSessions, filterTree, queueProvider);
 
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id),
-          containsAll(['hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['hidden-bug', 'hidden-feature']),
+      );
     });
 
     test('Complex: AND(OR(Bug, Feature), NOT(State(COMPLETED)))', () {
@@ -289,18 +308,21 @@ List<CachedItem<Session>> _applyFilter(
     final metadata = item.metadata;
 
     // Apply the FilterState logic
-    final initialState =
-        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
 
     if (filterTree == null) {
       return initialState.isIn;
     }
 
-    final treeResult = filterTree.evaluate(FilterContext(
-      session: session,
-      metadata: metadata,
-      queueProvider: queueProvider,
-    ));
+    final treeResult = filterTree.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
 
     final finalState = FilterState.combineAnd(initialState, treeResult);
     return finalState.isIn;
