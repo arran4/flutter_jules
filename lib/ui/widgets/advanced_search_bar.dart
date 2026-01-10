@@ -60,12 +60,38 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     });
   }
 
-  void _showBookmarksMenu(BuildContext context) {
+  void _showBookmarksMenu(BuildContext context) async {
     // Access the provider
     final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
       context,
       listen: false,
     );
+
+    // Ensure bookmarks are loaded before showing menu
+    if (bookmarkProvider.isLoading) {
+      // Show a loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('Loading presets...'),
+            ],
+          ),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      // Wait for initialization to complete
+      await bookmarkProvider.initialized;
+
+      if (!context.mounted) return;
+    }
 
     // Get the button's position for the menu
     final RenderBox? button = context.findRenderObject() as RenderBox?;
@@ -707,12 +733,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                 const SizedBox(width: 8),
                 if (widget.showBookmarksButton)
-                  Builder(
-                    builder: (buttonContext) => IconButton(
-                      icon: const Icon(Icons.bookmarks_outlined),
-                      onPressed: () => _showBookmarksMenu(buttonContext),
-                      tooltip: "Filter Presets",
-                    ),
+                  Consumer<FilterBookmarkProvider>(
+                    builder: (context, bookmarkProvider, child) {
+                      return Builder(
+                        builder: (buttonContext) => IconButton(
+                          icon: bookmarkProvider.isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.bookmarks_outlined),
+                          onPressed: bookmarkProvider.isLoading
+                              ? null
+                              : () => _showBookmarksMenu(buttonContext),
+                          tooltip: bookmarkProvider.isLoading
+                              ? "Loading presets..."
+                              : "Filter Presets",
+                        ),
+                      );
+                    },
                   ),
                 IconButton(
                   icon: const Icon(Icons.tune),
