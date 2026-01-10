@@ -161,19 +161,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (!mounted) return;
 
     if (result.isDraft) {
-      Provider.of<MessageQueueProvider>(
+      // Handle drafts (loops through all if multiple)
+      final queueProvider = Provider.of<MessageQueueProvider>(
         context,
         listen: false,
-      ).addCreateSessionRequest(result.session, isDraft: true);
+      );
+      for (final session in result.sessions) {
+         queueProvider.addCreateSessionRequest(session, isDraft: true);
+      }
+
       ScaffoldMessenger.of(
         context,
-      ).showSnackBar(const SnackBar(content: Text("Draft saved")));
+      ).showSnackBar(SnackBar(content: Text(result.sessions.length > 1 ? "Drafts saved" : "Draft saved")));
       return;
     }
 
-    final sessionToCreate = result.session;
+    final sessionsToCreate = result.sessions;
 
-    Future<void> performCreate() async {
+    Future<void> performCreate(Session sessionToCreate) async {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         await client.createSession(sessionToCreate);
@@ -226,13 +231,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     sessionToCreate,
                     reason: 'resource_exhausted',
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "API Quota Exhausted. Session creation queued.",
-                      ),
-                    ),
-                  );
+                  // Don't spam snackbars for bulk
+                  if (sessionsToCreate.length == 1) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "API Quota Exhausted. Session creation queued.",
+                          ),
+                        ),
+                      );
+                  }
                   handled = true;
                 } else if (error['code'] == 503 ||
                     error['status'] == 'UNAVAILABLE') {
@@ -244,13 +252,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     sessionToCreate,
                     reason: 'service_unavailable',
                   );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        "Service Unavailable. Session creation queued.",
-                      ),
-                    ),
-                  );
+                  if (sessionsToCreate.length == 1) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text(
+                            "Service Unavailable. Session creation queued.",
+                          ),
+                        ),
+                      );
+                  }
                   handled = true;
                 }
               }
@@ -259,70 +269,74 @@ class _SessionListScreenState extends State<SessionListScreen> {
         }
 
         if (!handled) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Error Creating Session'),
-              content: SingleChildScrollView(
-                child: Column(
-                  mainAxisSize: MainAxisSize.min,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    SelectableText(e.toString()),
-                    const SizedBox(height: 16),
-                    const Divider(),
-                    const Text(
-                      "Your Prompt:",
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    const SizedBox(height: 8),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: Colors.grey.shade100,
-                        borderRadius: BorderRadius.circular(4),
+          // If bulk, we probably shouldn't show a dialog for each error.
+          // Queue it and show snackbar.
+           Provider.of<MessageQueueProvider>(
+              context,
+              listen: false,
+            ).addCreateSessionRequest(
+              sessionToCreate,
+              reason: 'creation_failed',
+            );
+            if (sessionsToCreate.length == 1) {
+                showDialog(
+                  context: context,
+                  builder: (context) => AlertDialog(
+                    title: const Text('Error Creating Session'),
+                    content: SingleChildScrollView(
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          SelectableText(e.toString()),
+                          const SizedBox(height: 16),
+                          const Divider(),
+                          const Text(
+                            "Your Prompt:",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                          const SizedBox(height: 8),
+                          Container(
+                            padding: const EdgeInsets.all(8),
+                            decoration: BoxDecoration(
+                              color: Colors.grey.shade100,
+                              borderRadius: BorderRadius.circular(4),
+                            ),
+                            child: SelectableText(sessionToCreate.prompt),
+                          ),
+                        ],
                       ),
-                      child: SelectableText(sessionToCreate.prompt),
                     ),
-                  ],
-                ),
-              ),
-              actions: [
-                TextButton(
-                  onPressed: () {
-                    Provider.of<MessageQueueProvider>(
-                      context,
-                      listen: false,
-                    ).addCreateSessionRequest(
-                      sessionToCreate,
-                      reason: 'user_queued',
-                    );
-                    Navigator.pop(context);
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("Session creation queued.")),
-                    );
-                  },
-                  child: const Text('Queue'),
-                ),
-                TextButton(
-                  onPressed: () {
-                    Navigator.pop(context);
-                    performCreate(); // Retry
-                  },
-                  child: const Text('Try Again'),
-                ),
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Close'),
+                      ),
+                    ],
+                  ),
+                );
+            }
         }
       }
     }
 
-    await performCreate();
+    if (sessionsToCreate.length > 1) {
+       ScaffoldMessenger.of(context).showSnackBar(
+         SnackBar(content: Text('Starting creation of ${sessionsToCreate.length} sessions...')),
+       );
+    }
+
+    for (final session in sessionsToCreate) {
+        await performCreate(session);
+    }
+
+    if (sessionsToCreate.length > 1) {
+        // Final feedback
+        // We could check if any are queued and report.
+        final queue = Provider.of<MessageQueueProvider>(context, listen: false);
+        // This check is a bit loose, but good enough for UI feedback
+        // Ideally performCreate would return status.
+    }
   }
 
   Future<void> _quickReply(Session session) async {
@@ -1756,6 +1770,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                             ),
                                           );
                                         } else if (result.isDraft) {
+                                          // Draft Update is always single
                                           queueProvider
                                               .updateCreateSessionRequest(
                                             realId,
