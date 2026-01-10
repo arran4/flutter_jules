@@ -2,6 +2,7 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/refresh_schedule.dart';
+import '../models/session_refresh_schedule.dart';
 
 enum SessionRefreshPolicy { none, shallow, full }
 
@@ -14,6 +15,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnCreate = 'refresh_on_create';
   static const String _sessionPageSizeKey = 'session_page_size';
   static const String _refreshSchedulesKey = 'refresh_schedules';
+  static const String _openSessionRefreshScheduleKey =
+      'open_session_refresh_schedule';
 
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
@@ -21,6 +24,7 @@ class SettingsProvider extends ChangeNotifier {
   ListRefreshPolicy _refreshOnCreate = ListRefreshPolicy.quick;
   int _sessionPageSize = 100;
   List<RefreshSchedule> _schedules = [];
+  SessionRefreshSchedule _openSessionRefreshSchedule = SessionRefreshSchedule();
   bool _isInitialized = false;
 
   SharedPreferences? _prefs;
@@ -31,6 +35,8 @@ class SettingsProvider extends ChangeNotifier {
   ListRefreshPolicy get refreshOnCreate => _refreshOnCreate;
   int get sessionPageSize => _sessionPageSize;
   List<RefreshSchedule> get schedules => _schedules;
+  SessionRefreshSchedule get openSessionRefreshSchedule =>
+      _openSessionRefreshSchedule;
   bool get isInitialized => _isInitialized;
 
   Future<void> init() async {
@@ -63,6 +69,7 @@ class SettingsProvider extends ChangeNotifier {
     );
     _sessionPageSize = _prefs!.getInt(_sessionPageSizeKey) ?? 100;
     _loadSchedules();
+    _loadOpenSessionRefreshSchedule();
     _isInitialized = true;
 
     notifyListeners();
@@ -77,6 +84,21 @@ class SettingsProvider extends ChangeNotifier {
       }
     } catch (_) {}
     return defaultValue;
+  }
+
+  void _loadOpenSessionRefreshSchedule() {
+    final jsonString = _prefs?.getString(_openSessionRefreshScheduleKey);
+    if (jsonString != null) {
+      try {
+        final Map<String, dynamic> decodedMap = jsonDecode(jsonString);
+        _openSessionRefreshSchedule =
+            SessionRefreshSchedule.fromJson(decodedMap);
+      } catch (e) {
+        _openSessionRefreshSchedule = SessionRefreshSchedule();
+      }
+    } else {
+      _openSessionRefreshSchedule = SessionRefreshSchedule();
+    }
   }
 
   void _loadSchedules() {
@@ -97,6 +119,11 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> _saveSchedules() async {
     final jsonString = jsonEncode(_schedules.map((s) => s.toJson()).toList());
     await _prefs?.setString(_refreshSchedulesKey, jsonString);
+  }
+
+  Future<void> _saveOpenSessionRefreshSchedule() async {
+    final jsonString = jsonEncode(_openSessionRefreshSchedule.toJson());
+    await _prefs?.setString(_openSessionRefreshScheduleKey, jsonString);
   }
 
   List<RefreshSchedule> _defaultSchedules() {
@@ -137,6 +164,14 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> deleteSchedule(String scheduleId) async {
     _schedules.removeWhere((s) => s.id == scheduleId);
     await _saveSchedules();
+    notifyListeners();
+  }
+
+  Future<void> setOpenSessionRefreshSchedule(
+    SessionRefreshSchedule schedule,
+  ) async {
+    _openSessionRefreshSchedule = schedule;
+    await _saveOpenSessionRefreshSchedule();
     notifyListeners();
   }
 

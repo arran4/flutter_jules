@@ -37,6 +37,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setRefreshOnMessage,
               ),
               const Divider(),
+              _buildOpenSessionRefreshSection(context, settings),
+              const Divider(),
               _buildSectionHeader(context, 'List Updates'),
               _buildListDropdown(
                 context,
@@ -169,6 +171,44 @@ class _SettingsScreenState extends State<SettingsScreen> {
         );
       }
     }
+  }
+
+  Widget _buildOpenSessionRefreshSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    final schedule = settings.openSessionRefreshSchedule;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Open Session Refresh'),
+        SwitchListTile(
+          title: const Text('Auto-refresh open session'),
+          subtitle: Text(
+            schedule.isEnabled
+                ? 'Every ${schedule.intervalInMinutes} minutes'
+                : 'Disabled',
+          ),
+          value: schedule.isEnabled,
+          onChanged: (value) {
+            schedule.isEnabled = value;
+            settings.setOpenSessionRefreshSchedule(schedule);
+          },
+        ),
+        if (schedule.isEnabled)
+          Slider(
+            value: schedule.intervalInMinutes.toDouble(),
+            min: 1,
+            max: 60,
+            divisions: 59,
+            label: '${schedule.intervalInMinutes} min',
+            onChanged: (double value) {
+              schedule.intervalInMinutes = value.toInt();
+              settings.setOpenSessionRefreshSchedule(schedule);
+            },
+          ),
+      ],
+    );
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {

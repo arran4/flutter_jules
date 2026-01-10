@@ -49,6 +49,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Future<void> _apiLock = Future.value();
   int _busyCount = 0;
 
+  Timer? _refreshTimer;
+
   final FocusNode _messageFocusNode = FocusNode();
 
   Future<T> _locked<T>(Future<T> Function() op) {
@@ -117,14 +119,37 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _fetchActivities(force: true, shallow: false);
           break;
       }
+      _startRefreshTimer();
     });
   }
 
   @override
   void dispose() {
+    _cancelRefreshTimer();
     _messageController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
+  }
+
+  void _startRefreshTimer() {
+    _cancelRefreshTimer(); // Ensure no multiple timers
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final schedule = settings.openSessionRefreshSchedule;
+    if (schedule.isEnabled) {
+      _refreshTimer = Timer.periodic(
+        Duration(minutes: schedule.intervalInMinutes),
+        (timer) {
+          if (mounted) {
+            _fetchActivities(force: true, shallow: true);
+          }
+        },
+      );
+    }
+  }
+
+  void _cancelRefreshTimer() {
+    _refreshTimer?.cancel();
+    _refreshTimer = null;
   }
 
   Future<void> _handleRefresh() async {
