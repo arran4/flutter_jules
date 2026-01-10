@@ -2393,6 +2393,50 @@ class _SessionListScreenState extends State<SessionListScreen> {
       position: finalPosition,
       items: [
         PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.data_object),
+              SizedBox(width: 8),
+              Text('View Session Source'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: session.toJson(),
+                    title: 'Raw Session Source',
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.data_object),
+              SizedBox(width: 8),
+              Text('View Session Source'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: session.toJson(),
+                    title: 'Raw Session Source',
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
           child: Row(
             children: [
               Icon(metadata.isHidden ? Icons.visibility : Icons.visibility_off),
@@ -2539,6 +2583,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
         PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.data_object),
+              SizedBox(width: 8),
+              Text('View Session Source'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => ModelViewer(
+                    data: session.toJson(),
+                    title: 'Raw Session Source',
+                  ),
+                );
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
           child: Row(
             children: [
               Icon(
@@ -2586,28 +2652,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
         ),
         if (isDevMode) ...[
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.data_object),
-                SizedBox(width: 8),
-                Text('View Raw Session'),
-              ],
-            ),
-            onTap: () {
-              Future.delayed(Duration.zero, () {
-                if (context.mounted) {
-                  showDialog(
-                    context: context,
-                    builder: (context) => ModelViewer(
-                      data: session.toJson(),
-                      title: 'Raw Session Data',
-                    ),
-                  );
-                }
-              });
-            },
-          ),
           PopupMenuItem(
             child: const Row(
               children: [
