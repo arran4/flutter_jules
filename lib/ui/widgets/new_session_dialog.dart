@@ -11,6 +11,7 @@ import '../../services/auth_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
+import '../../services/github_provider.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
 class NewSessionDialog extends StatefulWidget {
@@ -175,6 +176,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final githubProvider =
+        Provider.of<GithubProvider>(context, listen: false);
 
     // Only show loading state on explicit user action
     if (force) {
@@ -186,7 +189,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     try {
       if (force || sourceProvider.items.isEmpty) {
-        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+        await sourceProvider.fetchSources(
+          auth.client,
+          authToken: auth.token,
+          githubProvider: githubProvider,
+          force: force,
+        );
       }
 
       if (mounted) {
@@ -926,11 +934,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               : () => _fetchSources(force: true),
                           icon: _isRefreshing
                               ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
+                                  width: 16,
+                                  height: 16,
                                   child: CircularProgressIndicator(strokeWidth: 2),
                                 )
-                              : const Icon(Icons.refresh, size: 14),
+                              : const Icon(Icons.refresh, size: 20),
                           label: Text(_refreshStatus),
                         ),
                       ],

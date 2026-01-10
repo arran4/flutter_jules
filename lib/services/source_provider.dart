@@ -20,28 +20,22 @@ class SourceProvider extends ChangeNotifier {
     _cacheService = service;
   }
 
-  Future<void> fetchSources(
+  Future<void> refreshSources(
     JulesClient client, {
     bool force = false,
     String? authToken,
+    GithubProvider? githubProvider,
   }) async {
-    // 1. Initial Load from Cache
-    if (_cacheService != null && authToken != null) {
-      _items = await _cacheService!.loadSources(authToken);
-      notifyListeners();
+    if (_isLoading) return;
 
-      // If we have data and not forcing, we can check if we should skip fetch
-      // But user requirement says: "until we manually refresh... OR if it sees a source it hasn't seen before"
-      // In the context of "sees a source it hasn't seen before", this usually implies
-      // checking against a known set (e.g. from session list source contexts).
-      // However, strictly "until we manually refresh" implies we should obey 'force'
-      // If not forced and we have items, we stop.
-      if (!force && _items.isNotEmpty) {
+    if (_cacheService != null && authToken != null && !force) {
+      _items = await _cacheService!.loadSources(authToken);
+      if (_items.isNotEmpty) {
+        notifyListeners();
         return;
       }
     }
 
-    if (_isLoading) return;
     _isLoading = true;
     _error = null;
     notifyListeners();
@@ -55,6 +49,46 @@ class SourceProvider extends ChangeNotifier {
         allSources.addAll(response.sources);
         pageToken = response.nextPageToken;
       } while (pageToken != null && pageToken.isNotEmpty);
+
+      if (githubProvider != null) {
+        List<Source> enrichedSources = [];
+        for (var source in allSources) {
+          if (source.githubRepo != null) {
+            final details = await githubProvider.getRepoDetails(
+              source.githubRepo!.owner,
+              source.githubRepo!.repo,
+            );
+            if (details != null) {
+              final newGitHubRepo = GitHubRepo(
+                owner: source.githubRepo!.owner,
+                repo: source.githubRepo!.repo,
+                isPrivate: source.githubRepo!.isPrivate,
+                defaultBranch: source.githubRepo!.defaultBranch,
+                branches: source.githubRepo!.branches,
+                repoName: details['name'],
+                repoId: details['id'],
+                isPrivateGh: details['private'],
+                description: details['description'],
+                primaryLanguage: details['language'],
+                license: details['license']?['name'],
+                openIssuesCount: details['open_issues_count'],
+                isFork: details['fork'],
+              );
+              final newSource = Source(
+                name: source.name,
+                id: source.id,
+                githubRepo: newGitHubRepo,
+              );
+              enrichedSources.add(newSource);
+            } else {
+              enrichedSources.add(source);
+            }
+          } else {
+            enrichedSources.add(source);
+          }
+        }
+        allSources = enrichedSources;
+      }
 
       if (_cacheService != null && authToken != null) {
         await _cacheService!.saveSources(authToken, allSources);
@@ -70,7 +104,6 @@ class SourceProvider extends ChangeNotifier {
             )
             .toList();
       }
-
       _lastFetchTime = DateTime.now();
     } catch (e) {
       _error = e.toString();
@@ -80,11 +113,26 @@ class SourceProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> fetchSources(
+    JulesClient client, {
+    bool force = false,
+    String? authToken,
+    GithubProvider? githubProvider,
+  }) async {
+    await refreshSources(
+      client,
+      force: force,
+      authToken: authToken,
+      githubProvider: githubProvider,
+    );
+  }
+
   // Helper to ensure a specific source is in the cache/list, triggering refresh if missing.
   Future<void> ensureSourceAvailable(
     JulesClient client,
     String sourceName, {
     String? authToken,
+    GithubProvider? githubProvider,
   }) async {
     // Check if we already have it
     final exists = _items.any(
@@ -94,7 +142,12 @@ class SourceProvider extends ChangeNotifier {
       // Trigger non-forced refresh (actually forced to ensure we get new data,
       // but 'force' arg in our fetchSources logic currently acts as "always fetch").
       // We will call fetchSources with force=true to get latest list which hopefully contains the new source.
-      await fetchSources(client, force: true, authToken: authToken);
+      await fetchSources(
+        client,
+        force: true,
+        authToken: authToken,
+        githubProvider: githubProvider,
+      );
     }
   }
 }

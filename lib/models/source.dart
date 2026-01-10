@@ -80,6 +80,14 @@ class GitHubRepo {
   final bool isPrivate;
   final GitHubBranch? defaultBranch;
   final List<GitHubBranch>? branches;
+  final String? repoName;
+  final int? repoId;
+  final bool? isPrivateGh;
+  final String? description;
+  final String? primaryLanguage;
+  final String? license;
+  final int? openIssuesCount;
+  final bool? isFork;
 
   GitHubRepo({
     required this.owner,
@@ -87,6 +95,14 @@ class GitHubRepo {
     required this.isPrivate,
     this.defaultBranch,
     this.branches,
+    this.repoName,
+    this.repoId,
+    this.isPrivateGh,
+    this.description,
+    this.primaryLanguage,
+    this.license,
+    this.openIssuesCount,
+    this.isFork,
   });
 
   factory GitHubRepo.fromJson(Map<String, dynamic> json) {
@@ -106,6 +122,14 @@ class GitHubRepo {
         GitHubBranch.fromJson,
         () => null,
       ),
+      repoName: getStringPropOrDefault(json, 'repoName', null),
+      repoId: getIntPropOrDefault(json, 'repoId', null),
+      isPrivateGh: getBooleanPropOrDefault(json, 'isPrivateGh', null),
+      description: getStringPropOrDefault(json, 'description', null),
+      primaryLanguage: getStringPropOrDefault(json, 'primaryLanguage', null),
+      license: getStringPropOrDefault(json, 'license', null),
+      openIssuesCount: getIntPropOrDefault(json, 'openIssuesCount', null),
+      isFork: getBooleanPropOrDefault(json, 'isFork', null),
     );
   }
 
@@ -121,6 +145,14 @@ class GitHubRepo {
     if (branches != null) {
       map['branches'] = branches!.map((e) => e.toJson()).toList();
     }
+    if (repoName != null) map['repoName'] = repoName;
+    if (repoId != null) map['repoId'] = repoId;
+    if (isPrivateGh != null) map['isPrivateGh'] = isPrivateGh;
+    if (description != null) map['description'] = description;
+    if (primaryLanguage != null) map['primaryLanguage'] = primaryLanguage;
+    if (license != null) map['license'] = license;
+    if (openIssuesCount != null) map['openIssuesCount'] = openIssuesCount;
+    if (isFork != null) map['isFork'] = isFork;
     return map;
   }
 }

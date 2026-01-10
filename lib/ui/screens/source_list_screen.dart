@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
@@ -10,6 +11,7 @@ import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../../services/cache_service.dart';
 import '../widgets/model_viewer.dart';
+import '../../services/github_provider.dart';
 
 enum SortOption { recent, count, alphabetical }
 
@@ -118,11 +120,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final githubProvider =
+        Provider.of<GithubProvider>(context, listen: false);
 
     // Fetch sources if empty, but usually SessionListScreen triggered it.
     // Just ensure we have data or are loading.
     if (sourceProvider.items.isEmpty && !sourceProvider.isLoading) {
-      await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+      await sourceProvider.fetchSources(
+        auth.client,
+        authToken: auth.token,
+        githubProvider: githubProvider,
+      );
     }
 
     // Load usage stats from SessionProvider
@@ -169,9 +177,15 @@ class _SourceListScreenState extends State<SourceListScreen> {
       context,
       listen: false,
     );
+    final githubProvider =
+        Provider.of<GithubProvider>(context, listen: false);
 
     await Future.wait([
-      sourceProvider.fetchSources(auth.client, authToken: auth.token),
+      sourceProvider.fetchSources(
+        auth.client,
+        authToken: auth.token,
+        githubProvider: githubProvider,
+      ),
       sessionProvider.fetchSessions(
         auth.client,
         authToken: auth.token,
@@ -454,13 +468,21 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
+                                              if (repo?.description != null)
+                                                Text(
+                                                  repo!.description!,
+                                                  maxLines: 2,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
                                               Text(
                                                 '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
                                               ),
                                               const SizedBox(height: 4),
                                               Row(
                                                 children: [
-                                                  if (count > 0)
+                                                  if (repo?.primaryLanguage !=
+                                                      null)
                                                     Container(
                                                       padding: const EdgeInsets
                                                           .symmetric(
@@ -470,7 +492,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                       decoration: BoxDecoration(
                                                         color: Theme.of(context)
                                                             .colorScheme
-                                                            .surfaceContainerHighest,
+                                                            .primaryContainer,
                                                         borderRadius:
                                                             BorderRadius
                                                                 .circular(
@@ -478,42 +500,41 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                         ),
                                                       ),
                                                       child: Text(
-                                                        '$count sessions',
+                                                        repo!.primaryLanguage!,
                                                         style: Theme.of(
                                                           context,
                                                         ).textTheme.labelSmall,
                                                       ),
                                                     ),
-                                                  if (count > 0)
-                                                    const SizedBox(width: 8),
-                                                  if (lastUsedDate != null)
-                                                    Text(
-                                                      'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                                      style: Theme.of(
-                                                        context,
-                                                      ).textTheme.bodySmall,
-                                                    ),
-                                                  if (item.metadata.isNew)
+                                                  if (repo?.license != null)
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
                                                         left: 8.0,
                                                       ),
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 4,
-                                                          vertical: 2,
-                                                        ),
-                                                        color: Colors.green,
-                                                        child: const Text(
-                                                          'NEW',
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 10,
-                                                          ),
-                                                        ),
+                                                      child: Text(
+                                                        repo!.license!,
+                                                        style: Theme.of(
+                                                          context,
+                                                        )
+                                                            .textTheme
+                                                            .labelSmall,
+                                                      ),
+                                                    ),
+                                                  if (repo?.openIssuesCount !=
+                                                      null)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                        left: 8.0,
+                                                      ),
+                                                      child: Text(
+                                                        '${repo!.openIssuesCount} open issues',
+                                                        style: Theme.of(
+                                                          context,
+                                                        )
+                                                            .textTheme
+                                                            .labelSmall,
                                                       ),
                                                     ),
                                                 ],
