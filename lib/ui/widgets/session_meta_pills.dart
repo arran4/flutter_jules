@@ -110,9 +110,7 @@ class SessionMetaPills extends StatelessWidget {
             context,
             label: 'PR: ${session.prStatus}',
             avatar: Icon(
-              session.prStatus == 'Draft'
-                  ? Icons.edit_note
-                  : Icons.merge_type,
+              session.prStatus == 'Draft' ? Icons.edit_note : Icons.merge_type,
               size: 16,
             ),
             backgroundColor: session.prStatus == 'Draft'

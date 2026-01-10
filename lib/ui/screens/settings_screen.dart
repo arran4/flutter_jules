@@ -18,7 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
+          GithubProvider>(
         builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [

@@ -9,8 +9,6 @@ class GithubProvider extends ChangeNotifier {
   static const String _githubApiKey = 'github_api_key';
 
   String? _apiKey;
-  bool _isLoading = true;
-
   String? get apiKey => _apiKey;
   // Rate Limiting
   int? _rateLimitLimit;
@@ -32,7 +30,6 @@ class GithubProvider extends ChangeNotifier {
 
   Future<void> _loadApiKey() async {
     _apiKey = await _secureStorage.read(key: _githubApiKey);
-    _isLoading = false;
     notifyListeners();
   }
 
@@ -42,7 +39,8 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getPrStatus(String owner, String repo, String prNumber) async {
+  Future<String?> getPrStatus(
+      String owner, String repo, String prNumber) async {
     if (_apiKey == null) {
       return null;
     }
@@ -51,7 +49,8 @@ class GithubProvider extends ChangeNotifier {
       id: 'pr_status_${owner}_${repo}_$prNumber',
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
-        final url = Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+        final url = Uri.parse(
+            'https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
         final response = await http.get(
           url,
           headers: {
@@ -98,14 +97,17 @@ class GithubProvider extends ChangeNotifier {
     if (headers.containsKey('x-ratelimit-reset')) {
       final resetEpoch = int.tryParse(headers['x-ratelimit-reset']!);
       if (resetEpoch != null) {
-        _rateLimitReset = DateTime.fromMillisecondsSinceEpoch(resetEpoch * 1000);
+        _rateLimitReset =
+            DateTime.fromMillisecondsSinceEpoch(resetEpoch * 1000);
       }
     }
     notifyListeners();
   }
 
   Duration get waitTime {
-    if (_rateLimitRemaining != null && _rateLimitRemaining! <= 0 && _rateLimitReset != null) {
+    if (_rateLimitRemaining != null &&
+        _rateLimitRemaining! <= 0 &&
+        _rateLimitReset != null) {
       final diff = _rateLimitReset!.difference(DateTime.now());
       return diff.isNegative ? Duration.zero : diff;
     }
@@ -119,24 +121,25 @@ class GithubProvider extends ChangeNotifier {
     while (_queue.isNotEmpty) {
       // Check Rate Limits
       if (_rateLimitRemaining != null && _rateLimitRemaining! <= 0) {
-        if (_rateLimitReset != null && _rateLimitReset!.isAfter(DateTime.now())) {
-           final wait = _rateLimitReset!.difference(DateTime.now());
-           // Notify listeners so UI updates status to "Waiting"
-           notifyListeners();
-           // Force adherence
-           await Future.delayed(wait);
-           
-           // After waiting, we assume quota is reset (or will be upon next request)
-           // We can optimistically reset local counters or just proceed
-           _rateLimitRemaining = null; // Let next request update it
+        if (_rateLimitReset != null &&
+            _rateLimitReset!.isAfter(DateTime.now())) {
+          final wait = _rateLimitReset!.difference(DateTime.now());
+          // Notify listeners so UI updates status to "Waiting"
+          notifyListeners();
+          // Force adherence
+          await Future.delayed(wait);
+
+          // After waiting, we assume quota is reset (or will be upon next request)
+          // We can optimistically reset local counters or just proceed
+          _rateLimitRemaining = null; // Let next request update it
         }
       }
 
-      final job = _queue.firstWhere(
-        (j) => j.status == GithubJobStatus.pending, 
-        orElse: () => GithubJob(id: 'none', description: '', action: () async {})..status = GithubJobStatus.completed
-      );
-      
+      final job = _queue.firstWhere((j) => j.status == GithubJobStatus.pending,
+          orElse: () =>
+              GithubJob(id: 'none', description: '', action: () async {})
+                ..status = GithubJobStatus.completed);
+
       if (job.id == 'none') {
         break;
       }
@@ -156,7 +159,7 @@ class GithubProvider extends ChangeNotifier {
         _queue.remove(job);
       }
       notifyListeners();
-      
+
       // Artificial delay for throttling safety (wait time between requests)
       await Future.delayed(const Duration(milliseconds: 500));
     }
@@ -172,10 +175,11 @@ class GithubJob {
   final String description;
   final Future<dynamic> Function() action;
   final Completer<void> completer = Completer<void>();
-  
+
   GithubJobStatus status = GithubJobStatus.pending;
   dynamic result;
   String? error;
 
-  GithubJob({required this.id, required this.description, required this.action});
+  GithubJob(
+      {required this.id, required this.description, required this.action});
 }

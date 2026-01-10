@@ -106,7 +106,7 @@ class SessionProvider extends ChangeNotifier {
           CacheMetadata metadata;
           if (oldItem != null) {
             _items.removeAt(index);
-            
+
             final changed = (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
 
@@ -131,20 +131,23 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl = oldSession != null ? _getPrUrl(oldSession) : null;
+              final oldPrUrl =
+                  oldSession != null ? _getPrUrl(oldSession) : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
-              if (isNewPr || (session.prStatus == null && !_isPrFetchQueued(prUrl))) {
+              if (isNewPr ||
+                  (session.prStatus == null && !_isPrFetchQueued(prUrl))) {
                 shouldRefresh = true;
               }
               // 2. Status changed to Completed & Has PR
               else if (session.state == SessionState.COMPLETED &&
-                  oldSession?.state != SessionState.COMPLETED) {
+                  oldSession.state != SessionState.COMPLETED) {
                 shouldRefresh = true;
               }
               // 3. Existing PR status is Draft or Open
-              else if (session.prStatus == 'Draft' || session.prStatus == 'Open') {
+              else if (session.prStatus == 'Draft' ||
+                  session.prStatus == 'Open') {
                 shouldRefresh = true;
               }
 
@@ -654,21 +657,24 @@ class SessionProvider extends ChangeNotifier {
     }
 
     final session = _items[index].data;
-    
+
     // Check if session has PR output
-    if (session.outputs == null || !session.outputs!.any((o) => o.pullRequest != null)) {
+    if (session.outputs == null ||
+        !session.outputs!.any((o) => o.pullRequest != null)) {
       throw Exception("Session does not have a pull request");
     }
 
     // Get PR URL from session
-    final pr = session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
-    
+    final pr =
+        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
-    
-    if (pathSegments.length < 4 || pathSegments[pathSegments.length - 2] != 'pull') {
+
+    if (pathSegments.length < 4 ||
+        pathSegments[pathSegments.length - 2] != 'pull') {
       throw Exception("Invalid PR URL format");
     }
 
@@ -678,21 +684,21 @@ class SessionProvider extends ChangeNotifier {
 
     // Fetch PR status from GitHub
     final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
-    
+
     // Update session with new PR status
     final updatedSession = session.copyWith(prStatus: prStatus);
-    
+
     // Update in cache
     if (_cacheService != null) {
       await _cacheService!.updateSession(authToken, updatedSession);
     }
-    
+
     // Update in memory
     _items[index] = CachedItem(
       updatedSession,
       _items[index].metadata,
     );
-    
+
     notifyListeners();
   }
 
@@ -707,7 +713,7 @@ class SessionProvider extends ChangeNotifier {
 
   bool _isPrFetchQueued(String prUrl) {
     if (_githubProvider == null) return false;
-    
+
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
     if (pathSegments.length < 4) return false;
@@ -720,7 +726,8 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
-  Future<void> _refreshPrStatusInBackground(String sessionId, String prUrl, String authToken) async {
+  Future<void> _refreshPrStatusInBackground(
+      String sessionId, String prUrl, String authToken) async {
     // Avoid multiple concurrent refreshes for same session if not already queued
     // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
     if (_isPrFetchQueued(prUrl)) return;
@@ -733,23 +740,23 @@ class SessionProvider extends ChangeNotifier {
       final prNumber = pathSegments[pathSegments.length - 1];
 
       final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
-      
+
       if (status != null) {
-         // Update session
-         final index = _items.indexWhere((i) => i.data.id == sessionId);
-         if (index != -1) {
-           final item = _items[index];
-           if (item.data.prStatus != status) {
-             final updatedSession = item.data.copyWith(prStatus: status);
-             // Save to cache
-             if (_cacheService != null) {
-               await _cacheService!.updateSession(authToken, updatedSession);
-             }
-             // Update memory
-             _items[index] = CachedItem(updatedSession, item.metadata);
-             notifyListeners();
-           }
-         }
+        // Update session
+        final index = _items.indexWhere((i) => i.data.id == sessionId);
+        if (index != -1) {
+          final item = _items[index];
+          if (item.data.prStatus != status) {
+            final updatedSession = item.data.copyWith(prStatus: status);
+            // Save to cache
+            if (_cacheService != null) {
+              await _cacheService!.updateSession(authToken, updatedSession);
+            }
+            // Update memory
+            _items[index] = CachedItem(updatedSession, item.metadata);
+            notifyListeners();
+          }
+        }
       }
     } catch (e) {
       // print("Background PR refresh failed: $e");

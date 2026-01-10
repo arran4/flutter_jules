@@ -13,7 +13,7 @@ class FilterElementBuilder {
 
     // Case 2: Root is a text element and new is also text - group them with OR
     if (root is TextElement && newElement is TextElement) {
-       return OrElement([root, newElement]);
+      return OrElement([root, newElement]);
     }
 
     // Case 3: Same type elements (both labels, both statuses, etc.) - use OR
@@ -179,11 +179,11 @@ class FilterElementBuilder {
 
   static FilterElement _addToAndElement(
       AndElement root, FilterElement newElement) {
-    // ... existing implementation 
+    // ... existing implementation
     // Wait, I should probably copy the existing implementation to be safe since I'm targeting a large block or keep it separate?
     // I can just include _addToAndElement as is if I target around it or reuse the logic.
-    // For simplicity, I'll just skip modifying _addToAndElement if I don't need to change it, 
-    // but the regex replace might be tricky if I don't include enough context. 
+    // For simplicity, I'll just skip modifying _addToAndElement if I don't need to change it,
+    // but the regex replace might be tricky if I don't include enough context.
     // Actually, I can target specific method bodies if I break it into chunks.
     // But let's try to fit _isSameFilterType + _elementsEqual in one chunk.
     // And fromFilterTokens + _collectTokens in another.
@@ -191,7 +191,8 @@ class FilterElementBuilder {
     return _addToAndElementInternal(root, newElement);
   }
 
-  static FilterElement _addToAndElementInternal(AndElement root, FilterElement newElement) {
+  static FilterElement _addToAndElementInternal(
+      AndElement root, FilterElement newElement) {
     // Find if there's an OR group of the same type
     final sameTypeOrIndex = root.children.indexWhere((c) {
       if (c is OrElement && c.children.isNotEmpty) {
@@ -291,12 +292,14 @@ class FilterElementBuilder {
     }
 
     if (root is AndElement) {
-      final newChildren =
-          root.children.map((c) => replaceFilter(c, target, replacement) ?? c).toList();
+      final newChildren = root.children
+          .map((c) => replaceFilter(c, target, replacement) ?? c)
+          .toList();
       return AndElement(newChildren);
     } else if (root is OrElement) {
-      final newChildren =
-          root.children.map((c) => replaceFilter(c, target, replacement) ?? c).toList();
+      final newChildren = root.children
+          .map((c) => replaceFilter(c, target, replacement) ?? c)
+          .toList();
       return OrElement(newChildren);
     } else if (root is NotElement) {
       final newChild = replaceFilter(root.child, target, replacement);
@@ -314,27 +317,29 @@ class FilterElementBuilder {
 
     final group =
         isAnd ? AndElement([target, source]) : OrElement([target, source]);
-    
+
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
-    // However, replaceFilter replaces 'target' with 'group'. 
+    // However, replaceFilter replaces 'target' with 'group'.
     // If 'source' was elsewhere, we should remove it separately.
-    
+
     return replaceFilter(root, target, group);
   }
 
   /// Adds a filter to an existing composite element
-  static FilterElement? addFilterToComposite(
-      FilterElement? root, FilterElement targetComposite, FilterElement source) {
+  static FilterElement? addFilterToComposite(FilterElement? root,
+      FilterElement targetComposite, FilterElement source) {
     if (root == null) return null;
-    
+
     // We can use replaceFilter to swap the old composite with a new one containing the source
     if (targetComposite is AndElement) {
-       return replaceFilter(root, targetComposite, AndElement([...targetComposite.children, source]));
+      return replaceFilter(root, targetComposite,
+          AndElement([...targetComposite.children, source]));
     } else if (targetComposite is OrElement) {
-       return replaceFilter(root, targetComposite, OrElement([...targetComposite.children, source]));
+      return replaceFilter(root, targetComposite,
+          OrElement([...targetComposite.children, source]));
     }
-    
+
     return root;
   }
 
@@ -406,7 +411,7 @@ class FilterElementBuilder {
         _collectTokens(child, tokens, mode);
       }
     } else if (element is TextElement) {
-      // Text elements don't map to tokens in the old system normally, 
+      // Text elements don't map to tokens in the old system normally,
       // but standard texts might not be tokens.
     } else if (element is LabelElement) {
       tokens.add(FilterToken(

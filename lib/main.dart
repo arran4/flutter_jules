@@ -28,10 +28,12 @@ void main() {
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider2<CacheService, GithubProvider, SessionProvider>(
+        ChangeNotifierProxyProvider2<CacheService, GithubProvider,
+            SessionProvider>(
           create: (_) => SessionProvider(),
-          update: (_, cache, github, session) =>
-              session!..setCacheService(cache)..setGithubProvider(github),
+          update: (_, cache, github, session) => session!
+            ..setCacheService(cache)
+            ..setGithubProvider(github),
         ),
         ChangeNotifierProxyProvider<CacheService, SourceProvider>(
           create: (_) => SourceProvider(),

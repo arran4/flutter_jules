@@ -85,7 +85,7 @@ abstract class FilterElement {
 
   static String _quote(String s) {
     if (s.isEmpty) return '()';
-    // If it contains unbalanced parentheses or commas that might be misinterpreted, 
+    // If it contains unbalanced parentheses or commas that might be misinterpreted,
     // or if it starts/ends with whitespace, we use the bracket quoting.
     // However, the user wants minimal brackets.
     // We'll only use brackets if the string contains ')' or ',' or starts/ends with whitespace.
@@ -278,7 +278,7 @@ class TextElement extends FilterElement {
         (session.state.toString().toLowerCase().contains(query)) ||
         (session.prStatus?.toLowerCase().contains(query) ?? false) ||
         context.metadata.labels.any((l) => l.toLowerCase().contains(query));
-    
+
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }
@@ -317,7 +317,8 @@ class PrStatusElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.prStatus?.toLowerCase() == value.toLowerCase();
+    final matches =
+        context.session.prStatus?.toLowerCase() == value.toLowerCase();
     if (context.metadata.isHidden) return FilterState.implicitOut;
     return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
@@ -345,7 +346,7 @@ class LabelElement extends FilterElement {
     // Isolated types (force AND grouping by using distinct keys)
     if (value == 'hidden') return 'label:hidden';
     if (value == 'watched') return 'label:watched';
-    
+
     // Group "queue" type labels (Drafts, Pending)
     if (value == 'draft' || value == 'pending') return 'label:queue';
 
@@ -395,18 +396,30 @@ class LabelElement extends FilterElement {
 
     // Special case for Hidden() flag - this is a conversion rule
     if (v == 'hidden' || v == 'hide') {
-      return metadata.isHidden ? FilterState.explicitIn : FilterState.explicitOut;
+      return metadata.isHidden
+          ? FilterState.explicitIn
+          : FilterState.explicitOut;
     }
 
-    if (v == 'new' && metadata.isNew) matched = true;
-    else if (v == 'updated' && metadata.isUpdated && !metadata.isNew) matched = true;
-    else if (v == 'unread' && metadata.isUnread) matched = true;
-    else if (v == 'has_pr' && (session.outputs?.any((o) => o.pullRequest != null) ?? false)) matched = true;
-    else if (v == 'watched' && metadata.isWatched) matched = true;
-    else if (v == 'pending' && metadata.hasPendingUpdates) matched = true;
-    else if (v == 'approval_required' && (session.requirePlanApproval ?? false)) matched = true;
-    else if (v == 'no_approval' && !(session.requirePlanApproval ?? false)) matched = true;
-    else if (v == 'draft') {
+    if (v == 'new' && metadata.isNew) {
+      matched = true;
+    } else if (v == 'updated' && metadata.isUpdated && !metadata.isNew) {
+      matched = true;
+    } else if (v == 'unread' && metadata.isUnread) {
+      matched = true;
+    } else if (v == 'has_pr' &&
+        (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
+      matched = true;
+    } else if (v == 'watched' && metadata.isWatched) {
+      matched = true;
+    } else if (v == 'pending' && metadata.hasPendingUpdates) {
+      matched = true;
+    } else if (v == 'approval_required' &&
+        (session.requirePlanApproval ?? false)) {
+      matched = true;
+    } else if (v == 'no_approval' && !(session.requirePlanApproval ?? false)) {
+      matched = true;
+    } else if (v == 'draft') {
       if (queueProvider != null) {
         try {
           if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
@@ -414,7 +427,8 @@ class LabelElement extends FilterElement {
       }
       if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
     } else {
-      matched = metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
+      matched =
+          metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
     }
 
     // Standard rule: can only see *In (Explicitly exclude otherwise)
@@ -468,18 +482,18 @@ class StatusElement extends FilterElement {
     String cleanVal = value;
     if (cleanVal.startsWith('SessionState.')) cleanVal = cleanVal.substring(13);
     if (cleanVal.startsWith('State.')) cleanVal = cleanVal.substring(6);
-    
+
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
       if (context.metadata.isHidden) return FilterState.implicitOut;
       return FilterState.explicitOut;
     }
-    
+
     final matches = state.toString().toLowerCase() == query ||
         state.name.toLowerCase() == query ||
         state.displayName.toLowerCase() == query;
-           
+
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }
@@ -559,7 +573,8 @@ class HasPrElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
+    final matches =
+        context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }

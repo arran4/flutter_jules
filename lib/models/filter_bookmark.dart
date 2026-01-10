@@ -23,14 +23,15 @@ class FilterBookmark {
 
   factory FilterBookmark.fromJson(Map<String, dynamic> json) {
     String expression = '';
-    
+
     // Support new 'expression' key
     if (json.containsKey('expression')) {
       expression = json['expression'] as String;
     } else if (json.containsKey('filterTree') && json['filterTree'] != null) {
       // Temporary backward compatibility during migration if json is still on disk
       try {
-        final tree = FilterElement.fromJson(json['filterTree'] as Map<String, dynamic>);
+        final tree =
+            FilterElement.fromJson(json['filterTree'] as Map<String, dynamic>);
         expression = tree.toExpression();
       } catch (_) {}
     }

@@ -2,7 +2,13 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
 
-enum FilterDropAction { groupOr, groupAnd, addToGroup, groupAboveAnd, groupAboveOr }
+enum FilterDropAction {
+  groupOr,
+  groupAnd,
+  addToGroup,
+  groupAboveAnd,
+  groupAboveOr
+}
 
 /// Widget that renders a FilterElement tree as nested pills
 class FilterElementWidget extends StatelessWidget {
@@ -10,7 +16,8 @@ class FilterElementWidget extends StatelessWidget {
   final Function(FilterElement)? onRemove;
   final Function(FilterElement)? onToggleNot;
   final Function(FilterElement)? onTap;
-  final Function(FilterElement source, FilterElement target, FilterDropAction action, bool isCopy)? onDrop;
+  final Function(FilterElement source, FilterElement target,
+      FilterDropAction action, bool isCopy)? onDrop;
 
   const FilterElementWidget({
     super.key,
@@ -114,19 +121,25 @@ class FilterElementWidget extends StatelessWidget {
         : (element as OrElement).children;
 
     return DragTarget<FilterElement>(
-      onWillAcceptWithDetails: (details) => details.data != element, // Prevent self-drop
-      onAcceptWithDetails: (details) => _handleDrop(context, details.data, element),
+      onWillAcceptWithDetails: (details) =>
+          details.data != element, // Prevent self-drop
+      onAcceptWithDetails: (details) =>
+          _handleDrop(context, details.data, element),
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
             border: Border.all(
-              color: isHovered ? Colors.blueAccent : textColor.withValues(alpha: 0.3),
+              color: isHovered
+                  ? Colors.blueAccent
+                  : textColor.withValues(alpha: 0.3),
               width: isHovered ? 2 : 1.5,
             ),
             borderRadius: BorderRadius.circular(8),
-            color: isHovered ? Colors.blue.withValues(alpha: 0.1) : backgroundColor.withValues(alpha: 0.3),
+            color: isHovered
+                ? Colors.blue.withValues(alpha: 0.1)
+                : backgroundColor.withValues(alpha: 0.3),
           ),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
@@ -140,7 +153,8 @@ class FilterElementWidget extends StatelessWidget {
                   topRight: Radius.circular(8),
                 ),
                 child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                  padding:
+                      const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                   decoration: BoxDecoration(
                     color: backgroundColor,
                     borderRadius: const BorderRadius.only(
@@ -167,8 +181,8 @@ class FilterElementWidget extends StatelessWidget {
               ),
               // Children
               Padding(
-                padding:
-                    const EdgeInsets.only(left: 12, right: 4, top: 4, bottom: 4),
+                padding: const EdgeInsets.only(
+                    left: 12, right: 4, top: 4, bottom: 4),
                 child: Wrap(
                   spacing: 6,
                   runSpacing: 4,
@@ -325,16 +339,17 @@ class FilterElementWidget extends StatelessWidget {
     // Wrap in DragTarget to accept drops
     Widget child = DragTarget<FilterElement>(
       onWillAcceptWithDetails: (details) => details.data != element,
-      onAcceptWithDetails: (details) => _handleDrop(context, details.data, element),
+      onAcceptWithDetails: (details) =>
+          _handleDrop(context, details.data, element),
       builder: (context, candidateData, rejectedData) {
         if (candidateData.isNotEmpty) {
-           return Container(
-             decoration: BoxDecoration(
-               borderRadius: BorderRadius.circular(16),
-               border: Border.all(color: Colors.blueAccent, width: 2),
-             ),
-             child: leafVisual,
-           );
+          return Container(
+            decoration: BoxDecoration(
+              borderRadius: BorderRadius.circular(16),
+              border: Border.all(color: Colors.blueAccent, width: 2),
+            ),
+            child: leafVisual,
+          );
         }
         return leafVisual;
       },
@@ -361,40 +376,42 @@ class FilterElementWidget extends StatelessWidget {
     if (onDrop == null) return;
 
     final isCtrlPressed = ServicesBinding.instance.keyboard.logicalKeysPressed
-        .contains(LogicalKeyboardKey.controlLeft) ||
+            .contains(LogicalKeyboardKey.controlLeft) ||
         ServicesBinding.instance.keyboard.logicalKeysPressed
-        .contains(LogicalKeyboardKey.controlRight);
+            .contains(LogicalKeyboardKey.controlRight);
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
     final offset = renderBox.localToGlobal(Offset.zero);
-    
+
     final List<PopupMenuEntry<FilterDropAction>> items = [];
 
     if (target is AndElement || target is OrElement) {
-        items.add(const PopupMenuItem(
-          value: FilterDropAction.addToGroup,
-          child: Text("Add to Group"),
-        ));
-        
-        // Show option to create Opposing group above
-        final oppositeLabel = target is AndElement ? "OR" : "AND";
-        final action = target is AndElement ? FilterDropAction.groupAboveOr : FilterDropAction.groupAboveAnd;
-        
-        items.add(PopupMenuItem(
-          value: action,
-          child: Text("Create $oppositeLabel Group Above"),
-        ));
+      items.add(const PopupMenuItem(
+        value: FilterDropAction.addToGroup,
+        child: Text("Add to Group"),
+      ));
+
+      // Show option to create Opposing group above
+      final oppositeLabel = target is AndElement ? "OR" : "AND";
+      final action = target is AndElement
+          ? FilterDropAction.groupAboveOr
+          : FilterDropAction.groupAboveAnd;
+
+      items.add(PopupMenuItem(
+        value: action,
+        child: Text("Create $oppositeLabel Group Above"),
+      ));
     } else {
-        // Leaf target
-        items.add(const PopupMenuItem(
-          value: FilterDropAction.groupOr,
-          child: Text("Group with OR"),
-        ));
-        items.add(const PopupMenuItem(
-          value: FilterDropAction.groupAnd,
-          child: Text("Group with AND"),
-        ));
+      // Leaf target
+      items.add(const PopupMenuItem(
+        value: FilterDropAction.groupOr,
+        child: Text("Group with OR"),
+      ));
+      items.add(const PopupMenuItem(
+        value: FilterDropAction.groupAnd,
+        child: Text("Group with AND"),
+      ));
     }
 
     final selectedAction = await showMenu<FilterDropAction>(

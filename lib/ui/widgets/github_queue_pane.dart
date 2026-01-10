@@ -20,92 +20,98 @@ class GithubQueuePane extends StatelessWidget {
             child: Column(
               mainAxisSize: MainAxisSize.min,
               crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                "GitHub API Status",
-                style: Theme.of(context).textTheme.titleLarge,
-              ),
-              const SizedBox(height: 16),
-              // Rate Limit Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      "Rate Limit",
-                      "$remaining / $limit",
-                      Colors.blue,
-                      Icons.speed,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      "Reset Time",
-                      reset != null ? DateFormat.Hms().format(reset) : "--:--",
-                      Colors.orange,
-                      Icons.timer,
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: _buildStatCard(
-                      context,
-                      "Wait Time",
-                      _formatDuration(provider.waitTime),
-                      provider.waitTime.inSeconds > 0 ? Colors.red : Colors.green,
-                      Icons.hourglass_empty,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 8),
-              if (provider.queue.isEmpty)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16.0),
-                  child: Center(
-                    child: Text(
-                      "Queue is empty",
-                      style: TextStyle(color: Colors.grey),
-                    ),
-                  ),
-                )
-              else
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  "GitHub API Status",
+                  style: Theme.of(context).textTheme.titleLarge,
+                ),
+                const SizedBox(height: 16),
+                // Rate Limit Cards
+                Row(
                   children: [
-                    Text(
-                      "Processing Queue (${provider.queue.length})",
-                      style: Theme.of(context).textTheme.titleMedium,
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Rate Limit",
+                        "$remaining / $limit",
+                        Colors.blue,
+                        Icons.speed,
+                      ),
                     ),
-                    const SizedBox(height: 8),
-                    ListView.builder(
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      itemCount: provider.queue.length,
-                      itemBuilder: (context, index) {
-                        final job = provider.queue[index];
-                        return ListTile(
-                          leading: _buildStatusIcon(job.status),
-                          title: Text(job.description),
-                          subtitle: Text(job.status.toString().split('.').last),
-                          trailing: job.status == GithubJobStatus.running
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
-                                )
-                              : null,
-                        );
-                      },
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Reset Time",
+                        reset != null
+                            ? DateFormat.Hms().format(reset)
+                            : "--:--",
+                        Colors.orange,
+                        Icons.timer,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Wait Time",
+                        _formatDuration(provider.waitTime),
+                        provider.waitTime.inSeconds > 0
+                            ? Colors.red
+                            : Colors.green,
+                        Icons.hourglass_empty,
+                      ),
                     ),
                   ],
                 ),
-            ],
-          ),
+                const SizedBox(height: 16),
+                const Divider(),
+                const SizedBox(height: 8),
+                if (provider.queue.isEmpty)
+                  const Padding(
+                    padding: EdgeInsets.symmetric(vertical: 16.0),
+                    child: Center(
+                      child: Text(
+                        "Queue is empty",
+                        style: TextStyle(color: Colors.grey),
+                      ),
+                    ),
+                  )
+                else
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "Processing Queue (${provider.queue.length})",
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                      const SizedBox(height: 8),
+                      ListView.builder(
+                        shrinkWrap: true,
+                        physics: const NeverScrollableScrollPhysics(),
+                        itemCount: provider.queue.length,
+                        itemBuilder: (context, index) {
+                          final job = provider.queue[index];
+                          return ListTile(
+                            leading: _buildStatusIcon(job.status),
+                            title: Text(job.description),
+                            subtitle:
+                                Text(job.status.toString().split('.').last),
+                            trailing: job.status == GithubJobStatus.running
+                                ? const SizedBox(
+                                    width: 16,
+                                    height: 16,
+                                    child: CircularProgressIndicator(
+                                        strokeWidth: 2),
+                                  )
+                                : null,
+                          );
+                        },
+                      ),
+                    ],
+                  ),
+              ],
+            ),
           ),
         );
       },
