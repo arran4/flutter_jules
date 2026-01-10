@@ -11,7 +11,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<List<FilterToken>> onFiltersChanged;
   final ValueChanged<String> onSearchChanged;
   final List<FilterToken>
-  availableSuggestions; // All possible filters for autocomplete
+      availableSuggestions; // All possible filters for autocomplete
   final VoidCallback? onOpenFilterMenu;
 
   final List<SortOption> activeSorts;
@@ -60,12 +60,38 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     });
   }
 
-  void _showBookmarksMenu(BuildContext context) {
+  void _showBookmarksMenu(BuildContext context) async {
     // Access the provider
     final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
       context,
       listen: false,
     );
+
+    // Ensure bookmarks are loaded before showing menu
+    if (bookmarkProvider.isLoading) {
+      // Show a loading indicator
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              SizedBox(
+                width: 16,
+                height: 16,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('Loading presets...'),
+            ],
+          ),
+          duration: Duration(seconds: 1),
+        ),
+      );
+
+      // Wait for initialization to complete
+      await bookmarkProvider.initialized;
+
+      if (!context.mounted) return;
+    }
 
     // Get the button's position for the menu
     final RenderBox? button = context.findRenderObject() as RenderBox?;
@@ -299,7 +325,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         setState(() {
           _highlightedIndex =
               (_highlightedIndex - 1 + _filteredSuggestions.length) %
-              _filteredSuggestions.length;
+                  _filteredSuggestions.length;
           _showOverlay();
         });
         return KeyEventResult.handled;
@@ -360,9 +386,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   final isHighlighted = index == _highlightedIndex;
 
                   return Container(
-                    color: isHighlighted
-                        ? Theme.of(context).highlightColor
-                        : null,
+                    color:
+                        isHighlighted ? Theme.of(context).highlightColor : null,
                     child: ListTile(
                       dense: true,
                       leading: _getIconForType(suggestion.type),
@@ -529,9 +554,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   void _addSort() {
     // Show menu to pick a field not in list
     final existingFields = widget.activeSorts.map((s) => s.field).toSet();
-    final availableFields = SortField.values
-        .where((f) => !existingFields.contains(f))
-        .toList();
+    final availableFields =
+        SortField.values.where((f) => !existingFields.contains(f)).toList();
 
     if (availableFields.isEmpty) return; // All fields added
 
@@ -709,12 +733,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                 const SizedBox(width: 8),
                 if (widget.showBookmarksButton)
-                  Builder(
-                    builder: (buttonContext) => IconButton(
-                      icon: const Icon(Icons.bookmarks_outlined),
-                      onPressed: () => _showBookmarksMenu(buttonContext),
-                      tooltip: "Filter Presets",
-                    ),
+                  Consumer<FilterBookmarkProvider>(
+                    builder: (context, bookmarkProvider, child) {
+                      return Builder(
+                        builder: (buttonContext) => IconButton(
+                          icon: bookmarkProvider.isLoading
+                              ? const SizedBox(
+                                  width: 20,
+                                  height: 20,
+                                  child:
+                                      CircularProgressIndicator(strokeWidth: 2),
+                                )
+                              : const Icon(Icons.bookmarks_outlined),
+                          onPressed: bookmarkProvider.isLoading
+                              ? null
+                              : () => _showBookmarksMenu(buttonContext),
+                          tooltip: bookmarkProvider.isLoading
+                              ? "Loading presets..."
+                              : "Filter Presets",
+                        ),
+                      );
+                    },
                   ),
                 IconButton(
                   icon: const Icon(Icons.tune),

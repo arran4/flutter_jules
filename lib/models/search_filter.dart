@@ -25,15 +25,30 @@ class FilterToken {
     this.mode = FilterMode.include,
   });
 
+  FilterToken copyWith({
+    String? id,
+    FilterType? type,
+    String? label,
+    dynamic value,
+    FilterMode? mode,
+  }) {
+    return FilterToken(
+      id: id ?? this.id,
+      type: type ?? this.type,
+      label: label ?? this.label,
+      value: value ?? this.value,
+      mode: mode ?? this.mode,
+    );
+  }
+
   FilterToken toggleMode() {
     return FilterToken(
       id: id,
       type: type,
       label: label,
       value: value,
-      mode: mode == FilterMode.include
-          ? FilterMode.exclude
-          : FilterMode.include,
+      mode:
+          mode == FilterMode.include ? FilterMode.exclude : FilterMode.include,
     );
   }
 
