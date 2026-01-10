@@ -303,7 +303,7 @@ class BulkActionExecutor extends ChangeNotifier {
         break;
       case BulkActionType.forceRefreshPrStatus:
         if (authToken != null) {
-          await sessionProvider.refreshPrStatus(session.id, authToken);
+          await sessionProvider.refreshGitStatus(session.id, authToken);
         }
         break;
       case BulkActionType.forceApprovePlan:

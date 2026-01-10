@@ -11,6 +11,7 @@ enum FilterElementType {
   source,
   hasPr,
   prStatus,
+  ciStatus,
   branch,
 }
 
@@ -118,6 +119,8 @@ abstract class FilterElement {
         return HasPrElement.fromJson(json);
       case 'pr_status':
         return PrStatusElement.fromJson(json);
+      case 'ci_status':
+        return CiStatusElement.fromJson(json);
       case 'branch':
         return BranchElement.fromJson(json);
       default:
@@ -322,6 +325,44 @@ class PrStatusElement extends FilterElement {
 
   factory PrStatusElement.fromJson(Map<String, dynamic> json) {
     return PrStatusElement(json['label'] as String, json['value'] as String);
+  }
+}
+
+/// CI Status filter element
+class CiStatusElement extends FilterElement {
+  final String label;
+  final String value;
+
+  CiStatusElement(this.label, this.value);
+
+  @override
+  FilterElementType get type => FilterElementType.ciStatus;
+
+  @override
+  String get groupingType => 'ci_status';
+
+  @override
+  String toExpression() {
+    return 'CI(${FilterElement._quote(value)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'ci_status',
+        'label': label,
+        'value': value,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches =
+        context.session.ciStatus?.toLowerCase() == value.toLowerCase();
+    if (context.metadata.isHidden) return FilterState.implicitOut;
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory CiStatusElement.fromJson(Map<String, dynamic> json) {
+    return CiStatusElement(json['label'] as String, json['value'] as String);
   }
 }
 

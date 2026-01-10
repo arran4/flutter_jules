@@ -152,7 +152,7 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
-                _refreshPrStatusInBackground(session.id, prUrl, authToken);
+                _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
           }
@@ -311,7 +311,7 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
-          _refreshPrStatusInBackground(updatedSession.id, prUrl, authToken);
+          _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
 
@@ -645,8 +645,8 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh the PR status for a session from GitHub
-  Future<void> refreshPrStatus(String sessionId, String authToken) async {
+  /// Refresh the PR and CI status for a session from GitHub
+  Future<void> refreshGitStatus(String sessionId, String authToken) async {
     if (_githubProvider == null) {
       throw Exception("GitHub provider not initialized");
     }
@@ -682,11 +682,20 @@ class SessionProvider extends ChangeNotifier {
     final repo = pathSegments[1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
-    // Fetch PR status from GitHub
-    final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+    // Fetch PR and CI statuses from GitHub in parallel
+    final results = await Future.wait([
+      _githubProvider!.getPrStatus(owner, repo, prNumber),
+      _githubProvider!.getCIStatus(owner, repo, prNumber),
+    ]);
 
-    // Update session with new PR status
-    final updatedSession = session.copyWith(prStatus: prStatus);
+    final prStatus = results[0];
+    final ciStatus = results[1];
+
+    // Update session with new statuses
+    final updatedSession = session.copyWith(
+      prStatus: prStatus,
+      ciStatus: ciStatus,
+    );
 
     // Update in cache
     if (_cacheService != null) {
@@ -723,13 +732,12 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
-  Future<void> _refreshPrStatusInBackground(
+  Future<void> _refreshGitStatusInBackground(
     String sessionId,
     String prUrl,
     String authToken,
   ) async {
     // Avoid multiple concurrent refreshes for same session if not already queued
-    // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
     if (_isPrFetchQueued(prUrl)) return;
 
     try {
@@ -739,15 +747,24 @@ class SessionProvider extends ChangeNotifier {
       final repo = pathSegments[1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
-      final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+      // Fetch statuses in parallel
+      final results = await Future.wait([
+        _githubProvider!.getPrStatus(owner, repo, prNumber),
+        _githubProvider!.getCIStatus(owner, repo, prNumber),
+      ]);
+      final prStatus = results[0];
+      final ciStatus = results[1];
 
-      if (status != null) {
+      if (prStatus != null || ciStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != status) {
-            final updatedSession = item.data.copyWith(prStatus: status);
+          if (item.data.prStatus != prStatus || item.data.ciStatus != ciStatus) {
+            final updatedSession = item.data.copyWith(
+              prStatus: prStatus,
+              ciStatus: ciStatus,
+            );
             // Save to cache
             if (_cacheService != null) {
               await _cacheService!.updateSession(authToken, updatedSession);
@@ -759,7 +776,7 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      // print("Background PR refresh failed: $e");
+      // print("Background Git status refresh failed: $e");
     }
   }
 }
