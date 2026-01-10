@@ -35,7 +35,7 @@ class SessionListScreen extends StatefulWidget {
 class _SessionListScreenState extends State<SessionListScreen> {
   // Search & Filter State
   // Search & Filter State
-  List<FilterToken> _activeFilters = [];
+  FilterElement? _filterTree;
   String _searchText = '';
   // Multi-column sorting
   List<SortOption> _activeSorts = [
@@ -52,14 +52,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     super.initState();
     if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
-      _activeFilters.add(
-        FilterToken(
-          id: 'source:${widget.sourceFilter}',
-          type: FilterType.source,
-          label: widget.sourceFilter!,
-          value: widget.sourceFilter!,
-        ),
-      );
+      _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -144,7 +137,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
     // Determine pre-selected source from active filters
     String? preSelectedSource = widget.sourceFilter;
     if (preSelectedSource == null) {
-      final activeSource = _activeFilters.firstWhere(
+      final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
+      final activeSource = activeFilters.firstWhere(
         (f) => f.type == FilterType.source && f.mode == FilterMode.include,
         orElse: () => const FilterToken(
           id: '',
@@ -714,6 +708,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   void _showFilterMenu() {
     // Group suggestions by type for better UI
+    final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
     final statusSuggestions = _availableSuggestions
         .where((s) => s.type == FilterType.status)
         .toList();
@@ -772,7 +767,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ),
                         ...items.map((suggestion) {
                           // Check current state in _activeFilters
-                          final activeFilter = _activeFilters.firstWhere(
+                          final activeFilter = activeFilters.firstWhere(
                             (f) =>
                                 f.id == suggestion.id &&
                                 f.mode == FilterMode.include,
@@ -785,7 +780,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           );
                           final isIncluded = activeFilter.id.isNotEmpty;
 
-                          final activeExclude = _activeFilters.firstWhere(
+                          final activeExclude = activeFilters.firstWhere(
                             (f) =>
                                 f.id == suggestion.id &&
                                 f.mode == FilterMode.exclude,
@@ -814,26 +809,29 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   ),
                                   tooltip: "Include",
                                   onPressed: () {
-                                    setState(() {
-                                      // Update parent state
-                                      _activeFilters.removeWhere(
-                                        (f) => f.id == suggestion.id,
-                                      );
-                                      if (!isIncluded) {
-                                        _activeFilters.add(
-                                          FilterToken(
-                                            id: suggestion.id,
-                                            type: suggestion.type,
-                                            label: suggestion.label,
-                                            value: suggestion.value,
-                                            mode: FilterMode.include,
-                                          ),
-                                        );
-                                      }
-                                    });
-                                    setDialogState(
-                                      () {},
-                                    ); // Refreshes the dialog UI
+                                    final element = _tokenToElement(
+                                      FilterToken(
+                                        id: suggestion.id,
+                                        type: suggestion.type,
+                                        label: suggestion.label,
+                                        value: suggestion.value,
+                                        mode: FilterMode.include,
+                                      ),
+                                    );
+                                    if (element != null) {
+                                      setState(() {
+                                        if (isIncluded) {
+                                          _filterTree =
+                                              FilterElementBuilder.removeFilter(
+                                                  _filterTree, element);
+                                        } else {
+                                          _filterTree =
+                                              FilterElementBuilder.addFilter(
+                                                  _filterTree, element);
+                                        }
+                                      });
+                                      setDialogState(() {});
+                                    }
                                   },
                                 ),
                                 // Exclude Button
@@ -846,26 +844,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   ),
                                   tooltip: "Exclude",
                                   onPressed: () {
-                                    setState(() {
-                                      _activeFilters.removeWhere(
-                                        (f) => f.id == suggestion.id,
-                                      );
-                                      if (!isExcluded) {
-                                        _activeFilters.add(
-                                          FilterToken(
-                                            id: suggestion.id,
-                                            type: suggestion.type,
-                                            label: suggestion.label,
-                                            value: suggestion.value,
-                                            mode: FilterMode.exclude,
-                                          ),
-                                        );
-                                      }
-                                    });
-                                    setDialogState(
-                                      () {},
-                                    ); // Refreshes the dialog UI
-                                  },
+                                    final element = _tokenToElement(
+                                      FilterToken(
+                                        id: suggestion.id,
+                                        type: suggestion.type,
+                                        label: suggestion.label,
+                                        value: suggestion.value,
+                                        mode: FilterMode.exclude,
+                                      ),
+                                    );
+                                    if (element != null) {
+                                      setState(() {
+                                        if (isExcluded) {
+                                          _filterTree =
+                                              FilterElementBuilder.removeFilter(
+                                                  _filterTree, element);
+                                        } else {
+                                          _filterTree =
+                                              FilterElementBuilder.addFilter(
+                                                  _filterTree, element);
+                                        }
+                                      });
+                                      setDialogState(() {});
+                                    }
+                                  }, // Refreshes the dialog UI
                                 ),
                               ],
                             ),
@@ -970,20 +972,37 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   void _addFilterToken(FilterToken token) {
-    // Check if exists
-    if (!_activeFilters.any((t) => t.id == token.id)) {
-      setState(() {
-        _activeFilters.add(token);
-      });
-    } else {
-      // If it exists but mode is different, update it?
-      // Or if user explicitly clicked "Filter: New" but "NOT New" is active, maybe flip it?
-      // Converting existing to the requested one
-      setState(() {
-        _activeFilters.removeWhere((t) => t.id == token.id);
-        _activeFilters.add(token);
-      });
+    final element = _tokenToElement(token);
+    if (element == null) return;
+
+    setState(() {
+      _filterTree = FilterElementBuilder.addFilter(_filterTree, element);
+    });
+  }
+
+  FilterElement? _tokenToElement(FilterToken token) {
+    FilterElement? element;
+    switch (token.type) {
+      case FilterType.status:
+        element = StatusElement(token.label, token.value.toString());
+        break;
+      case FilterType.source:
+        element = SourceElement(token.label, token.value.toString());
+        break;
+      case FilterType.flag:
+        if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
+          element = HasPrElement();
+        } else {
+          element = LabelElement(token.label, token.value.toString());
+        }
+        break;
+      default:
+        return null;
     }
+    if (token.mode == FilterMode.exclude) {
+      return NotElement(element);
+    }
+    return element;
   }
 
   void _addSortOption(SortOption option) {
@@ -1327,17 +1346,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final session = item.data;
           final metadata = item.metadata;
 
-          // Default hidden check:
-          // If the session is hidden, it should generally NOT be shown...
-          // UNLESS the user has explicitly requested to see hidden items via a filter.
-          final hasHiddenFilter = _activeFilters.any(
-            (f) => f.id == 'flag:hidden' && f.mode == FilterMode.include,
-          );
-          if (metadata.isHidden && !hasHiddenFilter) {
-            return false;
-          }
-
-          // Text Search
+          // Separate text search from filter tree for now, or integrate it?
+          // The current design keeps _searchText separate.
+          // Apply text search first (optimization)
           if (_searchText.isNotEmpty) {
             final query = _searchText.toLowerCase();
             final matches =
@@ -1348,189 +1359,31 @@ class _SessionListScreenState extends State<SessionListScreen> {
             if (!matches) return false;
           }
 
-          // Filter Tokens Logic
-          // Group by Type
-          final statusFilters =
-              _activeFilters.where((f) => f.type == FilterType.status).toList();
-          final sourceFilters =
-              _activeFilters.where((f) => f.type == FilterType.source).toList();
-          final flagFilters =
-              _activeFilters.where((f) => f.type == FilterType.flag).toList();
+          if (_filterTree == null) return true;
 
-          // 1. Status: OR logic for Include, AND logic for Exclude
-          // e.g. (Active OR Running) AND NOT Failed
-          if (statusFilters.isNotEmpty) {
-            final includes = statusFilters.where(
-              (f) => f.mode == FilterMode.include,
-            );
-            final excludes = statusFilters.where(
-              (f) => f.mode == FilterMode.exclude,
-            );
-
-            if (includes.isNotEmpty) {
-              final matchesAny = includes.any((f) => session.state == f.value);
-              if (!matchesAny) return false;
-            }
-
-            if (excludes.isNotEmpty) {
-              final matchesAny = excludes.any((f) => session.state == f.value);
-              if (matchesAny) return false;
-            }
+          // Check for 'hidden' flag to override default hiding behavior
+          // This is a bit disjointed from the tree, but necessary for legacy behavior
+          // Ideally, we'd make 'not hidden' an implicit root filter if not overridden
+          // For now, let's just check the tree for any 'hidden' include
+          // We can do this by traversing or just converting to tokens for this specific check
+          // (Optimization: could add hasFlag helper to FilterElement)
+          final activeFilters =
+              FilterElementBuilder.toFilterTokens(_filterTree);
+          final hasHiddenFilter = activeFilters.any(
+            (f) => f.id == 'flag:hidden' && f.mode == FilterMode.include,
+          );
+          if (metadata.isHidden && !hasHiddenFilter) {
+            return false;
           }
 
-          // 2. Source: OR logic for Include, AND logic for Exclude
-          if (sourceFilters.isNotEmpty) {
-            final includes = sourceFilters.where(
-              (f) => f.mode == FilterMode.include,
-            );
-            final excludes = sourceFilters.where(
-              (f) => f.mode == FilterMode.exclude,
-            );
-
-            if (includes.isNotEmpty) {
-              final matchesAny = includes.any(
-                (f) => session.sourceContext.source == f.value,
-              );
-              if (!matchesAny) return false;
-            }
-
-            if (excludes.isNotEmpty) {
-              final matchesAny = excludes.any(
-                (f) => session.sourceContext.source == f.value,
-              );
-              if (matchesAny) return false;
-            }
-          }
-
-          // 3. Flags: AND logic (typically flags are distinct properties)
-          // But if I select "New" and "Updated", do I want items that are BOTH? Or either?
-          // Usually "Is New" OR "Is Updated". Let's use OR for Includes.
-          if (flagFilters.isNotEmpty) {
-            final includes = flagFilters.where(
-              (f) => f.mode == FilterMode.include,
-            );
-            final excludes = flagFilters.where(
-              (f) => f.mode == FilterMode.exclude,
-            );
-
-            if (includes.isNotEmpty) {
-              bool matchesAny = false;
-              for (final f in includes) {
-                if (f.value == 'new' && metadata.isNew) matchesAny = true;
-                if (f.value == 'updated' &&
-                    metadata.isUpdated &&
-                    !metadata.isNew) {
-                  matchesAny = true;
-                }
-                if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
-                if (f.value == 'has_pr' &&
-                    (session.outputs?.any((o) => o.pullRequest != null) ??
-                        false)) {
-                  matchesAny = true;
-                }
-                if (f.value == 'watched' && metadata.isWatched) {
-                  matchesAny = true;
-                }
-                if (f.value == 'hidden' && metadata.isHidden) {
-                  matchesAny = true;
-                }
-                if (f.value == 'draft') {
-                  if (queueProvider.getDrafts(session.id).isNotEmpty) {
-                    matchesAny = true;
-                  }
-                }
-              }
-              if (!matchesAny) return false;
-            }
-
-            if (excludes.isNotEmpty) {
-              bool matchesAny = false;
-              for (final f in excludes) {
-                if (f.value == 'new' && metadata.isNew) matchesAny = true;
-                if (f.value == 'updated' &&
-                    metadata.isUpdated &&
-                    !metadata.isNew) {
-                  matchesAny = true;
-                }
-                if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
-                if (f.value == 'has_pr' &&
-                    (session.outputs?.any((o) => o.pullRequest != null) ??
-                        false)) {
-                  matchesAny = true;
-                }
-                if (f.value == 'watched' && metadata.isWatched) {
-                  matchesAny = true;
-                }
-                if (f.value == 'hidden' && metadata.isHidden) {
-                  matchesAny = true;
-                }
-                if (f.value == 'draft') {
-                  if (queueProvider.getDrafts(session.id).isNotEmpty) {
-                    matchesAny = true;
-                  }
-                  if (session.id.startsWith('DRAFT_CREATION_')) {
-                    matchesAny = true;
-                  }
-                }
-              }
-              if (matchesAny) return false;
-            }
-          }
-
-          // 4. Text Filters (Labels/Tag matching)
-          // Treat FilterType.text as broad text matching, including Labels
-          final textFilters =
-              _activeFilters.where((f) => f.type == FilterType.text).toList();
-          if (textFilters.isNotEmpty) {
-            // Includes
-            final includes = textFilters.where(
-              (f) => f.mode == FilterMode.include,
-            );
-            if (includes.isNotEmpty) {
-              final matchesAny = includes.any((f) {
-                final val = f.value.toString().toLowerCase();
-                // Check labels
-                if (metadata.labels.any((l) => l.toLowerCase() == val)) {
-                  return true;
-                }
-                if (session.prStatus?.toLowerCase() == val) {
-                  return true;
-                }
-                // Check title/name
-                if (session.title?.toLowerCase().contains(val) ?? false) {
-                  return true;
-                }
-                if (session.name.toLowerCase().contains(val)) return true;
-                return false;
-              });
-              if (!matchesAny) return false;
-            }
-
-            // Excludes
-            final excludes = textFilters.where(
-              (f) => f.mode == FilterMode.exclude,
-            );
-            if (excludes.isNotEmpty) {
-              final matchesAny = excludes.any((f) {
-                final val = f.value.toString().toLowerCase();
-                if (metadata.labels.any((l) => l.toLowerCase() == val)) {
-                  return true;
-                }
-                if (session.title?.toLowerCase().contains(val) ?? false) {
-                  return true;
-                }
-                if (session.name.toLowerCase().contains(val)) return true;
-                return false;
-              });
-              if (matchesAny) return false;
-            }
-          }
-
-          return true;
+          // Evaluate the filter tree
+          return _filterTree!.evaluate(FilterContext(
+            session: session,
+            metadata: metadata,
+            queueProvider: queueProvider,
+          ));
         }).toList();
 
-        // Sorting
-        // Sorting
         _displayItems.sort(_compareSessions);
 
         return Scaffold(
@@ -1732,12 +1585,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         Padding(
                           padding: const EdgeInsets.all(8.0),
                           child: AdvancedSearchBar(
-                            activeFilters: _activeFilters,
-                            onFiltersChanged: (filters) {
+                            filterTree: _filterTree,
+                            onFilterTreeChanged: (tree) {
                               setState(() {
-                                _activeFilters = filters;
+                                _filterTree = tree;
                               });
                             },
+                            searchText: _searchText,
                             onSearchChanged: (text) {
                               setState(() {
                                 _searchText = text;

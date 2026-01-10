@@ -2,7 +2,7 @@
   {
     "name": "Default View",
     "description": "The standard view, sorted by last update.",
-    "filters": [],
+    "filterTree": null,
     "sorts": [
       {
         "field": "updated",
@@ -13,29 +13,26 @@
   {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
-    "filters": [
-      {
-        "id": "flag:new",
-        "type": "flag",
-        "label": "New",
-        "value": "new",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      },
-      {
-        "id": "status:AWAITING_PLAN_APPROVAL",
-        "type": "status",
-        "label": "Awaiting Plan Approval",
-        "value": "AWAITING_PLAN_APPROVAL",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "or",
+      "children": [
+        {
+          "type": "label",
+          "label": "New",
+          "value": "new"
+        },
+        {
+          "type": "label",
+          "label": "Updated",
+          "value": "updated"
+        },
+        {
+          "type": "status",
+          "label": "Awaiting Plan Approval",
+          "value": "AWAITING_PLAN_APPROVAL"
+        }
+      ]
+    },
     "sorts": [
       {
         "field": "updated",
@@ -46,15 +43,11 @@
   {
     "name": "In Progress",
     "description": "All sessions currently in progress.",
-    "filters": [
-      {
-        "id": "status:IN_PROGRESS",
-        "type": "status",
-        "label": "In Progress",
-        "value": "IN_PROGRESS",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "status",
+      "label": "In Progress",
+      "value": "IN_PROGRESS"
+    },
     "sorts": [
       {
         "field": "updated",
@@ -65,15 +58,11 @@
   {
     "name": "Pending Sessions",
     "description": "Sessions queued and waiting to be sent to server.",
-    "filters": [
-      {
-        "id": "status:QUEUED",
-        "type": "status",
-        "label": "Pending",
-        "value": "QUEUED",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "status",
+      "label": "Pending",
+      "value": "QUEUED"
+    },
     "sorts": [
       {
         "field": "created",
@@ -84,15 +73,11 @@
   {
     "name": "Draft Messages",
     "description": "Sessions with unsent draft messages.",
-    "filters": [
-      {
-        "id": "flag:draft",
-        "type": "flag",
-        "label": "Has Drafts",
-        "value": "draft",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "label",
+      "label": "Has Drafts",
+      "value": "draft"
+    },
     "sorts": [
       {
         "field": "updated",
@@ -103,22 +88,21 @@
   {
     "name": "Completed & Updated",
     "description": "Recently updated and completed sessions.",
-    "filters": [
-      {
-        "id": "status:COMPLETED",
-        "type": "status",
-        "label": "Completed",
-        "value": "COMPLETED",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "and",
+      "children": [
+        {
+          "type": "status",
+          "label": "Completed",
+          "value": "COMPLETED"
+        },
+        {
+          "type": "label",
+          "label": "Updated",
+          "value": "updated"
+        }
+      ]
+    },
     "sorts": [
       {
         "field": "updated",
@@ -129,15 +113,11 @@
   {
     "name": "My Watched Items",
     "description": "Sessions you are actively watching.",
-    "filters": [
-      {
-        "id": "flag:watched",
-        "type": "flag",
-        "label": "Watching",
-        "value": "watched",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "label",
+      "label": "Watching",
+      "value": "watched"
+    },
     "sorts": [
       {
         "field": "updated",
@@ -178,36 +158,34 @@
     ],
     "name": "Completed w/ PR (Unread/Updated)",
     "description": "Completed sessions with PRs that are unread or recently updated.",
-    "filters": [
-      {
-        "id": "status:COMPLETED",
-        "type": "status",
-        "label": "Completed",
-        "value": "COMPLETED",
-        "mode": "include"
-      },
-      {
-        "id": "flag:has_pr",
-        "type": "flag",
-        "label": "Has PR",
-        "value": "has_pr",
-        "mode": "include"
-      },
-      {
-        "id": "flag:unread",
-        "type": "flag",
-        "label": "Unread",
-        "value": "unread",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "and",
+      "children": [
+        {
+          "type": "status",
+          "label": "Completed",
+          "value": "COMPLETED"
+        },
+        {
+          "type": "has_pr"
+        },
+        {
+          "type": "or",
+          "children": [
+            {
+              "type": "label",
+              "label": "Unread",
+              "value": "unread"
+            },
+            {
+              "type": "label",
+              "label": "Updated",
+              "value": "updated"
+            }
+          ]
+        }
+      ]
+    },
     "sorts": [
       {
         "field": "updated",
@@ -229,36 +207,37 @@
     ],
     "name": "Completed w/o PR (Unread/Updated)",
     "description": "Completed sessions without PRs that are unread or recently updated.",
-    "filters": [
-      {
-        "id": "status:COMPLETED",
-        "type": "status",
-        "label": "Completed",
-        "value": "COMPLETED",
-        "mode": "include"
-      },
-      {
-        "id": "flag:has_pr",
-        "type": "flag",
-        "label": "Has PR",
-        "value": "has_pr",
-        "mode": "exclude"
-      },
-      {
-        "id": "flag:unread",
-        "type": "flag",
-        "label": "Unread",
-        "value": "unread",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      }
-    ],
+    "filterTree": {
+      "type": "and",
+      "children": [
+        {
+          "type": "status",
+          "label": "Completed",
+          "value": "COMPLETED"
+        },
+        {
+          "type": "not",
+          "child": {
+            "type": "has_pr"
+          }
+        },
+        {
+          "type": "or",
+          "children": [
+            {
+              "type": "label",
+              "label": "Unread",
+              "value": "unread"
+            },
+            {
+              "type": "label",
+              "label": "Updated",
+              "value": "updated"
+            }
+          ]
+        }
+      ]
+    },
     "sorts": [
       {
         "field": "updated",

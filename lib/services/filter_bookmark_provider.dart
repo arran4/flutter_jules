@@ -52,6 +52,21 @@ class FilterBookmarkProvider with ChangeNotifier {
         final List<dynamic> jsonList = jsonDecode(jsonString);
         _bookmarks =
             jsonList.map((json) => FilterBookmark.fromJson(json)).toList();
+
+        // Auto-migrate old bookmarks to new tree format
+        bool needsMigration = false;
+        final migratedBookmarks = _bookmarks.map((bookmark) {
+          if (!bookmark.usesTreeFormat && bookmark.filters.isNotEmpty) {
+            needsMigration = true;
+            return bookmark.migrateToTree();
+          }
+          return bookmark;
+        }).toList();
+
+        if (needsMigration) {
+          _bookmarks = migratedBookmarks;
+          await _saveBookmarks(); // Save migrated bookmarks
+        }
       } else {
         // No saved bookmarks, initialize with defaults
         _bookmarks = List.from(_defaultBookmarks);
