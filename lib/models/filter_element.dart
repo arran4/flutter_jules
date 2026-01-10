@@ -1,5 +1,7 @@
 import 'session.dart';
 import 'cache_metadata.dart';
+import 'time_filter.dart';
+import '../utils/time_helper.dart';
 
 enum FilterElementType {
   and,
@@ -12,6 +14,7 @@ enum FilterElementType {
   hasPr,
   prStatus,
   branch,
+  time,
 }
 
 enum FilterState {
@@ -120,6 +123,8 @@ abstract class FilterElement {
         return PrStatusElement.fromJson(json);
       case 'branch':
         return BranchElement.fromJson(json);
+      case 'time':
+        return TimeFilterElement.fromJson(json);
       default:
         throw Exception('Unknown filter element type: $type');
     }
@@ -166,6 +171,47 @@ class AndElement extends FilterElement {
       childrenJson
           .map((c) => FilterElement.fromJson(c as Map<String, dynamic>))
           .toList(),
+    );
+  }
+}
+
+class TimeFilterElement extends FilterElement {
+  final TimeFilter timeFilter;
+
+  TimeFilterElement(this.timeFilter);
+
+  @override
+  FilterElementType get type => FilterElementType.time;
+
+  @override
+  String get groupingType => 'time';
+
+  @override
+  String toExpression() {
+    if (timeFilter.specificTime != null) {
+      return 'Time(${timeFilter.type.name} ${timeFilter.specificTime!.toIso8601String()})';
+    }
+    return 'Time(${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'time',
+        'timeFilter': timeFilter.toJson(),
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches = matchesTimeFilter(context.session, timeFilter);
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory TimeFilterElement.fromJson(Map<String, dynamic> json) {
+    return TimeFilterElement(
+      TimeFilter.fromJson(json['timeFilter'] as Map<String, dynamic>),
     );
   }
 }

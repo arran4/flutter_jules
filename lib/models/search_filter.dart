@@ -5,6 +5,7 @@ enum FilterType {
   prStatus, // PR: Open, Closed, Merged, etc.
   branch,
   text,
+  time,
 }
 
 enum FilterMode {

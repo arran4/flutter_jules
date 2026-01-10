@@ -7,6 +7,7 @@ import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'sort_pills_widget.dart';
 import 'bookmark_menu_helper.dart';
+import 'time_filter_dialog.dart';
 
 /// Refactored search bar using hierarchical FilterElement structure.
 /// Replaces the old flat-list based AdvancedSearchBar.
@@ -363,6 +364,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.text:
         // Text search is handled separately, not in tree
         return;
+      case FilterType.time:
+        newElement = TimeFilterElement(token.value);
+        break;
     }
 
     // Handle exclude mode
@@ -406,6 +410,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.account_tree;
       case FilterType.text:
         return Icons.text_fields;
+      case FilterType.time:
+        return Icons.access_time;
     }
   }
 
@@ -501,6 +507,19 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           tooltip: 'Filter Presets',
                         ),
                       ),
+                    IconButton(
+                      icon: const Icon(Icons.access_time),
+                      onPressed: () async {
+                        final filterToken = await showDialog<FilterToken>(
+                          context: context,
+                          builder: (context) => const TimeFilterDialog(),
+                        );
+                        if (filterToken != null) {
+                          _selectSuggestion(filterToken);
+                        }
+                      },
+                      tooltip: 'Filter by Time',
+                    ),
                   ],
                 ),
 

@@ -4,6 +4,8 @@ import '../models/cache_metadata.dart';
 import '../services/message_queue_provider.dart';
 import '../models/filter_element.dart';
 import '../models/enums.dart';
+import '../models/time_filter.dart';
+import 'time_helper.dart';
 
 class FilterUtils {
   static bool matches(
@@ -34,6 +36,8 @@ class FilterUtils {
         activeFilters.where((f) => f.type == FilterType.flag).toList();
     final textFilters =
         activeFilters.where((f) => f.type == FilterType.text).toList();
+    final timeFilters =
+        activeFilters.where((f) => f.type == FilterType.time).toList();
 
     // 1. Status: OR logic for Include, AND logic for Exclude
     if (statusFilters.isNotEmpty) {
@@ -171,6 +175,17 @@ class FilterUtils {
           return false;
         });
         if (matchesAny) return false;
+      }
+    }
+
+    // 5. Time Filters
+    if (timeFilters.isNotEmpty) {
+      for (final filter in timeFilters) {
+        final timeFilter = filter.value as TimeFilter;
+        final matches = matchesTimeFilter(session, timeFilter);
+
+        if (filter.mode == FilterMode.include && !matches) return false;
+        if (filter.mode == FilterMode.exclude && matches) return false;
       }
     }
 
