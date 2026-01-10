@@ -767,6 +767,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
   }
 
+  // ignore: unused_element
   void _showFilterMenu() {
     // Group suggestions by type for better UI
     final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
@@ -2133,7 +2134,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       showMenu(
                                                         context: context,
                                                         position: position,
-                                                        items: <PopupMenuEntry>[
+                                                        items: <PopupMenuEntry<dynamic>>[
                                                           PopupMenuItem(
                                                             child: const Row(
                                                               children: [
@@ -2381,12 +2382,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
             overlay.size.height / 2,
           ); // Center fallback
 
-    showMenu(
+    showMenu<String>(
       context: context,
       position: finalPosition,
       items: [
         // New Resubmit Actions
-        const PopupMenuItem(
+        const PopupMenuItem<String>(
           value: 'resubmit',
           child: Row(
             children: [
@@ -2396,7 +2397,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ],
           ),
         ),
-        const PopupMenuItem(
+        const PopupMenuItem<String>(
           value: 'resubmit_hide',
           child: Row(
             children: [
@@ -2408,7 +2409,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ),
         const PopupMenuDivider(),
 
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: Row(
             children: [
               Icon(metadata.isHidden ? Icons.visibility : Icons.visibility_off),
@@ -2425,7 +2426,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
         if (session.url != null) ...[
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.open_in_browser),
@@ -2435,7 +2436,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ),
             onTap: () => _openSessionUrl(session),
           ),
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.link),
@@ -2454,7 +2455,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
         ],
         if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.mark_email_read),
@@ -2466,7 +2467,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
         if (session.outputs != null &&
             session.outputs!.any((o) => o.pullRequest != null)) ...[
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.merge_type),
@@ -2485,7 +2486,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               });
             },
           ),
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.copy),
@@ -2504,7 +2505,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: const Row(
             children: [
               Icon(Icons.reply),
@@ -2514,7 +2515,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: const Row(
             children: [
               Icon(Icons.refresh),
@@ -2528,7 +2529,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             });
           },
         ),
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: const Row(
             children: [
               Icon(Icons.description),
@@ -2554,7 +2555,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             );
           },
         ),
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: const Row(
             children: [
               Icon(Icons.data_object),
@@ -2576,7 +2577,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             });
           },
         ),
-        PopupMenuItem(
+        PopupMenuItem<String>(
           child: Row(
             children: [
               Icon(
@@ -2597,7 +2598,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
         if (!metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.mark_email_unread),
@@ -2613,7 +2614,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               ).markAsUnread(session.id, auth.token!);
             },
           ),
-        const PopupMenuItem(
+        const PopupMenuItem<String>(
           value: 'source',
           child: Row(
             children: [
@@ -2624,7 +2625,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
         ),
         if (isDevMode) ...[
-          PopupMenuItem(
+          PopupMenuItem<String>(
             child: const Row(
               children: [
                 Icon(Icons.developer_mode),

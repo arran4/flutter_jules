@@ -585,10 +585,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       ).addCreateSessionRequest(result.session, isDraft: false);
 
       // Trigger send if online
-       final auth = Provider.of<AuthProvider>(context, listen: false);
-       if (auth.client != null) { // auth.client is always non-null but check for safety
-          Provider.of<MessageQueueProvider>(context, listen: false).sendQueue(auth.client);
-       }
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      ).sendQueue(auth.client);
 
       ScaffoldMessenger.of(
         context,
@@ -1164,10 +1165,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         // Adjust index for status item
         final int adjIndex = index - 1;
 
-        if (hasPr) {
-          if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
-            return _buildPrNotice(context);
-          }
+        if (hasPr && (adjIndex == 0 || adjIndex == finalItems.length + 1)) {
+          return _buildPrNotice(context);
         }
 
         final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
