@@ -34,21 +34,14 @@ void main() {
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
         ),
-        ChangeNotifierProxyProvider2<
-          CacheService,
-          AuthProvider,
-          MessageQueueProvider
-        >(
+        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
+            MessageQueueProvider>(
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider3<
-          SettingsProvider,
-          SessionProvider,
-          SourceProvider,
-          RefreshService
-        >(
+        ChangeNotifierProxyProvider3<SettingsProvider, SessionProvider,
+            SourceProvider, RefreshService>(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),

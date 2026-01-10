@@ -144,5 +144,85 @@
         "direction": "descending"
       }
     ]
+  },
+  {
+    "name": "Completed w/ PR (Unread/Updated)",
+    "description": "Completed sessions with PRs that are unread or recently updated.",
+    "filters": [
+      {
+        "id": "status:COMPLETED",
+        "type": "status",
+        "label": "Completed",
+        "value": "COMPLETED",
+        "mode": "include"
+      },
+      {
+        "id": "flag:has_pr",
+        "type": "flag",
+        "label": "Has PR",
+        "value": "has_pr",
+        "mode": "include"
+      },
+      {
+        "id": "flag:unread",
+        "type": "flag",
+        "label": "Unread",
+        "value": "unread",
+        "mode": "include"
+      },
+      {
+        "id": "flag:updated",
+        "type": "flag",
+        "label": "Updated",
+        "value": "updated",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Completed w/o PR (Unread/Updated)",
+    "description": "Completed sessions without PRs that are unread or recently updated.",
+    "filters": [
+      {
+        "id": "status:COMPLETED",
+        "type": "status",
+        "label": "Completed",
+        "value": "COMPLETED",
+        "mode": "include"
+      },
+      {
+        "id": "flag:has_pr",
+        "type": "flag",
+        "label": "Has PR",
+        "value": "has_pr",
+        "mode": "exclude"
+      },
+      {
+        "id": "flag:unread",
+        "type": "flag",
+        "label": "Unread",
+        "value": "unread",
+        "mode": "include"
+      },
+      {
+        "id": "flag:updated",
+        "type": "flag",
+        "label": "Updated",
+        "value": "updated",
+        "mode": "include"
+      }
+    ],
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
   }
 ]

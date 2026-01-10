@@ -95,15 +95,13 @@ class SessionProvider extends ChangeNotifier {
             final oldItem = _items[index];
             _items.removeAt(index);
 
-            final changed =
-                (oldItem.data.updateTime != session.updateTime) ||
+            final changed = (oldItem.data.updateTime != session.updateTime) ||
                 (oldItem.data.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated: changed
-                  ? DateTime.now()
-                  : oldItem.metadata.lastUpdated,
+              lastUpdated:
+                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -173,8 +171,7 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed =
-          (oldItem.data.updateTime != session.updateTime) ||
+      final changed = (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -227,7 +224,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-            (oldItem.data.state != updatedSession.state);
+                (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -407,9 +404,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems = _items
-          .where((item) => item.metadata.isWatched)
-          .toList();
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {

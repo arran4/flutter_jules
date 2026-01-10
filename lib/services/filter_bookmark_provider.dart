@@ -50,9 +50,8 @@ class FilterBookmarkProvider with ChangeNotifier {
       final jsonString = prefs.getString(_bookmarksKey);
       if (jsonString != null) {
         final List<dynamic> jsonList = jsonDecode(jsonString);
-        _bookmarks = jsonList
-            .map((json) => FilterBookmark.fromJson(json))
-            .toList();
+        _bookmarks =
+            jsonList.map((json) => FilterBookmark.fromJson(json)).toList();
       } else {
         // No saved bookmarks, initialize with defaults
         _bookmarks = List.from(_defaultBookmarks);
