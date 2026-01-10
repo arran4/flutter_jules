@@ -149,8 +149,8 @@ class SessionMetaPills extends StatelessWidget {
             label: session.sourceContext.githubRepoContext!.startingBranch,
             avatar: const Icon(Icons.call_split, size: 16),
             filterToken: FilterToken(
-              id: 'text:${session.sourceContext.githubRepoContext!.startingBranch}',
-              type: FilterType.text,
+              id: 'branch:${session.sourceContext.githubRepoContext!.startingBranch}',
+              type: FilterType.branch,
               label: session.sourceContext.githubRepoContext!.startingBranch,
               value: session.sourceContext.githubRepoContext!.startingBranch,
             ),
@@ -184,6 +184,21 @@ class SessionMetaPills extends StatelessWidget {
       padding: compact ? const EdgeInsets.all(0) : null,
       visualDensity: compact ? VisualDensity.compact : null,
     );
+
+    if (filterToken != null) {
+      chip = Draggable<FilterToken>(
+        data: filterToken,
+        feedback: Material(
+          color: Colors.transparent,
+          child: Opacity(
+            opacity: 0.8,
+            child: chip,
+          ),
+        ),
+        childWhenDragging: chip,
+        child: chip,
+      );
+    }
 
     if (filterToken == null && sortField == null) return chip;
 
