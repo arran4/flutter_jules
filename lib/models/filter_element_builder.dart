@@ -49,8 +49,8 @@ class FilterElementBuilder {
   ) {
     if (root == null) return null;
 
-    // Direct match - Identity check
-    if (root == target) {
+    // Direct match
+    if (_elementsEqual(root, target)) {
       return null;
     }
 
@@ -158,6 +158,20 @@ class FilterElementBuilder {
       return true;
     } else if (a is PrStatusElement && b is PrStatusElement) {
       return a.value == b.value;
+    } else if (a is NotElement && b is NotElement) {
+      return _elementsEqual(a.child, b.child);
+    } else if (a is AndElement && b is AndElement) {
+      if (a.children.length != b.children.length) return false;
+      for (int i = 0; i < a.children.length; i++) {
+        if (!_elementsEqual(a.children[i], b.children[i])) return false;
+      }
+      return true;
+    } else if (a is OrElement && b is OrElement) {
+      if (a.children.length != b.children.length) return false;
+      for (int i = 0; i < a.children.length; i++) {
+        if (!_elementsEqual(a.children[i], b.children[i])) return false;
+      }
+      return true;
     }
 
     return false;
@@ -220,8 +234,8 @@ class FilterElementBuilder {
     bool found = false;
 
     for (final child in children) {
-      // Identity check for precise removal
-      if (child == target) {
+      // Equality check for removal
+      if (_elementsEqual(child, target)) {
         found = true;
         continue; // Skip this child
       }
@@ -272,7 +286,7 @@ class FilterElementBuilder {
   ) {
     if (root == null) return null;
 
-    if (root == target) {
+    if (_elementsEqual(root, target)) {
       return replacement;
     }
 

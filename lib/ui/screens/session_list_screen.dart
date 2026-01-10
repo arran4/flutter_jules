@@ -1436,29 +1436,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
             if (!matches) return false;
           }
 
-          if (_filterTree == null) return true;
-
-          // Check for 'hidden' flag to override default hiding behavior
-          // This is a bit disjointed from the tree, but necessary for legacy behavior
-          // Ideally, we'd make 'not hidden' an implicit root filter if not overridden
-          // For now, let's just check the tree for any 'hidden' include
-          // We can do this by traversing or just converting to tokens for this specific check
-          // (Optimization: could add hasFlag helper to FilterElement)
-          final activeFilters =
-              FilterElementBuilder.toFilterTokens(_filterTree);
-          final hasHiddenFilter = activeFilters.any(
-            (f) => f.id == 'flag:hidden' && f.mode == FilterMode.include,
-          );
-          if (metadata.isHidden && !hasHiddenFilter) {
-            return false;
+          // Evaluate the filter tree using new FilterState logic
+          final initialState = metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+          
+          if (_filterTree == null) {
+            return initialState.isIn;
           }
 
-          // Evaluate the filter tree
-          return _filterTree!.evaluate(FilterContext(
+          final treeResult = _filterTree!.evaluate(FilterContext(
             session: session,
             metadata: metadata,
             queueProvider: queueProvider,
           ));
+
+          final finalState = FilterState.combineAnd(initialState, treeResult);
+          return finalState.isIn;
         }).toList();
 
         _displayItems.sort(_compareSessions);

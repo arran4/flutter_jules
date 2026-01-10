@@ -13,6 +13,45 @@ enum FilterElementType {
   prStatus,
 }
 
+enum FilterState {
+  explicitOut(-2),
+  implicitOut(-1),
+  implicitIn(1),
+  explicitIn(2);
+
+  final int value;
+  const FilterState(this.value);
+
+  int get priority => value.abs();
+  bool get isIn => value > 0;
+  bool get isExplicit => priority == 2;
+
+  static FilterState combineAnd(FilterState a, FilterState b) {
+    if (a.priority > b.priority) return a;
+    if (b.priority > a.priority) return b;
+    return a.value < b.value ? a : b;
+  }
+
+  static FilterState combineOr(FilterState a, FilterState b) {
+    if (a.priority > b.priority) return a;
+    if (b.priority > a.priority) return b;
+    return a.value > b.value ? a : b;
+  }
+
+  FilterState negate() {
+    switch (this) {
+      case FilterState.explicitIn:
+        return FilterState.explicitOut;
+      case FilterState.implicitIn:
+        return FilterState.implicitOut;
+      case FilterState.implicitOut:
+        return FilterState.implicitIn;
+      case FilterState.explicitOut:
+        return FilterState.explicitIn;
+    }
+  }
+}
+
 /// Context for evaluating filter elements
 class FilterContext {
   final Session session;
@@ -38,8 +77,8 @@ abstract class FilterElement {
   /// Elements with different groupingTypes are AND'd together.
   String get groupingType;
 
-  /// Returns true if this element matches the given criteria
-  bool evaluate(FilterContext context);
+  /// Evaluates the element and returns the resulting FilterState
+  FilterState evaluate(FilterContext context);
 
   /// Returns the string expression representation of this element
   String toExpression();
@@ -108,8 +147,13 @@ class AndElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return children.every((child) => child.evaluate(context));
+  FilterState evaluate(FilterContext context) {
+    if (children.isEmpty) return FilterState.implicitIn;
+    FilterState result = children.first.evaluate(context);
+    for (int i = 1; i < children.length; i++) {
+      result = FilterState.combineAnd(result, children[i].evaluate(context));
+    }
+    return result;
   }
 
   /// Factory to create from JSON
@@ -147,8 +191,13 @@ class OrElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return children.any((child) => child.evaluate(context));
+  FilterState evaluate(FilterContext context) {
+    if (children.isEmpty) return FilterState.implicitIn;
+    FilterState result = children.first.evaluate(context);
+    for (int i = 1; i < children.length; i++) {
+      result = FilterState.combineOr(result, children[i].evaluate(context));
+    }
+    return result;
   }
 
   factory OrElement.fromJson(Map<String, dynamic> json) {
@@ -185,8 +234,8 @@ class NotElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return !child.evaluate(context);
+  FilterState evaluate(FilterContext context) {
+    return child.evaluate(context).negate();
   }
 
   factory NotElement.fromJson(Map<String, dynamic> json) {
@@ -220,15 +269,20 @@ class TextElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
+  FilterState evaluate(FilterContext context) {
     final query = text.toLowerCase();
     final session = context.session;
-    return (session.title?.toLowerCase().contains(query) ?? false) ||
+    final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
         (session.name.toLowerCase().contains(query)) ||
         (session.id.toLowerCase().contains(query)) ||
         (session.state.toString().toLowerCase().contains(query)) ||
         (session.prStatus?.toLowerCase().contains(query) ?? false) ||
         context.metadata.labels.any((l) => l.toLowerCase().contains(query));
+    
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory TextElement.fromJson(Map<String, dynamic> json) {
@@ -262,8 +316,10 @@ class PrStatusElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return context.session.prStatus?.toLowerCase() == value.toLowerCase();
+  FilterState evaluate(FilterContext context) {
+    final matches = context.session.prStatus?.toLowerCase() == value.toLowerCase();
+    if (context.metadata.isHidden) return FilterState.implicitOut;
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory PrStatusElement.fromJson(Map<String, dynamic> json) {
@@ -330,37 +386,40 @@ class LabelElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
+  FilterState evaluate(FilterContext context) {
+    bool matched = false;
+    final v = value.toLowerCase();
     final metadata = context.metadata;
     final session = context.session;
     final queueProvider = context.queueProvider;
 
-    if (value == 'new' && metadata.isNew) return true;
-    if (value == 'updated' && metadata.isUpdated && !metadata.isNew) {
-      return true;
+    // Special case for Hidden() flag - this is a conversion rule
+    if (v == 'hidden' || v == 'hide') {
+      return metadata.isHidden ? FilterState.explicitIn : FilterState.explicitOut;
     }
-    if (value == 'unread' && metadata.isUnread) return true;
-    if (value == 'has_pr' &&
-        (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
-      return true;
-    }
-    if (value == 'watched' && metadata.isWatched) return true;
-    if (value == 'hidden' && metadata.isHidden) return true;
-    if (value == 'draft') {
+
+    if (v == 'new' && metadata.isNew) matched = true;
+    else if (v == 'updated' && metadata.isUpdated && !metadata.isNew) matched = true;
+    else if (v == 'unread' && metadata.isUnread) matched = true;
+    else if (v == 'has_pr' && (session.outputs?.any((o) => o.pullRequest != null) ?? false)) matched = true;
+    else if (v == 'watched' && metadata.isWatched) matched = true;
+    else if (v == 'pending' && metadata.hasPendingUpdates) matched = true;
+    else if (v == 'draft') {
       if (queueProvider != null) {
         try {
-          if (queueProvider.getDrafts(session.id).isNotEmpty) return true;
+          if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
         } catch (_) {}
       }
-      if (session.id.startsWith('DRAFT_CREATION_')) return true;
+      if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
+    } else {
+      matched = metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
     }
 
-    // Generic label matching
-    if (metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase())) {
-      return true;
+    // Standard rule: can only see *In (Explicitly exclude otherwise)
+    if (metadata.isHidden) {
+      return matched ? FilterState.implicitOut : FilterState.explicitOut;
     }
-
-    return false;
+    return matched ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory LabelElement.fromJson(Map<String, dynamic> json) {
@@ -403,14 +462,26 @@ class StatusElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    final query = value.toLowerCase();
-    final state = context.session.state;
-    if (state == null) return false;
+  FilterState evaluate(FilterContext context) {
+    String cleanVal = value;
+    if (cleanVal.startsWith('SessionState.')) cleanVal = cleanVal.substring(13);
+    if (cleanVal.startsWith('State.')) cleanVal = cleanVal.substring(6);
     
-    return state.toString().toLowerCase() == query ||
+    final query = cleanVal.toLowerCase();
+    final state = context.session.state;
+    if (state == null) {
+      if (context.metadata.isHidden) return FilterState.implicitOut;
+      return FilterState.explicitOut;
+    }
+    
+    final matches = state.toString().toLowerCase() == query ||
         state.name.toLowerCase() == query ||
         state.displayName.toLowerCase() == query;
+           
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory StatusElement.fromJson(Map<String, dynamic> json) {
@@ -447,9 +518,13 @@ class SourceElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return context.session.sourceContext.source.toLowerCase() ==
+  FilterState evaluate(FilterContext context) {
+    final matches = context.session.sourceContext.source.toLowerCase() ==
         value.toLowerCase();
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory SourceElement.fromJson(Map<String, dynamic> json) {
@@ -481,8 +556,12 @@ class HasPrElement extends FilterElement {
       };
 
   @override
-  bool evaluate(FilterContext context) {
-    return context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
+  FilterState evaluate(FilterContext context) {
+    final matches = context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory HasPrElement.fromJson(Map<String, dynamic> json) {
