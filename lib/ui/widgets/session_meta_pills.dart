@@ -46,8 +46,8 @@ class SessionMetaPills extends StatelessWidget {
             context,
             avatar: const Icon(Icons.calendar_today, size: 16),
             label: DateFormat.yMMMd().add_jm().format(
-                  DateTime.parse(session.createTime!).toLocal(),
-                ),
+              DateTime.parse(session.createTime!).toLocal(),
+            ),
             sortField: SortField.created,
           ),
 
@@ -100,6 +100,27 @@ class SessionMetaPills extends StatelessWidget {
               value: session.requirePlanApproval!
                   ? 'approval_required'
                   : 'no_approval',
+            ),
+          ),
+
+        // PR Status (for Open/Draft - non-final states)
+        if (session.prStatus != null &&
+            (session.prStatus == 'Open' || session.prStatus == 'Draft'))
+          _buildChip(
+            context,
+            label: 'PR: ${session.prStatus}',
+            avatar: Icon(
+              session.prStatus == 'Draft' ? Icons.edit_note : Icons.merge_type,
+              size: 16,
+            ),
+            backgroundColor: session.prStatus == 'Draft'
+                ? Colors.amber.shade50
+                : Colors.blue.shade50,
+            filterToken: FilterToken(
+              id: 'prStatus:${session.prStatus}',
+              type: FilterType.prStatus,
+              label: 'PR: ${session.prStatus}',
+              value: session.prStatus!,
             ),
           ),
 
