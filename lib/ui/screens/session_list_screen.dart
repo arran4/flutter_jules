@@ -147,31 +147,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
-  Future<void> _createSession() async {
-    // Determine pre-selected source from active filters
-    String? preSelectedSource = widget.sourceFilter;
-    if (preSelectedSource == null) {
-      final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
-      final activeSource = activeFilters.firstWhere(
-        (f) => f.type == FilterType.source && f.mode == FilterMode.include,
-        orElse: () => const FilterToken(
-          id: '',
-          type: FilterType.flag,
-          label: '',
-          value: '',
-        ),
-      );
-      if (activeSource.id.isNotEmpty) {
-        preSelectedSource = activeSource.value;
-      }
-    }
-
-    final NewSessionResult? result = await showDialog<NewSessionResult>(
-      context: context,
-      builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
-    );
-
-    if (result == null) return;
+  Future<void> _handleNewSessionResult(NewSessionResult result) async {
     if (!mounted) return;
 
     if (result.isDraft) {
@@ -181,18 +157,32 @@ class _SessionListScreenState extends State<SessionListScreen> {
         listen: false,
       );
       for (final session in result.sessions) {
-         queueProvider.addCreateSessionRequest(session, isDraft: true);
+        queueProvider.addCreateSessionRequest(session, isDraft: true);
       }
 
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text(result.sessions.length > 1 ? "Drafts saved" : "Draft saved")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.sessions.length > 1 ? "Drafts saved" : "Draft saved",
+          ),
+        ),
+      );
       return;
     }
 
     final sessionsToCreate = result.sessions;
 
-    Future<void> performCreate(Session sessionToCreate) async {
+    if (sessionsToCreate.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Starting creation of ${sessionsToCreate.length} sessions...',
+          ),
+        ),
+      );
+    }
+
+    for (final sessionToCreate in sessionsToCreate) {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         await client.createSession(sessionToCreate);
@@ -247,13 +237,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   );
                   // Don't spam snackbars for bulk
                   if (sessionsToCreate.length == 1) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "API Quota Exhausted. Session creation queued.",
-                          ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "API Quota Exhausted. Session creation queued.",
                         ),
-                      );
+                      ),
+                    );
                   }
                   handled = true;
                 } else if (error['code'] == 503 ||
@@ -267,13 +257,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     reason: 'service_unavailable',
                   );
                   if (sessionsToCreate.length == 1) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            "Service Unavailable. Session creation queued.",
-                          ),
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          "Service Unavailable. Session creation queued.",
                         ),
-                      );
+                      ),
+                    );
                   }
                   handled = true;
                 }
@@ -285,17 +275,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
         if (!handled) {
           // If bulk, we probably shouldn't show a dialog for each error.
           // Queue it and show snackbar.
-           Provider.of<MessageQueueProvider>(
-              context,
-              listen: false,
-            ).addCreateSessionRequest(
-              sessionToCreate,
-              reason: 'creation_failed',
-            );
-            if (sessionsToCreate.length == 1) {
-                showDialog(
-                  context: context,
-                  builder: (context) => AlertDialog(
+          Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          ).addCreateSessionRequest(
+            sessionToCreate,
+            reason: 'creation_failed',
+          );
+          if (sessionsToCreate.length == 1) {
+            showDialog(
+              context: context,
+              builder:
+                  (context) => AlertDialog(
                     title: const Text('Error Creating Session'),
                     content: SingleChildScrollView(
                       child: Column(
@@ -328,28 +319,40 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ),
                     ],
                   ),
-                );
-            }
+            );
+          }
         }
       }
     }
+  }
 
-    if (sessionsToCreate.length > 1) {
-       ScaffoldMessenger.of(context).showSnackBar(
-         SnackBar(content: Text('Starting creation of ${sessionsToCreate.length} sessions...')),
-       );
+  Future<void> _createSession() async {
+    // Determine pre-selected source from active filters
+    String? preSelectedSource = widget.sourceFilter;
+    if (preSelectedSource == null) {
+      final activeFilters = FilterElementBuilder.toFilterTokens(_filterTree);
+      final activeSource = activeFilters.firstWhere(
+        (f) => f.type == FilterType.source && f.mode == FilterMode.include,
+        orElse:
+            () => const FilterToken(
+              id: '',
+              type: FilterType.flag,
+              label: '',
+              value: '',
+            ),
+      );
+      if (activeSource.id.isNotEmpty) {
+        preSelectedSource = activeSource.value;
+      }
     }
 
-    for (final session in sessionsToCreate) {
-        await performCreate(session);
-    }
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(sourceFilter: preSelectedSource),
+    );
 
-    if (sessionsToCreate.length > 1) {
-        // Final feedback
-        // We could check if any are queued and report.
-        // This check is a bit loose, but good enough for UI feedback
-        // Ideally performCreate would return status.
-    }
+    if (result == null) return;
+    await _handleNewSessionResult(result);
   }
 
   Future<void> _quickReply(Session session) async {
@@ -2357,6 +2360,64 @@ class _SessionListScreenState extends State<SessionListScreen> {
           onTap: () {
             Future.delayed(Duration.zero, () {
               if (context.mounted) _refreshSession(session);
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.replay_circle_filled),
+              SizedBox(width: 8),
+              Text('Resubmit as new session'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (!context.mounted) return;
+              final result = await showDialog<NewSessionResult>(
+                context: context,
+                builder:
+                    (context) => NewSessionDialog(initialSession: session),
+              );
+              if (result != null) {
+                _handleNewSessionResult(result);
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off),
+              SizedBox(width: 8),
+              Text('Resubmit as new session and hide'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () async {
+              if (!context.mounted) return;
+              final result = await showDialog<NewSessionResult>(
+                context: context,
+                builder:
+                    (context) => NewSessionDialog(initialSession: session),
+              );
+              if (result != null) {
+                // Handle creation first/independently
+                await _handleNewSessionResult(result);
+
+                if (!metadata.isHidden) {
+                  if (context.mounted) {
+                    final auth = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    );
+                    Provider.of<SessionProvider>(
+                      context,
+                      listen: false,
+                    ).toggleHidden(session.id, auth.token!);
+                  }
+                }
+              }
             });
           },
         ),

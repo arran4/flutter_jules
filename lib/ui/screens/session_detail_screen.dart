@@ -19,6 +19,7 @@ import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/session_meta_pills.dart';
+import '../widgets/new_session_dialog.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -557,6 +558,132 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _handleResubmit({bool hideOriginal = false}) async {
+    final result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: _session),
+    );
+
+    if (result == null || !mounted) return;
+
+    // Handle Drafts
+    if (result.isDraft) {
+      final queueProvider = Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      );
+      for (final session in result.sessions) {
+        queueProvider.addCreateSessionRequest(session, isDraft: true);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            result.sessions.length > 1 ? "Drafts saved" : "Draft saved",
+          ),
+        ),
+      );
+
+      if (hideOriginal) {
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        await Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).toggleHidden(_session.id, auth.token!);
+        if (mounted) Navigator.pop(context);
+      }
+      return;
+    }
+
+    // Handle Creation
+    final sessionsToCreate = result.sessions;
+    if (sessionsToCreate.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Starting creation of ${sessionsToCreate.length} sessions...',
+          ),
+        ),
+      );
+    }
+
+    for (final sessionToCreate in sessionsToCreate) {
+      try {
+        final client = Provider.of<AuthProvider>(context, listen: false).client;
+        await client.createSession(sessionToCreate);
+      } catch (e) {
+        if (!mounted) return;
+        bool handled = false;
+        if (e is JulesException && e.responseBody != null) {
+          try {
+            final body = jsonDecode(e.responseBody!);
+            if (body is Map && body.containsKey('error')) {
+              final error = body['error'];
+              if (error is Map) {
+                if (error['code'] == 429 ||
+                    error['status'] == 'RESOURCE_EXHAUSTED') {
+                  Provider.of<MessageQueueProvider>(
+                    context,
+                    listen: false,
+                  ).addCreateSessionRequest(
+                    sessionToCreate,
+                    reason: 'resource_exhausted',
+                  );
+                  handled = true;
+                } else if (error['code'] == 503 ||
+                    error['status'] == 'UNAVAILABLE') {
+                  Provider.of<MessageQueueProvider>(
+                    context,
+                    listen: false,
+                  ).addCreateSessionRequest(
+                    sessionToCreate,
+                    reason: 'service_unavailable',
+                  );
+                  handled = true;
+                }
+              }
+            }
+          } catch (_) {}
+        }
+
+        if (!handled) {
+          // General failure - Queue it
+          Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          ).addCreateSessionRequest(
+            sessionToCreate,
+            reason: 'creation_failed',
+          );
+        }
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text(
+              "Session creation failed or delayed. Added to queue.",
+            ),
+          ),
+        );
+      }
+    }
+
+    if (!mounted) return;
+
+    if (sessionsToCreate.isNotEmpty) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Session(s) created")));
+    }
+
+    if (hideOriginal) {
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      await Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      ).toggleHidden(_session.id, auth.token!);
+      if (mounted) Navigator.pop(context);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -719,6 +846,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   }
                 } else if (value == 'approve_plan') {
                   _approvePlan();
+                } else if (value == 'resubmit') {
+                  _handleResubmit(hideOriginal: false);
+                } else if (value == 'resubmit_hide') {
+                  _handleResubmit(hideOriginal: true);
                 } else if (value == 'watch') {
                   final auth = Provider.of<AuthProvider>(
                     context,
@@ -868,6 +999,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       Icon(Icons.check_circle, color: Colors.green),
                       SizedBox(width: 8),
                       Text('Force Approve Plan'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
+                const PopupMenuItem(
+                  value: 'resubmit',
+                  child: Row(
+                    children: [
+                      Icon(Icons.replay_circle_filled, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Resubmit as new session'),
+                    ],
+                  ),
+                ),
+                const PopupMenuItem(
+                  value: 'resubmit_hide',
+                  child: Row(
+                    children: [
+                      Icon(Icons.visibility_off, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Resubmit as new session and hide'),
                     ],
                   ),
                 ),
