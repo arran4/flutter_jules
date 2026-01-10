@@ -49,8 +49,8 @@ class FilterElementBuilder {
   ) {
     if (root == null) return null;
 
-    // Direct match
-    if (_elementsEqual(root, target)) {
+    // Direct match - Identity check
+    if (root == target) {
       return null;
     }
 
@@ -62,7 +62,7 @@ class FilterElementBuilder {
       return _removeFromComposite(
           root, target, (children) => OrElement(children));
     } else if (root is NotElement) {
-      if (_elementsEqual(root.child, target)) {
+      if (root.child == target) {
         return null;
       }
       final newChild = removeFilter(root.child, target);
@@ -136,41 +136,7 @@ class FilterElementBuilder {
   // Helper methods
 
   static bool _isSameFilterType(FilterElement a, FilterElement b) {
-    // Text elements can be grouped with OR
-    if (a is TextElement && b is TextElement) return true;
-
-    // Statuses are grouped (e.g. Planning OR In Progress)
-    if (a is StatusElement && b is StatusElement) return true;
-
-    // PR Statuses are grouped
-    if (a is PrStatusElement && b is PrStatusElement) return true;
-
-    // Sources are grouped
-    if (a is SourceElement && b is SourceElement) return true;
-
-    // Labels need specific grouping logic
-    if (a is LabelElement && b is LabelElement) {
-      // "Isolated" labels that should be AND'd
-      if (_isIsolatedLabel(a) || _isIsolatedLabel(b)) {
-        return false;
-      }
-      // Otherwise regular labels (New, Updated, Unread, regular tags) are grouped
-      return true;
-    }
-
-    return false;
-  }
-
-  static bool _isIsolatedLabel(LabelElement l) {
-    // Watching is isolated
-    if (l.value == 'watched') return true;
-    
-    // Draft is isolated (per user request)
-    if (l.value == 'draft') return true;
-
-    // User examples: "Updated, New, Unread" -> Group.
-    // "Watching" -> Isolated.
-    return false;
+    return a.groupingType == b.groupingType;
   }
 
   static bool _elementsEqual(FilterElement a, FilterElement b) {
@@ -250,7 +216,8 @@ class FilterElementBuilder {
     bool found = false;
 
     for (final child in children) {
-      if (_elementsEqual(child, target)) {
+      // Identity check for precise removal
+      if (child == target) {
         found = true;
         continue; // Skip this child
       }
@@ -259,6 +226,9 @@ class FilterElementBuilder {
       if (transformed != null) {
         newChildren.add(transformed);
         if (transformed != child) found = true;
+      } else {
+        // Child was removed
+        found = true;
       }
     }
 

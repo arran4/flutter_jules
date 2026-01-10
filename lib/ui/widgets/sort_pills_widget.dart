@@ -14,96 +14,111 @@ class SortPillsWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisSize: MainAxisSize.min,
-      children: [
-        if (activeSorts.isNotEmpty)
-          Container(
-            height: 24,
-            width: 1,
-            color: Colors.grey.shade300,
-            margin: const EdgeInsets.symmetric(horizontal: 8),
-          ),
-        // Drag target for reordering
-        ...activeSorts.asMap().entries.map((entry) {
-          final index = entry.key;
-          final sort = entry.value;
-
-          return Draggable<SortOption>(
-            data: sort,
-            feedback: Material(
-              color: Colors.transparent,
-              child: _buildSortPill(context, sort, isDragging: true),
-            ),
-            childWhenDragging: Opacity(
-              opacity: 0.5,
-              child: _buildSortPill(context, sort),
-            ),
-            child: DragTarget<SortOption>(
-              onWillAcceptWithDetails: (details) => details.data != sort,
-              onAcceptWithDetails: (details) {
-                final incoming = details.data;
-                final incomingIndex = activeSorts.indexOf(incoming);
-                final targetIndex = index;
-                _reorderSorts(incomingIndex, targetIndex);
-              },
-              builder: (context, candidateData, rejectedData) {
-                return Row(
-                  mainAxisSize: MainAxisSize.min,
-                  children: [
-                    // Visual indicator for drop
-                    if (candidateData.isNotEmpty)
-                      Container(
-                        width: 4,
-                        height: 24,
-                        color: Colors.blueAccent,
+    return Container(
+      padding: const EdgeInsets.all(4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: Colors.grey.shade300),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Sort Button (Add)
+          InkWell(
+            onTap: () => _showAddSortMenu(context),
+            borderRadius: BorderRadius.circular(16),
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.sort, size: 16, color: Colors.grey.shade700),
+                  if (activeSorts.isEmpty) ...[
+                    const SizedBox(width: 4),
+                    Text(
+                      'Sort',
+                      style: TextStyle(
+                        fontSize: 12,
+                        fontWeight: FontWeight.w500,
+                        color: Colors.grey.shade700,
                       ),
-                    _buildSortPill(context, sort),
+                    ),
                   ],
-                );
-              },
+                ],
+              ),
             ),
-          );
-        }),
-        // Add Sort Button
-        IconButton(
-          icon: const Icon(
-            Icons.add_circle_outline,
-            size: 20,
-            color: Colors.grey,
           ),
-          onPressed: () => _showAddSortMenu(context),
-          tooltip: "Add Sort Criteria",
-        ),
-      ],
+
+          if (activeSorts.isNotEmpty)
+            Container(
+              height: 16,
+              width: 1,
+              color: Colors.grey.shade300,
+              margin: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+
+          // Active Sorts
+          ...activeSorts.asMap().entries.map((entry) {
+            final index = entry.key;
+            final sort = entry.value;
+
+            return Draggable<SortOption>(
+              data: sort,
+              feedback: Material(
+                color: Colors.transparent,
+                child: _buildSortPill(context, sort, isDragging: true),
+              ),
+              childWhenDragging: Opacity(
+                opacity: 0.5,
+                child: _buildSortPill(context, sort),
+              ),
+              child: DragTarget<SortOption>(
+                onWillAcceptWithDetails: (details) => details.data != sort,
+                onAcceptWithDetails: (details) {
+                  final incoming = details.data;
+                  final incomingIndex = activeSorts.indexOf(incoming);
+                  final targetIndex = index;
+                  _reorderSorts(incomingIndex, targetIndex);
+                },
+                builder: (context, candidateData, rejectedData) {
+                  return Row(
+                    mainAxisSize: MainAxisSize.min,
+                    children: [
+                      // Visual indicator for drop
+                      if (candidateData.isNotEmpty)
+                        Container(
+                          width: 4,
+                          height: 24,
+                          color: Colors.blueAccent,
+                        ),
+                      _buildSortPill(context, sort),
+                    ],
+                  );
+                },
+              ),
+            );
+          }),
+        ],
+      ),
     );
   }
 
   Widget _buildSortPill(BuildContext context, SortOption sort,
       {bool isDragging = false}) {
     return Padding(
-      padding: const EdgeInsets.only(right: 4.0),
+      padding: const EdgeInsets.only(left: 4.0),
       child: Tooltip(
         message:
             "Sort by ${sort.label}. Tap to toggle direction. Drag to reorder.",
         child: InkWell(
           onTap: () => _toggleSortDirection(sort),
-          borderRadius: BorderRadius.circular(16),
+          borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
             decoration: BoxDecoration(
-              color: isDragging ? Colors.grey.shade300 : Colors.grey.shade200,
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: Colors.grey.shade300),
-              boxShadow: isDragging
-                  ? const [
-                      BoxShadow(
-                        color: Colors.black26,
-                        blurRadius: 4,
-                        offset: Offset(0, 2),
-                      ),
-                    ]
-                  : null,
+              color: isDragging ? Colors.grey.shade300 : Colors.grey.shade100,
+              borderRadius: BorderRadius.circular(12),
             ),
             child: Row(
               mainAxisSize: MainAxisSize.min,

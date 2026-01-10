@@ -608,6 +608,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
+    // PR Statuses (Common ones)
+    for (final status in ['Open', 'Closed', 'Merged', 'Draft']) {
+       suggestions.add(
+        FilterToken(
+          id: 'prStatus:$status',
+          type: FilterType.text,
+          label: 'PR: $status',
+          value: status,
+        ),
+      );
+    }
+
     // Sources (from sessions)
     final sources = sessions.map((s) => s.sourceContext.source).toSet();
     for (final source in sources) {
@@ -657,6 +669,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
         value: 'unread',
       ),
     );
+     suggestions.add(
+      const FilterToken(
+        id: 'flag:pending',
+        type: FilterType.flag,
+        label: 'Pending',
+        value: 'pending',
+      ),
+    );
     suggestions.add(
       const FilterToken(
         id: 'flag:watched',
@@ -671,6 +691,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Hidden',
         value: 'hidden',
+      ),
+    );
+     suggestions.add(
+      const FilterToken(
+        id: 'flag:has_pr',
+        type: FilterType.flag,
+        label: 'Has PR',
+        value: 'has_pr',
       ),
     );
     suggestions.add(
@@ -1074,6 +1102,27 @@ class _SessionListScreenState extends State<SessionListScreen> {
         },
       ];
 
+      // If this is a status pill, add other statuses
+      final isStatusPill = filterToken.type == FilterType.status;
+      final List<Map<String, dynamic>> statusOptions = [];
+      if (isStatusPill) {
+        for (final status in SessionState.values) {
+          if (status == SessionState.STATE_UNSPECIFIED) continue;
+          
+          final statusLabel = status.displayName;
+          // Determine if this is the current session's status
+          final isCurrent = session.state == status;
+          
+          statusOptions.add({
+             'id': 'status:${status.name}',
+             'label': statusLabel,
+             'value': status,
+             'active': isCurrent,
+             'type': 'status'
+          });
+        }
+      }
+
       final activeFlags = allFlags.where((f) => f['active'] == true).toList();
       final otherFlags = allFlags.where((f) => f['active'] == false).toList();
       final customLabels = metadata.labels;
@@ -1112,6 +1161,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 _addFilterToken(token.copyWith(mode: FilterMode.exclude)),
           ),
         );
+      }
+
+      if (statusOptions.isNotEmpty) {
+        menuItems.add(
+          const PopupMenuItem(
+            enabled: false,
+            child: Text(
+              'ALL STATUSES',
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                fontSize: 11,
+                color: Colors.blueGrey,
+              ),
+            ),
+          ),
+        );
+        for (final option in statusOptions) {
+          addTokenOptions(
+            FilterToken(
+              id: option['id'],
+              type: FilterType.status,
+              label: option['label'],
+              value: option['value'],
+            ),
+            isActive: option['active'] == true,
+          );
+        }
+        menuItems.add(const PopupMenuDivider());
       }
 
       if (activeFlags.isNotEmpty || customLabels.isNotEmpty) {
@@ -1917,6 +1994,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 if (session.prStatus != null)
                                                   _buildPill(
                                                     context,
+                                                    metadata: metadata,
+                                                    session: session,
                                                     label:
                                                         'PR: ${session.prStatus}',
                                                     backgroundColor:
@@ -2282,50 +2361,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       context: context,
       position: finalPosition,
       items: [
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.data_object),
-              SizedBox(width: 8),
-              Text('View Session Source'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => ModelViewer(
-                    data: session.toJson(),
-                    title: 'Raw Session Source',
-                  ),
-                );
-              }
-            });
-          },
-        ),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.data_object),
-              SizedBox(width: 8),
-              Text('View Session Source'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => ModelViewer(
-                    data: session.toJson(),
-                    title: 'Raw Session Source',
-                  ),
-                );
-              }
-            });
-          },
-        ),
+
         PopupMenuItem(
           child: Row(
             children: [

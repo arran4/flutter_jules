@@ -148,17 +148,7 @@ class FilterElementWidget extends StatelessWidget {
                       color: textColor,
                     ),
                   ),
-                  if (onRemove != null) ...[
-                    const SizedBox(width: 4),
-                    InkWell(
-                      onTap: () => onRemove!(element),
-                      child: Icon(
-                        Icons.close,
-                        size: 14,
-                        color: textColor.withValues(alpha: 0.7),
-                      ),
-                    ),
-                  ],
+
                 ],
               ),
             ),

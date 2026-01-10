@@ -33,6 +33,11 @@ abstract class FilterElement {
 
   Map<String, dynamic> toJson();
 
+  /// The grouping type used to determine if elements should be combined with OR.
+  /// Elements with the same groupingType are OR'd together.
+  /// Elements with different groupingTypes are AND'd together.
+  String get groupingType;
+
   /// Returns true if this element matches the given criteria
   bool evaluate(FilterContext context);
 
@@ -74,6 +79,9 @@ class AndElement extends FilterElement {
   FilterElementType get type => FilterElementType.and;
 
   @override
+  String get groupingType => 'composite_and';
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'and',
         'children': children.map((c) => c.toJson()).toList(),
@@ -103,6 +111,9 @@ class OrElement extends FilterElement {
 
   @override
   FilterElementType get type => FilterElementType.or;
+
+  @override
+  String get groupingType => 'composite_or';
 
   @override
   Map<String, dynamic> toJson() => {
@@ -135,6 +146,9 @@ class NotElement extends FilterElement {
   FilterElementType get type => FilterElementType.not;
 
   @override
+  String get groupingType => 'composite_not';
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'not',
         'child': child.toJson(),
@@ -160,6 +174,9 @@ class TextElement extends FilterElement {
 
   @override
   FilterElementType get type => FilterElementType.text;
+
+  @override
+  String get groupingType => 'text';
 
   @override
   Map<String, dynamic> toJson() => {
@@ -195,6 +212,9 @@ class PrStatusElement extends FilterElement {
   FilterElementType get type => FilterElementType.prStatus;
 
   @override
+  String get groupingType => 'pr_status';
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'pr_status',
         'label': label,
@@ -223,6 +243,19 @@ class LabelElement extends FilterElement {
 
   @override
   FilterElementType get type => FilterElementType.label;
+
+  @override
+  String get groupingType {
+    // Isolated types (force AND grouping by using distinct keys)
+    if (value == 'hidden') return 'label:hidden';
+    if (value == 'watched') return 'label:watched';
+    
+    // Group "queue" type labels (Drafts, Pending)
+    if (value == 'draft' || value == 'pending') return 'label:queue';
+
+    // Standard labels group together (New, Updated, Unread)
+    return 'label:standard';
+  }
 
   @override
   Map<String, dynamic> toJson() => {
@@ -284,6 +317,9 @@ class StatusElement extends FilterElement {
   FilterElementType get type => FilterElementType.status;
 
   @override
+  String get groupingType => 'status';
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'status',
         'label': label,
@@ -317,6 +353,9 @@ class SourceElement extends FilterElement {
   FilterElementType get type => FilterElementType.source;
 
   @override
+  String get groupingType => 'source';
+
+  @override
   Map<String, dynamic> toJson() => {
         'type': 'source',
         'label': label,
@@ -343,6 +382,9 @@ class HasPrElement extends FilterElement {
 
   @override
   FilterElementType get type => FilterElementType.hasPr;
+
+  @override
+  String get groupingType => 'has_pr';
 
   @override
   Map<String, dynamic> toJson() => {

@@ -379,38 +379,46 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
             const SizedBox(height: 12),
 
-            // Active filters display
-            if (widget.filterTree != null)
+            // Filters and Sorts inline
+            if (widget.filterTree != null || true)
               Padding(
                 padding: const EdgeInsets.only(bottom: 8),
-                child: FilterElementWidget(
-                  element: widget.filterTree,
-                  onRemove: (element) {
-                    final newTree = FilterElementBuilder.removeFilter(
-                      widget.filterTree,
-                      element,
-                    );
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onToggleNot: (element) {
-                    final newTree = FilterElementBuilder.toggleNot(
-                      widget.filterTree!,
-                      element,
-                    );
-                    widget.onFilterTreeChanged(newTree);
-                  },
-                  onTap: null, // Can add menu later
-                ),
-              ),
-
-            // Sort pills
-            if (widget.activeSorts.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 8),
-                child: SortPillsWidget(
-                  activeSorts: widget.activeSorts,
-                  onSortsChanged: widget.onSortsChanged,
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // Filter Tree (Expanded)
+                    Expanded(
+                      child: widget.filterTree != null
+                          ? FilterElementWidget(
+                              element: widget.filterTree,
+                              onRemove: (element) {
+                                final newTree =
+                                    FilterElementBuilder.removeFilter(
+                                  widget.filterTree,
+                                  element,
+                                );
+                                final simplified =
+                                    FilterElementBuilder.simplify(newTree);
+                                widget.onFilterTreeChanged(simplified);
+                              },
+                              onToggleNot: (element) {
+                                final newTree = FilterElementBuilder.toggleNot(
+                                  widget.filterTree!,
+                                  element,
+                                );
+                                widget.onFilterTreeChanged(newTree);
+                              },
+                              onTap: null,
+                            )
+                          : const SizedBox.shrink(),
+                    ),
+                    const SizedBox(width: 8),
+                    // Sort Pills (Fixed width, right aligned via structure)
+                    SortPillsWidget(
+                      activeSorts: widget.activeSorts,
+                      onSortsChanged: widget.onSortsChanged,
+                    ),
+                  ],
                 ),
               ),
           ],
