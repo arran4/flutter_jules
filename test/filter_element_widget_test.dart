@@ -67,7 +67,9 @@ void main() {
       FilterElementType.and: (tester) async {
         // AndElement
         await pumpElement(
-            tester, AndElement([TextElement('A'), TextElement('B')]));
+          tester,
+          AndElement([TextElement('A'), TextElement('B')]),
+        );
         expect(find.text('AND'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.merge_type), findsOneWidget);
@@ -75,7 +77,9 @@ void main() {
       FilterElementType.or: (tester) async {
         // OrElement
         await pumpElement(
-            tester, OrElement([TextElement('A'), TextElement('B')]));
+          tester,
+          OrElement([TextElement('A'), TextElement('B')]),
+        );
         expect(find.text('OR'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.call_split), findsOneWidget);
@@ -91,20 +95,21 @@ void main() {
 
     // 1. SAFETY NET TEST: Ensures no FilterElementType is left behind.
     test(
-        'Coverage Assurance: All FilterElementTypes must have a defined test case',
-        () {
-      final definedTypes = testCases.keys.toSet();
-      final allTypes = FilterElementType.values.toSet();
-      final missingTypes = allTypes.difference(definedTypes);
+      'Coverage Assurance: All FilterElementTypes must have a defined test case',
+      () {
+        final definedTypes = testCases.keys.toSet();
+        final allTypes = FilterElementType.values.toSet();
+        final missingTypes = allTypes.difference(definedTypes);
 
-      if (missingTypes.isNotEmpty) {
-        fail(
-          'Rendering logic gap detected! The following types have been defined in the FilterElementType enum '
-          'but do not have a corresponding visual test case: $missingTypes.\n'
-          'Please add them to the `testCases` map in test/filter_element_widget_test.dart to ensure they are rendered correctly.',
-        );
-      }
-    });
+        if (missingTypes.isNotEmpty) {
+          fail(
+            'Rendering logic gap detected! The following types have been defined in the FilterElementType enum '
+            'but do not have a corresponding visual test case: $missingTypes.\n'
+            'Please add them to the `testCases` map in test/filter_element_widget_test.dart to ensure they are rendered correctly.',
+          );
+        }
+      },
+    );
 
     // 2. DYNAMIC TESTS: Run the verification for each defined type.
     testCases.forEach((type, testLogic) {

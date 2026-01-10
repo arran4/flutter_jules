@@ -133,12 +133,14 @@ class BulkActionExecutor extends ChangeNotifier {
 
   void _addLog(String message, bool isError, [String? sessionId]) {
     _logs.insert(
-        0,
-        BulkLogEntry(
-            message: message,
-            isError: isError,
-            sessionId: sessionId,
-            timestamp: DateTime.now()));
+      0,
+      BulkLogEntry(
+        message: message,
+        isError: isError,
+        sessionId: sessionId,
+        timestamp: DateTime.now(),
+      ),
+    );
     if (_logs.length > 500) _logs.removeLast();
     notifyListeners();
   }
@@ -155,8 +157,9 @@ class BulkActionExecutor extends ChangeNotifier {
     while (_currentParallelCount < (_config?.parallelQueries ?? 1) &&
         _queue.any((s) => !_pausedSessionIds.contains(s.id)) &&
         _status == BulkJobStatus.running) {
-      final sessionIndex =
-          _queue.indexWhere((s) => !_pausedSessionIds.contains(s.id));
+      final sessionIndex = _queue.indexWhere(
+        (s) => !_pausedSessionIds.contains(s.id),
+      );
       if (sessionIndex == -1) break;
 
       final session = _queue.removeAt(sessionIndex);
@@ -200,8 +203,11 @@ class BulkActionExecutor extends ChangeNotifier {
       try {
         await _executeStep(session, step, authToken);
       } catch (e) {
-        _addLog("Error executing ${step.type.displayName} on ${session.id}: $e",
-            true, session.id);
+        _addLog(
+          "Error executing ${step.type.displayName} on ${session.id}: $e",
+          true,
+          session.id,
+        );
 
         // Check if we should stop the entire job on error
         if (_config!.stopOnError) {
@@ -211,14 +217,20 @@ class BulkActionExecutor extends ChangeNotifier {
         }
 
         _addLog(
-            "Aborting remaining actions for this session.", true, session.id);
+          "Aborting remaining actions for this session.",
+          true,
+          session.id,
+        );
         break; // Stop execution for THIS session if one step fails.
       }
     }
   }
 
   Future<void> _executeStep(
-      Session session, BulkActionStep step, String? authToken) async {
+    Session session,
+    BulkActionStep step,
+    String? authToken,
+  ) async {
     switch (step.type) {
       case BulkActionType.openPrInBrowser:
         final url = _getPrUrl(session);
@@ -251,19 +263,26 @@ class BulkActionExecutor extends ChangeNotifier {
         }
         break;
       case BulkActionType.refreshSession:
-        await sessionProvider.refreshSession(julesClient, session.name,
-            authToken: authToken);
+        await sessionProvider.refreshSession(
+          julesClient,
+          session.name,
+          authToken: authToken,
+        );
         break;
       case BulkActionType.deepRefresh:
-        await sessionProvider.refreshSession(julesClient, session.name,
-            authToken: authToken);
+        await sessionProvider.refreshSession(
+          julesClient,
+          session.name,
+          authToken: authToken,
+        );
         // Activities are already refreshed inside refreshSession!
         break;
       case BulkActionType.watchSession:
         if (authToken != null) {
           // Ensure it's watched
-          final item =
-              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          final item = sessionProvider.items.firstWhere(
+            (i) => i.data.id == session.id,
+          );
           if (!item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
           }
@@ -271,8 +290,9 @@ class BulkActionExecutor extends ChangeNotifier {
         break;
       case BulkActionType.unwatchSession:
         if (authToken != null) {
-          final item =
-              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          final item = sessionProvider.items.firstWhere(
+            (i) => i.data.id == session.id,
+          );
           if (item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
           }
@@ -290,7 +310,10 @@ class BulkActionExecutor extends ChangeNotifier {
         await julesClient.sendMessage(session.name, step.message!);
         if (authToken != null) {
           await sessionProvider.addPendingMessage(
-              session.id, step.message!, authToken);
+            session.id,
+            step.message!,
+            authToken,
+          );
         }
         break;
       case BulkActionType.viewSourceRepo:

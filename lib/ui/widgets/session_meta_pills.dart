@@ -46,8 +46,8 @@ class SessionMetaPills extends StatelessWidget {
             context,
             avatar: const Icon(Icons.calendar_today, size: 16),
             label: DateFormat.yMMMd().add_jm().format(
-                  DateTime.parse(session.createTime!).toLocal(),
-                ),
+              DateTime.parse(session.createTime!).toLocal(),
+            ),
             sortField: SortField.created,
           ),
 
@@ -118,8 +118,8 @@ class SessionMetaPills extends StatelessWidget {
             backgroundColor: session.prStatus == 'Draft'
                 ? Colors.amber.shade50
                 : (session.prStatus == 'Merged'
-                    ? Colors.purple.shade50
-                    : Colors.blue.shade50),
+                      ? Colors.purple.shade50
+                      : Colors.blue.shade50),
             filterToken: FilterToken(
               id: 'prStatus:${session.prStatus}',
               type: FilterType.prStatus,
@@ -190,10 +190,7 @@ class SessionMetaPills extends StatelessWidget {
         data: filterToken,
         feedback: Material(
           color: Colors.transparent,
-          child: Opacity(
-            opacity: 0.8,
-            child: chip,
-          ),
+          child: Opacity(opacity: 0.8, child: chip),
         ),
         childWhenDragging: chip,
         child: chip,

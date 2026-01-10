@@ -92,8 +92,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (
-        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (pos < input.length &&
+        RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);

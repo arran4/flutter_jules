@@ -29,11 +29,18 @@ class NewSessionResult {
   final bool isDelete;
 
   // Constructor for backward compatibility logic (single session)
-  NewSessionResult(Session session, {this.isDraft = false, this.isDelete = false})
-      : sessions = [session];
+  NewSessionResult(
+    Session session, {
+    this.isDraft = false,
+    this.isDelete = false,
+  }) : sessions = [session];
 
   // Constructor for multiple sessions
-  NewSessionResult.multiple(this.sessions, {this.isDraft = false, this.isDelete = false});
+  NewSessionResult.multiple(
+    this.sessions, {
+    this.isDraft = false,
+    this.isDelete = false,
+  });
 
   // Helper to get the first session for backward compatibility
   Session get session => sessions.first;
@@ -79,7 +86,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -143,7 +151,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-                  _filteredSources.length;
+              _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -299,7 +307,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -375,8 +386,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading:
-                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                        leading: isPrivate
+                            ? const Icon(Icons.lock, size: 16)
+                            : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -460,7 +472,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     } else if (_selectedSource != null) {
       // Find source object corresponding to _selectedSource
       try {
-        final current = allSources.firstWhere((s) => s.name == _selectedSource!.name);
+        final current = allSources.firstWhere(
+          (s) => s.name == _selectedSource!.name,
+        );
         initialSelection = [current];
       } catch (_) {}
     }
@@ -557,29 +571,30 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (_bulkSelections.length > 1) {
       // Create session for each bulk selection
       for (final source in _bulkSelections) {
-         // Determine branch for this source
-         // We use default branch logic since UI doesn't allow picking specific branch in bulk yet
-         String branch = 'main';
-         if (source.githubRepo?.defaultBranch != null) {
-           branch = source.githubRepo!.defaultBranch!.displayName;
-         } else if (source.githubRepo?.branches != null && source.githubRepo!.branches!.isNotEmpty) {
-           branch = source.githubRepo!.branches!.first.displayName;
-         }
+        // Determine branch for this source
+        // We use default branch logic since UI doesn't allow picking specific branch in bulk yet
+        String branch = 'main';
+        if (source.githubRepo?.defaultBranch != null) {
+          branch = source.githubRepo!.defaultBranch!.displayName;
+        } else if (source.githubRepo?.branches != null &&
+            source.githubRepo!.branches!.isNotEmpty) {
+          branch = source.githubRepo!.branches!.first.displayName;
+        }
 
-         sessionsToCreate.add(Session(
-          name: '',
-          id: '',
-          prompt: _promptController.text,
-          sourceContext: SourceContext(
-            source: source.name,
-            githubRepoContext: GitHubRepoContext(
-              startingBranch: branch,
+        sessionsToCreate.add(
+          Session(
+            name: '',
+            id: '',
+            prompt: _promptController.text,
+            sourceContext: SourceContext(
+              source: source.name,
+              githubRepoContext: GitHubRepoContext(startingBranch: branch),
             ),
+            requirePlanApproval: requirePlanApproval,
+            automationMode: automationMode,
+            images: images,
           ),
-          requirePlanApproval: requirePlanApproval,
-          automationMode: automationMode,
-          images: images,
-        ));
+        );
       }
 
       // Save prefs based on first or generic?
@@ -587,7 +602,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('new_session_last_mode', _selectedModeIndex);
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
-
     } else {
       if (_selectedSource == null) return;
 
@@ -601,24 +615,29 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
-      sessionsToCreate.add(Session(
-        name: '', // Server assigns
-        id: '', // Server assigns
-        prompt: _promptController.text,
-        sourceContext: SourceContext(
-          source: _selectedSource!.name,
-          githubRepoContext: GitHubRepoContext(
-            startingBranch: _selectedBranch ?? 'main',
+      sessionsToCreate.add(
+        Session(
+          name: '', // Server assigns
+          id: '', // Server assigns
+          prompt: _promptController.text,
+          sourceContext: SourceContext(
+            source: _selectedSource!.name,
+            githubRepoContext: GitHubRepoContext(
+              startingBranch: _selectedBranch ?? 'main',
+            ),
           ),
+          requirePlanApproval: requirePlanApproval,
+          automationMode: automationMode,
+          images: images,
         ),
-        requirePlanApproval: requirePlanApproval,
-        automationMode: automationMode,
-        images: images,
-      ));
+      );
     }
 
     if (mounted) {
-      Navigator.pop(context, NewSessionResult.multiple(sessionsToCreate, isDraft: false));
+      Navigator.pop(
+        context,
+        NewSessionResult.multiple(sessionsToCreate, isDraft: false),
+      );
     }
   }
 
@@ -648,44 +667,49 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     List<Session> sessionsToCreate = [];
 
     if (_bulkSelections.length > 1) {
-        for (final source in _bulkSelections) {
-         String branch = 'main';
-         if (source.githubRepo?.defaultBranch != null) {
-           branch = source.githubRepo!.defaultBranch!.displayName;
-         }
+      for (final source in _bulkSelections) {
+        String branch = 'main';
+        if (source.githubRepo?.defaultBranch != null) {
+          branch = source.githubRepo!.defaultBranch!.displayName;
+        }
 
-         sessionsToCreate.add(Session(
-          name: '',
-          id: '',
+        sessionsToCreate.add(
+          Session(
+            name: '',
+            id: '',
+            prompt: _promptController.text,
+            sourceContext: SourceContext(
+              source: source.name,
+              githubRepoContext: GitHubRepoContext(startingBranch: branch),
+            ),
+            requirePlanApproval: requirePlanApproval,
+            automationMode: automationMode,
+          ),
+        );
+      }
+    } else {
+      sessionsToCreate.add(
+        Session(
+          name: widget.initialSession?.name ?? '',
+          id: widget.initialSession?.id ?? '',
           prompt: _promptController.text,
           sourceContext: SourceContext(
-            source: source.name,
+            source: _selectedSource?.name ?? 'sources/default',
             githubRepoContext: GitHubRepoContext(
-              startingBranch: branch,
+              startingBranch: _selectedBranch ?? 'main',
             ),
           ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
-        ));
-      }
-    } else {
-       sessionsToCreate.add(Session(
-        name: widget.initialSession?.name ?? '',
-        id: widget.initialSession?.id ?? '',
-        prompt: _promptController.text,
-        sourceContext: SourceContext(
-          source: _selectedSource?.name ?? 'sources/default',
-          githubRepoContext: GitHubRepoContext(
-            startingBranch: _selectedBranch ?? 'main',
-          ),
         ),
-        requirePlanApproval: requirePlanApproval,
-        automationMode: automationMode,
-      ));
+      );
     }
 
     if (mounted) {
-      Navigator.pop(context, NewSessionResult.multiple(sessionsToCreate, isDraft: true));
+      Navigator.pop(
+        context,
+        NewSessionResult.multiple(sessionsToCreate, isDraft: true),
+      );
     }
   }
 
@@ -708,12 +732,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   String _getBranchLabelForSource(Source s) {
-     if (s.githubRepo?.defaultBranch != null) {
-       return s.githubRepo!.defaultBranch!.displayName;
-     } else if (s.githubRepo?.branches != null && s.githubRepo!.branches!.isNotEmpty) {
-       return s.githubRepo!.branches!.first.displayName;
-     }
-     return 'main';
+    if (s.githubRepo?.defaultBranch != null) {
+      return s.githubRepo!.defaultBranch!.displayName;
+    } else if (s.githubRepo?.branches != null &&
+        s.githubRepo!.branches!.isNotEmpty) {
+      return s.githubRepo!.branches!.first.displayName;
+    }
+    return 'main';
   }
 
   @override
@@ -864,7 +889,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       control: true,
                     ): () {
                       if (_promptController.text.isNotEmpty &&
-                          (_selectedSource != null || _bulkSelections.length > 1)) {
+                          (_selectedSource != null ||
+                              _bulkSelections.length > 1)) {
                         _create();
                       } else if (_promptController.text.isNotEmpty) {
                         _saveDraft();
@@ -910,13 +936,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     Row(
                       children: [
-                         // Multi Button
-                         IconButton(
-                            icon: const Icon(Icons.library_add),
-                            tooltip: 'Select Multiple Repositories',
-                            onPressed: () => _showBulkDialog(sources),
-                         ),
-                         TextButton.icon(
+                        // Multi Button
+                        IconButton(
+                          icon: const Icon(Icons.library_add),
+                          tooltip: 'Select Multiple Repositories',
+                          onPressed: () => _showBulkDialog(sources),
+                        ),
+                        TextButton.icon(
                           style: TextButton.styleFrom(
                             textStyle: const TextStyle(fontSize: 12),
                             tapTargetSize: MaterialTapTargetSize.shrinkWrap,
@@ -928,7 +954,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               ? const SizedBox(
                                   width: 12,
                                   height: 12,
-                                  child: CircularProgressIndicator(strokeWidth: 2),
+                                  child: CircularProgressIndicator(
+                                    strokeWidth: 2,
+                                  ),
                                 )
                               : const Icon(Icons.refresh, size: 14),
                           label: Text(_refreshStatus),
@@ -940,57 +968,59 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 const SizedBox(height: 8),
 
                 if (_bulkSelections.length > 1) ...[
-                   // Pill Box for Bulk Selection
-                   Container(
-                     decoration: BoxDecoration(
-                       border: Border.all(color: Colors.grey.shade400),
-                       borderRadius: BorderRadius.circular(4),
-                     ),
-                     padding: const EdgeInsets.all(8),
-                     width: double.infinity,
-                     child: Wrap(
-                       spacing: 8.0,
-                       runSpacing: 4.0,
-                       children: _bulkSelections.map((s) {
-                         final branch = _getBranchLabelForSource(s);
-                         return InputChip(
-                           label: RichText(
-                             text: TextSpan(
-                               style: DefaultTextStyle.of(context).style,
-                               children: [
-                                 TextSpan(text: _getSourceDisplayLabel(s)),
-                                 const TextSpan(text: '\n'),
-                                 TextSpan(
-                                   text: branch,
-                                   style: TextStyle(
-                                     fontSize: 10,
-                                     color: Colors.grey.shade600,
-                                   ),
-                                 ),
-                               ],
-                             ),
-                           ),
-                           onDeleted: () {
-                             setState(() {
-                               _bulkSelections.removeWhere((item) => item.name == s.name);
-                               if (_bulkSelections.length <= 1) {
-                                  // Revert to single mode if 1 or 0
-                                  if (_bulkSelections.isNotEmpty) {
-                                    _selectSource(_bulkSelections.first);
-                                  } else {
-                                    _selectedSource = null;
-                                    _sourceController.clear();
-                                  }
-                               }
-                             });
-                           },
-                         );
-                       }).toList(),
-                     ),
-                   ),
+                  // Pill Box for Bulk Selection
+                  Container(
+                    decoration: BoxDecoration(
+                      border: Border.all(color: Colors.grey.shade400),
+                      borderRadius: BorderRadius.circular(4),
+                    ),
+                    padding: const EdgeInsets.all(8),
+                    width: double.infinity,
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      children: _bulkSelections.map((s) {
+                        final branch = _getBranchLabelForSource(s);
+                        return InputChip(
+                          label: RichText(
+                            text: TextSpan(
+                              style: DefaultTextStyle.of(context).style,
+                              children: [
+                                TextSpan(text: _getSourceDisplayLabel(s)),
+                                const TextSpan(text: '\n'),
+                                TextSpan(
+                                  text: branch,
+                                  style: TextStyle(
+                                    fontSize: 10,
+                                    color: Colors.grey.shade600,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          onDeleted: () {
+                            setState(() {
+                              _bulkSelections.removeWhere(
+                                (item) => item.name == s.name,
+                              );
+                              if (_bulkSelections.length <= 1) {
+                                // Revert to single mode if 1 or 0
+                                if (_bulkSelections.isNotEmpty) {
+                                  _selectSource(_bulkSelections.first);
+                                } else {
+                                  _selectedSource = null;
+                                  _sourceController.clear();
+                                }
+                              }
+                            });
+                          },
+                        );
+                      }).toList(),
+                    ),
+                  ),
                 ] else ...[
-                   // Standard Single Selection
-                   Row(
+                  // Standard Single Selection
+                  Row(
                     children: [
                       Expanded(
                         flex: 3,
@@ -1008,9 +1038,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   border: const OutlineInputBorder(),
                                   prefixIcon:
                                       (_selectedSource?.githubRepo?.isPrivate ==
-                                              true)
-                                          ? const Icon(Icons.lock, size: 16)
-                                          : const Icon(Icons.source, size: 16),
+                                          true)
+                                      ? const Icon(Icons.lock, size: 16)
+                                      : const Icon(Icons.source, size: 16),
                                   suffixIcon: IconButton(
                                     icon: const Icon(Icons.close, size: 16),
                                     onPressed: () {
@@ -1040,7 +1070,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               .map(
                                 (b) => DropdownMenuItem(
                                   value: b,
-                                  child: Text(b, overflow: TextOverflow.ellipsis),
+                                  child: Text(
+                                    b,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
                                 ),
                               )
                               .toList(),
@@ -1084,8 +1117,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_promptController.text.isNotEmpty &&
-                              (_selectedSource != null || _bulkSelections.length > 1))
+                      onPressed:
+                          (_promptController.text.isNotEmpty &&
+                              (_selectedSource != null ||
+                                  _bulkSelections.length > 1))
                           ? _create
                           : null,
                       child: const Text('Send Now'),
