@@ -20,8 +20,11 @@ class SourceProvider extends ChangeNotifier {
     _cacheService = service;
   }
 
-  Future<void> fetchSources(JulesClient client,
-      {bool force = false, String? authToken}) async {
+  Future<void> fetchSources(
+    JulesClient client, {
+    bool force = false,
+    String? authToken,
+  }) async {
     // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
       _items = await _cacheService!.loadSources(authToken);
@@ -59,8 +62,12 @@ class SourceProvider extends ChangeNotifier {
       } else {
         final now = DateTime.now();
         _items = allSources
-            .map((s) => CachedItem(
-                s, CacheMetadata(firstSeen: now, lastRetrieved: now)))
+            .map(
+              (s) => CachedItem(
+                s,
+                CacheMetadata(firstSeen: now, lastRetrieved: now),
+              ),
+            )
             .toList();
       }
 
@@ -74,11 +81,15 @@ class SourceProvider extends ChangeNotifier {
   }
 
   // Helper to ensure a specific source is in the cache/list, triggering refresh if missing.
-  Future<void> ensureSourceAvailable(JulesClient client, String sourceName,
-      {String? authToken}) async {
+  Future<void> ensureSourceAvailable(
+    JulesClient client,
+    String sourceName, {
+    String? authToken,
+  }) async {
     // Check if we already have it
     final exists = _items.any(
-        (item) => item.data.name == sourceName || item.data.id == sourceName);
+      (item) => item.data.name == sourceName || item.data.id == sourceName,
+    );
     if (!exists) {
       // Trigger non-forced refresh (actually forced to ensure we get new data,
       // but 'force' arg in our fetchSources logic currently acts as "always fetch").

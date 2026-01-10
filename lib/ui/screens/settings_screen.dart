@@ -4,6 +4,7 @@ import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/github_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -16,11 +17,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Settings'),
-      ),
-      body: Consumer3<SettingsProvider, DevModeProvider, AuthProvider>(
-        builder: (context, settings, devMode, auth, child) {
+      appBar: AppBar(title: const Text('Settings')),
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
+        builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
               _buildSectionHeader(context, 'Session Updates'),
@@ -78,8 +77,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               SwitchListTile(
                 title: const Text('API Logging'),
-                subtitle:
-                    const Text('Log API requests and responses to console'),
+                subtitle: const Text(
+                  'Log API requests and responses to console',
+                ),
                 value: devMode.enableApiLogging,
                 onChanged: (value) => devMode.toggleApiLogging(value),
               ),
@@ -87,9 +87,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'Authentication'),
               ListTile(
                 title: const Text('Current Session'),
-                subtitle: Text(auth.tokenType == TokenType.apiKey
-                    ? 'API Key'
-                    : 'Google Access Token'),
+                subtitle: Text(
+                  auth.tokenType == TokenType.apiKey
+                      ? 'API Key'
+                      : 'Google Access Token',
+                ),
                 trailing: const Icon(Icons.check_circle, color: Colors.green),
               ),
               ListTile(
@@ -98,16 +100,71 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onTap: () => _showApiKeyDialog(context, auth),
               ),
               ListTile(
-                title:
-                    const Text('Sign Out', style: TextStyle(color: Colors.red)),
+                title: const Text(
+                  'Sign Out',
+                  style: TextStyle(color: Colors.red),
+                ),
                 leading: const Icon(Icons.logout, color: Colors.red),
                 onTap: () => _showSignOutDialog(context, auth),
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'GitHub'),
+              ListTile(
+                title: const Text('Personal Access Token'),
+                subtitle: Text(
+                  github.apiKey != null
+                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                      : 'Not set',
+                ),
+                leading: const Icon(Icons.code),
+                onTap: () => _showGitHubKeyDialog(context, github),
               ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _showGitHubKeyDialog(
+    BuildContext context,
+    GithubProvider github,
+  ) async {
+    final controller = TextEditingController();
+    final newKey = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter GitHub PAT'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Personal Access Token',
+            hintText: 'Paste your token here',
+          ),
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (newKey != null && newKey.isNotEmpty) {
+      if (!context.mounted) return;
+      await github.setApiKey(newKey);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('GitHub token updated successfully')),
+        );
+      }
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -124,7 +181,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildAutomaticRefreshSection(
-      BuildContext context, SettingsProvider settings) {
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -156,7 +215,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListTile(
               title: Text(schedule.name),
               subtitle: Text(
-                  'Every ${schedule.intervalInMinutes} mins, ${_formatListPolicy(schedule.refreshPolicy)}'),
+                'Every ${schedule.intervalInMinutes} mins, ${_formatListPolicy(schedule.refreshPolicy)}',
+              ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: [
@@ -185,12 +245,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  void _showScheduleDialog(BuildContext context, SettingsProvider settings,
-      [RefreshSchedule? schedule]) {
+  void _showScheduleDialog(
+    BuildContext context,
+    SettingsProvider settings, [
+    RefreshSchedule? schedule,
+  ]) {
     final isEditing = schedule != null;
     final nameController = TextEditingController(text: schedule?.name ?? '');
     final intervalController = TextEditingController(
-        text: schedule?.intervalInMinutes.toString() ?? '');
+      text: schedule?.intervalInMinutes.toString() ?? '',
+    );
     var refreshPolicy = schedule?.refreshPolicy ?? ListRefreshPolicy.quick;
 
     showDialog(
@@ -209,8 +273,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   ),
                   TextField(
                     controller: intervalController,
-                    decoration:
-                        const InputDecoration(labelText: 'Interval (minutes)'),
+                    decoration: const InputDecoration(
+                      labelText: 'Interval (minutes)',
+                    ),
                     keyboardType: TextInputType.number,
                   ),
                   DropdownButtonFormField<ListRefreshPolicy>(
@@ -246,8 +311,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   // Show an error message if the interval is not a valid number.
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
-                      content:
-                          Text('Please enter a valid number for the interval.'),
+                      content: Text(
+                        'Please enter a valid number for the interval.',
+                      ),
                     ),
                   );
                   return;
@@ -276,7 +342,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showApiKeyDialog(
-      BuildContext context, AuthProvider auth) async {
+    BuildContext context,
+    AuthProvider auth,
+  ) async {
     final controller = TextEditingController();
     final newKey = await showDialog<String>(
       context: context,
@@ -315,7 +383,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Future<void> _showSignOutDialog(
-      BuildContext context, AuthProvider auth) async {
+    BuildContext context,
+    AuthProvider auth,
+  ) async {
     final confirm = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
@@ -323,11 +393,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         content: const Text('Are you sure you want to sign out?'),
         actions: [
           TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: const Text('Cancel')),
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
           TextButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: const Text('Sign Out')),
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Sign Out'),
+          ),
         ],
       ),
     );

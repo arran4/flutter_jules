@@ -32,10 +32,11 @@ class SessionMetaPills extends StatelessWidget {
                 ? const Icon(Icons.check, size: 16, color: Colors.green)
                 : null,
             filterToken: FilterToken(
-                id: 'status:${session.state!.name}',
-                type: FilterType.status,
-                label: session.state!.displayName,
-                value: session.state!),
+              id: 'status:${session.state!.name}',
+              type: FilterType.status,
+              label: session.state!.displayName,
+              value: session.state!,
+            ),
             sortField: SortField.status,
           ),
 
@@ -44,9 +45,9 @@ class SessionMetaPills extends StatelessWidget {
           _buildChip(
             context,
             avatar: const Icon(Icons.calendar_today, size: 16),
-            label: DateFormat.yMMMd()
-                .add_jm()
-                .format(DateTime.parse(session.createTime!).toLocal()),
+            label: DateFormat.yMMMd().add_jm().format(
+                  DateTime.parse(session.createTime!).toLocal(),
+                ),
             sortField: SortField.created,
           ),
 
@@ -91,14 +92,15 @@ class SessionMetaPills extends StatelessWidget {
                 ? Colors.orange.shade50
                 : Colors.green.shade50,
             filterToken: FilterToken(
-                id: 'flag:approval',
-                type: FilterType.flag,
-                label: session.requirePlanApproval!
-                    ? 'Approval Required'
-                    : 'No Approval',
-                value: session.requirePlanApproval!
-                    ? 'approval_required'
-                    : 'no_approval'),
+              id: 'flag:approval',
+              type: FilterType.flag,
+              label: session.requirePlanApproval!
+                  ? 'Approval Required'
+                  : 'No Approval',
+              value: session.requirePlanApproval!
+                  ? 'approval_required'
+                  : 'no_approval',
+            ),
           ),
 
         // Source
@@ -107,10 +109,11 @@ class SessionMetaPills extends StatelessWidget {
           label: session.sourceContext.source,
           avatar: const Icon(Icons.source, size: 16),
           filterToken: FilterToken(
-              id: 'source:${session.sourceContext.source}',
-              type: FilterType.source,
-              label: session.sourceContext.source,
-              value: session.sourceContext.source),
+            id: 'source:${session.sourceContext.source}',
+            type: FilterType.source,
+            label: session.sourceContext.source,
+            value: session.sourceContext.source,
+          ),
           sortField: SortField.source,
         ),
 
@@ -121,10 +124,11 @@ class SessionMetaPills extends StatelessWidget {
             label: session.sourceContext.githubRepoContext!.startingBranch,
             avatar: const Icon(Icons.call_split, size: 16),
             filterToken: FilterToken(
-                id: 'text:${session.sourceContext.githubRepoContext!.startingBranch}',
-                type: FilterType.text,
-                label: session.sourceContext.githubRepoContext!.startingBranch,
-                value: session.sourceContext.githubRepoContext!.startingBranch),
+              id: 'text:${session.sourceContext.githubRepoContext!.startingBranch}',
+              type: FilterType.text,
+              label: session.sourceContext.githubRepoContext!.startingBranch,
+              value: session.sourceContext.githubRepoContext!.startingBranch,
+            ),
           ),
       ],
     );
@@ -158,69 +162,102 @@ class SessionMetaPills extends StatelessWidget {
 
     if (filterToken == null && sortField == null) return chip;
 
-    return GestureDetector(
-      onSecondaryTapUp: (details) {
-        if (onAddFilter == null && onAddSort == null) return;
+    void showChipMenu(Offset globalPosition) {
+      if (onAddFilter == null && onAddSort == null) return;
 
-        final RenderBox overlay =
-            Overlay.of(context).context.findRenderObject() as RenderBox;
-        final RelativeRect position = RelativeRect.fromRect(
-          Rect.fromPoints(details.globalPosition, details.globalPosition),
-          Offset.zero & overlay.size,
-        );
+      final RenderBox overlay =
+          Overlay.of(context).context.findRenderObject() as RenderBox;
+      final RelativeRect position = RelativeRect.fromRect(
+        Rect.fromPoints(globalPosition, globalPosition),
+        Offset.zero & overlay.size,
+      );
 
-        showMenu(context: context, position: position, items: <PopupMenuEntry>[
+      showMenu(
+        context: context,
+        position: position,
+        items: <PopupMenuEntry>[
           if (filterToken != null) ...[
             PopupMenuItem(
-              child: Row(children: [
-                const Icon(Icons.filter_alt, size: 16),
-                const SizedBox(width: 8),
-                Text("Filter '${filterToken.label}'")
-              ]),
-              onTap: () => onAddFilter?.call(FilterToken(
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Filter '${filterToken.label}'",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () => onAddFilter?.call(
+                FilterToken(
                   id: filterToken.id,
                   type: filterToken.type,
                   label: filterToken.label,
                   value: filterToken.value,
-                  mode: FilterMode.include)),
+                  mode: FilterMode.include,
+                ),
+              ),
             ),
             PopupMenuItem(
-              child: Row(children: [
-                const Icon(Icons.filter_alt_off, size: 16),
-                const SizedBox(width: 8),
-                Text("Exclude '${filterToken.label}'")
-              ]),
-              onTap: () => onAddFilter?.call(FilterToken(
+              child: Row(
+                children: [
+                  const Icon(Icons.filter_alt_off, size: 16),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      "Exclude '${filterToken.label}'",
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                ],
+              ),
+              onTap: () => onAddFilter?.call(
+                FilterToken(
                   id: filterToken.id,
                   type: filterToken.type,
                   label: filterToken.label,
                   value: filterToken.value,
-                  mode: FilterMode.exclude)),
+                  mode: FilterMode.exclude,
+                ),
+              ),
             ),
           ],
           if (sortField != null) ...[
             if (filterToken != null) const PopupMenuDivider(),
             PopupMenuItem(
-              child: const Row(children: [
-                Icon(Icons.arrow_upward, size: 16),
-                SizedBox(width: 8),
-                Text("Sort Ascending")
-              ]),
-              onTap: () => onAddSort
-                  ?.call(SortOption(sortField, SortDirection.ascending)),
+              child: const Row(
+                children: [
+                  Icon(Icons.arrow_upward, size: 16),
+                  SizedBox(width: 8),
+                  Text("Sort Ascending"),
+                ],
+              ),
+              onTap: () => onAddSort?.call(
+                SortOption(sortField, SortDirection.ascending),
+              ),
             ),
             PopupMenuItem(
-              child: const Row(children: [
-                Icon(Icons.arrow_downward, size: 16),
-                SizedBox(width: 8),
-                Text("Sort Descending")
-              ]),
-              onTap: () => onAddSort
-                  ?.call(SortOption(sortField, SortDirection.descending)),
+              child: const Row(
+                children: [
+                  Icon(Icons.arrow_downward, size: 16),
+                  SizedBox(width: 8),
+                  Text("Sort Descending"),
+                ],
+              ),
+              onTap: () => onAddSort?.call(
+                SortOption(sortField, SortDirection.descending),
+              ),
             ),
-          ]
-        ]);
-      },
+          ],
+        ],
+      );
+    }
+
+    return GestureDetector(
+      behavior: HitTestBehavior.opaque,
+      onSecondaryTapUp: (details) => showChipMenu(details.globalPosition),
       child: chip,
     );
   }

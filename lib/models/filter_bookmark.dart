@@ -1,43 +1,47 @@
 import 'search_filter.dart';
-import 'enums.dart';
+import 'filter_element.dart';
+import 'filter_expression_parser.dart';
 
 class FilterBookmark {
   final String name;
   final String? description;
-  final List<FilterToken> filters;
+  final String expression;
   final List<SortOption> sorts;
 
   FilterBookmark({
     required this.name,
     this.description,
-    required this.filters,
+    required this.expression,
     required this.sorts,
   });
 
-  factory FilterBookmark.fromJson(Map<String, dynamic> json) {
-    // Safely parse filters
-    final filtersList = json['filters'] as List<dynamic>? ?? [];
-    final parsedFilters = filtersList
-        .map((f) {
-          try {
-            return _filterTokenFromJson(f as Map<String, dynamic>);
-          } catch (e) {
-            // print("Error parsing filter token: $e");
-            return null;
-          }
-        })
-        .where((f) => f != null)
-        .cast<FilterToken>()
-        .toList();
+  /// Get the filter tree parsed from the expression
+  FilterElement? get tree {
+    if (expression.isEmpty) return null;
+    return FilterExpressionParser.parse(expression);
+  }
 
-    // Safely parse sorts
+  factory FilterBookmark.fromJson(Map<String, dynamic> json) {
+    String expression = '';
+    
+    // Support new 'expression' key
+    if (json.containsKey('expression')) {
+      expression = json['expression'] as String;
+    } else if (json.containsKey('filterTree') && json['filterTree'] != null) {
+      // Temporary backward compatibility during migration if json is still on disk
+      try {
+        final tree = FilterElement.fromJson(json['filterTree'] as Map<String, dynamic>);
+        expression = tree.toExpression();
+      } catch (_) {}
+    }
+
+    // Parse sorts
     final sortsList = json['sorts'] as List<dynamic>? ?? [];
     final parsedSorts = sortsList
         .map((s) {
           try {
             return _sortOptionFromJson(s as Map<String, dynamic>);
           } catch (e) {
-            // print("Error parsing sort option: $e");
             return null;
           }
         })
@@ -48,7 +52,7 @@ class FilterBookmark {
     return FilterBookmark(
       name: json['name'] as String,
       description: json['description'] as String?,
-      filters: parsedFilters,
+      expression: expression,
       sorts: parsedSorts,
     );
   }
@@ -57,72 +61,39 @@ class FilterBookmark {
     return {
       'name': name,
       'description': description,
-      'filters': filters.map((f) => _filterTokenToJson(f)).toList(),
+      'expression': expression,
       'sorts': sorts.map((s) => _sortOptionToJson(s)).toList(),
     };
   }
-}
 
-// Private helper functions for FilterToken serialization
-Map<String, dynamic> _filterTokenToJson(FilterToken token) {
-  return {
-    'id': token.id,
-    'type': token.type.name,
-    'label': token.label,
-    'value':
-        token.type == FilterType.status && token.value is SessionState
-            ? (token.value as SessionState).name
-            : token.value,
-    'mode': token.mode.name,
-  };
-}
-
-FilterToken _filterTokenFromJson(Map<String, dynamic> json) {
-  final typeName = json['type'] as String;
-  final type =
-      FilterType.values.firstWhere((e) => e.name == typeName);
-
-  dynamic value;
-  if (type == FilterType.status) {
-    final valueName = json['value'] as String;
-    value = SessionState.values
-        .firstWhere((e) => e.name == valueName);
-  } else {
-    value = json['value'];
+  FilterBookmark copyWith({
+    String? name,
+    String? description,
+    String? expression,
+    List<SortOption>? sorts,
+  }) {
+    return FilterBookmark(
+      name: name ?? this.name,
+      description: description ?? this.description,
+      expression: expression ?? this.expression,
+      sorts: sorts ?? this.sorts,
+    );
   }
-
-  final modeName = json['mode'] as String;
-  final mode =
-      FilterMode.values.firstWhere((e) => e.name == modeName);
-
-  return FilterToken(
-    id: json['id'] as String,
-    type: type,
-    label: json['label'] as String,
-    value: value,
-    mode: mode,
-  );
 }
 
 // Private helper functions for SortOption serialization
 Map<String, dynamic> _sortOptionToJson(SortOption option) {
-  return {
-    'field': option.field.name,
-    'direction': option.direction.name,
-  };
+  return {'field': option.field.name, 'direction': option.direction.name};
 }
 
 SortOption _sortOptionFromJson(Map<String, dynamic> json) {
   final fieldName = json['field'] as String;
-  final field =
-      SortField.values.firstWhere((e) => e.name == fieldName);
+  final field = SortField.values.firstWhere((e) => e.name == fieldName);
 
   final directionName = json['direction'] as String;
-  final direction = SortDirection.values
-      .firstWhere((e) => e.name == directionName);
-
-  return SortOption(
-    field,
-    direction,
+  final direction = SortDirection.values.firstWhere(
+    (e) => e.name == directionName,
   );
+
+  return SortOption(field, direction);
 }

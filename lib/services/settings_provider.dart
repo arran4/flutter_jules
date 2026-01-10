@@ -3,19 +3,9 @@ import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../models/refresh_schedule.dart';
 
-enum SessionRefreshPolicy {
-  none,
-  shallow,
-  full,
-}
+enum SessionRefreshPolicy { none, shallow, full }
 
-enum ListRefreshPolicy {
-  none,
-  dirty,
-  watched,
-  quick,
-  full,
-}
+enum ListRefreshPolicy { none, dirty, watched, quick, full }
 
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
@@ -51,14 +41,26 @@ class SettingsProvider extends ChangeNotifier {
   void _loadSettings() {
     if (_prefs == null) return;
 
-    _refreshOnOpen = _loadEnum(keyRefreshOnOpen, SessionRefreshPolicy.values,
-        SessionRefreshPolicy.shallow);
-    _refreshOnMessage = _loadEnum(keyRefreshOnMessage,
-        SessionRefreshPolicy.values, SessionRefreshPolicy.shallow);
+    _refreshOnOpen = _loadEnum(
+      keyRefreshOnOpen,
+      SessionRefreshPolicy.values,
+      SessionRefreshPolicy.shallow,
+    );
+    _refreshOnMessage = _loadEnum(
+      keyRefreshOnMessage,
+      SessionRefreshPolicy.values,
+      SessionRefreshPolicy.shallow,
+    );
     _refreshOnReturn = _loadEnum(
-        keyRefreshOnReturn, ListRefreshPolicy.values, ListRefreshPolicy.dirty);
+      keyRefreshOnReturn,
+      ListRefreshPolicy.values,
+      ListRefreshPolicy.dirty,
+    );
     _refreshOnCreate = _loadEnum(
-        keyRefreshOnCreate, ListRefreshPolicy.values, ListRefreshPolicy.quick);
+      keyRefreshOnCreate,
+      ListRefreshPolicy.values,
+      ListRefreshPolicy.quick,
+    );
     _sessionPageSize = _prefs!.getInt(_sessionPageSizeKey) ?? 100;
     _loadSchedules();
     _isInitialized = true;
@@ -100,17 +102,20 @@ class SettingsProvider extends ChangeNotifier {
   List<RefreshSchedule> _defaultSchedules() {
     return [
       RefreshSchedule(
-          name: 'Full Refresh',
-          intervalInMinutes: 60,
-          refreshPolicy: ListRefreshPolicy.full),
+        name: 'Full Refresh',
+        intervalInMinutes: 60,
+        refreshPolicy: ListRefreshPolicy.full,
+      ),
       RefreshSchedule(
-          name: 'Watched Refresh',
-          intervalInMinutes: 5,
-          refreshPolicy: ListRefreshPolicy.watched),
+        name: 'Watched Refresh',
+        intervalInMinutes: 5,
+        refreshPolicy: ListRefreshPolicy.watched,
+      ),
       RefreshSchedule(
-          name: 'Quick Refresh',
-          intervalInMinutes: 15,
-          refreshPolicy: ListRefreshPolicy.quick),
+        name: 'Quick Refresh',
+        intervalInMinutes: 15,
+        refreshPolicy: ListRefreshPolicy.quick,
+      ),
     ];
   }
 

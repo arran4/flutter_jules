@@ -32,10 +32,10 @@ class NewSessionResult {
 
 class _NewSessionDialogState extends State<NewSessionDialog> {
   // Form State
-  String _prompt = '';
+  late final TextEditingController _promptController;
   Source? _selectedSource;
   String? _selectedBranch;
-  String _imageUrl = '';
+  late final TextEditingController _imageUrlController;
 
   // Task Mode
   // Options: Question (No Plan), Plan (Verify Plan), Start (Auto)
@@ -61,8 +61,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
+    _promptController = TextEditingController();
+    _imageUrlController = TextEditingController();
+
     if (widget.initialSession != null) {
-      _prompt = widget.initialSession!.prompt;
+      _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
       final mode = widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
@@ -76,8 +79,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         _selectedModeIndex = 1; // Plan
       } else {
         _selectedModeIndex = 0; // Question (default)
-        // Check if it was "Start" without auto-PR? Hard to distinguish from Question without more data,
-        // but default is fine.
       }
     }
     _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
@@ -110,6 +111,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _removeSourceOverlay();
     _sourceController.dispose();
     _sourceFocusNode.dispose();
+    _promptController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -144,6 +147,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _loadPreferences() async {
+    if (widget.initialSession != null) return;
+
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
@@ -235,15 +240,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (_selectedSource == null && widget.initialSession != null) {
         try {
           _selectedSource = sources.firstWhere(
-              (s) => s.name == widget.initialSession!.sourceContext.source);
+            (s) => s.name == widget.initialSession!.sourceContext.source,
+          );
         } catch (_) {}
       }
 
       // Priority 2: Already selected source (if re-fetching)
       if (_selectedSource != null) {
         try {
-          _selectedSource =
-              sources.firstWhere((s) => s.name == _selectedSource!.name);
+          _selectedSource = sources.firstWhere(
+            (s) => s.name == _selectedSource!.name,
+          );
         } catch (_) {
           _selectedSource = null;
         }
@@ -262,8 +269,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       // Priority 4: 'sources/default' or first available
       if (_selectedSource == null && sources.isNotEmpty) {
         try {
-          _selectedSource =
-              sources.firstWhere((s) => s.name == 'sources/default');
+          _selectedSource = sources.firstWhere(
+            (s) => s.name == 'sources/default',
+          );
         } catch (_) {
           _selectedSource = sources.first;
         }
@@ -278,8 +286,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       if (_selectedSource != null && widget.initialSession != null) {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
-          _selectedBranch = widget.initialSession!.sourceContext
-              .githubRepoContext!.startingBranch;
+          _selectedBranch = widget
+              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
         }
       } else {
         // Set default branch
@@ -327,45 +335,48 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       return;
     }
 
-    _sourceOverlayEntry = OverlayEntry(builder: (context) {
-      return Positioned(
-        width: _dropdownWidth ?? 300,
-        child: CompositedTransformFollower(
-          link: _sourceLayerLink,
-          showWhenUnlinked: false,
-          offset: const Offset(0.0, 60.0), // Approximate height
-          child: Material(
-            elevation: 4.0,
-            color: Theme.of(context).cardColor,
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxHeight: 250),
-              child: ListView.builder(
-                padding: EdgeInsets.zero,
-                shrinkWrap: true,
-                itemCount: _filteredSources.length,
-                itemBuilder: (context, index) {
-                  final source = _filteredSources[index];
-                  final isHighlighted = index == _highlightedSourceIndex;
-                  final isPrivate = source.githubRepo?.isPrivate ?? false;
+    _sourceOverlayEntry = OverlayEntry(
+      builder: (context) {
+        return Positioned(
+          width: _dropdownWidth ?? 300,
+          child: CompositedTransformFollower(
+            link: _sourceLayerLink,
+            showWhenUnlinked: false,
+            offset: const Offset(0.0, 60.0), // Approximate height
+            child: Material(
+              elevation: 4.0,
+              color: Theme.of(context).cardColor,
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxHeight: 250),
+                child: ListView.builder(
+                  padding: EdgeInsets.zero,
+                  shrinkWrap: true,
+                  itemCount: _filteredSources.length,
+                  itemBuilder: (context, index) {
+                    final source = _filteredSources[index];
+                    final isHighlighted = index == _highlightedSourceIndex;
+                    final isPrivate = source.githubRepo?.isPrivate ?? false;
 
-                  return Container(
-                    color:
-                        isHighlighted ? Theme.of(context).highlightColor : null,
-                    child: ListTile(
-                      dense: true,
-                      leading:
-                          isPrivate ? const Icon(Icons.lock, size: 16) : null,
-                      title: Text(_getSourceDisplayLabel(source)),
-                      onTap: () => _selectSource(source),
-                    ),
-                  );
-                },
+                    return Container(
+                      color: isHighlighted
+                          ? Theme.of(context).highlightColor
+                          : null,
+                      child: ListTile(
+                        dense: true,
+                        leading:
+                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                        title: Text(_getSourceDisplayLabel(source)),
+                        onTap: () => _selectSource(source),
+                      ),
+                    );
+                  },
+                ),
               ),
             ),
           ),
-        ),
-      );
-    });
+        );
+      },
+    );
 
     // Insert into overlay
     Overlay.of(context).insert(_sourceOverlayEntry!);
@@ -440,10 +451,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
     // Handle Image
+    final imageUrl = _imageUrlController.text.trim();
     List<Media>? images;
-    if (_imageUrl.isNotEmpty) {
+    if (imageUrl.isNotEmpty) {
       try {
-        final response = await http.get(Uri.parse(_imageUrl));
+        final response = await http.get(Uri.parse(imageUrl));
         if (response.statusCode == 200) {
           final bytes = response.bodyBytes;
           final base64Image = base64Encode(bytes);
@@ -452,15 +464,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           images = [Media(data: base64Image, mimeType: mimeType)];
         } else {
           if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                content: Text('Failed to load image: ${response.statusCode}')));
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: Text('Failed to load image: ${response.statusCode}'),
+              ),
+            );
             return;
           }
         }
       } catch (e) {
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text('Failed to load image: $e')));
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
           return;
         }
       }
@@ -490,7 +506,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final newSession = Session(
       name: '', // Server assigns
       id: '', // Server assigns
-      prompt: _prompt,
+      prompt: _promptController.text,
       sourceContext: SourceContext(
         source: _selectedSource!.name,
         githubRepoContext: GitHubRepoContext(
@@ -508,11 +524,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _saveDraft() async {
-    // Similar to create but only needs prompt? 
-    // Allow saving incomplete drafts? 
+    // Similar to create but only needs prompt?
+    // Allow saving incomplete drafts?
     // User requirement: "When you are editing a draft, you have the option to 'delete' too."
     // implying meaningful content.
-    if (_prompt.isEmpty) return; 
+    if (_promptController.text.isEmpty) return;
 
     // Build session (even if incomplete, use defaults)
     // Map Mode to API fields
@@ -533,7 +549,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final newSession = Session(
       name: widget.initialSession?.name ?? '',
       id: widget.initialSession?.id ?? '',
-      prompt: _prompt,
+      prompt: _promptController.text,
       sourceContext: SourceContext(
         source: _selectedSource?.name ?? 'sources/default',
         githubRepoContext: GitHubRepoContext(
@@ -550,9 +566,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   void _deleteDraft() {
-     // Return dummy session but mark delete
-     final dummy = Session(name: '', id: '', prompt: '', sourceContext: SourceContext(source: ''));
-     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
+    // Return dummy session but mark delete
+    final dummy = Session(
+      name: '',
+      id: '',
+      prompt: '',
+      sourceContext: SourceContext(source: ''),
+    );
+    Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
 
   String _getSourceDisplayLabel(Source s) {
@@ -564,204 +585,222 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(builder: (context, sourceProvider, _) {
-      final sources = sourceProvider.items.map((i) => i.data).toList();
+    return Consumer<SourceProvider>(
+      builder: (context, sourceProvider, _) {
+        final sources = sourceProvider.items.map((i) => i.data).toList();
 
-      // Sort sources
-      sources.sort((a, b) {
-        final labelA = _getSourceDisplayLabel(a);
-        final labelB = _getSourceDisplayLabel(b);
+        // Sort sources
+        sources.sort((a, b) {
+          final labelA = _getSourceDisplayLabel(a);
+          final labelB = _getSourceDisplayLabel(b);
 
-        final isSourceA =
-            labelA.startsWith('sources/') || a.name.startsWith('sources/');
-        final isSourceB =
-            labelB.startsWith('sources/') || b.name.startsWith('sources/');
+          final isSourceA =
+              labelA.startsWith('sources/') || a.name.startsWith('sources/');
+          final isSourceB =
+              labelB.startsWith('sources/') || b.name.startsWith('sources/');
 
-        if (isSourceA != isSourceB) {
-          // If one is source and the other is not, the one that IS 'source' goes last (return 1)
-          return isSourceA ? 1 : -1;
+          if (isSourceA != isSourceB) {
+            // If one is source and the other is not, the one that IS 'source' goes last (return 1)
+            return isSourceA ? 1 : -1;
+          }
+
+          return labelA.compareTo(labelB);
+        });
+
+        if (sourceProvider.isLoading && sources.isEmpty) {
+          // Initial load
+          return const AlertDialog(
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(),
+                SizedBox(height: 16),
+                Text("Loading available sources..."),
+              ],
+            ),
+          );
         }
 
-        return labelA.compareTo(labelB);
-      });
-
-      if (sourceProvider.isLoading && sources.isEmpty) {
-        // Initial load
-        return const AlertDialog(
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              CircularProgressIndicator(),
-              SizedBox(height: 16),
-              Text("Loading available sources..."),
+        if (sourceProvider.error != null && sources.isEmpty) {
+          return AlertDialog(
+            title: const Text('Error'),
+            content: SelectableText(sourceProvider.error!),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context),
+                child: const Text('Close'),
+              ),
             ],
-          ),
-        );
-      }
+          );
+        }
 
-      if (sourceProvider.error != null && sources.isEmpty) {
+        // Determine available branches for the selected source
+        List<String> branches = [];
+        if (_selectedSource != null &&
+            _selectedSource!.githubRepo != null &&
+            _selectedSource!.githubRepo!.branches != null) {
+          branches = _selectedSource!.githubRepo!.branches!
+              .map((b) => b.displayName)
+              .toList();
+        }
+        if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
+          branches.add(_selectedBranch!);
+        }
+        if (branches.isEmpty) branches.add('main');
+
         return AlertDialog(
-          title: const Text('Error'),
-          content: SelectableText(sourceProvider.error!),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.pop(context),
-              child: const Text('Close'),
-            )
-          ],
-        );
-      }
-
-      // Determine available branches for the selected source
-      List<String> branches = [];
-      if (_selectedSource != null &&
-          _selectedSource!.githubRepo != null &&
-          _selectedSource!.githubRepo!.branches != null) {
-        branches = _selectedSource!.githubRepo!.branches!
-            .map((b) => b.displayName)
-            .toList();
-      }
-      if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
-        branches.add(_selectedBranch!);
-      }
-      if (branches.isEmpty) branches.add('main');
-
-      return AlertDialog(
-        title: Text(widget.initialSession != null ? "Edit Draft" : "New Session"),
-        content: SizedBox(
-          width: MediaQuery.of(context).size.width * 0.8,
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-               if (widget.initialSession != null && widget.initialSession!.state == SessionState.FAILED && widget.initialSession!.currentAction != null)
-                 Container(
+          title: Text(
+            widget.initialSession != null ? "Edit Draft" : "New Session",
+          ),
+          content: SizedBox(
+            width: MediaQuery.of(context).size.width * 0.8,
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                if (widget.initialSession != null &&
+                    widget.initialSession!.state == SessionState.FAILED &&
+                    widget.initialSession!.currentAction != null)
+                  Container(
                     margin: const EdgeInsets.only(bottom: 16),
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
-                        color: Colors.red.shade50,
-                        borderRadius: BorderRadius.circular(8),
-                        border: Border.all(color: Colors.red.shade200),
+                      color: Colors.red.shade50,
+                      borderRadius: BorderRadius.circular(8),
+                      border: Border.all(color: Colors.red.shade200),
                     ),
                     child: Row(
-                        children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Expanded(child: Text("Last Send Failed: ${widget.initialSession!.currentAction}", style: TextStyle(color: Colors.red.shade800)))
-                        ]
-                    ),
-                 ),
-
-                  const Text('New Session',
-                      style:
-                          TextStyle(fontSize: 24, fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 16),
-
-                  // Mode Selection
-                  const Text('I want to...',
-                      style: TextStyle(fontWeight: FontWeight.bold)),
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      _buildModeChoice(0, 'Ask a Question'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(1, 'Create a Plan'),
-                      const SizedBox(width: 8),
-                      _buildModeChoice(2, 'Start Coding'),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  if (_selectedModeIndex == 2) ...[
-                    CheckboxListTile(
-                      title: const Text('Auto-create Pull Request'),
-                      subtitle: const Text(
-                          'Automatically create a PR when a final patch is generated'),
-                      value: _autoCreatePr,
-                      onChanged: (val) {
-                        setState(() {
-                          _autoCreatePr = val ?? false;
-                        });
-                      },
-                      contentPadding: EdgeInsets.zero,
-                      controlAffinity: ListTileControlAffinity.leading,
-                    ),
-                    const SizedBox(height: 8),
-                  ],
-
-                  // Prompt
-                  CallbackShortcuts(
-                    bindings: {
-                      const SingleActivator(LogicalKeyboardKey.enter,
-                          control: true): () {
-                        if (_prompt.isNotEmpty && _selectedSource != null) {
-                          _create();
-                        } else if (_prompt.isNotEmpty) {
-                           _saveDraft();
-                        }
-                      },
-                    },
-                    child: TextField(
-                      autofocus: true,
-                      maxLines: 6,
-                      decoration: const InputDecoration(
-                        labelText: 'Prompt',
-                        hintText: 'Describe what you want to do...',
-                        border: OutlineInputBorder(),
-                        alignLabelWithHint: true,
-                      ),
-                      onChanged: (val) {
-                        setState(() {
-                          _prompt = val;
-                        });
-                      },
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Image Attachment (URL for now)
-                  TextField(
-                    decoration: const InputDecoration(
-                      labelText: 'Image URL (Optional)',
-                      hintText: 'https://example.com/image.png',
-                      border: OutlineInputBorder(),
-                      prefixIcon: Icon(Icons.image),
-                    ),
-                    onChanged: (val) => _imageUrl = val,
-                  ),
-                  const SizedBox(height: 16),
-
-                  // Context (Source & Branch)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    crossAxisAlignment: CrossAxisAlignment.center,
-                    children: [
-                      const Text('Context',
-                          style: TextStyle(fontWeight: FontWeight.bold)),
-                      TextButton.icon(
-                        style: TextButton.styleFrom(
-                          textStyle: const TextStyle(fontSize: 12),
-                          tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      children: [
+                        const Icon(Icons.error_outline, color: Colors.red),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            "Last Send Failed: ${widget.initialSession!.currentAction}",
+                            style: TextStyle(color: Colors.red.shade800),
+                          ),
                         ),
-                        onPressed: _isRefreshing
-                            ? null
-                            : () => _fetchSources(force: true),
-                        icon: _isRefreshing
-                            ? const SizedBox(
-                                width: 12,
-                                height: 12,
-                                child:
-                                    CircularProgressIndicator(strokeWidth: 2))
-                            : const Icon(Icons.refresh, size: 14),
-                        label: Text(_refreshStatus),
-                      ),
-                    ],
+                      ],
+                    ),
+                  ),
+
+                const Text(
+                  'New Session',
+                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 16),
+
+                // Mode Selection
+                const Text(
+                  'I want to...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildModeChoice(0, 'Ask a Question'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(1, 'Create a Plan'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(2, 'Start Coding'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                if (_selectedModeIndex == 2) ...[
+                  CheckboxListTile(
+                    title: const Text('Auto-create Pull Request'),
+                    subtitle: const Text(
+                      'Automatically create a PR when a final patch is generated',
+                    ),
+                    value: _autoCreatePr,
+                    onChanged: (val) {
+                      setState(() {
+                        _autoCreatePr = val ?? false;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
                   ),
                   const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        flex: 3,
-                        child: LayoutBuilder(builder: (context, constraints) {
+                ],
+
+                // Prompt
+                CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(
+                      LogicalKeyboardKey.enter,
+                      control: true,
+                    ): () {
+                      if (_promptController.text.isNotEmpty &&
+                          _selectedSource != null) {
+                        _create();
+                      } else if (_promptController.text.isNotEmpty) {
+                        _saveDraft();
+                      }
+                    },
+                  },
+                  child: TextField(
+                    controller: _promptController,
+                    autofocus: true,
+                    maxLines: 6,
+                    decoration: const InputDecoration(
+                      labelText: 'Prompt',
+                      hintText: 'Describe what you want to do...',
+                      border: OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                    ),
+                    onChanged: (val) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Image Attachment (URL for now)
+                TextField(
+                  controller: _imageUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Image URL (Optional)',
+                    hintText: 'https://example.com/image.png',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.image),
+                  ),
+                  onChanged: (val) => setState(() {}),
+                ),
+                const SizedBox(height: 16),
+
+                // Context (Source & Branch)
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    const Text(
+                      'Context',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    TextButton.icon(
+                      style: TextButton.styleFrom(
+                        textStyle: const TextStyle(fontSize: 12),
+                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                      ),
+                      onPressed: _isRefreshing
+                          ? null
+                          : () => _fetchSources(force: true),
+                      icon: _isRefreshing
+                          ? const SizedBox(
+                              width: 12,
+                              height: 12,
+                              child: CircularProgressIndicator(strokeWidth: 2),
+                            )
+                          : const Icon(Icons.refresh, size: 14),
+                      label: Text(_refreshStatus),
+                    ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      flex: 3,
+                      child: LayoutBuilder(
+                        builder: (context, constraints) {
                           // Correctly capture width for overlay
                           _dropdownWidth = constraints.maxWidth;
                           return CompositedTransformTarget(
@@ -778,84 +817,91 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         ? const Icon(Icons.lock, size: 16)
                                         : const Icon(Icons.source, size: 16),
                                 suffixIcon: IconButton(
-                                    icon: const Icon(Icons.close, size: 16),
-                                    onPressed: () {
-                                      _sourceController.clear();
-                                      _sourceFocusNode.requestFocus();
-                                      _onSourceTextChanged('');
-                                    }),
+                                  icon: const Icon(Icons.close, size: 16),
+                                  onPressed: () {
+                                    _sourceController.clear();
+                                    _sourceFocusNode.requestFocus();
+                                    _onSourceTextChanged('');
+                                  },
+                                ),
                               ),
                               onChanged: _onSourceTextChanged,
                             ),
                           );
-                        }),
+                        },
                       ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Branch',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: _selectedBranch,
-                          items: branches
-                              .map((b) => DropdownMenuItem(
-                                    value: b,
-                                    child: Text(b,
-                                        overflow: TextOverflow.ellipsis),
-                                  ))
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedBranch = val;
-                            });
-                          },
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      flex: 1,
+                      child: DropdownButtonFormField<String>(
+                        isExpanded: true,
+                        decoration: const InputDecoration(
+                          labelText: 'Branch',
+                          border: OutlineInputBorder(),
                         ),
+                        value: _selectedBranch,
+                        items: branches
+                            .map(
+                              (b) => DropdownMenuItem(
+                                value: b,
+                                child: Text(b, overflow: TextOverflow.ellipsis),
+                              ),
+                            )
+                            .toList(),
+                        onChanged: (val) {
+                          setState(() {
+                            _selectedBranch = val;
+                          });
+                        },
                       ),
-                    ],
-                  ),
+                    ),
+                  ],
+                ),
 
-                  const SizedBox(height: 24),
+                const SizedBox(height: 24),
 
-                  // Actions
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.end,
-                    children: [
-                      if (widget.initialSession != null)
-                        TextButton(
-                          onPressed: _deleteDraft,
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text('Delete'),
+                // Actions
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.end,
+                  children: [
+                    if (widget.initialSession != null)
+                      TextButton(
+                        onPressed: _deleteDraft,
+                        style: TextButton.styleFrom(
+                          foregroundColor: Colors.red,
                         ),
-                      const Spacer(),
-                      TextButton(
-                        onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
-                        child: const Text('Save as Draft'),
+                        child: const Text('Delete'),
                       ),
-                      const SizedBox(width: 8),
-                      // Cancel acts as close without saving changes if not explicitly saving draft
-                      TextButton(
-                        onPressed: () => Navigator.pop(context),
-                        child: const Text('Cancel'),
-                      ),
-                      const SizedBox(width: 8),
-                      FilledButton(
-                        onPressed:
-                            (_prompt.isNotEmpty && _selectedSource != null)
-                                ? _create
-                                : null,
-                        child: const Text('Send Now'),
-                      ),
-                    ],
-                  )
-                ],
+                    const Spacer(),
+                    TextButton(
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? _saveDraft
+                          : null,
+                      child: const Text('Save as Draft'),
+                    ),
+                    const SizedBox(width: 8),
+                    // Cancel acts as close without saving changes if not explicitly saving draft
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Cancel'),
+                    ),
+                    const SizedBox(width: 8),
+                    FilledButton(
+                      onPressed: (_promptController.text.isNotEmpty &&
+                              _selectedSource != null)
+                          ? _create
+                          : null,
+                      child: const Text('Send Now'),
+                    ),
+                  ],
+                ),
+              ],
             ),
           ),
-
-      );
-    });
+        );
+      },
+    );
   }
 
   Widget _buildModeChoice(int index, String label) {

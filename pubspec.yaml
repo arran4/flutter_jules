@@ -1,4 +1,4 @@
-name: jules_client
+name: flutter_jules
 description: A basic Flutter client for the Jules API.
 publish_to: 'none'
 version: 1.0.0+1

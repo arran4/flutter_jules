@@ -1,6 +1,6 @@
 import 'dart:convert';
 import 'package:flutter_test/flutter_test.dart';
-import 'package:jules_client/models.dart';
+import 'package:flutter_jules/models.dart';
 
 void main() {
   group('API Samples Tests', () {
@@ -51,8 +51,10 @@ void main() {
 
       expect(activities.length, 1);
       final activity = activities.first;
-      expect(activity.name,
-          "sessions/14550388554331055113/activities/02200cce44f746308651037e4a18caed");
+      expect(
+        activity.name,
+        "sessions/14550388554331055113/activities/02200cce44f746308651037e4a18caed",
+      );
       expect(activity.originator, "agent");
       expect(activity.planGenerated, isNotNull);
       expect(activity.planGenerated!.plan.steps.length, 3);

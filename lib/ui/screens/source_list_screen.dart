@@ -132,8 +132,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   void _processSessions() {
     // We can get sessions from SessionProvider
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
     final sessions = sessionProvider.items.map((i) => i.data).toList();
 
     _usageCount.clear();
@@ -163,13 +165,18 @@ class _SourceListScreenState extends State<SourceListScreen> {
   Future<void> _refreshData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
 
     await Future.wait([
       sourceProvider.fetchSources(auth.client, authToken: auth.token),
-      sessionProvider.fetchSessions(auth.client,
-          authToken: auth.token, force: true) // Also refresh stats
+      sessionProvider.fetchSessions(
+        auth.client,
+        authToken: auth.token,
+        force: true,
+      ), // Also refresh stats
     ]);
 
     _processSessions();
@@ -207,7 +214,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
           'isNew': i.metadata.isNew,
           'isUpdated': i.metadata.isUpdated,
           'lastRetrieved': i.metadata.lastRetrieved.toIso8601String(),
-        }
+        },
       };
     }).toList();
 
@@ -375,13 +382,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                             MediaQuery.of(context).size.height *
                                                 0.7,
                                         child: Center(
-                                            child: Padding(
-                                          padding: const EdgeInsets.all(20.0),
-                                          child: Text(sources.isEmpty
-                                              ? 'No repositories found.'
-                                              : 'No matches found.'),
-                                        )),
-                                      )
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(20.0),
+                                            child: Text(
+                                              sources.isEmpty
+                                                  ? 'No repositories found.'
+                                                  : 'No matches found.',
+                                            ),
+                                          ),
+                                        ),
+                                      ),
                                     ],
                                   )
                                 : ListView.builder(
@@ -409,26 +419,35 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
                                       return Card(
                                         margin: const EdgeInsets.symmetric(
-                                            horizontal: 8, vertical: 4),
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
                                         child: ListTile(
-                                          leading: Icon(isPrivate
-                                              ? Icons.lock
-                                              : Icons.public),
+                                          leading: Icon(
+                                            isPrivate
+                                                ? Icons.lock
+                                                : Icons.public,
+                                          ),
                                           title: Row(
                                             children: [
                                               if (isPrivate)
                                                 const Padding(
                                                   padding: EdgeInsets.only(
-                                                      right: 6.0),
-                                                  child: Icon(Icons.lock,
-                                                      size: 16,
-                                                      color: Colors.grey),
+                                                    right: 6.0,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.lock,
+                                                    size: 16,
+                                                    color: Colors.grey,
+                                                  ),
                                                 ),
                                               Expanded(
-                                                  child: Text(
-                                                      repo?.repo ?? source.name,
-                                                      overflow: TextOverflow
-                                                          .ellipsis)),
+                                                child: Text(
+                                                  repo?.repo ?? source.name,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
                                             ],
                                           ),
                                           subtitle: Column(
@@ -436,7 +455,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                 CrossAxisAlignment.start,
                                             children: [
                                               Text(
-                                                  '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}'),
+                                                '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
+                                              ),
                                               const SizedBox(height: 4),
                                               Row(
                                                 children: [
@@ -444,21 +464,24 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                     Container(
                                                       padding: const EdgeInsets
                                                           .symmetric(
-                                                          horizontal: 6,
-                                                          vertical: 2),
+                                                        horizontal: 6,
+                                                        vertical: 2,
+                                                      ),
                                                       decoration: BoxDecoration(
                                                         color: Theme.of(context)
                                                             .colorScheme
                                                             .surfaceContainerHighest,
                                                         borderRadius:
                                                             BorderRadius
-                                                                .circular(4),
+                                                                .circular(
+                                                          4,
+                                                        ),
                                                       ),
                                                       child: Text(
                                                         '$count sessions',
-                                                        style: Theme.of(context)
-                                                            .textTheme
-                                                            .labelSmall,
+                                                        style: Theme.of(
+                                                          context,
+                                                        ).textTheme.labelSmall,
                                                       ),
                                                     ),
                                                   if (count > 0)
@@ -466,29 +489,32 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                   if (lastUsedDate != null)
                                                     Text(
                                                       'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                                      style: Theme.of(context)
-                                                          .textTheme
-                                                          .bodySmall,
+                                                      style: Theme.of(
+                                                        context,
+                                                      ).textTheme.bodySmall,
                                                     ),
                                                   if (item.metadata.isNew)
                                                     Padding(
                                                       padding:
                                                           const EdgeInsets.only(
-                                                              left: 8.0),
+                                                        left: 8.0,
+                                                      ),
                                                       child: Container(
-                                                          padding:
-                                                              const EdgeInsets
-                                                                  .symmetric(
-                                                                  horizontal: 4,
-                                                                  vertical: 2),
-                                                          color: Colors.green,
-                                                          child: const Text(
-                                                              'NEW',
-                                                              style: TextStyle(
-                                                                  color: Colors
-                                                                      .white,
-                                                                  fontSize:
-                                                                      10))),
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 4,
+                                                          vertical: 2,
+                                                        ),
+                                                        color: Colors.green,
+                                                        child: const Text(
+                                                          'NEW',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                          ),
+                                                        ),
+                                                      ),
                                                     ),
                                                 ],
                                               ),
@@ -501,8 +527,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                               MaterialPageRoute(
                                                 builder: (context) =>
                                                     SessionListScreen(
-                                                        sourceFilter:
-                                                            source.name),
+                                                  sourceFilter: source.name,
+                                                ),
                                               ),
                                             );
                                           },

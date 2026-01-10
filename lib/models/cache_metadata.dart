@@ -73,7 +73,11 @@ class CacheMetadata {
       hasPendingUpdates: json['hasPendingUpdates'] ?? false,
       isHidden: json['isHidden'] ?? false,
       pendingMessages: getObjectArrayPropOrDefaultFunction(
-          json, 'pendingMessages', PendingMessage.fromJson, () => []),
+        json,
+        'pendingMessages',
+        PendingMessage.fromJson,
+        () => [],
+      ),
     );
   }
 

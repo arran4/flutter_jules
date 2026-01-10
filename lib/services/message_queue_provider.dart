@@ -1,4 +1,7 @@
 import 'package:flutter/material.dart';
+import 'dart:convert';
+import 'dart:io';
+import 'package:flutter/foundation.dart';
 
 import 'cache_service.dart';
 import 'jules_client.dart';
@@ -44,43 +47,78 @@ class MessageQueueProvider extends ChangeNotifier {
   Future<void> _migrateQueue() async {
     bool changed = false;
     for (var i = 0; i < _queue.length; i++) {
-        final m = _queue[i];
-        // Fix 1: 'new_session' messages that are not tagged as sessionCreation
-        // This was a previous bug where they were stored as simple messages
-        if (m.sessionId == 'new_session' && m.type == QueuedMessageType.message) {
-             // Convert to sessionCreation and Draft
-             // We need to ensure metadata exists. If not, try to recover from content?
-             // But content for new session IS the prompt.
-             Map<String, dynamic> metadata = m.metadata ?? {};
-             if (metadata.isEmpty) {
-                 // Create minimal session metadata
-                 metadata = Session(
-                     id: '',
-                     name: '',
-                     prompt: m.content,
-                     sourceContext: SourceContext(source: ''),
-                 ).toJson();
-             }
+      var msg = _queue[i];
 
-             _queue[i] = QueuedMessage(
-                 id: m.id,
-                 sessionId: m.sessionId,
-                 content: m.content,
-                 createdAt: m.createdAt,
-                 type: QueuedMessageType.sessionCreation, // Fixed type
-                 metadata: metadata,
-                 queueReason: m.queueReason ?? 'migrated_legacy_item',
-                 isDraft: true, // Force to draft for review
-                 processingErrors: m.processingErrors,
-             );
-             changed = true;
+      // Fix 1: Legacy new_session message type
+      if (msg.sessionId == 'new_session' &&
+          msg.type != QueuedMessageType.sessionCreation) {
+        debugPrint(
+          "Migrating legacy message ${msg.id} to sessionCreation type",
+        );
+        try {
+          final session = Session(
+            id: '',
+            name: '',
+            prompt: msg.content,
+            sourceContext: SourceContext(source: ''),
+          );
+          final newMsg = QueuedMessage(
+            id: msg.id,
+            sessionId: msg.sessionId,
+            content: msg.content,
+            createdAt: msg.createdAt,
+            type: QueuedMessageType.sessionCreation,
+            metadata: session.toJson(), // Minimal metadata recovery
+            isDraft:
+                true, // Legacy queue items that weren't sent should be drafts
+            queueReason: 'Recovered from legacy queue',
+            processingErrors: msg.processingErrors,
+          );
+          _queue[i] = newMsg;
+          changed = true;
+        } catch (e) {
+          debugPrint("Error migrating message ${msg.id}: $e");
         }
+      }
+
+      // Fix 2: Ensure correct queueReason for drafts
+      if (_queue[i].isDraft &&
+          (_queue[i].queueReason == null || _queue[i].queueReason!.isEmpty)) {
+        debugPrint("Fixing queueReason for draft message ${msg.id}");
+        _queue[i] = _queue[i].copyWith(queueReason: "User saved as draft");
+        changed = true;
+      }
+
+      // Fix 3: Ensure session creation requests are marked as drafts if they have never been sent (no errors)
+      if (_queue[i].type == QueuedMessageType.sessionCreation &&
+          !_queue[i].isDraft &&
+          (_queue[i].processingErrors.isEmpty) &&
+          (_queue[i].queueReason == null)) {
+        // If it's just sitting there without errors or reason, assume it's a draft or pending offline
+        // But we don't want to auto-send really old stuff?
+        // Let's mark as draft to be safe for user review
+        debugPrint(
+          "Marking unsent session creation request ${msg.id} as draft.",
+        );
+        _queue[i] = _queue[i].copyWith(
+          isDraft: true,
+          queueReason: "Restored as draft",
+        );
+        changed = true;
+      }
     }
-    
+
     if (changed) {
-        await _saveQueue();
-        debugPrint("Message Queue migrated successfully.");
+      await _saveQueue();
+      debugPrint("Message Queue migrated successfully.");
     }
+  }
+
+  Future<void> resyncQueue() async {
+    debugPrint("Resyncing/Sanitizing queue...");
+    await _migrateQueue();
+    notifyListeners();
+    debugPrint("Resync complete.");
   }
 
   Future<void> _saveQueue() async {
@@ -89,8 +127,12 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  String addMessage(String sessionId, String content,
-      {String? reason, bool isDraft = false}) {
+  String addMessage(
+    String sessionId,
+    String content, {
+    String? reason,
+    bool isDraft = false,
+  }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: sessionId,
@@ -105,8 +147,11 @@ class MessageQueueProvider extends ChangeNotifier {
     return message.id;
   }
 
-  String addCreateSessionRequest(Session session,
-      {String? reason, bool isDraft = false}) {
+  String addCreateSessionRequest(
+    Session session, {
+    String? reason,
+    bool isDraft = false,
+  }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
       sessionId: 'new_session', // Placeholder
@@ -132,8 +177,12 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  void updateCreateSessionRequest(String id, Session session,
-      {bool? isDraft, String? reason}) {
+  void updateCreateSessionRequest(
+    String id,
+    Session session, {
+    bool? isDraft,
+    String? reason,
+  }) {
     final index = _queue.indexWhere((m) => m.id == id);
     if (index != -1) {
       _queue[index] = _queue[index].copyWith(
@@ -157,13 +206,16 @@ class MessageQueueProvider extends ChangeNotifier {
     // Check if draft already exists? User might want multiple.
     // Assuming adding new draft always for now, or updating if ID known.
     // For simplicity, just add.
-    addMessage(sessionId, content, isDraft: true, reason: 'User saved as draft');
+    addMessage(
+      sessionId,
+      content,
+      isDraft: true,
+      reason: 'User saved as draft',
+    );
   }
 
   List<QueuedMessage> getDrafts(String sessionId) {
-    return _queue
-        .where((m) => m.sessionId == sessionId && m.isDraft)
-        .toList();
+    return _queue.where((m) => m.sessionId == sessionId && m.isDraft).toList();
   }
 
   // Returns true if connection successful
@@ -186,13 +238,16 @@ class MessageQueueProvider extends ChangeNotifier {
     }
   }
 
-  Future<void> sendQueue(JulesClient client,
-      {Function(String)? onMessageSent,
-      Function(String, Object)? onError}) async {
+  Future<void> sendQueue(
+    JulesClient client, {
+    Function(String)? onMessageSent,
+    Function(String, Object)? onError,
+  }) async {
     if (_isOffline) return;
 
-    List<QueuedMessage> remaining =
-        List.from(_queue.where((m) => !m.isDraft)); // Skip drafts
+    List<QueuedMessage> remaining = List.from(
+      _queue.where((m) => !m.isDraft),
+    ); // Skip drafts
     List<QueuedMessage> toRemove = [];
 
     // Sort by creation time to send in order
@@ -247,11 +302,13 @@ class MessageQueueProvider extends ChangeNotifier {
         // Record error on the message
         final index = _queue.indexWhere((m) => m.id == msg.id);
         if (index != -1) {
-          final currentErrors =
-              List<String>.from(_queue[index].processingErrors);
+          final currentErrors = List<String>.from(
+            _queue[index].processingErrors,
+          );
           currentErrors.add(e.toString());
-          _queue[index] =
-              _queue[index].copyWith(processingErrors: currentErrors);
+          _queue[index] = _queue[index].copyWith(
+            processingErrors: currentErrors,
+          );
           await _saveQueue();
           notifyListeners();
         }
@@ -265,5 +322,64 @@ class MessageQueueProvider extends ChangeNotifier {
     _queue.removeWhere((m) => toRemove.contains(m));
     await _saveQueue();
     notifyListeners();
+  }
+
+  Future<String> importLegacyQueue(String filePath) async {
+    try {
+      final file = File(filePath);
+      debugPrint("Attempting to import from: $filePath");
+
+      if (!await file.exists()) {
+        return "File not found: $filePath";
+      }
+
+      final jsonString = await file.readAsString();
+      debugPrint("Read ${jsonString.length} chars.");
+
+      final List<dynamic> jsonList = jsonDecode(jsonString);
+      debugPrint("Decoded ${jsonList.length} items.");
+
+      int imported = 0;
+      int skipped = 0;
+
+      for (var item in jsonList) {
+        try {
+          final message = QueuedMessage.fromJson(item);
+          final existingIndex = _queue.indexWhere((m) => m.id == message.id);
+
+          if (existingIndex == -1) {
+            _queue.add(message);
+            imported++;
+            debugPrint("Imported new item: ${message.id}");
+          } else {
+            // Update/Merge logic: Overwrite with imported version to ensure tags/reason are restored
+            // especially for legacy items where local might be malformed or missing metadata.
+            _queue[existingIndex] = message;
+            imported++; // Count as imported/updated
+            debugPrint("Updated existing item: ${message.id}");
+          }
+        } catch (e) {
+          debugPrint("Failed to parse item: $e");
+        }
+      }
+
+      if (imported > 0) {
+        await _saveQueue();
+        // Run migration on new items just in case they are legacy
+        await _migrateQueue();
+        notifyListeners();
+      }
+
+      return "Process Complete.\nFound: ${jsonList.length}\nImported: $imported\nSkipped: $skipped";
+    } catch (e) {
+      debugPrint("Failed to import legacy queue: $e");
+      return "Error: $e";
+    }
+  }
+
+  Future<String?> getQueuePathForSessionId(String sessionId) async {
+    if (_cacheService == null) return null;
+    final file = await _cacheService!.getMessageQueueFileForToken(sessionId);
+    return file.path;
   }
 }

@@ -90,10 +90,7 @@ class ApiViewer extends StatelessWidget {
           ),
           Expanded(
             child: TabBarView(
-              children: [
-                _buildHeadersView(headers),
-                _buildBodyView(body),
-              ],
+              children: [_buildHeadersView(headers), _buildBodyView(body)],
             ),
           ),
         ],

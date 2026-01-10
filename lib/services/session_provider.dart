@@ -4,6 +4,7 @@ import '../models/api_exchange.dart';
 
 import 'jules_client.dart';
 import 'cache_service.dart';
+import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
   List<CachedItem<Session>> _items = [];
@@ -12,6 +13,7 @@ class SessionProvider extends ChangeNotifier {
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
   CacheService? _cacheService;
+  GithubProvider? _githubProvider;
 
   List<CachedItem<Session>> get items => _items;
   bool get isLoading => _isLoading;
@@ -23,12 +25,18 @@ class SessionProvider extends ChangeNotifier {
     _cacheService = service;
   }
 
-  Future<void> fetchSessions(JulesClient client,
-      {bool force = false,
-      bool shallow = true,
-      int pageSize = 100,
-      String? authToken,
-      void Function(String)? onRefreshFallback}) async {
+  void setGithubProvider(GithubProvider service) {
+    _githubProvider = service;
+  }
+
+  Future<void> fetchSessions(
+    JulesClient client, {
+    bool force = false,
+    bool shallow = true,
+    int pageSize = 100,
+    String? authToken,
+    void Function(String)? onRefreshFallback,
+  }) async {
     if (_cacheService == null) {
       _error = "Cache service not initialized";
       notifyListeners();
@@ -69,10 +77,12 @@ class SessionProvider extends ChangeNotifier {
           shouldStop: (shallow && _items.isNotEmpty)
               ? (session) {
                   // Stop if we find this session in our cache with same updateTime/state
-                  return _items.any((existing) =>
-                      existing.data.id == session.id &&
-                      existing.data.updateTime == session.updateTime &&
-                      existing.data.state == session.state);
+                  return _items.any(
+                    (existing) =>
+                        existing.data.id == session.id &&
+                        existing.data.updateTime == session.updateTime &&
+                        existing.data.state == session.state,
+                  );
                 }
               : null,
         );
@@ -83,7 +93,28 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
-        for (final session in newSessions) {
+        for (var session in newSessions) {
+          if (_githubProvider != null &&
+              session.sourceContext.source.startsWith('sources/github/')) {
+            final parts = session.sourceContext.source.split('/');
+            if (parts.length >= 4) {
+              final owner = parts[2];
+              final repo = parts[3];
+              final prNumberMatch =
+                  RegExp(r'#(\d+)').firstMatch(session.title ?? '');
+              if (prNumberMatch != null) {
+                final prNumber = prNumberMatch.group(1)!;
+                final prStatus = await _githubProvider!.getPrStatus(
+                  owner,
+                  repo,
+                  prNumber,
+                );
+                if (prStatus != null) {
+                  session = session.copyWith(prStatus: prStatus);
+                }
+              }
+            }
+          }
           final index = _items.indexWhere((i) => i.data.id == session.id);
           CacheMetadata metadata;
 
@@ -95,14 +126,16 @@ class SessionProvider extends ChangeNotifier {
                 (oldItem.data.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
-                lastRetrieved: DateTime.now(),
-                lastUpdated:
-                    changed ? DateTime.now() : oldItem.metadata.lastUpdated);
+              lastRetrieved: DateTime.now(),
+              lastUpdated:
+                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+            );
           } else {
             metadata = CacheMetadata(
-                firstSeen: DateTime.now(),
-                lastRetrieved: DateTime.now(),
-                lastUpdated: DateTime.now());
+              firstSeen: DateTime.now(),
+              lastRetrieved: DateTime.now(),
+              lastUpdated: DateTime.now(),
+            );
           }
           _items.add(CachedItem(session, metadata));
         }
@@ -117,7 +150,9 @@ class SessionProvider extends ChangeNotifier {
       for (var i = 0; i < _items.length; i++) {
         if (now.difference(_items[i].metadata.lastRetrieved).inSeconds > 1) {
           _items[i] = CachedItem(
-              _items[i].data, _items[i].metadata.copyWith(lastRetrieved: now));
+            _items[i].data,
+            _items[i].metadata.copyWith(lastRetrieved: now),
+          );
         }
       }
 
@@ -135,12 +170,14 @@ class SessionProvider extends ChangeNotifier {
         if (onRefreshFallback != null) onRefreshFallback(msg);
 
         _isLoading = false;
-        await fetchSessions(client,
-            force: true,
-            shallow: false,
-            pageSize: pageSize,
-            authToken: authToken,
-            onRefreshFallback: onRefreshFallback);
+        await fetchSessions(
+          client,
+          force: true,
+          shallow: false,
+          pageSize: pageSize,
+          authToken: authToken,
+          onRefreshFallback: onRefreshFallback,
+        );
         return;
       }
       _error = e.toString();
@@ -164,13 +201,15 @@ class SessionProvider extends ChangeNotifier {
       final changed = (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
-          lastRetrieved: DateTime.now(),
-          lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated);
+        lastRetrieved: DateTime.now(),
+        lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+      );
     } else {
       metadata = CacheMetadata(
-          firstSeen: DateTime.now(),
-          lastRetrieved: DateTime.now(),
-          lastUpdated: DateTime.now());
+        firstSeen: DateTime.now(),
+        lastRetrieved: DateTime.now(),
+        lastUpdated: DateTime.now(),
+      );
     }
 
     final cachedItem = CachedItem(session, metadata);
@@ -189,8 +228,11 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> refreshSession(JulesClient client, String sessionName,
-      {String? authToken}) async {
+  Future<void> refreshSession(
+    JulesClient client,
+    String sessionName, {
+    String? authToken,
+  }) async {
     try {
       final updatedSession = await client.getSession(sessionName);
 
@@ -211,14 +253,15 @@ class SessionProvider extends ChangeNotifier {
             (oldItem.data.updateTime != updatedSession.updateTime) ||
                 (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
-            lastRetrieved: DateTime.now(),
-            lastUpdated:
-                changed ? DateTime.now() : oldItem.metadata.lastUpdated);
+          lastRetrieved: DateTime.now(),
+          lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+        );
       } else {
         metadata = CacheMetadata(
-            firstSeen: DateTime.now(),
-            lastRetrieved: DateTime.now(),
-            lastUpdated: DateTime.now());
+          firstSeen: DateTime.now(),
+          lastRetrieved: DateTime.now(),
+          lastUpdated: DateTime.now(),
+        );
       }
 
       if (activities != null) {
@@ -231,8 +274,11 @@ class SessionProvider extends ChangeNotifier {
         await _cacheService!.saveSessions(authToken, [cachedItem]);
 
         if (activities != null) {
-          await _cacheService!
-              .saveSessionDetails(authToken, updatedSession, activities);
+          await _cacheService!.saveSessionDetails(
+            authToken,
+            updatedSession,
+            activities,
+          );
         }
       }
 
@@ -261,7 +307,9 @@ class SessionProvider extends ChangeNotifier {
   }
 
   CacheMetadata _resolvePendingMessages(
-      CacheMetadata metadata, List<Activity> activities) {
+    CacheMetadata metadata,
+    List<Activity> activities,
+  ) {
     if (metadata.pendingMessages.isEmpty) {
       return metadata;
     }
@@ -282,9 +330,11 @@ class SessionProvider extends ChangeNotifier {
 
     for (var pending in metadata.pendingMessages) {
       // Check for match
-      bool matched = activities.any((a) =>
-          a.userMessaged != null &&
-          a.userMessaged!.userMessage.trim() == pending.content.trim());
+      bool matched = activities.any(
+        (a) =>
+            a.userMessaged != null &&
+            a.userMessaged!.userMessage.trim() == pending.content.trim(),
+      );
 
       if (matched) {
         changed = true;
@@ -304,8 +354,9 @@ class SessionProvider extends ChangeNotifier {
 
     if (changed) {
       return metadata.copyWith(
-          pendingMessages: newPending,
-          hasPendingUpdates: newPending.any((p) => !p.hasMismatch));
+        pendingMessages: newPending,
+        hasPendingUpdates: newPending.any((p) => !p.hasMismatch),
+      );
     }
 
     return metadata;
@@ -319,38 +370,44 @@ class SessionProvider extends ChangeNotifier {
     });
   }
 
-  Future<void> refreshDirtySessions(JulesClient client,
-      {required String authToken}) async {
+  Future<void> refreshDirtySessions(
+    JulesClient client, {
+    required String authToken,
+  }) async {
     if (_isLoading) return;
     _isLoading = true;
     notifyListeners();
 
     try {
       final dirtyItems = _items.where((item) => _isSessionDirty(item)).toList();
-      await Future.wait(dirtyItems.map((item) async {
-        try {
-          // Deep refresh
-          await refreshSession(client, item.data.name, authToken: authToken);
+      await Future.wait(
+        dirtyItems.map((item) async {
+          try {
+            // Deep refresh
+            await refreshSession(client, item.data.name, authToken: authToken);
 
-          // After successful refresh, clear pending updates flag if it was set
-          // We need to fetch the item again from _items because refreshSession replaced it
-          final index = _items.indexWhere((i) => i.data.id == item.data.id);
-          if (index != -1) {
-            final refreshedItem = _items[index];
-            if (refreshedItem.metadata.hasPendingUpdates &&
-                refreshedItem.metadata.pendingMessages.isEmpty) {
-              final newItem = CachedItem(refreshedItem.data,
-                  refreshedItem.metadata.copyWith(hasPendingUpdates: false));
-              _items[index] = newItem;
-              if (_cacheService != null) {
-                await _cacheService!.saveSessions(authToken, [newItem]);
+            // After successful refresh, clear pending updates flag if it was set
+            // We need to fetch the item again from _items because refreshSession replaced it
+            final index = _items.indexWhere((i) => i.data.id == item.data.id);
+            if (index != -1) {
+              final refreshedItem = _items[index];
+              if (refreshedItem.metadata.hasPendingUpdates &&
+                  refreshedItem.metadata.pendingMessages.isEmpty) {
+                final newItem = CachedItem(
+                  refreshedItem.data,
+                  refreshedItem.metadata.copyWith(hasPendingUpdates: false),
+                );
+                _items[index] = newItem;
+                if (_cacheService != null) {
+                  await _cacheService!.saveSessions(authToken, [newItem]);
+                }
               }
             }
+          } catch (e) {
+            // print("Failed to refresh dirty session ${item.data.id}: $e");
           }
-        } catch (e) {
-          // print("Failed to refresh dirty session ${item.data.id}: $e");
-        }
-      }));
+        }),
+      );
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -365,8 +422,10 @@ class SessionProvider extends ChangeNotifier {
     return false;
   }
 
-  Future<void> refreshWatchedSessions(JulesClient client,
-      {required String authToken}) async {
+  Future<void> refreshWatchedSessions(
+    JulesClient client, {
+    required String authToken,
+  }) async {
     if (_isLoading) return;
     _isLoading = true;
     notifyListeners();
@@ -374,13 +433,15 @@ class SessionProvider extends ChangeNotifier {
     try {
       final watchedItems =
           _items.where((item) => item.metadata.isWatched).toList();
-      await Future.wait(watchedItems.map((item) async {
-        try {
-          await refreshSession(client, item.data.name, authToken: authToken);
-        } catch (e) {
-          // Ignore failures for individual sessions
-        }
-      }));
+      await Future.wait(
+        watchedItems.map((item) async {
+          try {
+            await refreshSession(client, item.data.name, authToken: authToken);
+          } catch (e) {
+            // Ignore failures for individual sessions
+          }
+        }),
+      );
     } finally {
       _isLoading = false;
       notifyListeners();
@@ -423,17 +484,23 @@ class SessionProvider extends ChangeNotifier {
 
   // Called when sending a message
   Future<void> addPendingMessage(
-      String sessionId, String content, String authToken) async {
+    String sessionId,
+    String content,
+    String authToken,
+  ) async {
     final index = _items.indexWhere((item) => item.data.id == sessionId);
     if (index != -1) {
       final item = _items[index];
-      final newPending =
-          List<PendingMessage>.from(item.metadata.pendingMessages);
-      newPending.add(PendingMessage(
-        id: DateTime.now().microsecondsSinceEpoch.toString(),
-        content: content,
-        timestamp: DateTime.now(),
-      ));
+      final newPending = List<PendingMessage>.from(
+        item.metadata.pendingMessages,
+      );
+      newPending.add(
+        PendingMessage(
+          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          content: content,
+          timestamp: DateTime.now(),
+        ),
+      );
 
       final newMetadata = item.metadata.copyWith(
         hasPendingUpdates: true,
@@ -450,12 +517,16 @@ class SessionProvider extends ChangeNotifier {
   }
 
   Future<void> removePendingMessage(
-      String sessionId, String pendingId, String authToken) async {
+    String sessionId,
+    String pendingId,
+    String authToken,
+  ) async {
     final index = _items.indexWhere((item) => item.data.id == sessionId);
     if (index != -1) {
       final item = _items[index];
-      final newPending =
-          List<PendingMessage>.from(item.metadata.pendingMessages);
+      final newPending = List<PendingMessage>.from(
+        item.metadata.pendingMessages,
+      );
       newPending.removeWhere((p) => p.id == pendingId);
 
       final newMetadata = item.metadata.copyWith(
@@ -499,7 +570,9 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-            item.data, item.metadata.copyWith(lastOpened: DateTime.now()));
+          item.data,
+          item.metadata.copyWith(lastOpened: DateTime.now()),
+        );
         notifyListeners();
       }
     }
@@ -512,16 +585,17 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-            item.data,
-            CacheMetadata(
-              firstSeen: item.metadata.firstSeen,
-              lastRetrieved: item.metadata.lastRetrieved,
-              lastOpened: null,
-              lastUpdated: item.metadata.lastUpdated,
-              labels: item.metadata.labels,
-              isWatched: item.metadata.isWatched,
-              hasPendingUpdates: item.metadata.hasPendingUpdates,
-            ));
+          item.data,
+          CacheMetadata(
+            firstSeen: item.metadata.firstSeen,
+            lastRetrieved: item.metadata.lastRetrieved,
+            lastOpened: null,
+            lastUpdated: item.metadata.lastUpdated,
+            labels: item.metadata.labels,
+            isWatched: item.metadata.isWatched,
+            hasPendingUpdates: item.metadata.hasPendingUpdates,
+          ),
+        );
         notifyListeners();
       }
     }
@@ -534,11 +608,12 @@ class SessionProvider extends ChangeNotifier {
       if (index != -1) {
         final item = _items[index];
         _items[index] = CachedItem(
-            item.data,
-            item.metadata.copyWith(
-              lastOpened: DateTime.now(), // it marks as read too
-              lastPrOpened: DateTime.now(),
-            ));
+          item.data,
+          item.metadata.copyWith(
+            lastOpened: DateTime.now(), // it marks as read too
+            lastPrOpened: DateTime.now(),
+          ),
+        );
         notifyListeners();
       }
     }

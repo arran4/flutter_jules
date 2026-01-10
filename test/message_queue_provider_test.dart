@@ -1,41 +1,49 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
-import 'package:jules_client/services/message_queue_provider.dart';
-import 'package:jules_client/services/jules_client.dart';
-import 'package:jules_client/services/cache_service.dart';
-import 'package:jules_client/models/api_exchange.dart';
-import 'package:jules_client/models/queued_message.dart';
-import 'package:jules_client/models/session.dart'; // Needed for listSessions return type
+import 'package:flutter_jules/services/message_queue_provider.dart';
+import 'package:flutter_jules/services/jules_client.dart';
+import 'package:flutter_jules/services/cache_service.dart';
+import 'package:flutter_jules/models/api_exchange.dart';
+import 'package:flutter_jules/models/queued_message.dart';
+import 'package:flutter_jules/models/session.dart'; // Needed for listSessions return type
 
 // Mock JulesClient
 class MockJulesClient extends Mock implements JulesClient {
   @override
-  Future<void> sendMessage(String? sessionName, String? message,
-      {void Function(ApiExchange)? onDebug}) {
+  Future<void> sendMessage(
+    String? sessionName,
+    String? message, {
+    void Function(ApiExchange)? onDebug,
+  }) {
     return super.noSuchMethod(
       Invocation.method(
-          #sendMessage, [sessionName, message], {#onDebug: onDebug}),
+        #sendMessage,
+        [sessionName, message],
+        {#onDebug: onDebug},
+      ),
       returnValue: Future.value(),
       returnValueForMissingStub: Future.value(),
     );
   }
 
   @override
-  Future<ListSessionsResponse> listSessions(
-      {int? pageSize,
-      String? pageToken,
-      void Function(ApiExchange)? onDebug,
-      bool Function(Session)? shouldStop}) {
+  Future<ListSessionsResponse> listSessions({
+    int? pageSize,
+    String? pageToken,
+    void Function(ApiExchange)? onDebug,
+    bool Function(Session)? shouldStop,
+  }) {
     return super.noSuchMethod(
       Invocation.method(#listSessions, [], {
         #pageSize: pageSize,
         #pageToken: pageToken,
         #onDebug: onDebug,
-        #shouldStop: shouldStop
+        #shouldStop: shouldStop,
       }),
       returnValue: Future.value(ListSessionsResponse(sessions: [])),
-      returnValueForMissingStub:
-          Future.value(ListSessionsResponse(sessions: [])),
+      returnValueForMissingStub: Future.value(
+        ListSessionsResponse(sessions: []),
+      ),
     );
   }
 }
@@ -91,8 +99,9 @@ void main() {
       provider.deleteMessage(id);
 
       expect(provider.queue, isEmpty);
-      verify(mockCacheService.saveMessageQueue(any, any))
-          .called(2); // 1 add, 1 delete
+      verify(
+        mockCacheService.saveMessageQueue(any, any),
+      ).called(2); // 1 add, 1 delete
     });
 
     test('updateMessage updates content and saves', () {
@@ -106,8 +115,9 @@ void main() {
     });
 
     test('goOnline checks connection', () async {
-      when(mockClient.listSessions(pageSize: 1))
-          .thenAnswer((_) async => ListSessionsResponse(sessions: []));
+      when(
+        mockClient.listSessions(pageSize: 1),
+      ).thenAnswer((_) async => ListSessionsResponse(sessions: []));
 
       provider.setOffline(true);
       expect(provider.isOffline, true);
@@ -119,8 +129,9 @@ void main() {
     });
 
     test('goOnline fails stays offline', () async {
-      when(mockClient.listSessions(pageSize: 1))
-          .thenThrow(Exception('Network Error'));
+      when(
+        mockClient.listSessions(pageSize: 1),
+      ).thenThrow(Exception('Network Error'));
 
       provider.setOffline(true);
       expect(provider.isOffline, true);
@@ -142,8 +153,9 @@ void main() {
       verify(mockClient.sendMessage('session-1', 'Msg 1')).called(1);
       verify(mockClient.sendMessage('session-2', 'Msg 2')).called(1);
       expect(provider.queue, isEmpty);
-      verify(mockCacheService.saveMessageQueue(any, any))
-          .called(greaterThan(0));
+      verify(
+        mockCacheService.saveMessageQueue(any, any),
+      ).called(greaterThan(0));
     });
 
     test('sendQueue stops on error', () async {
@@ -155,14 +167,18 @@ void main() {
       // but here they are added in order so likely sorted by default (list order).
       // Actually provider sorts by createdAt. sequential adds should be fine.
 
-      when(mockClient.sendMessage('s1', 'Good'))
-          .thenAnswer((_) => Future.value());
+      when(
+        mockClient.sendMessage('s1', 'Good'),
+      ).thenAnswer((_) => Future.value());
       when(mockClient.sendMessage('s2', 'Bad')).thenThrow(Exception('Fail'));
 
       bool errorCalled = false;
-      await provider.sendQueue(mockClient, onError: (id, e) {
-        errorCalled = true;
-      });
+      await provider.sendQueue(
+        mockClient,
+        onError: (id, e) {
+          errorCalled = true;
+        },
+      );
 
       verify(mockClient.sendMessage('s1', 'Good')).called(1);
       verify(mockClient.sendMessage('s2', 'Bad')).called(1);
