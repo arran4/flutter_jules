@@ -677,7 +677,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                 description: _descController.text.trim().isEmpty
                     ? null
                     : _descController.text.trim(),
-                filterTree: _filterTree,
+                expression: _filterTree?.toExpression() ?? '',
                 sorts: _sorts,
               );
 

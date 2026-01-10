@@ -234,7 +234,7 @@ class BookmarkMenuHelper {
     final bookmark = FilterBookmark(
       name: name,
       description: description.isNotEmpty ? description : null,
-      filterTree: currentFilterTree,
+      expression: currentFilterTree?.toExpression() ?? '',
       sorts: currentSorts,
     );
 

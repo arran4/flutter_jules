@@ -2,7 +2,7 @@
   {
     "name": "Default View",
     "description": "The standard view, sorted by last update.",
-    "filterTree": null,
+    "expression": "",
     "sorts": [
       {
         "field": "updated",
@@ -13,26 +13,7 @@
   {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
-    "filterTree": {
-      "type": "or",
-      "children": [
-        {
-          "type": "label",
-          "label": "New",
-          "value": "new"
-        },
-        {
-          "type": "label",
-          "label": "Updated",
-          "value": "updated"
-        },
-        {
-          "type": "status",
-          "label": "Awaiting Plan Approval",
-          "value": "AWAITING_PLAN_APPROVAL"
-        }
-      ]
-    },
+    "expression": "OR(New() Updated() State(AWAITING_PLAN_APPROVAL))",
     "sorts": [
       {
         "field": "updated",
@@ -43,11 +24,7 @@
   {
     "name": "In Progress",
     "description": "All sessions currently in progress.",
-    "filterTree": {
-      "type": "status",
-      "label": "In Progress",
-      "value": "IN_PROGRESS"
-    },
+    "expression": "State(IN_PROGRESS)",
     "sorts": [
       {
         "field": "updated",
@@ -58,11 +35,7 @@
   {
     "name": "Pending Sessions",
     "description": "Sessions queued and waiting to be sent to server.",
-    "filterTree": {
-      "type": "status",
-      "label": "Pending",
-      "value": "QUEUED"
-    },
+    "expression": "State(QUEUED)",
     "sorts": [
       {
         "field": "created",
@@ -73,11 +46,7 @@
   {
     "name": "Draft Messages",
     "description": "Sessions with unsent draft messages.",
-    "filterTree": {
-      "type": "label",
-      "label": "Has Drafts",
-      "value": "draft"
-    },
+    "expression": "Has(Drafts)",
     "sorts": [
       {
         "field": "updated",
@@ -88,21 +57,7 @@
   {
     "name": "Completed & Updated",
     "description": "Recently updated and completed sessions.",
-    "filterTree": {
-      "type": "and",
-      "children": [
-        {
-          "type": "status",
-          "label": "Completed",
-          "value": "COMPLETED"
-        },
-        {
-          "type": "label",
-          "label": "Updated",
-          "value": "updated"
-        }
-      ]
-    },
+    "expression": "AND(State(COMPLETED) Updated())",
     "sorts": [
       {
         "field": "updated",
@@ -113,11 +68,7 @@
   {
     "name": "My Watched Items",
     "description": "Sessions you are actively watching.",
-    "filterTree": {
-      "type": "label",
-      "label": "Watching",
-      "value": "watched"
-    },
+    "expression": "Watching()",
     "sorts": [
       {
         "field": "updated",
@@ -128,15 +79,7 @@
   {
     "name": "Open PRs",
     "description": "Sessions with open pull requests.",
-    "filters": [
-      {
-        "id": "prStatus:Open",
-        "type": "text",
-        "label": "PR: Open",
-        "value": "Open",
-        "mode": "include"
-      }
-    ],
+    "expression": "PR(Open)",
     "sorts": [
       {
         "field": "updated",
@@ -147,45 +90,7 @@
   {
     "name": "Merged PRs",
     "description": "Sessions with merged pull requests.",
-    "filters": [
-      {
-        "id": "prStatus:Merged",
-        "type": "text",
-        "label": "PR: Merged",
-        "value": "Merged",
-        "mode": "include"
-      }
-    ],
-    "name": "Completed w/ PR (Unread/Updated)",
-    "description": "Completed sessions with PRs that are unread or recently updated.",
-    "filterTree": {
-      "type": "and",
-      "children": [
-        {
-          "type": "status",
-          "label": "Completed",
-          "value": "COMPLETED"
-        },
-        {
-          "type": "has_pr"
-        },
-        {
-          "type": "or",
-          "children": [
-            {
-              "type": "label",
-              "label": "Unread",
-              "value": "unread"
-            },
-            {
-              "type": "label",
-              "label": "Updated",
-              "value": "updated"
-            }
-          ]
-        }
-      ]
-    },
+    "expression": "PR(Merged)",
     "sorts": [
       {
         "field": "updated",
@@ -194,50 +99,20 @@
     ]
   },
   {
-    "name": "Closed PRs",
-    "description": "Sessions with closed pull requests.",
-    "filters": [
+    "name": "Completed w/ PR (Unread/Updated)",
+    "description": "Completed sessions with PRs that are unread or recently updated.",
+    "expression": "AND(State(COMPLETED) Has(PR) OR(Unread() Updated()))",
+    "sorts": [
       {
-        "id": "prStatus:Closed",
-        "type": "text",
-        "label": "PR: Closed",
-        "value": "Closed",
-        "mode": "include"
+        "field": "updated",
+        "direction": "descending"
       }
-    ],
+    ]
+  },
+  {
     "name": "Completed w/o PR (Unread/Updated)",
     "description": "Completed sessions without PRs that are unread or recently updated.",
-    "filterTree": {
-      "type": "and",
-      "children": [
-        {
-          "type": "status",
-          "label": "Completed",
-          "value": "COMPLETED"
-        },
-        {
-          "type": "not",
-          "child": {
-            "type": "has_pr"
-          }
-        },
-        {
-          "type": "or",
-          "children": [
-            {
-              "type": "label",
-              "label": "Unread",
-              "value": "unread"
-            },
-            {
-              "type": "label",
-              "label": "Updated",
-              "value": "updated"
-            }
-          ]
-        }
-      ]
-    },
+    "expression": "AND(State(COMPLETED) NOT(Has(PR)) OR(Unread() Updated()))",
     "sorts": [
       {
         "field": "updated",
