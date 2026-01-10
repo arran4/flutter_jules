@@ -164,6 +164,8 @@ class FilterExpressionParser {
       case 'PR':
       case 'PR_STATUS':
         return args.isNotEmpty ? PrStatusElement(args[0], args[0]) : null;
+      case 'BRANCH':
+        return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
       default:
         return null;
     }

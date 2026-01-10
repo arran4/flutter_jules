@@ -121,6 +121,18 @@ class FilterElementWidget extends StatelessWidget {
         Colors.teal.shade800,
         Icons.merge_type,
       );
+    } else if (element is BranchElement) {
+      final label = element.label;
+      final displayLabel =
+          label.startsWith('Branch:') ? label : 'Branch: $label';
+      return _buildLeafElement(
+        context,
+        element,
+        displayLabel,
+        Colors.indigo.shade100,
+        Colors.indigo.shade800,
+        Icons.account_tree,
+      );
     }
 
     return const SizedBox.shrink();
@@ -449,7 +461,7 @@ class FilterElementWidget extends StatelessWidget {
       items.add(
         PopupMenuItem(
           value: action,
-          child: Text("Create $oppositeLabel Group Above"),
+          child: Text("Create $oppositeLabel above"),
         ),
       );
     } else {

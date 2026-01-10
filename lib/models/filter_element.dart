@@ -11,6 +11,7 @@ enum FilterElementType {
   source,
   hasPr,
   prStatus,
+  branch,
 }
 
 enum FilterState {
@@ -117,6 +118,8 @@ abstract class FilterElement {
         return HasPrElement.fromJson(json);
       case 'pr_status':
         return PrStatusElement.fromJson(json);
+      case 'branch':
+        return BranchElement.fromJson(json);
       default:
         throw Exception('Unknown filter element type: $type');
     }
@@ -567,5 +570,50 @@ class HasPrElement extends FilterElement {
 
   factory HasPrElement.fromJson(Map<String, dynamic> json) {
     return HasPrElement();
+  }
+}
+
+/// Branch filter element
+class BranchElement extends FilterElement {
+  final String label;
+  final String value;
+
+  BranchElement(this.label, this.value);
+
+  @override
+  FilterElementType get type => FilterElementType.branch;
+
+  @override
+  String get groupingType => 'branch';
+
+  @override
+  String toExpression() {
+    return 'Branch(${FilterElement._quote(value)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'branch',
+        'label': label,
+        'value': value,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final branch =
+        context.session.sourceContext.githubRepoContext?.startingBranch;
+    final matches = branch?.toLowerCase() == value.toLowerCase();
+
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory BranchElement.fromJson(Map<String, dynamic> json) {
+    return BranchElement(
+      json['label'] as String,
+      json['value'] as String,
+    );
   }
 }
