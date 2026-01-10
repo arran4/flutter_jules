@@ -27,14 +27,22 @@ enum FilterState {
   bool get isExplicit => priority == 2;
 
   static FilterState combineAnd(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value < b.value ? a : b;
   }
 
   static FilterState combineOr(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value > b.value ? a : b;
   }
 
@@ -84,7 +92,9 @@ abstract class FilterElement {
   String toExpression();
 
   static String _quote(String s) {
-    if (s.isEmpty) return '()';
+    if (s.isEmpty) {
+      return '()';
+    }
     // If it contains unbalanced parentheses or commas that might be misinterpreted, 
     // or if it starts/ends with whitespace, we use the bracket quoting.
     // However, the user wants minimal brackets.
@@ -148,7 +158,9 @@ class AndElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineAnd(result, children[i].evaluate(context));
@@ -192,7 +204,9 @@ class OrElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineOr(result, children[i].evaluate(context));
@@ -317,8 +331,11 @@ class PrStatusElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.prStatus?.toLowerCase() == value.toLowerCase();
-    if (context.metadata.isHidden) return FilterState.implicitOut;
+    final matches =
+        context.session.prStatus?.toLowerCase() == value.toLowerCase();
+    if (context.metadata.isHidden) {
+      return FilterState.implicitOut;
+    }
     return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
@@ -343,11 +360,17 @@ class LabelElement extends FilterElement {
   @override
   String get groupingType {
     // Isolated types (force AND grouping by using distinct keys)
-    if (value == 'hidden') return 'label:hidden';
-    if (value == 'watched') return 'label:watched';
+    if (value == 'hidden') {
+      return 'label:hidden';
+    }
+    if (value == 'watched') {
+      return 'label:watched';
+    }
     
     // Group "queue" type labels (Drafts, Pending)
-    if (value == 'draft' || value == 'pending') return 'label:queue';
+    if (value == 'draft' || value == 'pending') {
+      return 'label:queue';
+    }
 
     // Standard labels group together (New, Updated, Unread)
     return 'label:standard';
@@ -398,23 +421,38 @@ class LabelElement extends FilterElement {
       return metadata.isHidden ? FilterState.explicitIn : FilterState.explicitOut;
     }
 
-    if (v == 'new' && metadata.isNew) matched = true;
-    else if (v == 'updated' && metadata.isUpdated && !metadata.isNew) matched = true;
-    else if (v == 'unread' && metadata.isUnread) matched = true;
-    else if (v == 'has_pr' && (session.outputs?.any((o) => o.pullRequest != null) ?? false)) matched = true;
-    else if (v == 'watched' && metadata.isWatched) matched = true;
-    else if (v == 'pending' && metadata.hasPendingUpdates) matched = true;
-    else if (v == 'approval_required' && (session.requirePlanApproval ?? false)) matched = true;
-    else if (v == 'no_approval' && !(session.requirePlanApproval ?? false)) matched = true;
-    else if (v == 'draft') {
+    if (v == 'new' && metadata.isNew) {
+      matched = true;
+    } else if (v == 'updated' && metadata.isUpdated && !metadata.isNew) {
+      matched = true;
+    } else if (v == 'unread' && metadata.isUnread) {
+      matched = true;
+    } else if (v == 'has_pr' &&
+        (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
+      matched = true;
+    } else if (v == 'watched' && metadata.isWatched) {
+      matched = true;
+    } else if (v == 'pending' && metadata.hasPendingUpdates) {
+      matched = true;
+    } else if (v == 'approval_required' &&
+        (session.requirePlanApproval ?? false)) {
+      matched = true;
+    } else if (v == 'no_approval' && !(session.requirePlanApproval ?? false)) {
+      matched = true;
+    } else if (v == 'draft') {
       if (queueProvider != null) {
         try {
-          if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
+          if (queueProvider.getDrafts(session.id).isNotEmpty) {
+            matched = true;
+          }
         } catch (_) {}
       }
-      if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
+      if (session.id.startsWith('DRAFT_CREATION_')) {
+        matched = true;
+      }
     } else {
-      matched = metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
+      matched =
+          metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
     }
 
     // Standard rule: can only see *In (Explicitly exclude otherwise)
@@ -472,7 +510,9 @@ class StatusElement extends FilterElement {
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
-      if (context.metadata.isHidden) return FilterState.implicitOut;
+      if (context.metadata.isHidden) {
+        return FilterState.implicitOut;
+      }
       return FilterState.explicitOut;
     }
     

@@ -51,8 +51,6 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
     _filteredSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
       final labelB = _getSourceDisplayLabel(b);
-      final isSelectedA = _isSelected(a);
-      final isSelectedB = _isSelected(b);
 
       // Selected items first? Or just alpha?
       // Usually alpha is better for finding.

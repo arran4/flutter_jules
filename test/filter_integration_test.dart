@@ -228,7 +228,7 @@ void main() {
     });
 
     test('Source filter: shows only matching visible items', () {
-      final filterTree = SourceElement('Source 1', 'src1');
+      const filterTree = SourceElement('Source 1', 'src1');
       
       final results = _applyFilter(testSessions, filterTree, queueProvider);
       

@@ -24,8 +24,8 @@ void main() {
     });
 
     test('Should strip technical prefixes in State()', () {
-      final input1 = 'State(SessionState.IN_PROGRESS)';
-      final input2 = 'State(State.COMPLETED)';
+      const input1 = 'State(SessionState.IN_PROGRESS)';
+      const input2 = 'State(State.COMPLETED)';
       
       final p1 = FilterExpressionParser.parse(input1) as StatusElement;
       final p2 = FilterExpressionParser.parse(input2) as StatusElement;
@@ -38,14 +38,14 @@ void main() {
     });
 
     test('Should maintain circularity with functional labels', () {
-      final input = 'AND(Hidden() New() Has(PR))';
+      const input = 'AND(Hidden() New() Has(PR))';
       final parsed = FilterExpressionParser.parse(input);
       expect(parsed, isNotNull);
       expect(parsed!.toExpression(), input);
     });
 
     test('User case equivalence: complex complex complex', () {
-      final input = 'AND(Hidden() Watching() OR(State(AWAITING_USER_FEEDBACK) State(COMPLETED)) OR(Source(sources/github/arran4/.github) Source(sources/github/arran4/flutter_jules)) New() Pending() Has(PR))';
+      const input = 'AND(Hidden() Watching() OR(State(AWAITING_USER_FEEDBACK) State(COMPLETED)) OR(Source(sources/github/arran4/.github) Source(sources/github/arran4/flutter_jules)) New() Pending() Has(PR))';
       final parsed = FilterExpressionParser.parse(input);
       expect(parsed, isNotNull);
       

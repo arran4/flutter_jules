@@ -50,6 +50,7 @@ class BookmarkMenuHelper {
     if (!context.mounted) return;
 
     // Get the button's position for the menu
+    // ignore: use_build_context_synchronously
     final RenderBox? button = context.findRenderObject() as RenderBox?;
     if (button == null) return;
     final RenderBox overlay =
