@@ -66,7 +66,16 @@ void main() {
     test('Backward Compatibility: Watched() -> Watching()', () {
       final parsed = FilterExpressionParser.parse('Watched()');
       expect(parsed, isA<LabelElement>());
+      expect(parsed, isA<LabelElement>());
       expect(parsed!.toExpression(), 'Watching()');
+    });
+
+    test('Should parse PR() and BRANCH()', () {
+      expect(FilterExpressionParser.parse('PR(Draft)'), isA<PrStatusElement>());
+
+      final branch = FilterExpressionParser.parse('Branch(main)');
+      expect(branch, isA<BranchElement>());
+      expect((branch as BranchElement).value, 'main');
     });
   });
 }

@@ -21,8 +21,7 @@ class FilterElementWidget extends StatelessWidget {
     FilterElement target,
     FilterDropAction action,
     bool isCopy,
-  )?
-  onDrop;
+  )? onDrop;
 
   const FilterElementWidget({
     super.key,
@@ -110,9 +109,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is PrStatusElement) {
       final label = element.label;
-      final displayLabel = label.toUpperCase().startsWith('PR:')
-          ? label
-          : 'PR: $label';
+      final displayLabel =
+          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
       return _buildLeafElement(
         context,
         element,
@@ -120,6 +118,18 @@ class FilterElementWidget extends StatelessWidget {
         Colors.teal.shade100,
         Colors.teal.shade800,
         Icons.merge_type,
+      );
+    } else if (element is BranchElement) {
+      final label = element.label;
+      final displayLabel =
+          label.startsWith('Branch:') ? label : 'Branch: $label';
+      return _buildLeafElement(
+        context,
+        element,
+        displayLabel,
+        Colors.indigo.shade100,
+        Colors.indigo.shade800,
+        Icons.account_tree,
       );
     }
 
@@ -420,11 +430,11 @@ class FilterElementWidget extends StatelessWidget {
 
     final isCtrlPressed =
         ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlLeft,
-        ) ||
-        ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlRight,
-        );
+              LogicalKeyboardKey.controlLeft,
+            ) ||
+            ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
+              LogicalKeyboardKey.controlRight,
+            );
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
@@ -449,7 +459,7 @@ class FilterElementWidget extends StatelessWidget {
       items.add(
         PopupMenuItem(
           value: action,
-          child: Text("Create $oppositeLabel Group Above"),
+          child: Text("Create $oppositeLabel above"),
         ),
       );
     } else {

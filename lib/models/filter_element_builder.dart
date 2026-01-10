@@ -51,8 +51,8 @@ class FilterElementBuilder {
   ) {
     if (root == null) return null;
 
-    // Direct match
-    if (_elementsEqual(root, target)) {
+    // Direct match (Identity)
+    if (root == target) {
       return null;
     }
 
@@ -85,12 +85,12 @@ class FilterElementBuilder {
     if (root == null) return null;
 
     // Direct match
-    if (_elementsEqual(root, target)) {
+    if (root == target) {
       return NotElement(root);
     }
 
     // If root is NOT and child matches, unwrap
-    if (root is NotElement && _elementsEqual(root.child, target)) {
+    if (root is NotElement && root.child == target) {
       return root.child;
     }
 
@@ -120,15 +120,12 @@ class FilterElementBuilder {
     if (root == null) return null;
 
     if (root is AndElement || root is OrElement) {
-      final children = root is AndElement
-          ? root.children
-          : (root as OrElement).children;
+      final children =
+          root is AndElement ? root.children : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren = children
-          .map((c) => simplify(c))
-          .whereType<FilterElement>()
-          .toList();
+      final simplifiedChildren =
+          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -152,40 +149,6 @@ class FilterElementBuilder {
       return false;
     }
     return a.groupingType == b.groupingType;
-  }
-
-  static bool _elementsEqual(FilterElement a, FilterElement b) {
-    if (a.runtimeType != b.runtimeType) return false;
-
-    if (a is TextElement && b is TextElement) {
-      return a.text == b.text;
-    } else if (a is LabelElement && b is LabelElement) {
-      return a.value == b.value;
-    } else if (a is StatusElement && b is StatusElement) {
-      return a.value == b.value;
-    } else if (a is SourceElement && b is SourceElement) {
-      return a.value == b.value;
-    } else if (a is HasPrElement && b is HasPrElement) {
-      return true;
-    } else if (a is PrStatusElement && b is PrStatusElement) {
-      return a.value == b.value;
-    } else if (a is NotElement && b is NotElement) {
-      return _elementsEqual(a.child, b.child);
-    } else if (a is AndElement && b is AndElement) {
-      if (a.children.length != b.children.length) return false;
-      for (int i = 0; i < a.children.length; i++) {
-        if (!_elementsEqual(a.children[i], b.children[i])) return false;
-      }
-      return true;
-    } else if (a is OrElement && b is OrElement) {
-      if (a.children.length != b.children.length) return false;
-      for (int i = 0; i < a.children.length; i++) {
-        if (!_elementsEqual(a.children[i], b.children[i])) return false;
-      }
-      return true;
-    }
-
-    return false;
   }
 
   static FilterElement _addToAndElement(
@@ -252,8 +215,8 @@ class FilterElementBuilder {
     bool found = false;
 
     for (final child in children) {
-      // Equality check for removal
-      if (_elementsEqual(child, target)) {
+      // Equality check for removal (Identity)
+      if (child == target) {
         found = true;
         continue; // Skip this child
       }
@@ -287,7 +250,7 @@ class FilterElementBuilder {
         : (composite as OrElement).children;
 
     final newChildren = children.map((child) {
-      if (_elementsEqual(child, target)) {
+      if (child == target) {
         return NotElement(child);
       }
       return toggleNot(child, target) ?? child;
@@ -304,7 +267,7 @@ class FilterElementBuilder {
   ) {
     if (root == null) return null;
 
-    if (_elementsEqual(root, target)) {
+    if (root == target) {
       return replacement;
     }
 
@@ -335,9 +298,8 @@ class FilterElementBuilder {
   }) {
     if (root == null) return root;
 
-    final group = isAnd
-        ? AndElement([target, source])
-        : OrElement([target, source]);
+    final group =
+        isAnd ? AndElement([target, source]) : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
