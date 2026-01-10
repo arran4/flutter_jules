@@ -11,6 +11,7 @@ import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
 import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
+import 'services/scheduling_service.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -66,6 +67,11 @@ void main() {
             githubProvider: context.read<GithubProvider>(),
           ),
           update: (context, session, auth, github, executor) => executor!,
+        ),
+        Provider(
+          create: (context) =>
+              SchedulingService(context.read<MessageQueueProvider>())..start(),
+          lazy: false,
         ),
       ],
       child: const MyApp(),

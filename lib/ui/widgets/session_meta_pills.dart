@@ -30,7 +30,9 @@ class SessionMetaPills extends StatelessWidget {
             backgroundColor: _getColorForState(session.state!),
             avatar: session.state == SessionState.COMPLETED
                 ? const Icon(Icons.check, size: 16, color: Colors.green)
-                : null,
+                : (session.state == SessionState.TEMPLATE
+                    ? const Icon(Icons.description, size: 16)
+                    : null),
             filterToken: FilterToken(
               id: 'status:${session.state!.name}',
               type: FilterType.status,
@@ -38,6 +40,17 @@ class SessionMetaPills extends StatelessWidget {
               value: session.state!,
             ),
             sortField: SortField.status,
+          ),
+
+        // Scheduled Time Pill
+        if (session.state == SessionState.SCHEDULED &&
+            session.scheduledTime != null)
+          _buildChip(
+            context,
+            label:
+                "Scheduled: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(session.scheduledTime!).toLocal())}",
+            avatar: const Icon(Icons.alarm, size: 16),
+            backgroundColor: _getColorForState(SessionState.SCHEDULED),
           ),
 
         // DATE Pill (Created)
@@ -165,6 +178,8 @@ class SessionMetaPills extends StatelessWidget {
     if (state == SessionState.IN_PROGRESS || state == SessionState.PLANNING) {
       return Colors.blue.shade50;
     }
+    if (state == SessionState.SCHEDULED) return Colors.purple.shade50;
+    if (state == SessionState.TEMPLATE) return Colors.grey.shade300;
     return Colors.grey.shade50;
   }
 

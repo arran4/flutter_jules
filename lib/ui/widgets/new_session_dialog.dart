@@ -44,6 +44,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   // Automation Option
   bool _autoCreatePr = false;
 
+  // New states for scheduling and templates
+  DateTime? _scheduledTime;
+  bool _isTemplate = false;
+  bool _isRepeating = false;
+  String? _repetitionSchedule;
+
   // Refresh State
   bool _isRefreshing = false;
   String _refreshStatus = '';
@@ -516,6 +522,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       requirePlanApproval: requirePlanApproval,
       automationMode: automationMode,
       images: images,
+      scheduledTime: _scheduledTime?.toIso8601String(),
+      state: _isTemplate
+          ? SessionState.TEMPLATE
+          : (_scheduledTime != null
+              ? SessionState.SCHEDULED
+              : SessionState.QUEUED),
+      isRepeating: _isRepeating,
+      repetitionSchedule: _repetitionSchedule,
     );
 
     if (mounted) {
@@ -558,6 +572,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       ),
       requirePlanApproval: requirePlanApproval,
       automationMode: automationMode,
+      scheduledTime: _scheduledTime?.toIso8601String(),
+      state: _isTemplate
+          ? SessionState.TEMPLATE
+          : (_scheduledTime != null
+              ? SessionState.SCHEDULED
+              : SessionState.QUEUED),
+      isRepeating: _isRepeating,
+      repetitionSchedule: _repetitionSchedule,
     );
 
     if (mounted) {
@@ -581,6 +603,32 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       return '${s.githubRepo!.owner}/${s.githubRepo!.repo}';
     }
     return s.name;
+  }
+
+  Future<void> _selectScheduledTime() async {
+    final DateTime? pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _scheduledTime ?? DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+    if (pickedDate != null) {
+      final TimeOfDay? pickedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(_scheduledTime ?? DateTime.now()),
+      );
+      if (pickedTime != null) {
+        setState(() {
+          _scheduledTime = DateTime(
+            pickedDate.year,
+            pickedDate.month,
+            pickedDate.day,
+            pickedTime.hour,
+            pickedTime.minute,
+          );
+        });
+      }
+    }
   }
 
   @override
@@ -766,6 +814,65 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ),
                 const SizedBox(height: 16),
 
+                // New Scheduling and Template UI
+                Row(
+                  children: [
+                    TextButton.icon(
+                      onPressed: _selectScheduledTime,
+                      icon: const Icon(Icons.calendar_today),
+                      label: const Text('Schedule'),
+                    ),
+                    const SizedBox(width: 8),
+                    if (_scheduledTime != null)
+                      Text(
+                        'Scheduled for: ${DateFormat.yMd().add_jm().format(_scheduledTime!)}',
+                      ),
+                    const Spacer(),
+                    Checkbox(
+                      value: _isTemplate,
+                      onChanged: (value) {
+                        setState(() {
+                          _isTemplate = value!;
+                        });
+                      },
+                    ),
+                    const Text('Template'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                // New Repeating Task UI
+                if (_isTemplate)
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _isRepeating,
+                        onChanged: (value) {
+                          setState(() {
+                            _isRepeating = value!;
+                          });
+                        },
+                      ),
+                      const Text('Repeating'),
+                      const SizedBox(width: 16),
+                      if (_isRepeating)
+                        DropdownButton<String>(
+                          value: _repetitionSchedule,
+                          hint: const Text('Schedule'),
+                          items: <String>['Daily', 'Weekly', 'Monthly']
+                              .map((String value) {
+                            return DropdownMenuItem<String>(
+                              value: value,
+                              child: Text(value),
+                            );
+                          }).toList(),
+                          onChanged: (String? newValue) {
+                            setState(() {
+                              _repetitionSchedule = newValue;
+                            });
+                          },
+                        ),
+                    ],
+                  ),
                 // Context (Source & Branch)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,

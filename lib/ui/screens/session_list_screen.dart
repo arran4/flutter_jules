@@ -187,6 +187,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     final sessionToCreate = result.session;
 
+    if (sessionToCreate.state == SessionState.SCHEDULED ||
+        sessionToCreate.state == SessionState.TEMPLATE) {
+      Provider.of<MessageQueueProvider>(context, listen: false)
+          .addCreateSessionRequest(sessionToCreate, isDraft: true);
+      ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+          content: Text("Session scheduled or saved as template")));
+      return;
+    }
+
     Future<void> performCreate() async {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
@@ -429,6 +438,41 @@ class _SessionListScreenState extends State<SessionListScreen> {
     controller.dispose();
   }
 
+  Future<void> _scheduleSession(Session session) async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: session),
+    );
+
+    if (result == null) return;
+    if (!mounted) return;
+
+    final messageQueueProvider =
+        Provider.of<MessageQueueProvider>(context, listen: false);
+
+    // Check if the session is a draft or already in the queue.
+    final existingMessage = messageQueueProvider.queue.firstWhere(
+      (m) => m.sessionId == session.id,
+      orElse: () => null,
+    );
+
+    if (existingMessage != null) {
+      // If it's already in the queue, update it.
+      messageQueueProvider.updateCreateSessionRequest(
+        existingMessage.id,
+        result.session,
+        isDraft: true,
+      );
+    } else {
+      // If it's not in the queue, it's a session from the server. Add it to the queue.
+      messageQueueProvider.addCreateSessionRequest(result.session,
+          isDraft: true);
+    }
+
+    ScaffoldMessenger.of(context)
+        .showSnackBar(const SnackBar(content: Text("Session scheduled")));
+  }
+
   Future<void> _refreshSession(Session session) async {
     try {
       final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -603,6 +647,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ),
       );
     }
+    suggestions.add(
+      const FilterToken(
+        id: 'status:TEMPLATE',
+        type: FilterType.status,
+        label: 'Template',
+        value: SessionState.TEMPLATE,
+      ),
+    );
+    suggestions.add(
+      const FilterToken(
+        id: 'status:SCHEDULED',
+        type: FilterType.status,
+        label: 'Scheduled',
+        value: SessionState.SCHEDULED,
+      ),
+    );
 
     // PR Statuses (Common ones - always available to filter by)
     for (final status in ['Open', 'Closed', 'Merged', 'Draft']) {
@@ -2318,6 +2378,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        if (session.state == SessionState.QUEUED)
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.alarm),
+                SizedBox(width: 8),
+                Text('Schedule'),
+              ],
+            ),
+            onTap: () {
+              Future.delayed(Duration.zero, () {
+                if (context.mounted) _scheduleSession(session);
+              });
+            },
+          ),
         PopupMenuItem(
           child: const Row(
             children: [

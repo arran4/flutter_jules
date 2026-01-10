@@ -70,6 +70,9 @@ class Session {
   final int? totalSteps;
   final String? currentAction;
   final String? prStatus;
+  final String? scheduledTime;
+  final bool? isRepeating;
+  final String? repetitionSchedule;
 
   Session({
     required this.name,
@@ -89,6 +92,9 @@ class Session {
     this.totalSteps,
     this.currentAction,
     this.prStatus,
+    this.scheduledTime,
+    this.isRepeating,
+    this.repetitionSchedule,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -146,6 +152,10 @@ class Session {
       )?.toInt(),
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
       prStatus: getStringPropOrDefault(json, 'prStatus', null),
+      scheduledTime: getStringPropOrDefault(json, 'scheduledTime', null),
+      isRepeating: getBooleanPropOrDefault(json, 'isRepeating', false),
+      repetitionSchedule:
+          getStringPropOrDefault(json, 'repetitionSchedule', null),
     );
   }
 
@@ -179,6 +189,11 @@ class Session {
     if (totalSteps != null) map['totalSteps'] = totalSteps;
     if (currentAction != null) map['currentAction'] = currentAction;
     if (prStatus != null) map['prStatus'] = prStatus;
+    if (scheduledTime != null) map['scheduledTime'] = scheduledTime;
+    if (isRepeating != null) map['isRepeating'] = isRepeating;
+    if (repetitionSchedule != null) {
+      map['repetitionSchedule'] = repetitionSchedule;
+    }
     return map;
   }
 
@@ -200,6 +215,9 @@ class Session {
     int? totalSteps,
     String? currentAction,
     String? prStatus,
+    String? scheduledTime,
+    bool? isRepeating,
+    String? repetitionSchedule,
   }) {
     return Session(
       name: name ?? this.name,
@@ -219,6 +237,9 @@ class Session {
       totalSteps: totalSteps ?? this.totalSteps,
       currentAction: currentAction ?? this.currentAction,
       prStatus: prStatus ?? this.prStatus,
+      scheduledTime: scheduledTime ?? this.scheduledTime,
+      isRepeating: isRepeating ?? this.isRepeating,
+      repetitionSchedule: repetitionSchedule ?? this.repetitionSchedule,
     );
   }
 }

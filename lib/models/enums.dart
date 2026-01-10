@@ -11,6 +11,8 @@ enum SessionState {
   // ignore: constant_identifier_names
   QUEUED,
   // ignore: constant_identifier_names
+  SCHEDULED,
+  // ignore: constant_identifier_names
   PLANNING,
   // ignore: constant_identifier_names
   AWAITING_PLAN_APPROVAL,
@@ -23,7 +25,9 @@ enum SessionState {
   // ignore: constant_identifier_names
   FAILED,
   // ignore: constant_identifier_names
-  COMPLETED;
+  COMPLETED,
+  // ignore: constant_identifier_names
+  TEMPLATE;
 
   String get displayName {
     switch (this) {
@@ -31,6 +35,8 @@ enum SessionState {
         return 'Unspecified';
       case SessionState.QUEUED:
         return 'Pending';
+      case SessionState.SCHEDULED:
+        return 'Scheduled';
       case SessionState.PLANNING:
         return 'Planning';
       case SessionState.AWAITING_PLAN_APPROVAL:
@@ -45,6 +51,8 @@ enum SessionState {
         return 'Failed';
       case SessionState.COMPLETED:
         return 'Completed';
+      case SessionState.TEMPLATE:
+        return 'Template';
     }
   }
 
@@ -54,6 +62,8 @@ enum SessionState {
         return 'The state is unspecified.';
       case SessionState.QUEUED:
         return 'The session is queued.';
+      case SessionState.SCHEDULED:
+        return 'The session is scheduled to run at a later time.';
       case SessionState.PLANNING:
         return 'The agent is planning.';
       case SessionState.AWAITING_PLAN_APPROVAL:
@@ -68,6 +78,8 @@ enum SessionState {
         return 'The session has failed.';
       case SessionState.COMPLETED:
         return 'The session has completed.';
+      case SessionState.TEMPLATE:
+        return 'This is a template session used for creating other sessions.';
     }
   }
 }
