@@ -18,7 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
+          GithubProvider>(
         builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
@@ -92,7 +93,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'API Key'
                       : 'Google Access Token',
                 ),
-                trailing: const Icon(Icons.check_circle, color: Colors.green),
+                trailing: const Icon(
+                  Icons.check_circle,
+                  color: Colors.green,
+                ),
               ),
               ListTile(
                 title: const Text('Update API Key'),

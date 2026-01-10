@@ -104,8 +104,11 @@ class SortPillsWidget extends StatelessWidget {
     );
   }
 
-  Widget _buildSortPill(BuildContext context, SortOption sort,
-      {bool isDragging = false}) {
+  Widget _buildSortPill(
+    BuildContext context,
+    SortOption sort, {
+    bool isDragging = false,
+  }) {
     return Padding(
       padding: const EdgeInsets.only(left: 4.0),
       child: Tooltip(

@@ -9,7 +9,7 @@ void main() {
 
     setUp(() {
       queueProvider = MockQueueProvider();
-      
+
       // Create test sessions with various states
       testSessions = [
         // Visible sessions
@@ -98,32 +98,38 @@ void main() {
     });
 
     test('No filter: shows only visible items (Implicit In)', () {
-      final FilterElement? filterTree = null;
-      
+      const FilterElement? filterTree = null;
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'visible-feature', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature', 'visible-new']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('hidden-bug')));
       expect(results.map((r) => r.data.id), isNot(contains('hidden-feature')));
     });
 
     test('Label(Bug) filter: shows only visible bugs, hides hidden bugs', () {
       final filterTree = LabelElement('Bug', 'bug');
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 1);
       expect(results.first.data.id, 'visible-bug');
     });
 
     test('Hidden() filter: shows only hidden items', () {
       final filterTree = LabelElement('Hidden', 'hidden');
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['hidden-bug', 'hidden-feature']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('visible-bug')));
     });
 
@@ -132,9 +138,9 @@ void main() {
         LabelElement('Bug', 'bug'),
         LabelElement('Hidden', 'hidden'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 1);
       expect(results.first.data.id, 'hidden-bug');
     });
@@ -144,9 +150,9 @@ void main() {
         LabelElement('Feature', 'feature'),
         LabelElement('Hidden', 'hidden'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 1);
       expect(results.first.data.id, 'hidden-feature');
     });
@@ -156,84 +162,106 @@ void main() {
         LabelElement('Bug', 'bug'),
         LabelElement('Feature', 'feature'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'visible-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature']),
+      );
     });
 
-    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items', () {
+    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items',
+        () {
       final filterTree = OrElement([
         LabelElement('Bug', 'bug'),
         LabelElement('Hidden', 'hidden'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       // visible-bug: Label(Bug) -> Explicit In, Hidden() -> Explicit Out, OR -> Explicit In
       // hidden-bug: Label(Bug) -> Implicit Out, Hidden() -> Explicit In, OR -> Explicit In
       // hidden-feature: Label(Bug) -> Explicit Out, Hidden() -> Explicit In, OR -> Explicit In
       // Result: visible-bug, hidden-bug, hidden-feature
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'hidden-bug', 'hidden-feature']),
+      );
     });
 
     test('State(IN_PROGRESS): shows only visible in-progress items', () {
       final filterTree = StatusElement('In Progress', 'IN_PROGRESS');
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-new']),
+      );
     });
 
-    test('AND(State(IN_PROGRESS), Hidden()): shows hidden in-progress items', () {
-      final filterTree = AndElement([
-        StatusElement('In Progress', 'IN_PROGRESS'),
-        LabelElement('Hidden', 'hidden'),
-      ]);
-      
-      final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
-      expect(results.length, 1);
-      expect(results.first.data.id, 'hidden-bug');
-    });
+    test(
+      'AND(State(IN_PROGRESS), Hidden()): shows hidden in-progress items',
+      () {
+        final filterTree = AndElement([
+          StatusElement('In Progress', 'IN_PROGRESS'),
+          LabelElement('Hidden', 'hidden'),
+        ]);
+
+        final results = _applyFilter(testSessions, filterTree, queueProvider);
+
+        expect(results.length, 1);
+        expect(results.first.data.id, 'hidden-bug');
+      },
+    );
 
     test('NOT(Hidden()): shows only visible items (double negative)', () {
       final filterTree = NotElement(LabelElement('Hidden', 'hidden'));
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       // visible items: NOT(Explicit Out) -> Explicit In
       // hidden items: NOT(Explicit In) -> Explicit Out
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'visible-feature', 'visible-new']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature', 'visible-new']),
+      );
     });
 
     test('NOT(Label(Bug)): shows visible non-bug items', () {
       final filterTree = NotElement(LabelElement('Bug', 'bug'));
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       // visible-bug: Label(Bug) -> Explicit In, NOT -> Explicit Out
-      // visible-feature: Label(Bug) -> Explicit Out, NOT -> Explicit In  
+      // visible-feature: Label(Bug) -> Explicit Out, NOT -> Explicit In
       // visible-new: Label(Bug) -> Explicit Out, NOT -> Explicit In
       // hidden-bug: Label(Bug) -> Implicit Out, NOT -> Implicit In, AND(Implicit Out, Implicit In) -> Implicit Out (hidden)
       // hidden-feature: Label(Bug) -> Explicit Out, NOT -> Explicit In, AND(Implicit Out, Explicit In) -> Explicit In (visible!)
       expect(results.length, 3);
-      expect(results.map((r) => r.data.id), containsAll(['visible-feature', 'visible-new', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-feature', 'visible-new', 'hidden-feature']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('visible-bug')));
       expect(results.map((r) => r.data.id), isNot(contains('hidden-bug')));
     });
 
     test('Source filter: shows only matching visible items', () {
-      const filterTree = SourceElement('Source 1', 'src1');
-      
+      final filterTree = SourceElement('Source 1', 'src1');
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['visible-bug', 'visible-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['visible-bug', 'visible-feature']),
+      );
     });
 
     test('AND(Source(src1), Hidden()): shows hidden items from src1', () {
@@ -241,11 +269,14 @@ void main() {
         SourceElement('Source 1', 'src1'),
         LabelElement('Hidden', 'hidden'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['hidden-bug', 'hidden-feature']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['hidden-bug', 'hidden-feature']),
+      );
     });
 
     test('Complex: AND(OR(Bug, Feature), NOT(State(COMPLETED)))', () {
@@ -256,9 +287,9 @@ void main() {
         ]),
         NotElement(StatusElement('Completed', 'COMPLETED')),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       // visible-bug: Bug=Yes, NOT(COMPLETED)=Yes -> Show
       // visible-feature: Feature=Yes, NOT(COMPLETED)=No -> Hide
       expect(results.length, 1);
@@ -278,19 +309,20 @@ List<CachedItem<Session>> _applyFilter(
     final metadata = item.metadata;
 
     // Apply the FilterState logic
-    final initialState = metadata.isHidden 
-        ? FilterState.implicitOut 
-        : FilterState.implicitIn;
-    
+    final initialState =
+        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+
     if (filterTree == null) {
       return initialState.isIn;
     }
 
-    final treeResult = filterTree.evaluate(FilterContext(
-      session: session,
-      metadata: metadata,
-      queueProvider: queueProvider,
-    ));
+    final treeResult = filterTree.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
 
     final finalState = FilterState.combineAnd(initialState, treeResult);
     return finalState.isIn;

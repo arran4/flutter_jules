@@ -16,6 +16,7 @@ import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
 import '../widgets/api_viewer.dart';
+import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
@@ -621,12 +622,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
-    // PR Statuses (Common ones)
+    // PR Statuses (Common ones - always available to filter by)
     for (final status in ['Open', 'Closed', 'Merged', 'Draft']) {
-       suggestions.add(
+      suggestions.add(
         FilterToken(
           id: 'prStatus:$status',
-          type: FilterType.text,
+          type: FilterType.prStatus,
           label: 'PR: $status',
           value: status,
         ),
@@ -682,7 +683,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         value: 'unread',
       ),
     );
-     suggestions.add(
+    suggestions.add(
       const FilterToken(
         id: 'flag:pending',
         type: FilterType.flag,
@@ -706,7 +707,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         value: 'hidden',
       ),
     );
-     suggestions.add(
+    suggestions.add(
       const FilterToken(
         id: 'flag:has_pr',
         type: FilterType.flag,
@@ -722,22 +723,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
         value: 'draft',
       ),
     );
-
-    // PR Statuses
-    final prStatuses = sessions
-        .where((s) => s.prStatus != null)
-        .map((s) => s.prStatus!)
-        .toSet();
-    for (final status in prStatuses) {
-      suggestions.add(
-        FilterToken(
-          id: 'prStatus:$status',
-          type: FilterType.text,
-          label: 'PR: $status',
-          value: status,
-        ),
-      );
-    }
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -768,6 +753,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
         context,
         listen: false,
       ).markAsRead(session.id, auth.token!);
+    }
+  }
+
+  Future<void> _refreshPrStatus(Session session) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Authentication required")));
+      return;
+    }
+
+    try {
+      await Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      ).refreshPrStatus(session.id, auth.token!);
+
+      if (mounted) {
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text("PR status refreshed")));
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text("Failed to refresh PR status: $e")),
+        );
+      }
     }
   }
 
@@ -844,6 +858,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         break;
       case FilterType.source:
         element = SourceElement(token.label, token.value.toString());
+        break;
+      case FilterType.prStatus:
+        element = PrStatusElement(token.label, token.value.toString());
         break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
@@ -936,17 +953,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
       if (isStatusPill) {
         for (final status in SessionState.values) {
           if (status == SessionState.STATE_UNSPECIFIED) continue;
-          
+
           final statusLabel = status.displayName;
           // Determine if this is the current session's status
           final isCurrent = session.state == status;
-          
+
           statusOptions.add({
-             'id': 'status:${status.name}',
-             'label': statusLabel,
-             'value': status,
-             'active': isCurrent,
-             'type': 'status'
+            'id': 'status:${status.name}',
+            'label': statusLabel,
+            'value': status,
+            'active': isCurrent,
+            'type': 'status',
           });
         }
       }
@@ -979,8 +996,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
           PopupMenuItem(
             child: Row(
               children: [
-                const Icon(Icons.remove_circle_outline,
-                    size: 16, color: Colors.red),
+                const Icon(
+                  Icons.remove_circle_outline,
+                  size: 16,
+                  color: Colors.red,
+                ),
                 const SizedBox(width: 8),
                 Text("Exclude ${token.label}"),
               ],
@@ -1047,7 +1067,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         for (final l in customLabels) {
           addTokenOptions(
             FilterToken(
-                id: 'text:$l', type: FilterType.text, label: l, value: l),
+              id: 'text:$l',
+              type: FilterType.text,
+              label: l,
+              value: l,
+            ),
             isActive: true,
           );
         }
@@ -1265,17 +1289,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
           }
 
           // Evaluate the filter tree using new FilterState logic
-          final initialState = metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
-          
+          final initialState = metadata.isHidden
+              ? FilterState.implicitOut
+              : FilterState.implicitIn;
+
           if (_filterTree == null) {
             return initialState.isIn;
           }
 
-          final treeResult = _filterTree!.evaluate(FilterContext(
-            session: session,
-            metadata: metadata,
-            queueProvider: queueProvider,
-          ));
+          final treeResult = _filterTree!.evaluate(
+            FilterContext(
+              session: session,
+              metadata: metadata,
+              queueProvider: queueProvider,
+            ),
+          );
 
           final finalState = FilterState.combineAnd(initialState, treeResult);
           return finalState.isIn;
@@ -1377,6 +1405,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     );
                   } else if (value == 'open_by_id') {
                     _openSessionById();
+                  } else if (value == 'github_status') {
+                    showModalBottomSheet(
+                      context: context,
+                      builder: (context) => const GithubQueuePane(),
+                    );
                   }
                 },
                 itemBuilder: (context) {
@@ -1413,6 +1446,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           Icon(Icons.input),
                           SizedBox(width: 8),
                           Text('Open by Session ID'),
+                        ],
+                      ),
+                    ),
+                    const PopupMenuItem(
+                      value: 'github_status',
+                      child: Row(
+                        children: [
+                          Icon(Icons.dashboard_customize),
+                          SizedBox(width: 8),
+                          Text('GitHub Status & Queue'),
                         ],
                       ),
                     ),
@@ -1810,26 +1853,37 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           label: 'Watching',
                                                           value: 'watched',
                                                         ),
-                                                  ),
-                                                if (session.prStatus != null)
-                                                  _buildPill(
-                                                    context,
-                                                    metadata: metadata,
-                                                    session: session,
-                                                    label:
-                                                        'PR: ${session.prStatus}',
-                                                    backgroundColor:
-                                                        Colors.blueGrey,
-                                                    textColor: Colors.white,
-                                                    filterToken: FilterToken(
-                                                      id:
-                                                          'prStatus:${session.prStatus}',
-                                                      type: FilterType.text,
-                                                      label:
-                                                          'PR: ${session.prStatus}',
-                                                      value: session.prStatus!,
-                                                    ),
-                                                  ),
+                                                      ),
+                                                    // PR Status - only for final states (Closed/Merged)
+                                                    if (session.prStatus !=
+                                                            null &&
+                                                        (session.prStatus ==
+                                                                'Closed' ||
+                                                            session.prStatus ==
+                                                                'Merged'))
+                                                      _buildPill(
+                                                        context,
+                                                        metadata: metadata,
+                                                        session: session,
+                                                        label:
+                                                            '${session.prStatus}',
+                                                        backgroundColor:
+                                                            session.prStatus ==
+                                                                    'Merged'
+                                                                ? Colors.green
+                                                                : Colors.red,
+                                                        textColor: Colors.white,
+                                                        filterToken:
+                                                            FilterToken(
+                                                          id: 'prStatus:${session.prStatus}',
+                                                          type: FilterType
+                                                              .prStatus,
+                                                          label:
+                                                              'PR: ${session.prStatus}',
+                                                          value:
+                                                              session.prStatus!,
+                                                        ),
+                                                      ),
 
                                                     // Render custom labels
                                                     for (final label
@@ -2181,7 +2235,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
       context: context,
       position: finalPosition,
       items: [
-
         PopupMenuItem(
           child: Row(
             children: [
@@ -2276,6 +2329,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 const SnackBar(content: Text("PR URL copied to clipboard")),
               );
             },
+          ),
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.refresh),
+                SizedBox(width: 8),
+                Text('Refresh PR Status'),
+              ],
+            ),
+            onTap: () => _refreshPrStatus(session),
           ),
         ],
         PopupMenuItem(

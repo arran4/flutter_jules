@@ -620,7 +620,6 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                     _updatePreview();
                   },
                   showBookmarksButton: false,
-
                 ),
               ),
             ),

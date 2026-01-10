@@ -18,6 +18,7 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
+import '../widgets/session_meta_pills.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -1626,104 +1627,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     // Start with Pills (State, Date, Automation, Approval, Source, Branch)
-                    Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
-                      children: [
-                        if (_session.state != null)
-                          Chip(
-                            label: Text(
-                              _session.state.toString().split('.').last,
-                            ),
-                            backgroundColor:
-                                _session.state == SessionState.COMPLETED
-                                    ? Colors.green.shade50
-                                    : (_session.state == SessionState.FAILED
-                                        ? Colors.red.shade50
-                                        : Colors.grey.shade50),
-                            avatar: _session.state == SessionState.COMPLETED
-                                ? const Icon(
-                                    Icons.check,
-                                    size: 16,
-                                    color: Colors.green,
-                                  )
-                                : null,
-                            side: BorderSide.none,
-                          ),
-                        if (_session.createTime != null)
-                          Chip(
-                            avatar: const Icon(Icons.calendar_today, size: 16),
-                            label: Text(
-                              "Created: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.createTime!).toLocal())}",
-                            ),
-                            side: BorderSide.none,
-                          ),
-                        if (_session.updateTime != null || _isLoading)
-                          Chip(
-                            avatar: _isLoading
-                                ? const SizedBox(
-                                    width: 12,
-                                    height: 12,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : const Icon(Icons.access_time, size: 16),
-                            label: Builder(
-                              builder: (context) {
-                                final timeStr = _session.updateTime != null
-                                    ? "Updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.updateTime!).toLocal())}"
-                                    : "Updating...";
-                                return Text(timeStr);
-                              },
-                            ),
-                            side: BorderSide.none,
-                          ),
-                        if (_session.automationMode != null)
-                          Chip(
-                            avatar: const Icon(Icons.smart_toy, size: 16),
-                            label: Text(
-                              "Automation: ${_session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
-                            ),
-                            backgroundColor: Colors.blue.shade50,
-                            side: BorderSide.none,
-                          ),
-                        if (_session.requirePlanApproval != null)
-                          Chip(
-                            label: Text(
-                              _session.requirePlanApproval!
-                                  ? "Approval Required"
-                                  : "No Approval Required",
-                            ),
-                            avatar: Icon(
-                              _session.requirePlanApproval!
-                                  ? Icons.check_circle_outline
-                                  : Icons.do_not_disturb_on_outlined,
-                              size: 16,
-                            ),
-                            backgroundColor: _session.requirePlanApproval!
-                                ? Colors.orange.shade50
-                                : Colors.green.shade50,
-                            side: BorderSide.none,
-                          ),
-                        Chip(
-                          label: Text(_session.sourceContext.source),
-                          avatar: const Icon(Icons.source, size: 16),
-                          side: BorderSide.none,
-                        ),
-                        if (_session.sourceContext.githubRepoContext
-                                ?.startingBranch !=
-                            null)
-                          Chip(
-                            label: Text(
-                              _session.sourceContext.githubRepoContext!
-                                  .startingBranch,
-                            ),
-                            avatar: const Icon(Icons.call_split, size: 16),
-                            side: BorderSide.none,
-                          ),
-                      ],
-                    ),
+                    // Start with Pills (State, Date, Automation, Approval, PR Status, Source, Branch)
+                    SessionMetaPills(session: _session),
                     const SizedBox(height: 12),
                     Text(
                       "Prompt:",

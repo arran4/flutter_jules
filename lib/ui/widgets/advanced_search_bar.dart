@@ -162,18 +162,17 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     _removeOverlay();
 
     // Group suggestions by type
-    final flagSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.flag)
+    final flagSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.flag).toList();
+    final statusSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.status).toList();
+    final sourceSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.source).toList();
+    final prStatusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.prStatus)
         .toList();
-    final statusSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.status)
-        .toList();
-    final sourceSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.source)
-        .toList();
-    final otherSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.text)
-        .toList();
+    final otherSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -207,10 +206,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             Colors.orange,
                           ),
                         ),
-                      if (flagSuggestions.isNotEmpty && 
-                          (statusSuggestions.isNotEmpty || sourceSuggestions.isNotEmpty))
+                      if (flagSuggestions.isNotEmpty &&
+                          (statusSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
-                      
+
                       // Status column
                       if (statusSuggestions.isNotEmpty)
                         Expanded(
@@ -220,9 +220,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             Colors.blue,
                           ),
                         ),
-                      if (statusSuggestions.isNotEmpty && sourceSuggestions.isNotEmpty)
+                      if (statusSuggestions.isNotEmpty &&
+                          sourceSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
-                      
+
                       // Sources column
                       if (sourceSuggestions.isNotEmpty)
                         Expanded(
@@ -232,13 +233,26 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             Colors.green,
                           ),
                         ),
-                      
+                      if (sourceSuggestions.isNotEmpty &&
+                          (prStatusSuggestions.isNotEmpty ||
+                              otherSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // PR Status column
+                      if (prStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'PR Status',
+                            prStatusSuggestions,
+                            Colors.purple,
+                          ),
+                        ),
+                      if (prStatusSuggestions.isNotEmpty &&
+                          otherSuggestions.isNotEmpty)
+                        const VerticalDivider(width: 1),
+
                       // Other/Text column
                       if (otherSuggestions.isNotEmpty) ...[
-                        if (flagSuggestions.isNotEmpty || 
-                            statusSuggestions.isNotEmpty || 
-                            sourceSuggestions.isNotEmpty)
-                          const VerticalDivider(width: 1),
                         Expanded(
                           child: _buildFilterColumn(
                             'Other',
@@ -288,14 +302,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
           return InkWell(
             onTap: () => _selectSuggestion(suggestion),
             child: Container(
-              padding: const EdgeInsets.symmetric(
-                horizontal: 8,
-                vertical: 6,
-              ),
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 6),
               decoration: BoxDecoration(
-                color: isHighlighted
-                    ? Colors.blue.shade50
-                    : Colors.transparent,
+                color: isHighlighted ? Colors.blue.shade50 : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
               ),
               child: Row(
@@ -345,6 +354,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.source:
         newElement = SourceElement(token.label, token.value.toString());
         break;
+      case FilterType.prStatus:
+        newElement = PrStatusElement(token.label, token.value.toString());
+        break;
       case FilterType.text:
         // Text search is handled separately, not in tree
         return;
@@ -356,8 +368,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
 
     // Add to tree using smart builder
-    final newTree =
-        FilterElementBuilder.addFilter(widget.filterTree, newElement);
+    final newTree = FilterElementBuilder.addFilter(
+      widget.filterTree,
+      newElement,
+    );
     widget.onFilterTreeChanged(newTree);
 
     // Clear the @part from text
@@ -383,11 +397,12 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.info_outline;
       case FilterType.source:
         return Icons.source;
+      case FilterType.prStatus:
+        return Icons.merge; // PR icon
       case FilterType.text:
         return Icons.text_fields;
     }
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -413,7 +428,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         if (value.trim().isNotEmpty) {
                           final element = TextElement(value.trim());
                           final newTree = FilterElementBuilder.addFilter(
-                              widget.filterTree, element);
+                            widget.filterTree,
+                            element,
+                          );
                           widget.onFilterTreeChanged(newTree);
                           _textController.clear();
                           widget.onSearchChanged('');
@@ -509,7 +526,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                         onSubmitted: (value) {
                                           final newTree =
                                               FilterExpressionParser.parse(
-                                                  value);
+                                            value,
+                                          );
                                           widget.onFilterTreeChanged(newTree);
                                         },
                                       ),
@@ -529,45 +547,79 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                     alignment: Alignment.topLeft,
                                     child: FilterElementWidget(
                                       element: widget.filterTree,
-                                      onDrop: (source, target, action, isCtrlPressed) {
+                                      onDrop: (source, target, action,
+                                          isCtrlPressed) {
                                         var newTree = widget.filterTree;
-                                        
+
                                         // Clone source so we can add a new instance and remove the old one (if move)
-                                        final sourceCopy = FilterElement.fromJson(source.toJson());
+                                        final sourceCopy =
+                                            FilterElement.fromJson(
+                                          source.toJson(),
+                                        );
                                         final isCopy = isCtrlPressed;
 
                                         // 1. Perform the Add/Group operation with the Copy
                                         switch (action) {
                                           case FilterDropAction.groupOr:
-                                            newTree = FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy, isAnd: false);
+                                            newTree = FilterElementBuilder
+                                                .groupFilters(
+                                              newTree,
+                                              target,
+                                              sourceCopy,
+                                              isAnd: false,
+                                            );
                                             break;
                                           case FilterDropAction.groupAnd:
-                                            newTree = FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy, isAnd: true);
+                                            newTree = FilterElementBuilder
+                                                .groupFilters(
+                                              newTree,
+                                              target,
+                                              sourceCopy,
+                                              isAnd: true,
+                                            );
                                             break;
                                           case FilterDropAction.addToGroup:
-                                            newTree = FilterElementBuilder.addFilterToComposite(
-                                                newTree, target, sourceCopy);
+                                            newTree = FilterElementBuilder
+                                                .addFilterToComposite(
+                                              newTree,
+                                              target,
+                                              sourceCopy,
+                                            );
                                             break;
                                           case FilterDropAction.groupAboveAnd:
-                                            newTree = FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy, isAnd: true);
+                                            newTree = FilterElementBuilder
+                                                .groupFilters(
+                                              newTree,
+                                              target,
+                                              sourceCopy,
+                                              isAnd: true,
+                                            );
                                             break;
                                           case FilterDropAction.groupAboveOr:
-                                            newTree = FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy, isAnd: false);
+                                            newTree = FilterElementBuilder
+                                                .groupFilters(
+                                              newTree,
+                                              target,
+                                              sourceCopy,
+                                              isAnd: false,
+                                            );
                                             break;
                                         }
 
                                         // 2. Remove the original source if it is a move operation
                                         if (!isCopy && newTree != null) {
-                                          newTree = FilterElementBuilder.removeFilter(
-                                              newTree, source);
+                                          newTree =
+                                              FilterElementBuilder.removeFilter(
+                                            newTree,
+                                            source,
+                                          );
                                         }
 
                                         // 3. Simplify and update
-                                        final simplified = FilterElementBuilder.simplify(newTree);
+                                        final simplified =
+                                            FilterElementBuilder.simplify(
+                                          newTree,
+                                        );
                                         widget.onFilterTreeChanged(simplified);
                                       },
                                       onRemove: (element) {
@@ -578,7 +630,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                         );
                                         final simplified =
                                             FilterElementBuilder.simplify(
-                                                newTree);
+                                          newTree,
+                                        );
                                         widget.onFilterTreeChanged(simplified);
                                       },
                                       onToggleNot: (element) {

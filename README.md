@@ -34,10 +34,41 @@ Enabled via the Settings screen, **Dev Mode** unlocks powerful inspection tools:
 
 ## Screenshots
 
+### Main Dashboard
+The session list provides a comprehensive overview of your active tasks, including real-time status updates.
+![Main Dashboard](docs/Screenshot_20260110_200843.png)
 
-![Session List](assets/screenshots/session_list.png)
+### Session Details & Chat
+Engage with the agent using a rich chat interface that supports markdown and media.
+![Session Chat](docs/Screenshot_20260110_200716.png)
 
-![Session Detail](assets/screenshots/session_detail.png)
+### Activity Log
+View detailed activity logs and steps taken by the agent during a session.
+![Activity View](docs/Screenshot_20260110_200722.png)
+
+### Context Management
+Manage and view the source context associated with your sessions.
+![Context View](docs/Screenshot_20260110_200728.png)
+
+### App Settings
+Configure your preferences, API keys, and enable Developer Mode.
+![Settings](docs/Screenshot_20260110_200739.png)
+
+### User Interactions
+Rich dialogs handle user input, approvals, and confirmations securely.
+![Interactions](docs/Screenshot_20260110_200822.png)
+
+### PR Status Tracking
+Monitor your Pull Requests (Open, Merged, Draft) effortlessly from the session list.
+![PR Integration](docs/Screenshot_20260110_200847.png)
+
+### Advanced Filtering
+Create and save filter presets to organize your workspace efficiently.
+![Filter Presets](docs/Screenshot_20260110_200853.png)
+
+### Session Creation
+Start new tasks with specific modes (Plan, Question, Automate) using the creation wizard.
+![New Session](docs/Screenshot_20260110_201004.png)
 
 ## Architecture
 

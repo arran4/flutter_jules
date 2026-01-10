@@ -88,7 +88,7 @@ void main() {
       expect(provider.bookmarks.length, 2);
       await provider.deleteBookmark('Test Bookmark 1');
       expect(provider.bookmarks.length, 1);
-      
+
       final savedJson = prefs.getString('filter_bookmarks_v1');
       final List<dynamic> savedList = jsonDecode(savedJson!);
       expect(savedList.any((b) => b['name'] == 'Test Bookmark 1'), isFalse);

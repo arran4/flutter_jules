@@ -11,6 +11,7 @@ enum FilterElementType {
   source,
   hasPr,
   prStatus,
+  branch,
 }
 
 enum FilterState {
@@ -92,10 +93,8 @@ abstract class FilterElement {
   String toExpression();
 
   static String _quote(String s) {
-    if (s.isEmpty) {
-      return '()';
-    }
-    // If it contains unbalanced parentheses or commas that might be misinterpreted, 
+    if (s.isEmpty) return '()';
+    // If it contains unbalanced parentheses or commas that might be misinterpreted,
     // or if it starts/ends with whitespace, we use the bracket quoting.
     // However, the user wants minimal brackets.
     // We'll only use brackets if the string contains ')' or ',' or starts/ends with whitespace.
@@ -127,6 +126,8 @@ abstract class FilterElement {
         return HasPrElement.fromJson(json);
       case 'pr_status':
         return PrStatusElement.fromJson(json);
+      case 'branch':
+        return BranchElement.fromJson(json);
       default:
         throw Exception('Unknown filter element type: $type');
     }
@@ -242,10 +243,7 @@ class NotElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'not',
-        'child': child.toJson(),
-      };
+  Map<String, dynamic> toJson() => {'type': 'not', 'child': child.toJson()};
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -277,10 +275,7 @@ class TextElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'text',
-        'text': text,
-      };
+  Map<String, dynamic> toJson() => {'type': 'text', 'text': text};
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -292,7 +287,7 @@ class TextElement extends FilterElement {
         (session.state.toString().toLowerCase().contains(query)) ||
         (session.prStatus?.toLowerCase().contains(query) ?? false) ||
         context.metadata.labels.any((l) => l.toLowerCase().contains(query));
-    
+
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }
@@ -333,17 +328,12 @@ class PrStatusElement extends FilterElement {
   FilterState evaluate(FilterContext context) {
     final matches =
         context.session.prStatus?.toLowerCase() == value.toLowerCase();
-    if (context.metadata.isHidden) {
-      return FilterState.implicitOut;
-    }
+    if (context.metadata.isHidden) return FilterState.implicitOut;
     return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
 
   factory PrStatusElement.fromJson(Map<String, dynamic> json) {
-    return PrStatusElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return PrStatusElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -360,13 +350,9 @@ class LabelElement extends FilterElement {
   @override
   String get groupingType {
     // Isolated types (force AND grouping by using distinct keys)
-    if (value == 'hidden') {
-      return 'label:hidden';
-    }
-    if (value == 'watched') {
-      return 'label:watched';
-    }
-    
+    if (value == 'hidden') return 'label:hidden';
+    if (value == 'watched') return 'label:watched';
+
     // Group "queue" type labels (Drafts, Pending)
     if (value == 'draft' || value == 'pending') {
       return 'label:queue';
@@ -418,7 +404,9 @@ class LabelElement extends FilterElement {
 
     // Special case for Hidden() flag - this is a conversion rule
     if (v == 'hidden' || v == 'hide') {
-      return metadata.isHidden ? FilterState.explicitIn : FilterState.explicitOut;
+      return metadata.isHidden
+          ? FilterState.explicitIn
+          : FilterState.explicitOut;
     }
 
     if (v == 'new' && metadata.isNew) {
@@ -451,8 +439,9 @@ class LabelElement extends FilterElement {
         matched = true;
       }
     } else {
-      matched =
-          metadata.labels.any((l) => l.toLowerCase() == value.toLowerCase());
+      matched = metadata.labels.any(
+        (l) => l.toLowerCase() == value.toLowerCase(),
+      );
     }
 
     // Standard rule: can only see *In (Explicitly exclude otherwise)
@@ -463,10 +452,7 @@ class LabelElement extends FilterElement {
   }
 
   factory LabelElement.fromJson(Map<String, dynamic> json) {
-    return LabelElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return LabelElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -506,7 +492,7 @@ class StatusElement extends FilterElement {
     String cleanVal = value;
     if (cleanVal.startsWith('SessionState.')) cleanVal = cleanVal.substring(13);
     if (cleanVal.startsWith('State.')) cleanVal = cleanVal.substring(6);
-    
+
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
@@ -515,11 +501,11 @@ class StatusElement extends FilterElement {
       }
       return FilterState.explicitOut;
     }
-    
+
     final matches = state.toString().toLowerCase() == query ||
         state.name.toLowerCase() == query ||
         state.displayName.toLowerCase() == query;
-           
+
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }
@@ -527,10 +513,7 @@ class StatusElement extends FilterElement {
   }
 
   factory StatusElement.fromJson(Map<String, dynamic> json) {
-    return StatusElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return StatusElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -570,10 +553,7 @@ class SourceElement extends FilterElement {
   }
 
   factory SourceElement.fromJson(Map<String, dynamic> json) {
-    return SourceElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return SourceElement(json['label'] as String, json['value'] as String);
   }
 }
 
@@ -593,13 +573,12 @@ class HasPrElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {
-        'type': 'has_pr',
-      };
+  Map<String, dynamic> toJson() => {'type': 'has_pr'};
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
+    final matches =
+        context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
     }
@@ -608,5 +587,50 @@ class HasPrElement extends FilterElement {
 
   factory HasPrElement.fromJson(Map<String, dynamic> json) {
     return HasPrElement();
+  }
+}
+
+/// Branch filter element
+class BranchElement extends FilterElement {
+  final String label;
+  final String value;
+
+  BranchElement(this.label, this.value);
+
+  @override
+  FilterElementType get type => FilterElementType.branch;
+
+  @override
+  String get groupingType => 'branch';
+
+  @override
+  String toExpression() {
+    return 'Branch(${FilterElement._quote(value)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'branch',
+        'label': label,
+        'value': value,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final branch =
+        context.session.sourceContext.githubRepoContext?.startingBranch;
+    final matches = branch?.toLowerCase() == value.toLowerCase();
+
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory BranchElement.fromJson(Map<String, dynamic> json) {
+    return BranchElement(
+      json['label'] as String,
+      json['value'] as String,
+    );
   }
 }

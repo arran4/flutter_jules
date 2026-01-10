@@ -9,7 +9,7 @@ void main() {
 
     setUp(() {
       queueProvider = MockQueueProvider();
-      
+
       testSessions = [
         // Approval required
         CachedItem(
@@ -84,24 +84,36 @@ void main() {
 
     test('approval_required filter shows only items requiring approval', () {
       final filterTree = LabelElement('Approval Required', 'approval_required');
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['approval-required-1', 'approval-required-2']));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['approval-required-1', 'approval-required-2']),
+      );
       expect(results.map((r) => r.data.id), isNot(contains('no-approval-1')));
       expect(results.map((r) => r.data.id), isNot(contains('null-approval-1')));
     });
 
     test('no_approval filter shows items not requiring approval', () {
       final filterTree = LabelElement('No Approval', 'no_approval');
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 2);
-      expect(results.map((r) => r.data.id), containsAll(['no-approval-1', 'null-approval-1']));
-      expect(results.map((r) => r.data.id), isNot(contains('approval-required-1')));
-      expect(results.map((r) => r.data.id), isNot(contains('approval-required-2')));
+      expect(
+        results.map((r) => r.data.id),
+        containsAll(['no-approval-1', 'null-approval-1']),
+      );
+      expect(
+        results.map((r) => r.data.id),
+        isNot(contains('approval-required-1')),
+      );
+      expect(
+        results.map((r) => r.data.id),
+        isNot(contains('approval-required-2')),
+      );
     });
 
     test('OR(approval_required, no_approval) shows all items', () {
@@ -109,23 +121,26 @@ void main() {
         LabelElement('Approval Required', 'approval_required'),
         LabelElement('No Approval', 'no_approval'),
       ]);
-      
+
       final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
+
       expect(results.length, 4);
     });
 
-    test('AND(approval_required, State(AWAITING_PLAN_APPROVAL)) shows specific items', () {
-      final filterTree = AndElement([
-        LabelElement('Approval Required', 'approval_required'),
-        StatusElement('Awaiting Plan Approval', 'AWAITING_PLAN_APPROVAL'),
-      ]);
-      
-      final results = _applyFilter(testSessions, filterTree, queueProvider);
-      
-      expect(results.length, 1);
-      expect(results.first.data.id, 'approval-required-1');
-    });
+    test(
+      'AND(approval_required, State(AWAITING_PLAN_APPROVAL)) shows specific items',
+      () {
+        final filterTree = AndElement([
+          LabelElement('Approval Required', 'approval_required'),
+          StatusElement('Awaiting Plan Approval', 'AWAITING_PLAN_APPROVAL'),
+        ]);
+
+        final results = _applyFilter(testSessions, filterTree, queueProvider);
+
+        expect(results.length, 1);
+        expect(results.first.data.id, 'approval-required-1');
+      },
+    );
   });
 }
 
@@ -139,19 +154,20 @@ List<CachedItem<Session>> _applyFilter(
     final session = item.data;
     final metadata = item.metadata;
 
-    final initialState = metadata.isHidden 
-        ? FilterState.implicitOut 
-        : FilterState.implicitIn;
-    
+    final initialState =
+        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+
     if (filterTree == null) {
       return initialState.isIn;
     }
 
-    final treeResult = filterTree.evaluate(FilterContext(
-      session: session,
-      metadata: metadata,
-      queueProvider: queueProvider,
-    ));
+    final treeResult = filterTree.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
 
     final finalState = FilterState.combineAnd(initialState, treeResult);
     return finalState.isIn;

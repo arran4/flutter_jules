@@ -251,6 +251,22 @@ class CacheService {
     }
   }
 
+  Future<void> updateSession(String token, Session session) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final fileName = '${Uri.encodeComponent(session.id)}.json';
+    final file = File(path.join(cacheDir.path, 'sessions', fileName));
+
+    if (await file.exists()) {
+      final content = await file.readAsString();
+      final json = jsonDecode(content);
+
+      // Update session data but preserve metadata
+      json['data'] = session.toJson();
+
+      await file.writeAsString(jsonEncode(json));
+    }
+  }
+
   // New methods for session details (activities) cache
   Future<void> saveSessionDetails(
     String token,

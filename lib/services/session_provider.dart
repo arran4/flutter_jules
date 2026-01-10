@@ -94,36 +94,21 @@ class SessionProvider extends ChangeNotifier {
       // Merge logic
       if (newSessions.isNotEmpty) {
         for (var session in newSessions) {
-          if (_githubProvider != null &&
-              session.sourceContext.source.startsWith('sources/github/')) {
-            final parts = session.sourceContext.source.split('/');
-            if (parts.length >= 4) {
-              final owner = parts[2];
-              final repo = parts[3];
-              final prNumberMatch =
-                  RegExp(r'#(\d+)').firstMatch(session.title ?? '');
-              if (prNumberMatch != null) {
-                final prNumber = prNumberMatch.group(1)!;
-                final prStatus = await _githubProvider!.getPrStatus(
-                  owner,
-                  repo,
-                  prNumber,
-                );
-                if (prStatus != null) {
-                  session = session.copyWith(prStatus: prStatus);
-                }
-              }
-            }
-          }
           final index = _items.indexWhere((i) => i.data.id == session.id);
-          CacheMetadata metadata;
+          final oldItem = index != -1 ? _items[index] : null;
+          final oldSession = oldItem?.data;
 
-          if (index != -1) {
-            final oldItem = _items[index];
+          // Preserve PR status from cache if backend doesn't provide it
+          if (session.prStatus == null && oldSession?.prStatus != null) {
+            session = session.copyWith(prStatus: oldSession!.prStatus);
+          }
+
+          CacheMetadata metadata;
+          if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed = (oldItem.data.updateTime != session.updateTime) ||
-                (oldItem.data.state != session.state);
+            final changed = (oldSession!.updateTime != session.updateTime) ||
+                (oldSession.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
@@ -138,6 +123,39 @@ class SessionProvider extends ChangeNotifier {
             );
           }
           _items.add(CachedItem(session, metadata));
+
+          // PR Refresh Logic
+          if (_githubProvider != null && authToken != null) {
+            final prUrl = _getPrUrl(session);
+            if (prUrl != null) {
+              bool shouldRefresh = false;
+
+              // Rules apply to any session list refresh (full, normal, etc)
+              final oldPrUrl =
+                  oldSession != null ? _getPrUrl(oldSession) : null;
+              final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
+
+              // 1. New PR Url OR (No Status & No Queue)
+              if (isNewPr ||
+                  (session.prStatus == null && !_isPrFetchQueued(prUrl))) {
+                shouldRefresh = true;
+              }
+              // 2. Status changed to Completed & Has PR
+              else if (session.state == SessionState.COMPLETED &&
+                  oldSession.state != SessionState.COMPLETED) {
+                shouldRefresh = true;
+              }
+              // 3. Existing PR status is Draft or Open
+              else if (session.prStatus == 'Draft' ||
+                  session.prStatus == 'Open') {
+                shouldRefresh = true;
+              }
+
+              if (shouldRefresh) {
+                _refreshPrStatusInBackground(session.id, prUrl, authToken);
+              }
+            }
+          }
         }
       }
 
@@ -289,6 +307,14 @@ class SessionProvider extends ChangeNotifier {
       }
 
       _sortItems();
+
+      if (authToken != null && _githubProvider != null) {
+        final prUrl = _getPrUrl(updatedSession);
+        if (prUrl != null) {
+          _refreshPrStatusInBackground(updatedSession.id, prUrl, authToken);
+        }
+      }
+
       notifyListeners();
     } catch (e) {
       // print("Failed to refresh individual session: $e");
@@ -616,6 +642,124 @@ class SessionProvider extends ChangeNotifier {
         );
         notifyListeners();
       }
+    }
+  }
+
+  /// Refresh the PR status for a session from GitHub
+  Future<void> refreshPrStatus(String sessionId, String authToken) async {
+    if (_githubProvider == null) {
+      throw Exception("GitHub provider not initialized");
+    }
+
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index == -1) {
+      throw Exception("Session not found");
+    }
+
+    final session = _items[index].data;
+
+    // Check if session has PR output
+    if (session.outputs == null ||
+        !session.outputs!.any((o) => o.pullRequest != null)) {
+      throw Exception("Session does not have a pull request");
+    }
+
+    // Get PR URL from session
+    final pr =
+        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+
+    // Extract owner, repo, and PR number from URL
+    // URL format: https://github.com/owner/repo/pull/123
+    final uri = Uri.parse(pr.url);
+    final pathSegments = uri.pathSegments;
+
+    if (pathSegments.length < 4 ||
+        pathSegments[pathSegments.length - 2] != 'pull') {
+      throw Exception("Invalid PR URL format");
+    }
+
+    final owner = pathSegments[0];
+    final repo = pathSegments[1];
+    final prNumber = pathSegments[pathSegments.length - 1];
+
+    // Fetch PR status from GitHub
+    final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+
+    // Update session with new PR status
+    final updatedSession = session.copyWith(prStatus: prStatus);
+
+    // Update in cache
+    if (_cacheService != null) {
+      await _cacheService!.updateSession(authToken, updatedSession);
+    }
+
+    // Update in memory
+    _items[index] = CachedItem(updatedSession, _items[index].metadata);
+
+    notifyListeners();
+  }
+
+  String? _getPrUrl(Session session) {
+    if (session.outputs != null) {
+      for (var o in session.outputs!) {
+        if (o.pullRequest != null) return o.pullRequest!.url;
+      }
+    }
+    return null;
+  }
+
+  bool _isPrFetchQueued(String prUrl) {
+    if (_githubProvider == null) return false;
+
+    final uri = Uri.parse(prUrl);
+    final pathSegments = uri.pathSegments;
+    if (pathSegments.length < 4) return false;
+
+    final owner = pathSegments[0];
+    final repo = pathSegments[1];
+    final prNumber = pathSegments[pathSegments.length - 1];
+    final jobId = 'pr_status_${owner}_${repo}_$prNumber';
+
+    return _githubProvider!.queue.any((job) => job.id == jobId);
+  }
+
+  Future<void> _refreshPrStatusInBackground(
+    String sessionId,
+    String prUrl,
+    String authToken,
+  ) async {
+    // Avoid multiple concurrent refreshes for same session if not already queued
+    // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
+    if (_isPrFetchQueued(prUrl)) return;
+
+    try {
+      final uri = Uri.parse(prUrl);
+      final pathSegments = uri.pathSegments;
+      final owner = pathSegments[0];
+      final repo = pathSegments[1];
+      final prNumber = pathSegments[pathSegments.length - 1];
+
+      final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+
+      if (status != null) {
+        // Update session
+        final index = _items.indexWhere((i) => i.data.id == sessionId);
+        if (index != -1) {
+          final item = _items[index];
+          if (item.data.prStatus != status) {
+            final updatedSession = item.data.copyWith(prStatus: status);
+            // Save to cache
+            if (_cacheService != null) {
+              await _cacheService!.updateSession(authToken, updatedSession);
+            }
+            // Update memory
+            _items[index] = CachedItem(updatedSession, item.metadata);
+            notifyListeners();
+          }
+        }
+      }
+    } catch (e) {
+      // print("Background PR refresh failed: $e");
     }
   }
 }

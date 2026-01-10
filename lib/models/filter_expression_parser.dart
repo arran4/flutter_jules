@@ -42,9 +42,10 @@ class FilterExpressionParser {
     if (pos < input.length && input[pos] == '(') {
       pos++; // skip (
       _skipWhitespace();
-      
+
       final upperName = name.toUpperCase();
-      final isComposite = upperName == 'AND' || upperName == 'OR' || upperName == 'NOT';
+      final isComposite =
+          upperName == 'AND' || upperName == 'OR' || upperName == 'NOT';
 
       if (isComposite) {
         while (pos < input.length && input[pos] != ')') {
@@ -59,7 +60,7 @@ class FilterExpressionParser {
         }
       } else {
         // Simple function: everything between ( and matching ) is considered the arg(s).
-        // Since we want to support multiple args split by spaces/commas for backward compat 
+        // Since we want to support multiple args split by spaces/commas for backward compat
         // OR atoms, let's read until matching ')'.
         final start = pos;
         int depth = 1;
@@ -91,7 +92,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (
+        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);
@@ -107,7 +109,11 @@ class FilterExpressionParser {
     _skipWhitespace();
   }
 
-  FilterElement? _createFilter(String name, List<FilterElement> children, List<String> args) {
+  FilterElement? _createFilter(
+    String name,
+    List<FilterElement> children,
+    List<String> args,
+  ) {
     final upperName = name.toUpperCase();
     switch (upperName) {
       case 'AND':
@@ -138,7 +144,8 @@ class FilterExpressionParser {
         if (args.isEmpty) return null;
         final arg = args[0].toUpperCase();
         if (arg == 'PR') return HasPrElement();
-        if (arg == 'DRAFTS' || arg == 'DRAFT') return LabelElement('Draft', 'draft');
+        if (arg == 'DRAFTS' || arg == 'DRAFT')
+          return LabelElement('Draft', 'draft');
         return LabelElement(args[0], args[0]);
       case 'HAS_PR':
         return HasPrElement();
@@ -157,6 +164,8 @@ class FilterExpressionParser {
       case 'PR':
       case 'PR_STATUS':
         return args.isNotEmpty ? PrStatusElement(args[0], args[0]) : null;
+      case 'BRANCH':
+        return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
       default:
         return null;
     }

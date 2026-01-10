@@ -183,10 +183,7 @@ void main() {
 
     test('Adding another text element creates OR', () {
       final root = TextElement('old');
-      final result = FilterElementBuilder.addFilter(
-        root,
-        TextElement('new'),
-      );
+      final result = FilterElementBuilder.addFilter(root, TextElement('new'));
 
       expect(result, isA<OrElement>());
       final or = result as OrElement;
@@ -243,10 +240,7 @@ void main() {
         HasPrElement(),
       ]);
 
-      final result = FilterElementBuilder.removeFilter(
-        root,
-        HasPrElement(),
-      );
+      final result = FilterElementBuilder.removeFilter(root, HasPrElement());
 
       expect(result, isA<LabelElement>());
     });
@@ -269,7 +263,9 @@ void main() {
       final and = result as AndElement;
       expect(and.children.length, 2);
       expect(
-          and.children[0], isA<LabelElement>()); // OR reduced to single element
+        and.children[0],
+        isA<LabelElement>(),
+      ); // OR reduced to single element
     });
   });
 
@@ -306,10 +302,7 @@ void main() {
         HasPrElement(),
       ]);
 
-      final result = FilterElementBuilder.toggleNot(
-        root,
-        HasPrElement(),
-      );
+      final result = FilterElementBuilder.toggleNot(root, HasPrElement());
 
       expect(result, isA<AndElement>());
       final and = result as AndElement;
@@ -522,10 +515,13 @@ void main() {
 
     test('Null root with various operations', () {
       expect(
-          FilterElementBuilder.removeFilter(null, LabelElement('test', 'test')),
-          isNull);
-      expect(FilterElementBuilder.toggleNot(null, LabelElement('test', 'test')),
-          isNull);
+        FilterElementBuilder.removeFilter(null, LabelElement('test', 'test')),
+        isNull,
+      );
+      expect(
+        FilterElementBuilder.toggleNot(null, LabelElement('test', 'test')),
+        isNull,
+      );
       expect(FilterElementBuilder.simplify(null), isNull);
       expect(FilterElementBuilder.toFilterTokens(null), isEmpty);
     });
