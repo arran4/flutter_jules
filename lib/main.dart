@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
+import 'services/github_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
 import 'services/filter_bookmark_provider.dart';
@@ -20,35 +21,30 @@ void main() {
       providers: [
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
+        ChangeNotifierProvider(create: (_) => GithubProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ProxyProvider<DevModeProvider, CacheService>(
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider<CacheService, SessionProvider>(
+        ChangeNotifierProxyProvider2<CacheService, GithubProvider, SessionProvider>(
           create: (_) => SessionProvider(),
-          update: (_, cache, session) => session!..setCacheService(cache),
+          update: (_, cache, github, session) =>
+              session!..setCacheService(cache)..setGithubProvider(github),
         ),
         ChangeNotifierProxyProvider<CacheService, SourceProvider>(
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
         ),
-        ChangeNotifierProxyProvider2<
-          CacheService,
-          AuthProvider,
-          MessageQueueProvider
-        >(
+        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
+            MessageQueueProvider>(
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider3<
-          SettingsProvider,
-          SessionProvider,
-          SourceProvider,
-          RefreshService
-        >(
+        ChangeNotifierProxyProvider3<SettingsProvider, SessionProvider,
+            SourceProvider, RefreshService>(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),

@@ -4,6 +4,7 @@ import '../models/api_exchange.dart';
 
 import 'jules_client.dart';
 import 'cache_service.dart';
+import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
   List<CachedItem<Session>> _items = [];
@@ -12,6 +13,7 @@ class SessionProvider extends ChangeNotifier {
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
   CacheService? _cacheService;
+  GithubProvider? _githubProvider;
 
   List<CachedItem<Session>> get items => _items;
   bool get isLoading => _isLoading;
@@ -21,6 +23,10 @@ class SessionProvider extends ChangeNotifier {
 
   void setCacheService(CacheService service) {
     _cacheService = service;
+  }
+
+  void setGithubProvider(GithubProvider service) {
+    _githubProvider = service;
   }
 
   Future<void> fetchSessions(
@@ -87,7 +93,28 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
-        for (final session in newSessions) {
+        for (var session in newSessions) {
+          if (_githubProvider != null &&
+              session.sourceContext.source.startsWith('sources/github/')) {
+            final parts = session.sourceContext.source.split('/');
+            if (parts.length >= 4) {
+              final owner = parts[2];
+              final repo = parts[3];
+              final prNumberMatch =
+                  RegExp(r'#(\d+)').firstMatch(session.title ?? '');
+              if (prNumberMatch != null) {
+                final prNumber = prNumberMatch.group(1)!;
+                final prStatus = await _githubProvider!.getPrStatus(
+                  owner,
+                  repo,
+                  prNumber,
+                );
+                if (prStatus != null) {
+                  session = session.copyWith(prStatus: prStatus);
+                }
+              }
+            }
+          }
           final index = _items.indexWhere((i) => i.data.id == session.id);
           CacheMetadata metadata;
 
@@ -95,15 +122,13 @@ class SessionProvider extends ChangeNotifier {
             final oldItem = _items[index];
             _items.removeAt(index);
 
-            final changed =
-                (oldItem.data.updateTime != session.updateTime) ||
+            final changed = (oldItem.data.updateTime != session.updateTime) ||
                 (oldItem.data.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated: changed
-                  ? DateTime.now()
-                  : oldItem.metadata.lastUpdated,
+              lastUpdated:
+                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -173,8 +198,7 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed =
-          (oldItem.data.updateTime != session.updateTime) ||
+      final changed = (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -227,7 +251,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-            (oldItem.data.state != updatedSession.state);
+                (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -407,9 +431,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems = _items
-          .where((item) => item.metadata.isWatched)
-          .toList();
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {

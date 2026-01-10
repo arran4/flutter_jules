@@ -32,10 +32,10 @@ class NewSessionResult {
 
 class _NewSessionDialogState extends State<NewSessionDialog> {
   // Form State
-  String _prompt = '';
   final List<Source> _selectedSources = [];
+  late final TextEditingController _promptController;
   String? _selectedBranch;
-  String _imageUrl = '';
+  late final TextEditingController _imageUrlController;
 
   // Task Mode
   // Options: Question (No Plan), Plan (Verify Plan), Start (Auto)
@@ -61,11 +61,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   @override
   void initState() {
     super.initState();
+    _promptController = TextEditingController();
+    _imageUrlController = TextEditingController();
+
     if (widget.initialSession != null) {
-      _prompt = widget.initialSession!.prompt;
+      _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
-      final mode =
-          widget.initialSession!.automationMode ??
+      final mode = widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -77,8 +79,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         _selectedModeIndex = 1; // Plan
       } else {
         _selectedModeIndex = 0; // Question (default)
-        // Check if it was "Start" without auto-PR? Hard to distinguish from Question without more data,
-        // but default is fine.
       }
     }
     _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
@@ -111,6 +111,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _removeSourceOverlay();
     _sourceController.dispose();
     _sourceFocusNode.dispose();
+    _promptController.dispose();
+    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -129,7 +131,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-              _filteredSources.length;
+                  _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -145,6 +147,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _loadPreferences() async {
+    if (widget.initialSession != null) return;
+
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
@@ -292,10 +296,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!
-              .sourceContext
-              .githubRepoContext!
-              .startingBranch;
+              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
         }
       } else {
         // Set default branch
@@ -371,9 +372,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading: isPrivate
-                            ? const Icon(Icons.lock, size: 16)
-                            : null,
+                        leading:
+                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -463,112 +463,98 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
-      // Handle Image
-      List<Media>? images;
-      if (_imageUrl.isNotEmpty) {
-        try {
-          final response = await http.get(Uri.parse(_imageUrl));
-          if (response.statusCode == 200) {
-            final bytes = response.bodyBytes;
-            final base64Image = base64Encode(bytes);
-            final mimeType = response.headers['content-type'] ?? 'image/png';
-
-            images = [Media(data: base64Image, mimeType: mimeType)];
-          } else {
-            if (mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content:
-                      Text('Failed to load image: ${response.statusCode}'),
-                ),
-              );
-              return;
-            }
-          }
-        } catch (e) {
-          if (mounted) {
-            ScaffoldMessenger.of(
-              context,
-            ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
-            return;
-          }
-        }
-      }
-
-      final newSession = _buildSession(images: images);
-
-      if (mounted) {
-        Navigator.pop(context, NewSessionResult(newSession, isDraft: false));
-      }
-    } else {
-      // Handle bulk session creation
-      // Save preferences (without source)
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      if (_selectedBranch != null) {
-        await prefs.setString('new_session_last_branch', _selectedBranch!);
-      }
-      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
-
-      if (!mounted) return;
-
-      // Show progress dialog
-      showDialog(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) {
-          return const AlertDialog(
-            title: Text('Creating Sessions...'),
-            content: Center(
-              child: CircularProgressIndicator(),
-            ),
-          );
-        },
-      );
-
-      int successCount = 0;
-      int errorCount = 0;
-
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      for (final source in _selectedSources) {
-        try {
-          final newSession = _buildSession(source: source);
-          await auth.client.createSession(newSession);
-          successCount++;
-        } catch (e) {
-          errorCount++;
-          // Log the error or show a notification
-          // print('Failed to create session for ${source.name}: $e');
-        }
-      }
-
-      if (!mounted) return;
-
-      // Close the progress dialog
-      Navigator.pop(context);
-
-      // Show summary
-      showDialog(
-        context: context,
-        builder: (context) {
-          return AlertDialog(
-            title: const Text('Bulk Creation Complete'),
-            content: Text(
-              '$successCount sessions created successfully.\n$errorCount sessions failed.',
-            ),
-            actions: [
-              TextButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  Navigator.pop(context);
-                },
-                child: const Text('OK'),
-              ),
-            ],
-          );
-        },
-      );
+    // Save preferences
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+    await prefs.setString('new_session_last_source', _selectedSource!.name);
+    if (_selectedBranch != null) {
+      prefs.setString('new_session_last_branch', _selectedBranch!);
     }
+    await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+
+    // Handle Image
+    final imageUrl = _imageUrlController.text.trim();
+    // Handle bulk session creation
+    // Save preferences (without source)
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+    if (_selectedBranch != null) {
+      await prefs.setString('new_session_last_branch', _selectedBranch!);
+    }
+    await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+
+    if (!mounted) return;
+    final newSession = Session(
+      name: '', // Server assigns
+      id: '', // Server assigns
+      prompt: _promptController.text,
+      sourceContext: SourceContext(
+        source: _selectedSource!.name,
+        githubRepoContext: GitHubRepoContext(
+          startingBranch: _selectedBranch ?? 'main',
+        ),
+      ),
+      requirePlanApproval: requirePlanApproval,
+      automationMode: automationMode,
+      images: images,
+    );
+
+    // Show progress dialog
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return const AlertDialog(
+          title: Text('Creating Sessions...'),
+          content: Center(
+            child: CircularProgressIndicator(),
+          ),
+        );
+      },
+    );
+
+    int successCount = 0;
+    int errorCount = 0;
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    for (final source in _selectedSources) {
+      try {
+        final newSession = _buildSession(source: source);
+        await auth.client.createSession(newSession);
+        successCount++;
+      } catch (e) {
+        errorCount++;
+        // Log the error or show a notification
+        // print('Failed to create session for ${source.name}: $e');
+      }
+    }
+
+    if (!mounted) return;
+
+    // Close the progress dialog
+    Navigator.pop(context);
+
+    // Show summary
+    showDialog(
+      context: context,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Bulk Creation Complete'),
+          content: Text(
+            '$successCount sessions created successfully.\n$errorCount sessions failed.',
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                Navigator.pop(context);
+                Navigator.pop(context);
+              },
+              child: const Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
   }
 
   Future<void> _saveDraft() async {
@@ -576,7 +562,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // Allow saving incomplete drafts?
     // User requirement: "When you are editing a draft, you have the option to 'delete' too."
     // implying meaningful content.
-    if (_prompt.isEmpty) return;
+    if (_promptController.text.isEmpty) return;
 
     // Build session (even if incomplete, use defaults)
     // Map Mode to API fields
@@ -597,7 +583,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final newSession = Session(
       name: widget.initialSession?.name ?? '',
       id: widget.initialSession?.id ?? '',
-      prompt: _prompt,
+      prompt: _promptController.text,
       sourceContext: SourceContext(
         source: _selectedSources.isNotEmpty
             ? _selectedSources.first.name
@@ -841,14 +827,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       LogicalKeyboardKey.enter,
                       control: true,
                     ): () {
-                      if (_prompt.isNotEmpty && _selectedSource != null) {
+                      if (_promptController.text.isNotEmpty &&
+                          _selectedSource != null) {
                         _create();
-                      } else if (_prompt.isNotEmpty) {
+                      } else if (_promptController.text.isNotEmpty) {
                         _saveDraft();
                       }
                     },
                   },
                   child: TextField(
+                    controller: _promptController,
                     autofocus: true,
                     maxLines: 6,
                     decoration: const InputDecoration(
@@ -857,24 +845,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       border: OutlineInputBorder(),
                       alignLabelWithHint: true,
                     ),
-                    onChanged: (val) {
-                      setState(() {
-                        _prompt = val;
-                      });
-                    },
+                    onChanged: (val) => setState(() {}),
                   ),
                 ),
                 const SizedBox(height: 16),
 
                 // Image Attachment (URL for now)
                 TextField(
+                  controller: _imageUrlController,
                   decoration: const InputDecoration(
                     labelText: 'Image URL (Optional)',
                     hintText: 'https://example.com/image.png',
                     border: OutlineInputBorder(),
                     prefixIcon: Icon(Icons.image),
                   ),
-                  onChanged: (val) => _imageUrl = val,
+                  onChanged: (val) => setState(() {}),
                 ),
                 const SizedBox(height: 16),
 
@@ -973,9 +958,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 border: const OutlineInputBorder(),
                                 prefixIcon:
                                     (_selectedSource?.githubRepo?.isPrivate ==
-                                        true)
-                                    ? const Icon(Icons.lock, size: 16)
-                                    : const Icon(Icons.source, size: 16),
+                                            true)
+                                        ? const Icon(Icons.lock, size: 16)
+                                        : const Icon(Icons.source, size: 16),
                                 suffixIcon: IconButton(
                                   icon: const Icon(Icons.close, size: 16),
                                   onPressed: () {
@@ -1039,7 +1024,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       ),
                     const Spacer(),
                     TextButton(
-                      onPressed: (_prompt.isNotEmpty) ? _saveDraft : null,
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? _saveDraft
+                          : null,
                       child: const Text('Save as Draft'),
                     ),
                     const SizedBox(width: 8),
@@ -1050,7 +1037,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_prompt.isNotEmpty && _selectedSources.isNotEmpty)
+                      onPressed: (_promptController.text.isNotEmpty &&
+                              _selectedSource != null)
                           ? _create
                           : null,
                       child: const Text('Send Now'),

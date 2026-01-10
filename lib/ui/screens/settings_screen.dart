@@ -4,6 +4,7 @@ import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
+import '../../services/github_provider.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -17,8 +18,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer3<SettingsProvider, DevModeProvider, AuthProvider>(
-        builder: (context, settings, devMode, auth, child) {
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
+        builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
               _buildSectionHeader(context, 'Session Updates'),
@@ -106,11 +107,64 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 leading: const Icon(Icons.logout, color: Colors.red),
                 onTap: () => _showSignOutDialog(context, auth),
               ),
+              const Divider(),
+              _buildSectionHeader(context, 'GitHub'),
+              ListTile(
+                title: const Text('Personal Access Token'),
+                subtitle: Text(
+                  github.apiKey != null
+                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                      : 'Not set',
+                ),
+                leading: const Icon(Icons.code),
+                onTap: () => _showGitHubKeyDialog(context, github),
+              ),
             ],
           );
         },
       ),
     );
+  }
+
+  Future<void> _showGitHubKeyDialog(
+    BuildContext context,
+    GithubProvider github,
+  ) async {
+    final controller = TextEditingController();
+    final newKey = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Enter GitHub PAT'),
+        content: TextField(
+          controller: controller,
+          decoration: const InputDecoration(
+            labelText: 'Personal Access Token',
+            hintText: 'Paste your token here',
+          ),
+          obscureText: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, controller.text),
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+
+    if (newKey != null && newKey.isNotEmpty) {
+      if (!context.mounted) return;
+      await github.setApiKey(newKey);
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('GitHub token updated successfully')),
+        );
+      }
+    }
   }
 
   Widget _buildSectionHeader(BuildContext context, String title) {
@@ -119,9 +173,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-        ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
       ),
     );
   }
@@ -141,9 +195,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),

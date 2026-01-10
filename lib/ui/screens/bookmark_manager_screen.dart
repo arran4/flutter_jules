@@ -11,6 +11,8 @@ import '../../services/session_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../utils/filter_utils.dart';
 import '../widgets/advanced_search_bar.dart';
+import '../../models/filter_element.dart';
+import '../../models/filter_element_builder.dart';
 import '../../models/enums.dart';
 
 class BookmarkManagerScreen extends StatefulWidget {
@@ -53,13 +55,11 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           }).toList();
 
           // 2. Restorable System Bookmarks
-          final restorableBookmarks = provider
-              .getRestorableSystemBookmarks()
-              .where((b) {
-                if (_searchQuery.isEmpty) return true;
-                return b.name.toLowerCase().contains(_searchQuery);
-              })
-              .toList();
+          final restorableBookmarks =
+              provider.getRestorableSystemBookmarks().where((b) {
+            if (_searchQuery.isEmpty) return true;
+            return b.name.toLowerCase().contains(_searchQuery);
+          }).toList();
 
           return Column(
             children: [
@@ -232,8 +232,7 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
   }
 
   void _showBookmarkEditor(BuildContext context, FilterBookmark? existing) {
-    final isSystem =
-        existing != null &&
+    final isSystem = existing != null &&
         context.read<FilterBookmarkProvider>().isSystemBookmark(existing.name);
 
     showDialog(
@@ -261,8 +260,8 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               context.read<FilterBookmarkProvider>().deleteBookmark(
-                bookmark.name,
-              );
+                    bookmark.name,
+                  );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Preset "${bookmark.name}" deleted')),
@@ -301,9 +300,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               final newName = nameController.text.trim();
               if (newName.isNotEmpty) {
                 await context.read<FilterBookmarkProvider>().copyBookmark(
-                  bookmark.name,
-                  newName,
-                );
+                      bookmark.name,
+                      newName,
+                    );
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -448,9 +447,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
 
                 try {
                   await context.read<FilterBookmarkProvider>().importFromJson(
-                    jsonString,
-                    merge: merge,
-                  );
+                        jsonString,
+                        merge: merge,
+                      );
 
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext);
@@ -501,7 +500,7 @@ class _BookmarkEditorDialog extends StatefulWidget {
 class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
   late TextEditingController _nameController;
   late TextEditingController _descController;
-  late List<FilterToken> _filters;
+  FilterElement? _filterTree;
   late List<SortOption> _sorts;
   List<Session> _matchingSessions = [];
   int _totalMatches = 0;
@@ -513,7 +512,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
     _descController = TextEditingController(
       text: widget.existing?.description ?? '',
     );
-    _filters = List.from(widget.existing?.filters ?? []);
+    _filterTree = widget.existing?.tree;
     _sorts = List.from(widget.existing?.sorts ?? []);
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _updatePreview());
@@ -530,12 +529,13 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
     );
 
     // Apply filters
+    final filters = FilterElementBuilder.toFilterTokens(_filterTree);
     final allMatches = sessionProvider.items
         .where((item) {
           return FilterUtils.matches(
             item.data,
             item.metadata,
-            _filters,
+            filters,
             queueProvider,
           );
         })
@@ -606,11 +606,12 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
               child: Opacity(
                 opacity: widget.isReadOnly ? 0.7 : 1.0,
                 child: AdvancedSearchBar(
-                  activeFilters: _filters,
-                  onFiltersChanged: (f) {
-                    setState(() => _filters = f);
+                  filterTree: _filterTree,
+                  onFilterTreeChanged: (tree) {
+                    setState(() => _filterTree = tree);
                     _updatePreview();
                   },
+                  searchText: '',
                   onSearchChanged: (_) {},
                   availableSuggestions: widget.availableSuggestions,
                   activeSorts: _sorts,
@@ -619,7 +620,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                     _updatePreview();
                   },
                   showBookmarksButton: false,
-                  onOpenFilterMenu: null,
+
                 ),
               ),
             ),
@@ -676,7 +677,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                 description: _descController.text.trim().isEmpty
                     ? null
                     : _descController.text.trim(),
-                filters: _filters,
+                expression: _filterTree?.toExpression() ?? '',
                 sorts: _sorts,
               );
 

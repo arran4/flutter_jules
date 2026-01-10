@@ -2,7 +2,7 @@
   {
     "name": "Default View",
     "description": "The standard view, sorted by last update.",
-    "filters": [],
+    "expression": "",
     "sorts": [
       {
         "field": "updated",
@@ -13,29 +13,7 @@
   {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
-    "filters": [
-      {
-        "id": "flag:new",
-        "type": "flag",
-        "label": "New",
-        "value": "new",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      },
-      {
-        "id": "status:AWAITING_PLAN_APPROVAL",
-        "type": "status",
-        "label": "Awaiting Plan Approval",
-        "value": "AWAITING_PLAN_APPROVAL",
-        "mode": "include"
-      }
-    ],
+    "expression": "OR(New() Updated() State(AWAITING_PLAN_APPROVAL))",
     "sorts": [
       {
         "field": "updated",
@@ -46,15 +24,7 @@
   {
     "name": "In Progress",
     "description": "All sessions currently in progress.",
-    "filters": [
-      {
-        "id": "status:IN_PROGRESS",
-        "type": "status",
-        "label": "In Progress",
-        "value": "IN_PROGRESS",
-        "mode": "include"
-      }
-    ],
+    "expression": "State(IN_PROGRESS)",
     "sorts": [
       {
         "field": "updated",
@@ -65,15 +35,7 @@
   {
     "name": "Pending Sessions",
     "description": "Sessions queued and waiting to be sent to server.",
-    "filters": [
-      {
-        "id": "status:QUEUED",
-        "type": "status",
-        "label": "Pending",
-        "value": "QUEUED",
-        "mode": "include"
-      }
-    ],
+    "expression": "State(QUEUED)",
     "sorts": [
       {
         "field": "created",
@@ -84,15 +46,7 @@
   {
     "name": "Draft Messages",
     "description": "Sessions with unsent draft messages.",
-    "filters": [
-      {
-        "id": "flag:draft",
-        "type": "flag",
-        "label": "Has Drafts",
-        "value": "draft",
-        "mode": "include"
-      }
-    ],
+    "expression": "Has(Drafts)",
     "sorts": [
       {
         "field": "updated",
@@ -103,22 +57,7 @@
   {
     "name": "Completed & Updated",
     "description": "Recently updated and completed sessions.",
-    "filters": [
-      {
-        "id": "status:COMPLETED",
-        "type": "status",
-        "label": "Completed",
-        "value": "COMPLETED",
-        "mode": "include"
-      },
-      {
-        "id": "flag:updated",
-        "type": "flag",
-        "label": "Updated",
-        "value": "updated",
-        "mode": "include"
-      }
-    ],
+    "expression": "AND(State(COMPLETED) Updated())",
     "sorts": [
       {
         "field": "updated",
@@ -129,15 +68,51 @@
   {
     "name": "My Watched Items",
     "description": "Sessions you are actively watching.",
-    "filters": [
+    "expression": "Watching()",
+    "sorts": [
       {
-        "id": "flag:watched",
-        "type": "flag",
-        "label": "Watching",
-        "value": "watched",
-        "mode": "include"
+        "field": "updated",
+        "direction": "descending"
       }
-    ],
+    ]
+  },
+  {
+    "name": "Open PRs",
+    "description": "Sessions with open pull requests.",
+    "expression": "PR(Open)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Merged PRs",
+    "description": "Sessions with merged pull requests.",
+    "expression": "PR(Merged)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Completed w/ PR (Unread/Updated)",
+    "description": "Completed sessions with PRs that are unread or recently updated.",
+    "expression": "AND(State(COMPLETED) Has(PR) OR(Unread() Updated()))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Completed w/o PR (Unread/Updated)",
+    "description": "Completed sessions without PRs that are unread or recently updated.",
+    "expression": "AND(State(COMPLETED) NOT(Has(PR)) OR(Unread() Updated()))",
     "sorts": [
       {
         "field": "updated",
