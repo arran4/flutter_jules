@@ -67,10 +67,10 @@ class GithubProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          if (data['draft'] == true) {
-            return 'Draft';
-          } else if (data['merged'] == true) {
+          if (data['merged'] == true) {
             return 'Merged';
+          } else if (data['draft'] == true) {
+            return 'Draft';
           } else if (data['state'] == 'closed') {
             return 'Closed';
           } else {
