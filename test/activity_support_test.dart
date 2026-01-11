@@ -7,7 +7,7 @@ void main() {
     late List<Activity> activities;
 
     setUpAll(() {
-      final json = jsonDecode(TEST_ACTIVITIES_JSON);
+      final json = jsonDecode(testActivitiesJson);
       activities = (json['activities'] as List)
           .map((e) => Activity.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -36,10 +36,7 @@ void main() {
       );
       expect(activity.originator, 'user');
       expect(activity.planApproved, isNotNull);
-      expect(
-        activity.planApproved!.planId,
-        '5103d604240042cd9f59a4cb2355643a',
-      );
+      expect(activity.planApproved!.planId, '5103d604240042cd9f59a4cb2355643a');
     });
 
     test('Parses Bash Command Output activity (5b3acd1b...)', () {
@@ -49,7 +46,7 @@ void main() {
       expect(activity.progressUpdated, isNotNull);
       expect(activity.artifacts, isNotNull);
       expect(activity.artifacts!.length, 1);
-      
+
       final artifact = activity.artifacts!.first;
       expect(artifact.bashOutput, isNotNull);
       expect(artifact.bashOutput!.command, contains('npm install'));
@@ -85,10 +82,10 @@ void main() {
         (a) => a.id == 'a76b35353eda42d09b1c37aedaa56047',
       );
       expect(activity.progressUpdated!.title, 'Frontend verification');
-      
+
       expect(activity.artifacts, isNotNull);
       expect(activity.artifacts!.length, 1);
-      
+
       final artifact = activity.artifacts!.first;
       expect(artifact.media, isNotNull);
       expect(artifact.media!.mimeType, 'image/png');
@@ -99,7 +96,7 @@ void main() {
         (a) => a.id == '022837dbc0e940eabcc1bc53608e15fc',
       );
       expect(activity.sessionCompleted, isNotNull);
-      
+
       final artifact = activity.artifacts!.first;
       expect(artifact.changeSet!.gitPatch!.suggestedCommitMessage, isNotNull);
       expect(
@@ -111,7 +108,7 @@ void main() {
 }
 
 // Formatted, multi-line JSON for better readability
-const TEST_ACTIVITIES_JSON = r'''
+const testActivitiesJson = r'''
 {
   "activities": [
     {

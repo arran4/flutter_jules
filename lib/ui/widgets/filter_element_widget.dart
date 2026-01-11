@@ -22,9 +22,10 @@ class FilterElementWidget extends StatelessWidget {
     FilterElement target,
     FilterDropAction action,
     bool isCopy,
-  )? onDrop;
+  )?
+  onDrop;
   final Function(FilterElement target, FilterElement alternative)?
-      onAddAlternative;
+  onAddAlternative;
   final bool isNegated;
 
   const FilterElementWidget({
@@ -115,8 +116,9 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is PrStatusElement) {
       final label = element.label;
-      final displayLabel =
-          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
+      final displayLabel = label.toUpperCase().startsWith('PR:')
+          ? label
+          : 'PR: $label';
       return _buildLeafElement(
         context,
         element,
@@ -127,8 +129,9 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is BranchElement) {
       final label = element.label;
-      final displayLabel =
-          label.startsWith('Branch:') ? label : 'Branch: $label';
+      final displayLabel = label.startsWith('Branch:')
+          ? label
+          : 'Branch: $label';
       return _buildLeafElement(
         context,
         element,
@@ -139,8 +142,9 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is CiStatusElement) {
       final label = element.label;
-      final displayLabel =
-          label.toUpperCase().startsWith('CI:') ? label : 'CI: $label';
+      final displayLabel = label.toUpperCase().startsWith('CI:')
+          ? label
+          : 'CI: $label';
       return _buildLeafElement(
         context,
         element,
@@ -192,38 +196,42 @@ class FilterElementWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header with operator label
-              InkWell(
-                onTap: onTap != null ? () => onTap!(element) : null,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+              GestureDetector(
+                onSecondaryTapUp: (details) =>
+                    _showContextMenu(context, details, element),
+                child: InkWell(
+                  onTap: onTap != null ? () => onTap!(element) : null,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
                   ),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(7),
-                      topRight: Radius.circular(7),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 14, color: textColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(7),
+                        topRight: Radius.circular(7),
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 14, color: textColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -350,10 +358,12 @@ class FilterElementWidget extends StatelessWidget {
     final items = <PopupMenuEntry<int>>[];
 
     // 1. Exclude/Include logic
+    final isComposite = element is AndElement || element is OrElement;
+    final excludeText = isComposite ? "Exclude this group" : "Exclude this";
     items.add(
       PopupMenuItem(
         value: 1,
-        child: Text(isNegated ? "Include this" : "Exclude this"),
+        child: Text(isNegated ? "Include this" : excludeText),
       ),
     );
 
@@ -522,11 +532,11 @@ class FilterElementWidget extends StatelessWidget {
 
     final isCtrlPressed =
         ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-              LogicalKeyboardKey.controlLeft,
-            ) ||
-            ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-              LogicalKeyboardKey.controlRight,
-            );
+          LogicalKeyboardKey.controlLeft,
+        ) ||
+        ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
+          LogicalKeyboardKey.controlRight,
+        );
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
