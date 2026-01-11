@@ -57,10 +57,12 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
       // But maybe selected first is nice.
       // Let's stick to the logic in NewSessionDialog: sources/ last, then alpha.
 
-      final isSourceA = labelA.startsWith('sources/') || a.name.startsWith('sources/');
-      final isSourceB = labelB.startsWith('sources/') || b.name.startsWith('sources/');
+      final isSourceA =
+          labelA.startsWith('sources/') || a.name.startsWith('sources/');
+      final isSourceB =
+          labelB.startsWith('sources/') || b.name.startsWith('sources/');
 
-       if (isSourceA != isSourceB) {
+      if (isSourceA != isSourceB) {
         return isSourceA ? 1 : -1;
       }
       return labelA.compareTo(labelB);
@@ -118,7 +120,9 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                     value: isSelected,
                     onChanged: (_) => _toggleSelection(source),
                     title: Text(_getSourceDisplayLabel(source)),
-                    secondary: isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                    secondary: isPrivate
+                        ? const Icon(Icons.lock, size: 16)
+                        : null,
                   );
                 },
               ),
