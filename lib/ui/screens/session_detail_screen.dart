@@ -947,11 +947,52 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     ],
                   ),
                   onTap: () async {
-                    final success = await resubmitSession(context, _session,
-                        hideOriginal: true);
-                    if (success && context.mounted) {
-                      Navigator.pop(context);
-                    }
+                    // This needs to be done without BuildContext, so we grab providers first
+                    final sessionProvider =
+                        Provider.of<SessionProvider>(context, listen: false);
+                    final authProvider =
+                        Provider.of<AuthProvider>(context, listen: false);
+                    final messageQueueProvider =
+                        Provider.of<MessageQueueProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final settingsProvider =
+                        Provider.of<SettingsProvider>(context, listen: false);
+
+                    // Allow user to configure new session
+                    final NewSessionResult? result =
+                        await showDialog<NewSessionResult>(
+                      context: context,
+                      builder: (context) =>
+                          NewSessionDialog(initialSession: _session),
+                    );
+
+                    if (result == null) return;
+
+                    // Immediately pop and do the work in the background
+                    if (context.mounted) Navigator.pop(context);
+
+                    // Show messages via the session list's scaffold
+                    final scaffoldMessenger = ScaffoldMessenger.of(
+                      sessionProvider.scaffoldKey.currentContext!,
+                    );
+                    final showMessage = (String msg) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(content: Text(msg)),
+                      );
+                    };
+
+                    handleNewSessionResultInBackground(
+                      result: result,
+                      originalSession: _session,
+                      hideOriginal: true,
+                      sessionProvider: sessionProvider,
+                      authProvider: authProvider,
+                      messageQueueProvider: messageQueueProvider,
+                      settingsProvider: settingsProvider,
+                      showMessage: showMessage,
+                    );
                   },
                 ),
                 const PopupMenuDivider(),
