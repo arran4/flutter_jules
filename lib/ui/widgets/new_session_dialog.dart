@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
+import '../../services/github_provider.dart';
+import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
@@ -182,6 +184,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // Only show loading state on explicit user action
     if (force) {
@@ -193,7 +198,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     try {
       if (force || sourceProvider.items.isEmpty) {
-        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+        await sourceProvider.fetchSources(
+          auth.client,
+          authToken: auth.token,
+          force: force,
+          githubProvider: githubProvider,
+          sessionProvider: sessionProvider,
+        );
       }
 
       if (mounted) {
@@ -986,13 +997,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               : () => _fetchSources(force: true),
                           icon: _isRefreshing
                               ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
+                                  width: 16,
+                                  height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.refresh, size: 14),
+                              : const Icon(Icons.refresh, size: 20),
                           label: Text(_refreshStatus),
                         ),
                       ],

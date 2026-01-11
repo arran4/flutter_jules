@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import '../models.dart';
-
+import 'github_provider.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
+import 'session_provider.dart';
 
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];
@@ -24,20 +26,18 @@ class SourceProvider extends ChangeNotifier {
     JulesClient client, {
     bool force = false,
     String? authToken,
+    GithubProvider? githubProvider,
+    SessionProvider? sessionProvider,
   }) async {
     // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
-      _items = await _cacheService!.loadSources(authToken);
-      notifyListeners();
-
-      // If we have data and not forcing, we can check if we should skip fetch
-      // But user requirement says: "until we manually refresh... OR if it sees a source it hasn't seen before"
-      // In the context of "sees a source it hasn't seen before", this usually implies
-      // checking against a known set (e.g. from session list source contexts).
-      // However, strictly "until we manually refresh" implies we should obey 'force'
-      // If not forced and we have items, we stop.
-      if (!force && _items.isNotEmpty) {
-        return;
+      if (!force) {
+        _items = await _cacheService!.loadSources(authToken);
+        notifyListeners();
+        if (_items.isNotEmpty) {
+          // If we have items and not forcing, we can stop.
+          return;
+        }
       }
     }
 
@@ -47,6 +47,19 @@ class SourceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
+      // Chain session fetch if requested
+      if (sessionProvider != null) {
+        // We don't wait for it here, but we trigger it.
+        // Let UI handle loading state of sessions.
+        unawaited(
+          sessionProvider.fetchSessions(
+            client,
+            authToken: authToken,
+            force: true,
+          ),
+        );
+      }
+
       List<Source> allSources = [];
       String? pageToken;
 
@@ -55,6 +68,49 @@ class SourceProvider extends ChangeNotifier {
         allSources.addAll(response.sources);
         pageToken = response.nextPageToken;
       } while (pageToken != null && pageToken.isNotEmpty);
+
+      // Enrich with GitHub data if provider is available
+      if (githubProvider != null && githubProvider.apiKey != null) {
+        List<Source> enrichedSources = [];
+        for (final source in allSources) {
+          if (source.githubRepo != null) {
+            final details = await githubProvider.getRepoDetails(
+              source.githubRepo!.owner,
+              source.githubRepo!.repo,
+            );
+            if (details != null) {
+              final enrichedRepo = GitHubRepo(
+                owner: source.githubRepo!.owner,
+                repo: source.githubRepo!.repo,
+                isPrivate: source.githubRepo!.isPrivate,
+                defaultBranch: source.githubRepo!.defaultBranch,
+                branches: source.githubRepo!.branches,
+                repoName: details['repoName'],
+                repoId: details['repoId'],
+                isPrivateGithub: details['isPrivateGithub'],
+                description: details['description'],
+                primaryLanguage: details['primaryLanguage'],
+                license: details['license'],
+                openIssuesCount: details['openIssuesCount'],
+                isFork: details['isFork'],
+                forkParent: details['forkParent'],
+              );
+              enrichedSources.add(
+                Source(
+                  name: source.name,
+                  id: source.id,
+                  githubRepo: enrichedRepo,
+                ),
+              );
+            } else {
+              enrichedSources.add(source); // Add original if enrichment fails
+            }
+          } else {
+            enrichedSources.add(source);
+          }
+        }
+        allSources = enrichedSources;
+      }
 
       if (_cacheService != null && authToken != null) {
         await _cacheService!.saveSources(authToken, allSources);

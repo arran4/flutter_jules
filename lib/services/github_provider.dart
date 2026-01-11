@@ -228,6 +228,65 @@ class GithubProvider extends ChangeNotifier {
     return job.result as String?;
   }
 
+  Future<Map<String, dynamic>?> getRepoDetails(
+    String owner,
+    String repo,
+  ) async {
+    if (_apiKey == null) {
+      return null;
+    }
+
+    final job = GithubJob(
+      id: 'repo_details_${owner}_$repo',
+      description: 'Get Repo Details: $owner/$repo',
+      action: () async {
+        final url = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo',
+        );
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+
+        _updateRateLimits(response.headers);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final license = data['license'];
+          final parent = data['parent'];
+
+          return {
+            'repoName': data['name'],
+            'repoId': data['id'],
+            'isPrivateGithub': data['private'],
+            'description': data['description'],
+            'primaryLanguage': data['language'],
+            'license': license != null ? license['name'] : null,
+            'openIssuesCount': data['open_issues_count'],
+            'isFork': data['fork'],
+            'forkParent': parent != null ? parent['full_name'] : null,
+          };
+        } else {
+          debugPrint(
+            'Failed to get repo details for $owner/$repo: ${response.statusCode} ${response.body}',
+          );
+          return null;
+        }
+      },
+    );
+
+    _queue.add(job);
+    _processQueue();
+    notifyListeners();
+
+    // Wait for job to complete
+    await job.completer.future;
+    return job.result as Map<String, dynamic>?;
+  }
+
   void _updateRateLimits(Map<String, String> headers) {
     if (headers.containsKey('x-ratelimit-limit')) {
       _rateLimitLimit = int.tryParse(headers['x-ratelimit-limit']!);
