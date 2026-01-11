@@ -20,6 +20,7 @@ import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
+import '../session_helpers.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -907,6 +908,36 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ),
                 ),
 
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_circle_outline),
+                      SizedBox(width: 8),
+                      Text('Resubmit as new session'),
+                    ],
+                  ),
+                  onTap: () async {
+                    await resubmitSession(context, _session,
+                        hideOriginal: false);
+                  },
+                ),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.visibility_off_outlined),
+                      SizedBox(width: 8),
+                      Text('Resubmit as new session and hide'),
+                    ],
+                  ),
+                  onTap: () async {
+                    final success = await resubmitSession(context, _session,
+                        hideOriginal: true);
+                    if (success && context.mounted) {
+                      Navigator.pop(context);
+                    }
+                  },
+                ),
                 const PopupMenuDivider(),
                 // Watch Toggle - we need to know current watch state.
                 // We access it via SessionProvider -> items.
