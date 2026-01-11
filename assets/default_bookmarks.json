@@ -11,6 +11,28 @@
     ]
   },
   {
+    "name": "CI: Failure",
+    "description": "Sessions with a CI failure.",
+    "expression": "CI(failure)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI: Success",
+    "description": "Sessions with a CI success.",
+    "expression": "CI(success)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
     "expression": "OR(New() Updated() State(AWAITING_PLAN_APPROVAL))",
@@ -91,6 +113,28 @@
     "name": "Merged PRs",
     "description": "Sessions with merged pull requests.",
     "expression": "PR(Merged)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI: Failure",
+    "description": "Sessions with a CI failure.",
+    "expression": "CI(failure)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI: Success",
+    "description": "Sessions with a CI success.",
+    "expression": "CI(success)",
     "sorts": [
       {
         "field": "updated",
