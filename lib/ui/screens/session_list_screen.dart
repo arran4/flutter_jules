@@ -785,13 +785,46 @@ class _SessionListScreenState extends State<SessionListScreen> {
       ),
     );
     suggestions.add(
-      const FilterToken(
+        const FilterToken(
         id: 'flag:draft',
         type: FilterType.flag,
         label: 'Has Drafts',
         value: 'draft',
       ),
     );
+
+      // Add "Has Notes" suggestion
+      suggestions.add(
+        const FilterToken(
+          id: 'has_notes',
+          type: FilterType.hasNotes,
+          label: 'Has Notes',
+          value: 'true',
+        ),
+      );
+
+      // Add tags from all sessions
+      final Set<String> allTags = {};
+      for (final session in sessions) {
+        if (session.metadata != null) {
+          for (final meta in session.metadata!) {
+            if (meta.key.toLowerCase() == 'tag') {
+              allTags.add(meta.value);
+            }
+          }
+        }
+      }
+
+      for (final tag in allTags) {
+        suggestions.add(
+          FilterToken(
+            id: 'tag:$tag',
+            type: FilterType.tag,
+            label: 'Tag: $tag',
+            value: tag,
+          ),
+        );
+      }
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -923,6 +956,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
         break;
       case FilterType.ciStatus:
         element = CiStatusElement(token.label, token.value.toString());
+        break;
+      case FilterType.tag:
+        element = TagElement(token.label, token.value.toString());
+        break;
+      case FilterType.hasNotes:
+        element = HasNotesElement();
         break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
