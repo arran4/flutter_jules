@@ -368,7 +368,7 @@ class BulkActionExecutor extends ChangeNotifier {
       case BulkActionType.forceRefreshPrStatus:
         if (authToken != null) {
           _addLog("Forcing a refresh of the PR status.", false, session.id);
-          await sessionProvider.refreshPrStatus(session.id, authToken);
+          await sessionProvider.refreshGitStatus(session.id, authToken);
         }
         break;
       case BulkActionType.forceApprovePlan:

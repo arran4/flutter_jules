@@ -46,8 +46,8 @@ class SessionMetaPills extends StatelessWidget {
             context,
             avatar: const Icon(Icons.calendar_today, size: 16),
             label: DateFormat.yMMMd().add_jm().format(
-              DateTime.parse(session.createTime!).toLocal(),
-            ),
+                  DateTime.parse(session.createTime!).toLocal(),
+                ),
             sortField: SortField.created,
           ),
 
@@ -118,13 +118,39 @@ class SessionMetaPills extends StatelessWidget {
             backgroundColor: session.prStatus == 'Draft'
                 ? Colors.amber.shade50
                 : (session.prStatus == 'Merged'
-                      ? Colors.purple.shade50
-                      : Colors.blue.shade50),
+                    ? Colors.purple.shade50
+                    : Colors.blue.shade50),
             filterToken: FilterToken(
               id: 'prStatus:${session.prStatus}',
               type: FilterType.prStatus,
               label: 'PR: ${session.prStatus}',
               value: session.prStatus!,
+            ),
+          ),
+
+        // CI Status
+        if (session.ciStatus != null)
+          _buildChip(
+            context,
+            label: 'CI: ${session.ciStatus}',
+            avatar: Icon(
+              session.ciStatus == 'Success'
+                  ? Icons.check_circle
+                  : (session.ciStatus == 'Failure'
+                      ? Icons.cancel
+                      : Icons.pending),
+              size: 16,
+            ),
+            backgroundColor: session.ciStatus == 'Success'
+                ? Colors.green.shade50
+                : (session.ciStatus == 'Failure'
+                    ? Colors.red.shade50
+                    : Colors.amber.shade50),
+            filterToken: FilterToken(
+              id: 'ciStatus:${session.ciStatus}',
+              type: FilterType.ciStatus,
+              label: 'CI: ${session.ciStatus}',
+              value: session.ciStatus!,
             ),
           ),
 

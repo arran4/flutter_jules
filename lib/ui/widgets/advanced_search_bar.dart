@@ -20,7 +20,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
 
   final List<FilterToken>
-  availableSuggestions; // All possible filters for autocomplete
+      availableSuggestions; // All possible filters for autocomplete
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -162,21 +162,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     _removeOverlay();
 
     // Group suggestions by type
-    final flagSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.flag)
-        .toList();
-    final statusSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.status)
-        .toList();
-    final sourceSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.source)
-        .toList();
+    final flagSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.flag).toList();
+    final statusSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.status).toList();
+    final sourceSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.source).toList();
     final prStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.prStatus)
         .toList();
-    final otherSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.text)
+    final ciStatusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.ciStatus)
         .toList();
+    final otherSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -201,20 +200,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      // Flags column
-                      if (flagSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Flags',
-                            flagSuggestions,
-                            Colors.orange,
-                          ),
-                        ),
-                      if (flagSuggestions.isNotEmpty &&
-                          (statusSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
                       // Status column
                       if (statusSuggestions.isNotEmpty)
                         Expanded(
@@ -225,6 +210,50 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (statusSuggestions.isNotEmpty &&
+                          (prStatusSuggestions.isNotEmpty ||
+                              flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // PR Status column
+                      if (prStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'PR Status',
+                            prStatusSuggestions,
+                            Colors.purple,
+                          ),
+                        ),
+                      if (prStatusSuggestions.isNotEmpty &&
+                          (ciStatusSuggestions.isNotEmpty ||
+                              flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // CI Status column
+                      if (ciStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'CI Status',
+                            ciStatusSuggestions,
+                            Colors.blueGrey,
+                          ),
+                        ),
+                      if (ciStatusSuggestions.isNotEmpty &&
+                          (flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // Flags column
+                      if (flagSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Flags',
+                            flagSuggestions,
+                            Colors.orange,
+                          ),
+                        ),
+                      if (flagSuggestions.isNotEmpty &&
                           sourceSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
@@ -238,33 +267,18 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (sourceSuggestions.isNotEmpty &&
-                          (prStatusSuggestions.isNotEmpty ||
-                              otherSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // PR Status column
-                      if (prStatusSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'PR Status',
-                            prStatusSuggestions,
-                            Colors.purple,
-                          ),
-                        ),
-                      if (prStatusSuggestions.isNotEmpty &&
                           otherSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
                       // Other/Text column
-                      if (otherSuggestions.isNotEmpty) ...[
+                      if (otherSuggestions.isNotEmpty)
                         Expanded(
                           child: _buildFilterColumn(
                             'Other',
                             otherSuggestions,
-                            Colors.purple,
+                            Colors.grey,
                           ),
                         ),
-                      ],
                     ],
                   ),
                 ),
@@ -361,6 +375,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.prStatus:
         newElement = PrStatusElement(token.label, token.value.toString());
         break;
+      case FilterType.ciStatus:
+        newElement = CiStatusElement(token.label, token.value.toString());
+        break;
       case FilterType.branch:
         newElement = BranchElement(token.label, token.value.toString());
         break;
@@ -406,6 +423,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.source;
       case FilterType.prStatus:
         return Icons.merge; // PR icon
+      case FilterType.ciStatus:
+        return Icons.check_circle_outline;
       case FilterType.branch:
         return Icons.account_tree;
       case FilterType.text:
@@ -552,8 +571,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                             onSubmitted: (value) {
                                               final newTree =
                                                   FilterExpressionParser.parse(
-                                                    value,
-                                                  );
+                                                value,
+                                              );
                                               widget.onFilterTreeChanged(
                                                 newTree,
                                               );
@@ -575,110 +594,112 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                         alignment: Alignment.topLeft,
                                         child: FilterElementWidget(
                                           element: widget.filterTree,
-                                          onAddAlternative: (target, alternative) {
-                                            final newTree =
-                                                FilterElementBuilder.groupFilters(
-                                                  widget.filterTree,
-                                                  target,
-                                                  alternative,
-                                                  isAnd: false,
-                                                );
+                                          onAddAlternative:
+                                              (target, alternative) {
+                                            final newTree = FilterElementBuilder
+                                                .groupFilters(
+                                              widget.filterTree,
+                                              target,
+                                              alternative,
+                                              isAnd: false,
+                                            );
                                             final simplified =
                                                 FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
+                                              newTree,
+                                            );
                                             widget.onFilterTreeChanged(
                                               simplified,
                                             );
                                           },
-                                          onDrop: (source, target, action, isCtrlPressed) {
+                                          onDrop: (source, target, action,
+                                              isCtrlPressed) {
                                             var newTree = widget.filterTree;
 
                                             // Clone source so we can add a new instance and remove the old one (if move)
                                             final sourceCopy =
                                                 FilterElement.fromJson(
-                                                  source.toJson(),
-                                                );
+                                              source.toJson(),
+                                            );
                                             final isCopy = isCtrlPressed;
 
                                             // 1. Perform the Add/Group operation with the Copy
                                             switch (action) {
                                               case FilterDropAction.groupOr:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: false,
-                                                    );
+                                                newTree = FilterElementBuilder
+                                                    .groupFilters(
+                                                  newTree,
+                                                  target,
+                                                  sourceCopy,
+                                                  isAnd: false,
+                                                );
                                                 break;
                                               case FilterDropAction.groupAnd:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: true,
-                                                    );
+                                                newTree = FilterElementBuilder
+                                                    .groupFilters(
+                                                  newTree,
+                                                  target,
+                                                  sourceCopy,
+                                                  isAnd: true,
+                                                );
                                                 break;
                                               case FilterDropAction.addToGroup:
-                                                newTree =
-                                                    FilterElementBuilder.addFilterToComposite(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                    );
+                                                newTree = FilterElementBuilder
+                                                    .addFilterToComposite(
+                                                  newTree,
+                                                  target,
+                                                  sourceCopy,
+                                                );
                                                 break;
                                               case FilterDropAction
-                                                  .groupAboveAnd:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: true,
-                                                    );
+                                                    .groupAboveAnd:
+                                                newTree = FilterElementBuilder
+                                                    .groupFilters(
+                                                  newTree,
+                                                  target,
+                                                  sourceCopy,
+                                                  isAnd: true,
+                                                );
                                                 break;
                                               case FilterDropAction
-                                                  .groupAboveOr:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: false,
-                                                    );
+                                                    .groupAboveOr:
+                                                newTree = FilterElementBuilder
+                                                    .groupFilters(
+                                                  newTree,
+                                                  target,
+                                                  sourceCopy,
+                                                  isAnd: false,
+                                                );
                                                 break;
                                             }
 
                                             // 2. Remove the original source if it is a move operation
                                             if (!isCopy && newTree != null) {
-                                              newTree =
-                                                  FilterElementBuilder.removeFilter(
-                                                    newTree,
-                                                    source,
-                                                  );
+                                              newTree = FilterElementBuilder
+                                                  .removeFilter(
+                                                newTree,
+                                                source,
+                                              );
                                             }
 
                                             // 3. Simplify and update
                                             final simplified =
                                                 FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
+                                              newTree,
+                                            );
                                             widget.onFilterTreeChanged(
                                               simplified,
                                             );
                                           },
                                           onRemove: (element) {
-                                            final newTree =
-                                                FilterElementBuilder.removeFilter(
-                                                  widget.filterTree,
-                                                  element,
-                                                );
+                                            final newTree = FilterElementBuilder
+                                                .removeFilter(
+                                              widget.filterTree,
+                                              element,
+                                            );
                                             final simplified =
                                                 FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
+                                              newTree,
+                                            );
                                             widget.onFilterTreeChanged(
                                               simplified,
                                             );
@@ -686,9 +707,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                           onToggleNot: (element) {
                                             final newTree =
                                                 FilterElementBuilder.toggleNot(
-                                                  widget.filterTree!,
-                                                  element,
-                                                );
+                                              widget.filterTree!,
+                                              element,
+                                            );
                                             widget.onFilterTreeChanged(newTree);
                                           },
                                           onTap: null,

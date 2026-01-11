@@ -1,6 +1,6 @@
 [
   {
-    "name": "Default View",
+    "name": "Empty View",
     "description": "The standard view, sorted by last update.",
     "expression": "",
     "sorts": [

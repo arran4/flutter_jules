@@ -58,6 +58,18 @@ void main() {
         expect(find.text('PR: Draft'), findsOneWidget);
         expect(find.text('PR: PR: Draft'), findsNothing);
       },
+      FilterElementType.ciStatus: (tester) async {
+        // CiStatusElement
+        // Case 1: Simple label
+        await pumpElement(tester, CiStatusElement('Success', 'success'));
+        expect(find.text('CI: Success'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+
+        // Case 2: Redundant prefix regression test
+        await pumpElement(tester, CiStatusElement('CI: Failure', 'failure'));
+        expect(find.text('CI: Failure'), findsOneWidget);
+        expect(find.text('CI: CI: Failure'), findsNothing);
+      },
       FilterElementType.branch: (tester) async {
         // BranchElement
         await pumpElement(tester, BranchElement('main', 'main'));
