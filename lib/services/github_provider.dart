@@ -3,6 +3,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
+import 'package:dartobjectutils/dartobjectutils.dart';
 
 class GithubProvider extends ChangeNotifier {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
@@ -39,7 +40,7 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<Map<String, dynamic>?> getPrStatus(
+  Future<GitHubPrResponse?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
@@ -67,15 +68,7 @@ class GithubProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          if (data['merged'] == true) {
-            return 'Merged';
-          } else if (data['draft'] == true) {
-            return 'Draft';
-          } else if (data['state'] == 'closed') {
-            return 'Closed';
-          } else {
-            return data;
-          }
+          return GitHubPrResponse(data);
         } else {
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
@@ -91,7 +84,7 @@ class GithubProvider extends ChangeNotifier {
 
     // Wait for job to complete
     await job.completer.future;
-    return job.result as Map<String, dynamic>?;
+    return job.result as GitHubPrResponse?;
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
@@ -388,4 +381,31 @@ class GithubJob {
     required this.description,
     required this.action,
   });
+}
+
+class GitHubPrResponse {
+  final Map<String, dynamic> _data;
+
+  GitHubPrResponse(this._data);
+
+  bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
+  bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
+  String get state => getStringPropOrDefault(_data, 'state', '');
+  String? get mergeableState =>
+      getStringPropOrDefault(_data, 'mergeable_state', null);
+  int? get additions =>
+      getNumberPropOrDefault<num?>(_data, 'additions', null)?.toInt();
+  int? get deletions =>
+      getNumberPropOrDefault<num?>(_data, 'deletions', null)?.toInt();
+  int? get changedFiles =>
+      getNumberPropOrDefault<num?>(_data, 'changed_files', null)?.toInt();
+  String? get diffUrl => getStringPropOrDefault(_data, 'diff_url', null);
+  String? get patchUrl => getStringPropOrDefault(_data, 'patch_url', null);
+
+  String get displayStatus {
+    if (isMerged == true) return 'Merged';
+    if (isDraft == true) return 'Draft';
+    if (state == 'closed') return 'Closed';
+    return 'Open';
+  }
 }

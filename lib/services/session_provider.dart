@@ -698,19 +698,19 @@ class SessionProvider extends ChangeNotifier {
       _githubProvider!.getCIStatus(owner, repo, prNumber),
     ]);
 
-    final prData = results[0] as Map<String, dynamic>?;
+    final prResponse = results[0] as GitHubPrResponse?;
     final ciStatus = results[1] as String?;
 
     // Update session with new statuses
     final updatedSession = session.copyWith(
-      prStatus: prData != null ? _getPrStatusString(prData) : session.prStatus,
+      prStatus: prResponse?.displayStatus ?? session.prStatus,
       ciStatus: ciStatus ?? session.ciStatus,
-      mergeableState: prData?['mergeable_state'],
-      additions: prData?['additions'],
-      deletions: prData?['deletions'],
-      changedFiles: prData?['changed_files'],
-      diffUrl: prData?['diff_url'],
-      patchUrl: prData?['patch_url'],
+      mergeableState: prResponse?.mergeableState,
+      additions: prResponse?.additions,
+      deletions: prResponse?.deletions,
+      changedFiles: prResponse?.changedFiles,
+      diffUrl: prResponse?.diffUrl,
+      patchUrl: prResponse?.patchUrl,
     );
 
     // Update in cache
@@ -748,13 +748,6 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
-  String _getPrStatusString(Map<String, dynamic> prData) {
-    if (prData['merged'] == true) return 'Merged';
-    if (prData['draft'] == true) return 'Draft';
-    if (prData['state'] == 'closed') return 'Closed';
-    return 'Open';
-  }
-
   Future<void> _refreshGitStatusInBackground(
     String sessionId,
     String prUrl,
@@ -775,25 +768,24 @@ class SessionProvider extends ChangeNotifier {
         _githubProvider!.getPrStatus(owner, repo, prNumber),
         _githubProvider!.getCIStatus(owner, repo, prNumber),
       ]);
-      final prData = results[0] as Map<String, dynamic>?;
+      final prResponse = results[0] as GitHubPrResponse?;
       final ciStatus = results[1] as String?;
 
-      if (prData != null || ciStatus != null) {
+      if (prResponse != null || ciStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          final prStatus = prData != null ? _getPrStatusString(prData) : null;
 
           final updatedSession = item.data.copyWith(
-            prStatus: prStatus ?? item.data.prStatus,
+            prStatus: prResponse?.displayStatus ?? item.data.prStatus,
             ciStatus: ciStatus ?? item.data.ciStatus,
-            mergeableState: prData?['mergeable_state'],
-            additions: prData?['additions'],
-            deletions: prData?['deletions'],
-            changedFiles: prData?['changed_files'],
-            diffUrl: prData?['diff_url'],
-            patchUrl: prData?['patch_url'],
+            mergeableState: prResponse?.mergeableState,
+            additions: prResponse?.additions,
+            deletions: prResponse?.deletions,
+            changedFiles: prResponse?.changedFiles,
+            diffUrl: prResponse?.diffUrl,
+            patchUrl: prResponse?.patchUrl,
           );
 
           // Save to cache
