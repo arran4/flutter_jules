@@ -71,6 +71,12 @@ class Session {
   final String? currentAction;
   final String? prStatus;
   final String? ciStatus;
+  final String? mergeableState;
+  final int? additions;
+  final int? deletions;
+  final int? changedFiles;
+  final String? diffUrl;
+  final String? patchUrl;
 
   Session({
     required this.name,
@@ -91,6 +97,12 @@ class Session {
     this.currentAction,
     this.prStatus,
     this.ciStatus,
+    this.mergeableState,
+    this.additions,
+    this.deletions,
+    this.changedFiles,
+    this.diffUrl,
+    this.patchUrl,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -149,6 +161,13 @@ class Session {
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
       prStatus: getStringPropOrDefault(json, 'prStatus', null),
       ciStatus: getStringPropOrDefault(json, 'ciStatus', null),
+      mergeableState: getStringPropOrDefault(json, 'mergeableState', null),
+      additions: getNumberPropOrDefault<num?>(json, 'additions', null)?.toInt(),
+      deletions: getNumberPropOrDefault<num?>(json, 'deletions', null)?.toInt(),
+      changedFiles:
+          getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
+      diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
+      patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
     );
   }
 
@@ -183,6 +202,12 @@ class Session {
     if (currentAction != null) map['currentAction'] = currentAction;
     if (prStatus != null) map['prStatus'] = prStatus;
     if (ciStatus != null) map['ciStatus'] = ciStatus;
+    if (mergeableState != null) map['mergeableState'] = mergeableState;
+    if (additions != null) map['additions'] = additions;
+    if (deletions != null) map['deletions'] = deletions;
+    if (changedFiles != null) map['changedFiles'] = changedFiles;
+    if (diffUrl != null) map['diffUrl'] = diffUrl;
+    if (patchUrl != null) map['patchUrl'] = patchUrl;
     return map;
   }
 
@@ -205,6 +230,12 @@ class Session {
     String? currentAction,
     String? prStatus,
     String? ciStatus,
+    String? mergeableState,
+    int? additions,
+    int? deletions,
+    int? changedFiles,
+    String? diffUrl,
+    String? patchUrl,
   }) {
     return Session(
       name: name ?? this.name,
@@ -225,6 +256,12 @@ class Session {
       currentAction: currentAction ?? this.currentAction,
       prStatus: prStatus ?? this.prStatus,
       ciStatus: ciStatus ?? this.ciStatus,
+      mergeableState: mergeableState ?? this.mergeableState,
+      additions: additions ?? this.additions,
+      deletions: deletions ?? this.deletions,
+      changedFiles: changedFiles ?? this.changedFiles,
+      diffUrl: diffUrl ?? this.diffUrl,
+      patchUrl: patchUrl ?? this.patchUrl,
     );
   }
 }
