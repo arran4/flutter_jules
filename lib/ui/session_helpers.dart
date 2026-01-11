@@ -119,19 +119,15 @@ Future<bool> resubmitSession(
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Original session hidden."),
-          ),
+          const SnackBar(content: Text("Original session hidden.")),
         );
       }
     }
   } else if (anySucceeded) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("New session(s) created."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("New session(s) created.")));
     }
   }
 

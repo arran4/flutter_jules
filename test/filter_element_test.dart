@@ -558,11 +558,7 @@ void main() {
       sourceContext: SourceContext(source: 'sources/github/test/repo'),
     );
 
-    final sessionWithoutSource = Session(
-      name: 'test',
-      id: '2',
-      prompt: 'test',
-    );
+    final sessionWithoutSource = Session(name: 'test', id: '2', prompt: 'test');
 
     final contextWithSource = FilterContext(
       session: sessionWithSource,

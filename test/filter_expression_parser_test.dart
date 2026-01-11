@@ -27,7 +27,10 @@ void main() {
     });
 
     test('Should parse Has(NoSource)', () {
-      expect(FilterExpressionParser.parse('Has(NoSource)'), isA<NoSourceElement>());
+      expect(
+        FilterExpressionParser.parse('Has(NoSource)'),
+        isA<NoSourceElement>(),
+      );
     });
 
     test('Should strip technical prefixes in State()', () {
@@ -84,14 +87,18 @@ void main() {
     });
 
     test('Should parse time-based filters', () {
-      final before = FilterExpressionParser.parse('before(yesterday)')
-          as TimeFilterElement;
+      final before =
+          FilterExpressionParser.parse('before(yesterday)')
+              as TimeFilterElement;
       expect(before.value.type, TimeFilterType.olderThan);
-      expect(before.value.specificTime?.day,
-          DateTime.now().subtract(const Duration(days: 1)).day);
+      expect(
+        before.value.specificTime?.day,
+        DateTime.now().subtract(const Duration(days: 1)).day,
+      );
 
-      final after = FilterExpressionParser.parse('after(2023-10-27)')
-          as TimeFilterElement;
+      final after =
+          FilterExpressionParser.parse('after(2023-10-27)')
+              as TimeFilterElement;
       expect(after.value.type, TimeFilterType.newerThan);
       expect(after.value.specificTime, DateTime(2023, 10, 27));
 
@@ -102,11 +109,14 @@ void main() {
       expect(between.value.specificTime, DateTime(2023, 10, 27));
       expect(between.value.specificTimeEnd, DateTime(2023, 10, 28));
 
-      final afterDuration = FilterExpressionParser.parse('after(last 24 hours)')
-          as TimeFilterElement;
+      final afterDuration =
+          FilterExpressionParser.parse('after(last 24 hours)')
+              as TimeFilterElement;
       expect(afterDuration.value.type, TimeFilterType.newerThan);
-      expect(afterDuration.value.specificTime?.hour,
-          DateTime.now().subtract(const Duration(hours: 24)).hour);
+      expect(
+        afterDuration.value.specificTime?.hour,
+        DateTime.now().subtract(const Duration(hours: 24)).hour,
+      );
     });
   });
 }
