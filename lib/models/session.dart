@@ -2,6 +2,7 @@ import 'package:dartobjectutils/dartobjectutils.dart';
 import 'enums.dart';
 import 'source.dart';
 import 'media.dart';
+import 'note.dart';
 
 class PullRequest {
   final String url;
@@ -77,6 +78,7 @@ class Session {
   final int? changedFiles;
   final String? diffUrl;
   final String? patchUrl;
+  final Note? note;
 
   Session({
     required this.name,
@@ -103,6 +105,7 @@ class Session {
     this.changedFiles,
     this.diffUrl,
     this.patchUrl,
+    this.note,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -169,6 +172,12 @@ class Session {
           getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
+      note: getObjectFunctionPropOrDefault(
+        json,
+        'note',
+        Note.fromJson,
+        null,
+      ),
     );
   }
 
@@ -211,6 +220,7 @@ class Session {
     if (changedFiles != null) map['changedFiles'] = changedFiles;
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
+    if (note != null) map['note'] = note!.toJson();
     return map;
   }
 
@@ -240,6 +250,7 @@ class Session {
     int? changedFiles,
     String? diffUrl,
     String? patchUrl,
+    Note? note,
   }) {
     return Session(
       name: name ?? this.name,
@@ -268,6 +279,7 @@ class Session {
       changedFiles: changedFiles ?? this.changedFiles,
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
+      note: note ?? this.note,
     );
   }
 }

@@ -24,6 +24,7 @@ import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
+import '../widgets/note_dialog.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -790,6 +791,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Has Drafts',
         value: 'draft',
+      ),
+    );
+    suggestions.add(
+      const FilterToken(
+        id: 'flag:has_notes',
+        type: FilterType.flag,
+        label: 'Has Notes',
+        value: 'has_notes',
       ),
     );
 
@@ -2539,6 +2548,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.note_add),
+              SizedBox(width: 8),
+              Text('Edit Note'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) _editNote(session);
+            });
+          },
+        ),
         const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
@@ -2714,5 +2737,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _openSourceUrl(session.sourceContext!.source);
       }
     });
+  }
+
+  Future<void> _editNote(Session session) async {
+    final newNote = await showDialog<Note>(
+      context: context,
+      builder: (context) => NoteDialog(note: session.note),
+    );
+
+    if (newNote != null) {
+      if (!mounted) return;
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final authProvider = Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      );
+      sessionProvider.updateSession(
+        session.copyWith(note: newNote),
+        authToken: authProvider.token,
+      );
+    }
   }
 }
