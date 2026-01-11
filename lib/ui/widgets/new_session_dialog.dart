@@ -86,8 +86,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
-      final mode =
-          widget.initialSession!.automationMode ??
+      final mode = widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -151,7 +150,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-              _filteredSources.length;
+                  _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -307,10 +306,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!
-              .sourceContext
-              .githubRepoContext!
-              .startingBranch;
+              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
         }
       } else {
         // Set default branch
@@ -386,9 +382,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading: isPrivate
-                            ? const Icon(Icons.lock, size: 16)
-                            : null,
+                        leading:
+                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -901,38 +896,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     controller: _promptController,
                     autofocus: true,
                     maxLines: 6,
-                    decoration: InputDecoration(
+                    decoration: const InputDecoration(
                       labelText: 'Prompt',
                       hintText: 'Describe what you want to do...',
-                      border: const OutlineInputBorder(),
+                      border: OutlineInputBorder(),
                       alignLabelWithHint: true,
-                      suffixIcon: widget.initialSession != null
-                          ? IconButton(
-                              icon: const Icon(Icons.content_paste_go),
-                              tooltip: 'Import Prompt from Original Session',
-                              onPressed: () {
-                                if (widget.initialSession == null) return;
-                                final originalPrompt =
-                                    widget.initialSession!.prompt;
-                                final currentText = _promptController.text;
-
-                                if (currentText.trim().isNotEmpty) {
-                                  const separator =
-                                      '\n\n--- Imported Prompt ---\n';
-                                  _promptController.text =
-                                      '$currentText$separator$originalPrompt';
-                                } else {
-                                  _promptController.text = originalPrompt;
-                                }
-                                _promptController.selection =
-                                    TextSelection.fromPosition(
-                                      TextPosition(
-                                        offset: _promptController.text.length,
-                                      ),
-                                    );
-                              },
-                            )
-                          : null,
                     ),
                     onChanged: (val) => setState(() {}),
                   ),
@@ -1065,9 +1033,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   border: const OutlineInputBorder(),
                                   prefixIcon:
                                       (_selectedSource?.githubRepo?.isPrivate ==
-                                          true)
-                                      ? const Icon(Icons.lock, size: 16)
-                                      : const Icon(Icons.source, size: 16),
+                                              true)
+                                          ? const Icon(Icons.lock, size: 16)
+                                          : const Icon(Icons.source, size: 16),
                                   suffixIcon: IconButton(
                                     icon: const Icon(Icons.close, size: 16),
                                     onPressed: () {
@@ -1144,8 +1112,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed:
-                          (_promptController.text.isNotEmpty &&
+                      onPressed: (_promptController.text.isNotEmpty &&
                               (_selectedSource != null ||
                                   _bulkSelections.length > 1))
                           ? _create

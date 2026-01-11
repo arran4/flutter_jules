@@ -72,10 +72,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final titleMatches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                (session.name.toLowerCase().contains(query)) ||
-                (session.id.toLowerCase().contains(query)) ||
-                (session.state?.displayName.toLowerCase().contains(query) ??
-                    false);
+                    (session.name.toLowerCase().contains(query)) ||
+                    (session.id.toLowerCase().contains(query)) ||
+                    (session.state?.displayName.toLowerCase().contains(query) ??
+                        false);
             if (!titleMatches) return false;
           }
 
@@ -227,9 +227,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 style: const TextStyle(fontSize: 12),
                                 onChanged: (val) {
                                   setState(() {
-                                    _limit = val.isEmpty
-                                        ? null
-                                        : int.tryParse(val);
+                                    _limit =
+                                        val.isEmpty ? null : int.tryParse(val);
                                   });
                                   _updatePreview();
                                 },
@@ -357,9 +356,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed: _totalMatches > 0 && _actions.isNotEmpty
-              ? _startJob
-              : null,
+          onPressed:
+              _totalMatches > 0 && _actions.isNotEmpty ? _startJob : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Run Bulk Actions'),
         ),
@@ -550,9 +548,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final matches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                (session.name.toLowerCase().contains(query)) ||
-                (session.id.toLowerCase().contains(query)) ||
-                (session.state.toString().toLowerCase().contains(query));
+                    (session.name.toLowerCase().contains(query)) ||
+                    (session.id.toLowerCase().contains(query)) ||
+                    (session.state.toString().toLowerCase().contains(query));
             if (!matches) return false;
           }
 

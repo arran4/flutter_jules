@@ -7,7 +7,7 @@ void main() {
     late List<Activity> activities;
 
     setUpAll(() {
-      final json = jsonDecode(testActivitiesJson);
+      final json = jsonDecode(TEST_ACTIVITIES_JSON);
       activities = (json['activities'] as List)
           .map((e) => Activity.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -36,7 +36,10 @@ void main() {
       );
       expect(activity.originator, 'user');
       expect(activity.planApproved, isNotNull);
-      expect(activity.planApproved!.planId, '5103d604240042cd9f59a4cb2355643a');
+      expect(
+        activity.planApproved!.planId,
+        '5103d604240042cd9f59a4cb2355643a',
+      );
     });
 
     test('Parses Bash Command Output activity (5b3acd1b...)', () {
@@ -108,7 +111,7 @@ void main() {
 }
 
 // Formatted, multi-line JSON for better readability
-const testActivitiesJson = r'''
+const TEST_ACTIVITIES_JSON = r'''
 {
   "activities": [
     {
