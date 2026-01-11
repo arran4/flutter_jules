@@ -141,5 +141,27 @@
         "direction": "descending"
       }
     ]
+  },
+  {
+    "name": "Active CI Failures",
+    "description": "Open PRs with failed CI checks.",
+    "expression": "AND(CI(Failure) PR(Open))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI Passing (Open)",
+    "description": "Open PRs with passing CI checks.",
+    "expression": "AND(CI(Success) PR(Open))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
   }
 ]
