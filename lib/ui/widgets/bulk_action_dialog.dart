@@ -527,7 +527,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       sorts: _sorts,
       actions: _actions,
       parallelQueries: _parallelQueries,
-      waitBetweenSeconds: _waitBetween.inSeconds,
+      waitBetween: _waitBetween,
       limit: _limit,
       offset: _offset,
       randomize: _randomize,

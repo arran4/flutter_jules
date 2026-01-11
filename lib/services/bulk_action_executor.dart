@@ -47,7 +47,7 @@ class BulkActionExecutor extends ChangeNotifier {
 
   int get waitBetweenSeconds => _waitBetweenSecondsOverride != -1
       ? _waitBetweenSecondsOverride
-      : (_config?.waitBetweenSeconds ?? 2);
+      : (_config?.waitBetween.inSeconds ?? 2);
 
   set waitBetweenSeconds(int value) {
     _waitBetweenSecondsOverride = value;
