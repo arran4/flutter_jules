@@ -184,6 +184,41 @@ class SessionMetaPills extends StatelessWidget {
             avatar: const Icon(Icons.edit_document, size: 16),
             backgroundColor: Colors.grey.shade200,
           ),
+
+        // Tags
+        if (session.metadata != null)
+          ...session.metadata!
+              .where((m) => m.key.toLowerCase() == 'tag')
+              .map(
+                (m) => _buildChip(
+                  context,
+                  label: m.value,
+                  avatar: const Icon(Icons.tag, size: 16),
+                  backgroundColor: Colors.grey.shade200,
+                  filterToken: FilterToken(
+                    id: 'tag:${m.value}',
+                    type: FilterType.tag,
+                    label: m.value,
+                    value: m.value,
+                  ),
+                ),
+              ),
+
+        // Notes
+        if (session.note != null && session.note!.content.isNotEmpty)
+          _buildChip(
+            context,
+            label: 'Notes',
+            avatar: const Icon(Icons.note, size: 16),
+            backgroundColor: Colors.yellow.shade100,
+            tooltip: session.note!.content,
+            filterToken: const FilterToken(
+              id: 'has_notes',
+              type: FilterType.hasNotes,
+              label: 'Has Notes',
+              value: 'true',
+            ),
+          ),
       ],
     );
   }
@@ -262,6 +297,7 @@ class SessionMetaPills extends StatelessWidget {
     Widget? avatar,
     FilterToken? filterToken,
     SortField? sortField,
+    String? tooltip,
   }) {
     Widget chip = Chip(
       label: Text(label, style: compact ? const TextStyle(fontSize: 10) : null),
@@ -271,6 +307,13 @@ class SessionMetaPills extends StatelessWidget {
       padding: compact ? const EdgeInsets.all(0) : null,
       visualDensity: compact ? VisualDensity.compact : null,
     );
+
+    if (tooltip != null) {
+      chip = Tooltip(
+        message: tooltip,
+        child: chip,
+      );
+    }
 
     if (filterToken != null) {
       chip = Draggable<FilterToken>(
