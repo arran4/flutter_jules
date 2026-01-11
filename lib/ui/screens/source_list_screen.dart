@@ -5,6 +5,7 @@ import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
+import '../../services/github_provider.dart';
 import '../../services/source_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
@@ -165,19 +166,18 @@ class _SourceListScreenState extends State<SourceListScreen> {
   Future<void> _refreshData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
-    await Future.wait([
-      sourceProvider.fetchSources(auth.client, authToken: auth.token),
-      sessionProvider.fetchSessions(
-        auth.client,
-        authToken: auth.token,
-        force: true,
-      ), // Also refresh stats
-    ]);
+    // This will trigger both source and session refreshes
+    await sourceProvider.fetchSources(
+      auth.client,
+      authToken: auth.token,
+      force: true,
+      githubProvider: githubProvider,
+      sessionProvider: sessionProvider,
+    );
 
     _processSessions();
     _onSearchChanged();
@@ -454,8 +454,58 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
                                             children: [
+                                              if (repo?.description != null &&
+                                                  repo!.description!.isNotEmpty)
+                                                Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                    bottom: 4.0,
+                                                  ),
+                                                  child: Text(
+                                                    repo.description!,
+                                                    maxLines: 2,
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                    style: Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall,
+                                                  ),
+                                                ),
                                               Text(
                                                 '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  if (repo?.primaryLanguage !=
+                                                      null)
+                                                    _buildInfoPill(
+                                                      context,
+                                                      repo!.primaryLanguage!,
+                                                      Icons.code,
+                                                    ),
+                                                  if (repo?.openIssuesCount !=
+                                                          null &&
+                                                      repo!.openIssuesCount! >
+                                                          0)
+                                                    _buildInfoPill(
+                                                      context,
+                                                      '${repo.openIssuesCount} open issues',
+                                                      Icons.bug_report,
+                                                    ),
+                                                  if (repo?.isFork ?? false)
+                                                    _buildInfoPill(
+                                                      context,
+                                                      'Fork',
+                                                      Icons.call_split,
+                                                    ),
+                                                  if (item.metadata.isNew)
+                                                    _buildStatusPill(
+                                                      context,
+                                                      'NEW',
+                                                      Colors.green,
+                                                    ),
+                                                ],
                                               ),
                                               const SizedBox(height: 4),
                                               Row(
@@ -493,34 +543,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                         context,
                                                       ).textTheme.bodySmall,
                                                     ),
-                                                  if (item.metadata.isNew)
-                                                    Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                        left: 8.0,
-                                                      ),
-                                                      child: Container(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 4,
-                                                          vertical: 2,
-                                                        ),
-                                                        color: Colors.green,
-                                                        child: const Text(
-                                                          'NEW',
-                                                          style: TextStyle(
-                                                            color: Colors.white,
-                                                            fontSize: 10,
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    ),
                                                 ],
                                               ),
                                             ],
                                           ),
-                                          isThreeLine: true,
                                           onTap: () {
                                             Navigator.push(
                                               context,
@@ -542,6 +568,50 @@ class _SourceListScreenState extends State<SourceListScreen> {
                     ),
         );
       },
+    );
+  }
+
+  Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surfaceContainerHighest,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Row(
+        children: [
+          Icon(icon, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          const SizedBox(width: 4),
+          Text(
+            text,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
+                ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatusPill(
+    BuildContext context,
+    String text,
+    Color color,
+  ) {
+    return Container(
+      margin: const EdgeInsets.only(right: 6.0),
+      padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(4),
+      ),
+      child: Text(
+        text,
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: Colors.white,
+            ),
+      ),
     );
   }
 }
