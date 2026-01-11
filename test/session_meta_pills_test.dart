@@ -4,8 +4,9 @@ import 'package:flutter_jules/ui/widgets/session_meta_pills.dart';
 import 'package:flutter_jules/models.dart';
 
 void main() {
-  testWidgets('SessionMetaPills shows Merged PR status',
-      (WidgetTester tester) async {
+  testWidgets('SessionMetaPills shows Merged PR status', (
+    WidgetTester tester,
+  ) async {
     final session = Session(
       name: 'test-session',
       id: '123',
@@ -16,9 +17,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SessionMetaPills(session: session),
-        ),
+        home: Scaffold(body: SessionMetaPills(session: session)),
       ),
     );
 
@@ -29,8 +28,9 @@ void main() {
     expect(find.byIcon(Icons.merge_type), findsOneWidget);
   });
 
-  testWidgets('SessionMetaPills shows Open PR status',
-      (WidgetTester tester) async {
+  testWidgets('SessionMetaPills shows Open PR status', (
+    WidgetTester tester,
+  ) async {
     final session = Session(
       name: 'test-session',
       id: '123',
@@ -41,9 +41,7 @@ void main() {
 
     await tester.pumpWidget(
       MaterialApp(
-        home: Scaffold(
-          body: SessionMetaPills(session: session),
-        ),
+        home: Scaffold(body: SessionMetaPills(session: session)),
       ),
     );
 
