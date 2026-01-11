@@ -301,8 +301,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique =
-                _activities.where((a) => !newIds.contains(a.id)).toList();
+            final oldUnique = _activities
+                .where((a) => !newIds.contains(a.id))
+                .toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -572,14 +573,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Future<void> _handleNewSessionResult(NewSessionResult result) async {
     if (result.isDraft) {
       // Handle drafts
-      final queueProvider =
-          Provider.of<MessageQueueProvider>(context, listen: false);
+      final queueProvider = Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      );
       for (final session in result.sessions) {
         queueProvider.addCreateSessionRequest(session, isDraft: true);
       }
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-          content:
-              Text('${result.sessions.length} draft(s) saved successfully')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${result.sessions.length} draft(s) saved successfully',
+          ),
+        ),
+      );
       return;
     }
 
@@ -588,8 +595,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (sessionsToCreate.length > 1) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content:
-                Text('Starting creation of ${sessionsToCreate.length} sessions...')),
+          content: Text(
+            'Starting creation of ${sessionsToCreate.length} sessions...',
+          ),
+        ),
       );
     }
 
@@ -610,11 +619,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
 
       // Optionally, refresh the main list in the background
-      final sessionProvider =
-          Provider.of<SessionProvider>(context, listen: false);
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
       final auth = Provider.of<AuthProvider>(context, listen: false);
-      sessionProvider.fetchSessions(client,
-          force: true, shallow: true, authToken: auth.token);
+      sessionProvider.fetchSessions(
+        client,
+        force: true,
+        shallow: true,
+        authToken: auth.token,
+      );
     } catch (e) {
       if (!mounted) return;
 
@@ -626,18 +641,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             final error = body['error'];
             if (error is Map) {
               final status = error['status'];
-              if (status == 'RESOURCE_EXHAUSTED' ||
-                  status == 'UNAVAILABLE') {
-                Provider.of<MessageQueueProvider>(context, listen: false)
-                    .addCreateSessionRequest(
+              if (status == 'RESOURCE_EXHAUSTED' || status == 'UNAVAILABLE') {
+                Provider.of<MessageQueueProvider>(
+                  context,
+                  listen: false,
+                ).addCreateSessionRequest(
                   sessionToCreate,
                   reason: status.toLowerCase(),
                 );
                 if (!isBulk) {
                   ScaffoldMessenger.of(context).showSnackBar(
                     SnackBar(
-                        content: Text(
-                            'API limit reached. Session creation queued.')),
+                      content: Text(
+                        'API limit reached. Session creation queued.',
+                      ),
+                    ),
                   );
                 }
                 handled = true;
@@ -648,11 +666,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       }
 
       if (!handled) {
-        Provider.of<MessageQueueProvider>(context, listen: false)
-            .addCreateSessionRequest(
-          sessionToCreate,
-          reason: 'creation_failed',
-        );
+        Provider.of<MessageQueueProvider>(
+          context,
+          listen: false,
+        ).addCreateSessionRequest(sessionToCreate, reason: 'creation_failed');
         if (!isBulk) {
           showDialog(
             context: context,
@@ -915,8 +932,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   context,
                   listen: false,
                 ).items.any(
-                      (i) => i.data.id == _session.id && i.metadata.isWatched,
-                    ))
+                  (i) => i.data.id == _session.id && i.metadata.isWatched,
+                ))
                   const PopupMenuItem(
                     value: 'watch',
                     child: Row(
@@ -1058,7 +1075,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -1067,8 +1085,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages =
-        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+    final queuedMessages = queueProvider.queue
+        .where((m) => m.sessionId == _session.id)
+        .toList();
 
     final queuedActivities = queuedMessages.map(
       (m) => Activity(
@@ -1188,11 +1207,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            DateTime.now().difference(updateTime).inMinutes > 15
-                                ? Colors.orange
-                                : Colors.grey,
-                      ),
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
+                  ),
                 ),
               ),
             );
@@ -1293,7 +1311,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal = activity.id.startsWith('pending-') ||
+          final isLocal =
+              activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -1821,7 +1840,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(
