@@ -14,6 +14,10 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnCreate = 'refresh_on_create';
   static const String _sessionPageSizeKey = 'session_page_size';
   static const String _refreshSchedulesKey = 'refresh_schedules';
+  static const String keyNotifyOnAttention = 'notify_on_attention';
+  static const String keyNotifyOnCompletion = 'notify_on_completion';
+  static const String keyNotifyOnWatch = 'notify_on_watch';
+  static const String keyNotifyOnFailure = 'notify_on_failure';
 
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
@@ -22,6 +26,10 @@ class SettingsProvider extends ChangeNotifier {
   int _sessionPageSize = 100;
   List<RefreshSchedule> _schedules = [];
   bool _isInitialized = false;
+  bool _notifyOnAttention = true;
+  bool _notifyOnCompletion = true;
+  bool _notifyOnWatch = true;
+  bool _notifyOnFailure = true;
 
   SharedPreferences? _prefs;
 
@@ -32,6 +40,10 @@ class SettingsProvider extends ChangeNotifier {
   int get sessionPageSize => _sessionPageSize;
   List<RefreshSchedule> get schedules => _schedules;
   bool get isInitialized => _isInitialized;
+  bool get notifyOnAttention => _notifyOnAttention;
+  bool get notifyOnCompletion => _notifyOnCompletion;
+  bool get notifyOnWatch => _notifyOnWatch;
+  bool get notifyOnFailure => _notifyOnFailure;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -62,6 +74,10 @@ class SettingsProvider extends ChangeNotifier {
       ListRefreshPolicy.quick,
     );
     _sessionPageSize = _prefs!.getInt(_sessionPageSizeKey) ?? 100;
+    _notifyOnAttention = _prefs!.getBool(keyNotifyOnAttention) ?? true;
+    _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
+    _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
+    _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
     _loadSchedules();
     _isInitialized = true;
 
@@ -170,5 +186,29 @@ class SettingsProvider extends ChangeNotifier {
     _refreshOnCreate = policy;
     notifyListeners();
     await _prefs?.setInt(keyRefreshOnCreate, policy.index);
+  }
+
+  Future<void> setNotifyOnAttention(bool value) async {
+    _notifyOnAttention = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnAttention, value);
+  }
+
+  Future<void> setNotifyOnCompletion(bool value) async {
+    _notifyOnCompletion = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnCompletion, value);
+  }
+
+  Future<void> setNotifyOnWatch(bool value) async {
+    _notifyOnWatch = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnWatch, value);
+  }
+
+  Future<void> setNotifyOnFailure(bool value) async {
+    _notifyOnFailure = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnFailure, value);
   }
 }

@@ -11,15 +11,22 @@ import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
 import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
+import 'services/notification_service.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await NotificationService().init();
+
   runApp(
     MultiProvider(
       providers: [
+        Provider<NotificationService>(
+          create: (_) => NotificationService(),
+        ),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => GithubProvider()),
@@ -46,15 +53,17 @@ void main() {
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider3<SettingsProvider, SessionProvider,
-            SourceProvider, RefreshService>(
+        ChangeNotifierProxyProvider4<SettingsProvider, SessionProvider,
+            SourceProvider, NotificationService, RefreshService>(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),
             context.read<SourceProvider>(),
             context.read<AuthProvider>(),
+            context.read<NotificationService>(),
           ),
-          update: (_, settings, sessionProvider, sourceProvider, service) =>
+          update: (_, settings, sessionProvider, sourceProvider,
+                  notificationService, service) =>
               service!,
         ),
         ChangeNotifierProxyProvider3<SessionProvider, AuthProvider,

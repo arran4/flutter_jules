@@ -23,7 +23,9 @@ import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 
 import 'dart:convert';
+import 'package:url_launcher/url_launcher.dart';
 import '../../services/exceptions.dart';
+import '../../services/notification_service.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -48,10 +50,36 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   // Computed suggestions based on available data
   List<FilterToken> _availableSuggestions = [];
+  late NotificationService _notificationService;
 
   @override
   void initState() {
     super.initState();
+    _notificationService = context.read<NotificationService>();
+    _notificationService.onNotificationPayloadStream.listen((response) {
+      if (response.payload != null) {
+        final session = _displayItems
+            .firstWhere((item) => item.data.name == response.payload)
+            .data;
+        if (response.actionId == 'open_pr') {
+          if (session.outputs != null &&
+              session.outputs!.any((o) => o.pullRequest != null)) {
+            final pr = session.outputs!
+                .firstWhere((o) => o.pullRequest != null)
+                .pullRequest!;
+            launchUrl(Uri.parse(pr.url));
+          }
+        } else {
+          Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (_) => SessionDetailScreen(session: session),
+            ),
+          );
+        }
+      }
+    });
+
     if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);

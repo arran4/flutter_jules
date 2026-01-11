@@ -6,12 +6,16 @@ import 'source_provider.dart';
 import 'auth_provider.dart';
 import 'jules_client.dart';
 import '../models/refresh_schedule.dart';
+import 'notification_service.dart';
+import '../models/session.dart';
+import '../models/enums.dart';
 
 class RefreshService extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final SessionProvider _sessionProvider;
   final SourceProvider _sourceProvider;
   final AuthProvider _authProvider;
+  final NotificationService _notificationService;
   final Map<String, Timer> _timers = {};
 
   RefreshService(
@@ -19,6 +23,7 @@ class RefreshService extends ChangeNotifier {
     this._sessionProvider,
     this._sourceProvider,
     this._authProvider,
+    this._notificationService,
   ) {
     _settingsProvider.addListener(_onSettingsChanged);
     _initializeTimers();
@@ -51,24 +56,71 @@ class RefreshService extends ChangeNotifier {
     );
   }
 
-  void _executeRefresh(RefreshSchedule schedule) {
+  void _executeRefresh(RefreshSchedule schedule) async {
     final client = JulesClient(accessToken: _authProvider.token);
+    final oldSessions = _sessionProvider.items.map((e) => e.item).toList();
+
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
-        _sessionProvider.fetchSessions(client, force: true);
-        _sourceProvider.fetchSources(client, force: true);
+        await _sessionProvider.fetchSessions(client, force: true);
+        await _sourceProvider.fetchSources(client, force: true);
         break;
       case ListRefreshPolicy.quick:
-        _sessionProvider.fetchSessions(client);
+        await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.watched:
-        _sessionProvider.fetchSessions(client);
+        await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.dirty:
-        _sessionProvider.fetchSessions(client);
+        await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.none:
-        break;
+        return;
+    }
+
+    final newSessions = _sessionProvider.items.map((e) => e.item).toList();
+    _compareSessions(oldSessions, newSessions);
+  }
+
+  void _compareSessions(List<Session> oldSessions, List<Session> newSessions) {
+    final oldSessionMap = {for (var s in oldSessions) s.name: s};
+
+    for (final newSession in newSessions) {
+      final oldSession = oldSessionMap[newSession.name];
+      final isNew = oldSession == null;
+      final stateChanged = !isNew && oldSession.state != newSession.state;
+
+      if (isNew || stateChanged) {
+        if (_settingsProvider.notifyOnAttention &&
+            newSession.state == SessionState.AWAITING_PLAN_APPROVAL) {
+          _notificationService.showNotification(
+            'Task requires your attention',
+            newSession.title,
+            payload: newSession.name,
+          );
+        } else if (_settingsProvider.notifyOnCompletion &&
+            newSession.state == SessionState.COMPLETED) {
+          _notificationService.showNotification(
+            'Task completed',
+            newSession.title,
+            payload: newSession.name,
+          );
+        } else if (_settingsProvider.notifyOnFailure &&
+            newSession.state == SessionState.FAILED) {
+          _notificationService.showNotification(
+            'Task failed',
+            newSession.title,
+            payload: newSession.name,
+          );
+        } else if (_settingsProvider.notifyOnWatch &&
+            newSession.title.toLowerCase().contains('watched')) {
+          _notificationService.showNotification(
+            isNew ? 'New task created' : 'Watched task updated',
+            newSession.title,
+            payload: newSession.name,
+          );
+        }
+      }
     }
   }
 
