@@ -103,30 +103,9 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
 
-        // PR Status (for Open/Draft/Merged)
-        if (session.prStatus != null &&
-            (session.prStatus == 'Open' ||
-                session.prStatus == 'Draft' ||
-                session.prStatus == 'Merged'))
-          _buildChip(
-            context,
-            label: 'PR: ${session.prStatus}',
-            avatar: Icon(
-              session.prStatus == 'Draft' ? Icons.edit_note : Icons.merge_type,
-              size: 16,
-            ),
-            backgroundColor: session.prStatus == 'Draft'
-                ? Colors.amber.shade50
-                : (session.prStatus == 'Merged'
-                    ? Colors.purple.shade50
-                    : Colors.blue.shade50),
-            filterToken: FilterToken(
-              id: 'prStatus:${session.prStatus}',
-              type: FilterType.prStatus,
-              label: 'PR: ${session.prStatus}',
-              value: session.prStatus!,
-            ),
-          ),
+        // PR Status (for Open/Draft/Merged/Closed)
+        if (session.prStatus != null)
+          ..._buildPrStatusChips(context, session.prStatus!),
 
         // CI Status
         if (session.ciStatus != null)
@@ -207,6 +186,50 @@ class SessionMetaPills extends StatelessWidget {
           ),
       ],
     );
+  }
+
+  List<Widget> _buildPrStatusChips(BuildContext context, String prStatus) {
+    final chips = <Widget>[];
+    IconData icon;
+    Color color;
+
+    switch (prStatus) {
+      case 'Open':
+        icon = Icons.code; // Or any other appropriate icon
+        color = Colors.blue.shade50;
+        break;
+      case 'Draft':
+        icon = Icons.edit_note;
+        color = Colors.amber.shade50;
+        break;
+      case 'Merged':
+        icon = Icons.merge_type;
+        color = Colors.purple.shade50;
+        break;
+      case 'Closed':
+        icon = Icons.highlight_off;
+        color = Colors.red.shade50;
+        break;
+      default:
+        // Optional: handle unknown status
+        return [];
+    }
+
+    chips.add(
+      _buildChip(
+        context,
+        label: 'PR: $prStatus',
+        avatar: Icon(icon, size: 16),
+        backgroundColor: color,
+        filterToken: FilterToken(
+          id: 'prStatus:$prStatus',
+          type: FilterType.prStatus,
+          label: 'PR: $prStatus',
+          value: prStatus,
+        ),
+      ),
+    );
+    return chips;
   }
 
   Color _getColorForMergeableState(String state) {
