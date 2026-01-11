@@ -27,7 +27,8 @@ void main() {
     });
 
     test('Should parse Has(NoSource)', () {
-      expect(FilterExpressionParser.parse('Has(NoSource)'), isA<NoSourceElement>());
+      expect(FilterExpressionParser.parse('Has(NoSource)'),
+          isA<NoSourceElement>());
     });
 
     test('Should strip technical prefixes in State()', () {

@@ -2051,24 +2051,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             ),
 
                                                           Expanded(
-                                                            child: LayoutBuilder(
-                                                              builder: (context, constraints) {
+                                                            child:
+                                                                LayoutBuilder(
+                                                              builder: (context,
+                                                                  constraints) {
                                                                 // Simple responsive logic for max lines
-                                                                int maxLines = 1;
-                                                                if (constraints.maxWidth > 800) {
+                                                                int maxLines =
+                                                                    1;
+                                                                if (constraints
+                                                                        .maxWidth >
+                                                                    800) {
                                                                   maxLines = 3;
-                                                                } else if (constraints.maxWidth > 400) {
+                                                                } else if (constraints
+                                                                        .maxWidth >
+                                                                    400) {
                                                                   maxLines = 2;
                                                                 }
 
                                                                 return PopupText(
-                                                                  session.title ?? session.prompt,
-                                                                  maxLines: maxLines,
-                                                                  style: TextStyle(
+                                                                  session.title ??
+                                                                      session
+                                                                          .prompt,
+                                                                  maxLines:
+                                                                      maxLines,
+                                                                  style:
+                                                                      TextStyle(
                                                                     fontWeight: (metadata.isUnread)
-                                                                        ? FontWeight.bold
-                                                                        : FontWeight.normal,
-                                                                    fontSize: 16,
+                                                                        ? FontWeight
+                                                                            .bold
+                                                                        : FontWeight
+                                                                            .normal,
+                                                                    fontSize:
+                                                                        16,
                                                                   ),
                                                                 );
                                                               },

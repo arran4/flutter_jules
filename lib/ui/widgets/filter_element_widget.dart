@@ -165,6 +165,15 @@ class FilterElementWidget extends StatelessWidget {
         Colors.brown.shade800,
         Icons.access_time,
       );
+    } else if (element is NoSourceElement) {
+      return _buildLeafElement(
+        context,
+        element,
+        'Has No Source',
+        Colors.red.shade100,
+        Colors.red.shade800,
+        Icons.cloud_off,
+      );
     }
 
     return const SizedBox.shrink();
