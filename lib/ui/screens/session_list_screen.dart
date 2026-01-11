@@ -20,6 +20,7 @@ import '../widgets/bulk_action_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
@@ -2050,23 +2051,27 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             ),
 
                                                           Expanded(
-                                                            child: Text(
-                                                              session.title ??
-                                                                  session
-                                                                      .prompt,
-                                                              maxLines: 1,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style: TextStyle(
-                                                                fontWeight: (metadata
-                                                                        .isUnread)
-                                                                    ? FontWeight
-                                                                        .bold
-                                                                    : FontWeight
-                                                                        .normal,
-                                                                fontSize: 16,
-                                                              ),
+                                                            child: LayoutBuilder(
+                                                              builder: (context, constraints) {
+                                                                // Simple responsive logic for max lines
+                                                                int maxLines = 1;
+                                                                if (constraints.maxWidth > 800) {
+                                                                  maxLines = 3;
+                                                                } else if (constraints.maxWidth > 400) {
+                                                                  maxLines = 2;
+                                                                }
+
+                                                                return PopupText(
+                                                                  session.title ?? session.prompt,
+                                                                  maxLines: maxLines,
+                                                                  style: TextStyle(
+                                                                    fontWeight: (metadata.isUnread)
+                                                                        ? FontWeight.bold
+                                                                        : FontWeight.normal,
+                                                                    fontSize: 16,
+                                                                  ),
+                                                                );
+                                                              },
                                                             ),
                                                           ),
                                                         ],
