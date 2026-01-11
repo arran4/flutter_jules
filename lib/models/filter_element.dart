@@ -29,14 +29,22 @@ enum FilterState {
   bool get isExplicit => priority == 2;
 
   static FilterState combineAnd(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value < b.value ? a : b;
   }
 
   static FilterState combineOr(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value > b.value ? a : b;
   }
 
@@ -59,7 +67,7 @@ class FilterContext {
   final Session session;
   final CacheMetadata metadata;
   final dynamic
-      queueProvider; // Using dynamic to avoid hard dependency on provider
+  queueProvider; // Using dynamic to avoid hard dependency on provider
 
   FilterContext({
     required this.session,
@@ -148,13 +156,15 @@ class AndElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'and',
-        'children': children.map((c) => c.toJson()).toList(),
-      };
+    'type': 'and',
+    'children': children.map((c) => c.toJson()).toList(),
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineAnd(result, children[i].evaluate(context));
@@ -192,13 +202,15 @@ class OrElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'or',
-        'children': children.map((c) => c.toJson()).toList(),
-      };
+    'type': 'or',
+    'children': children.map((c) => c.toJson()).toList(),
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineOr(result, children[i].evaluate(context));
@@ -272,7 +284,8 @@ class TextElement extends FilterElement {
   FilterState evaluate(FilterContext context) {
     final query = text.toLowerCase();
     final session = context.session;
-    final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
+    final matches =
+        (session.title?.toLowerCase().contains(query) ?? false) ||
         (session.name.toLowerCase().contains(query)) ||
         (session.id.toLowerCase().contains(query)) ||
         (session.state.toString().toLowerCase().contains(query)) ||
@@ -310,10 +323,10 @@ class PrStatusElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'pr_status',
-        'label': label,
-        'value': value,
-      };
+    'type': 'pr_status',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -383,7 +396,9 @@ class LabelElement extends FilterElement {
     if (value == 'watched') return 'label:watched';
 
     // Group "queue" type labels (Drafts, Pending)
-    if (value == 'draft' || value == 'pending') return 'label:queue';
+    if (value == 'draft' || value == 'pending') {
+      return 'label:queue';
+    }
 
     // Standard labels group together (New, Updated, Unread)
     return 'label:standard';
@@ -416,10 +431,10 @@ class LabelElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'label',
-        'label': label,
-        'value': value,
-      };
+    'type': 'label',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -457,10 +472,14 @@ class LabelElement extends FilterElement {
     } else if (v == 'draft') {
       if (queueProvider != null) {
         try {
-          if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
+          if (queueProvider.getDrafts(session.id).isNotEmpty) {
+            matched = true;
+          }
         } catch (_) {}
       }
-      if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
+      if (session.id.startsWith('DRAFT_CREATION_')) {
+        matched = true;
+      }
     } else {
       matched = metadata.labels.any(
         (l) => l.toLowerCase() == value.toLowerCase(),
@@ -505,10 +524,10 @@ class StatusElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'status',
-        'label': label,
-        'value': value,
-      };
+    'type': 'status',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -519,11 +538,14 @@ class StatusElement extends FilterElement {
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
-      if (context.metadata.isHidden) return FilterState.implicitOut;
+      if (context.metadata.isHidden) {
+        return FilterState.implicitOut;
+      }
       return FilterState.explicitOut;
     }
 
-    final matches = state.toString().toLowerCase() == query ||
+    final matches =
+        state.toString().toLowerCase() == query ||
         state.name.toLowerCase() == query ||
         state.displayName.toLowerCase() == query;
 
@@ -558,14 +580,15 @@ class SourceElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'source',
-        'label': label,
-        'value': value,
-      };
+    'type': 'source',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.sourceContext.source.toLowerCase() ==
+    final matches =
+        context.session.sourceContext.source.toLowerCase() ==
         value.toLowerCase();
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -631,10 +654,10 @@ class BranchElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'branch',
-        'label': label,
-        'value': value,
-      };
+    'type': 'branch',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -649,9 +672,6 @@ class BranchElement extends FilterElement {
   }
 
   factory BranchElement.fromJson(Map<String, dynamic> json) {
-    return BranchElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return BranchElement(json['label'] as String, json['value'] as String);
   }
 }
