@@ -924,6 +924,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.ciStatus:
         element = CiStatusElement(token.label, token.value.toString());
         break;
+      case FilterType.text:
+        element = LabelElement(token.label, token.value.toString());
+        break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
           element = HasPrElement();
