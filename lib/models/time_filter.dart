@@ -1,4 +1,4 @@
-enum TimeFilterType { newerThan, olderThan }
+enum TimeFilterType { newerThan, olderThan, between }
 
 enum TimeFilterUnit { hours, days, months }
 
@@ -7,12 +7,14 @@ class TimeFilter {
   final int value;
   final TimeFilterUnit unit;
   final DateTime? specificTime;
+  final DateTime? specificTimeEnd;
 
   TimeFilter({
     required this.type,
-    required this.value,
-    required this.unit,
+    this.value = 0,
+    this.unit = TimeFilterUnit.days,
     this.specificTime,
+    this.specificTimeEnd,
   });
 
   factory TimeFilter.fromJson(Map<String, dynamic> json) {
@@ -23,6 +25,9 @@ class TimeFilter {
       specificTime: json['specificTime'] != null
           ? DateTime.parse(json['specificTime'])
           : null,
+      specificTimeEnd: json['specificTimeEnd'] != null
+          ? DateTime.parse(json['specificTimeEnd'])
+          : null,
     );
   }
 
@@ -32,6 +37,7 @@ class TimeFilter {
       'value': value,
       'unit': unit.name,
       'specificTime': specificTime?.toIso8601String(),
+      'specificTimeEnd': specificTimeEnd?.toIso8601String(),
     };
   }
 }
