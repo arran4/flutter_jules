@@ -1835,24 +1835,28 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                           value: 'watched',
                                                         ),
                                                       ),
-                                                    // PR Status - only for final states (Closed/Merged)
-                                                    if (session.prStatus !=
-                                                            null &&
-                                                        (session.prStatus ==
-                                                                'Closed' ||
-                                                            session.prStatus ==
-                                                                'Merged'))
+                                                    // PR Status - for all states
+                                                    if (session.prStatus != null)
                                                       _buildPill(
                                                         context,
                                                         metadata: metadata,
                                                         session: session,
                                                         label:
-                                                            '${session.prStatus}',
+                                                            'PR: ${session.prStatus}',
                                                         backgroundColor:
                                                             session.prStatus ==
                                                                     'Merged'
-                                                                ? Colors.green
-                                                                : Colors.red,
+                                                                ? Colors.purple
+                                                                : session.prStatus ==
+                                                                        'Closed'
+                                                                    ? Colors
+                                                                        .red
+                                                                    : session.prStatus ==
+                                                                            'Draft'
+                                                                        ? Colors
+                                                                            .grey
+                                                                        : Colors
+                                                                            .green, // Open
                                                         textColor: Colors.white,
                                                         filterToken:
                                                             FilterToken(
