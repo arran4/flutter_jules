@@ -642,6 +642,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
+    // CI Statuses
+    for (final status in ['Success', 'Failure', 'Pending', 'No Checks']) {
+      suggestions.add(
+        FilterToken(
+          id: 'ciStatus:$status',
+          type: FilterType.ciStatus,
+          label: 'CI: $status',
+          value: status,
+        ),
+      );
+    }
+
     // Sources (from SourceProvider for completeness)
     final allSources = sourceProvider.items.map((i) => i.data);
     for (final source in allSources) {
@@ -750,7 +762,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  Future<void> _refreshPrStatus(Session session) async {
+  Future<void> _refreshGitStatus(Session session) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) {
       ScaffoldMessenger.of(
@@ -763,17 +775,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
       await Provider.of<SessionProvider>(
         context,
         listen: false,
-      ).refreshPrStatus(session.id, auth.token!);
+      ).refreshGitStatus(session.id, auth.token!);
 
       if (mounted) {
         ScaffoldMessenger.of(
           context,
-        ).showSnackBar(const SnackBar(content: Text("PR status refreshed")));
+        ).showSnackBar(const SnackBar(content: Text("Git status refreshed")));
       }
     } catch (e) {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text("Failed to refresh PR status: $e")),
+          SnackBar(content: Text("Failed to refresh Git status: $e")),
         );
       }
     }
@@ -855,6 +867,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         break;
       case FilterType.prStatus:
         element = PrStatusElement(token.label, token.value.toString());
+        break;
+      case FilterType.ciStatus:
+        element = CiStatusElement(token.label, token.value.toString());
         break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
@@ -2317,10 +2332,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
               children: [
                 Icon(Icons.refresh),
                 SizedBox(width: 8),
-                Text('Refresh PR Status'),
+                Text('Refresh Git Status'),
               ],
             ),
-            onTap: () => _refreshPrStatus(session),
+            onTap: () => _refreshGitStatus(session),
           ),
         ],
         PopupMenuItem(
