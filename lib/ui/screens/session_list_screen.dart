@@ -830,8 +830,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
           break;
         case SortField.source:
-          cmp = a.data.sourceContext.source.compareTo(
-            b.data.sourceContext.source,
+          cmp = (a.data.sourceContext?.source ?? '').compareTo(
+            b.data.sourceContext?.source ?? '',
           );
           break;
         case SortField.status:
@@ -2575,8 +2575,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ],
       ],
     ).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
-        _openSourceUrl(session.sourceContext.source);
+      if (value == 'source' && session.sourceContext?.source != null) {
+        _openSourceUrl(session.sourceContext!.source);
       }
     });
   }
