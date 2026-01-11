@@ -132,9 +132,9 @@
     ]
   },
   {
-    "name": "CI: Failure",
-    "description": "Sessions with failed CI checks.",
-    "expression": "CI(Failure)",
+    "name": "Active CI Failures",
+    "description": "Open PRs with failed CI checks.",
+    "expression": "AND(CI(Failure) PR(Open))",
     "sorts": [
       {
         "field": "updated",
@@ -143,9 +143,9 @@
     ]
   },
   {
-    "name": "CI: Success",
-    "description": "Sessions with successful CI checks.",
-    "expression": "CI(Success)",
+    "name": "CI Passing (Open)",
+    "description": "Open PRs with passing CI checks.",
+    "expression": "AND(CI(Success) PR(Open))",
     "sorts": [
       {
         "field": "updated",
