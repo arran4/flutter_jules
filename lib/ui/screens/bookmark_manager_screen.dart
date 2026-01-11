@@ -622,7 +622,6 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                     setState(() => _sorts = s);
                     _updatePreview();
                   },
-                  showBookmarksButton: false,
                 ),
               ),
             ),

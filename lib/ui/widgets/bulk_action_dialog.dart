@@ -166,7 +166,6 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                         setState(() => _sorts = s);
                         _updatePreview();
                       },
-                      showBookmarksButton: false,
                     ),
                     const SizedBox(height: 16),
                     _buildSectionHeader('2. Actions to Perform'),

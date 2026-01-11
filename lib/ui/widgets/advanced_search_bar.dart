@@ -1,9 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:provider/provider.dart';
+import '../../models/filter_bookmark.dart';
 import '../../models/filter_element.dart';
 import '../../models/filter_element_builder.dart';
 import '../../models/filter_expression_parser.dart';
 import '../../models/search_filter.dart';
+import '../../services/filter_bookmark_provider.dart';
 import 'filter_element_widget.dart';
 import 'sort_pills_widget.dart';
 import 'bookmark_menu_helper.dart';
@@ -24,7 +27,6 @@ class AdvancedSearchBar extends StatefulWidget {
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
-  final bool showBookmarksButton;
 
   const AdvancedSearchBar({
     super.key,
@@ -35,7 +37,6 @@ class AdvancedSearchBar extends StatefulWidget {
     required this.availableSuggestions,
     required this.activeSorts,
     required this.onSortsChanged,
-    this.showBookmarksButton = true,
   });
 
   @override
@@ -50,7 +51,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
-  bool _isFilterExpanded = true;
+  bool _isFilterExpanded = false;
 
   @override
   void initState() {
@@ -490,224 +491,186 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                     const SizedBox(width: 8),
 
-                    // Bookmarks button
-                    if (widget.showBookmarksButton)
-                      Builder(
-                        builder: (context) => IconButton(
-                          icon: const Icon(Icons.bookmarks_outlined),
-                          onPressed: () => BookmarkMenuHelper.showBookmarksMenu(
-                            context: context,
-                            currentFilterTree: widget.filterTree,
-                            currentSorts: widget.activeSorts,
-                            onFilterTreeChanged: widget.onFilterTreeChanged,
-                            onSortsChanged: widget.onSortsChanged,
-                            availableSuggestions: widget.availableSuggestions,
-                          ),
-                          tooltip: 'Filter Presets',
-                        ),
-                      ),
+                    // Filter menu button
+                    IconButton(
+                      icon: Icon(_isFilterExpanded
+                          ? Icons.filter_list_off
+                          : Icons.filter_list),
+                      onPressed: () {
+                        setState(() {
+                          _isFilterExpanded = !_isFilterExpanded;
+                        });
+                      },
+                      tooltip:
+                          _isFilterExpanded ? 'Dismiss Filters' : 'Show Filters',
+                    ),
                   ],
                 ),
 
-                const SizedBox(height: 12),
-
-                // Filters and Sorts inline
-                if (widget.filterTree != null || true)
-                  Padding(
-                    padding: const EdgeInsets.only(bottom: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Filter Tree (Expanded)
-                        Expanded(
-                          child: widget.filterTree != null
-                              ? Theme(
-                                  data: Theme.of(context).copyWith(
-                                    dividerColor: Colors.transparent,
-                                    splashColor: Colors.transparent,
-                                    highlightColor: Colors.transparent,
-                                  ),
-                                  child: ExpansionTile(
-                                    title: _isFilterExpanded
-                                        ? const Text(
-                                            "Active Filters",
-                                            style: TextStyle(
-                                              fontSize: 13,
-                                              fontWeight: FontWeight.w500,
-                                              color: Colors.grey,
-                                            ),
-                                          )
-                                        : TextField(
-                                            controller: _expressionController,
-                                            style: const TextStyle(
-                                              fontSize: 12,
-                                              color: Colors.blueAccent,
-                                              fontFamily: 'monospace',
-                                            ),
-                                            decoration: const InputDecoration(
-                                              isDense: true,
-                                              border: InputBorder.none,
-                                              contentPadding: EdgeInsets.zero,
-                                            ),
-                                            onSubmitted: (value) {
-                                              final newTree =
-                                                  FilterExpressionParser.parse(
-                                                    value,
-                                                  );
-                                              widget.onFilterTreeChanged(
-                                                newTree,
-                                              );
-                                            },
-                                          ),
-                                    tilePadding: EdgeInsets.zero,
-                                    childrenPadding: EdgeInsets.zero,
-                                    showTrailingIcon: true,
-                                    shape: const Border(),
-                                    collapsedShape: const Border(),
-                                    initiallyExpanded: _isFilterExpanded,
-                                    onExpansionChanged: (expanded) {
-                                      setState(() {
-                                        _isFilterExpanded = expanded;
-                                      });
-                                    },
-                                    children: [
-                                      Align(
-                                        alignment: Alignment.topLeft,
-                                        child: FilterElementWidget(
-                                          element: widget.filterTree,
-                                          onAddAlternative: (target, alternative) {
-                                            final newTree =
-                                                FilterElementBuilder.groupFilters(
-                                                  widget.filterTree,
-                                                  target,
-                                                  alternative,
-                                                  isAnd: false,
-                                                );
-                                            final simplified =
-                                                FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
-                                            widget.onFilterTreeChanged(
-                                              simplified,
-                                            );
-                                          },
-                                          onDrop: (source, target, action, isCtrlPressed) {
-                                            var newTree = widget.filterTree;
-
-                                            // Clone source so we can add a new instance and remove the old one (if move)
-                                            final sourceCopy =
-                                                FilterElement.fromJson(
-                                                  source.toJson(),
-                                                );
-                                            final isCopy = isCtrlPressed;
-
-                                            // 1. Perform the Add/Group operation with the Copy
-                                            switch (action) {
-                                              case FilterDropAction.groupOr:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: false,
-                                                    );
-                                                break;
-                                              case FilterDropAction.groupAnd:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: true,
-                                                    );
-                                                break;
-                                              case FilterDropAction.addToGroup:
-                                                newTree =
-                                                    FilterElementBuilder.addFilterToComposite(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                    );
-                                                break;
-                                              case FilterDropAction
-                                                  .groupAboveAnd:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: true,
-                                                    );
-                                                break;
-                                              case FilterDropAction
-                                                  .groupAboveOr:
-                                                newTree =
-                                                    FilterElementBuilder.groupFilters(
-                                                      newTree,
-                                                      target,
-                                                      sourceCopy,
-                                                      isAnd: false,
-                                                    );
-                                                break;
-                                            }
-
-                                            // 2. Remove the original source if it is a move operation
-                                            if (!isCopy && newTree != null) {
-                                              newTree =
-                                                  FilterElementBuilder.removeFilter(
-                                                    newTree,
-                                                    source,
-                                                  );
-                                            }
-
-                                            // 3. Simplify and update
-                                            final simplified =
-                                                FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
-                                            widget.onFilterTreeChanged(
-                                              simplified,
-                                            );
-                                          },
-                                          onRemove: (element) {
-                                            final newTree =
-                                                FilterElementBuilder.removeFilter(
-                                                  widget.filterTree,
-                                                  element,
-                                                );
-                                            final simplified =
-                                                FilterElementBuilder.simplify(
-                                                  newTree,
-                                                );
-                                            widget.onFilterTreeChanged(
-                                              simplified,
-                                            );
-                                          },
-                                          onToggleNot: (element) {
-                                            final newTree =
-                                                FilterElementBuilder.toggleNot(
-                                                  widget.filterTree!,
-                                                  element,
-                                                );
-                                            widget.onFilterTreeChanged(newTree);
-                                          },
-                                          onTap: null,
-                                        ),
-                                      ),
-                                    ],
-                                  ),
-                                )
-                              : const SizedBox.shrink(),
+                // Filters and Sorts inline (collapsible)
+                if (_isFilterExpanded) ...[
+                  const Divider(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        "Filters & Presets",
+                        style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.black54,
                         ),
-                        const SizedBox(width: 8),
-                        // Sort Pills (Fixed width, right aligned via structure)
-                        SortPillsWidget(
-                          activeSorts: widget.activeSorts,
-                          onSortsChanged: widget.onSortsChanged,
-                        ),
-                      ],
-                    ),
+                      ),
+                      Row(
+                        children: [
+                          TextButton.icon(
+                            icon: const Icon(Icons.save_alt, size: 16),
+                            label: const Text("Save"),
+                            onPressed: () =>
+                                BookmarkMenuHelper.saveCurrentFilters(
+                              context: context,
+                              currentFilterTree: widget.filterTree,
+                              currentSorts: widget.activeSorts,
+                            ),
+                          ),
+                          TextButton.icon(
+                            icon: const Icon(Icons.edit_note, size: 16),
+                            label: const Text("Manage"),
+                            onPressed: () =>
+                                BookmarkMenuHelper.manageBookmarks(
+                              context,
+                              widget.availableSuggestions,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
+                  const SizedBox(height: 8),
+                  // Presets List
+                  Consumer<FilterBookmarkProvider>(
+                    builder: (context, provider, _) {
+                      if (provider.isLoading) {
+                        return const Center(child: LinearProgressIndicator());
+                      }
+                      return Wrap(
+                        spacing: 6,
+                        runSpacing: 6,
+                        children: provider.bookmarks.map((bookmark) {
+                          return ActionChip(
+                            avatar: Icon(
+                              Icons.bookmark,
+                              size: 14,
+                              color: provider.isSystemBookmark(bookmark.name)
+                                  ? Colors.blue.shade700
+                                  : Colors.orange.shade800,
+                            ),
+                            label: Text(bookmark.name),
+                            labelStyle: const TextStyle(fontSize: 12),
+                            onPressed: () {
+                              widget.onFilterTreeChanged(bookmark.tree);
+                              widget.onSortsChanged(bookmark.sorts);
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    'Applied preset: ${bookmark.name}',
+                                  ),
+                                  duration: const Duration(seconds: 1),
+                                ),
+                              );
+                            },
+                          );
+                        }).toList(),
+                      );
+                    },
+                  ),
+
+                  const Divider(height: 24),
+
+                  // Filter Tree and Sorts
+                  Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              "Active Filters",
+                              style: TextStyle(
+                                fontSize: 13,
+                                fontWeight: FontWeight.w500,
+                                color: Colors.grey,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            if (widget.filterTree != null)
+                              FilterElementWidget(
+                                element: widget.filterTree,
+                                onAddAlternative: (target, alternative) {
+                                  final newTree =
+                                      FilterElementBuilder.groupFilters(
+                                    widget.filterTree,
+                                    target,
+                                    alternative,
+                                    isAnd: false,
+                                  );
+                                  final simplified =
+                                      FilterElementBuilder.simplify(newTree);
+                                  widget.onFilterTreeChanged(simplified);
+                                },
+                                onDrop: (source, target, action, isCtrl) {
+                                  final newTree =
+                                      FilterElementBuilder.moveFilter(
+                                    widget.filterTree,
+                                    source,
+                                    target,
+                                    action,
+                                    isCopy: isCtrl,
+                                  );
+                                  final simplified =
+                                      FilterElementBuilder.simplify(newTree);
+                                  widget.onFilterTreeChanged(simplified);
+                                },
+                                onRemove: (element) {
+                                  final newTree =
+                                      FilterElementBuilder.removeFilter(
+                                    widget.filterTree,
+                                    element,
+                                  );
+                                  final simplified =
+                                      FilterElementBuilder.simplify(newTree);
+                                  widget.onFilterTreeChanged(simplified);
+                                },
+                                onToggleNot: (element) {
+                                  final newTree =
+                                      FilterElementBuilder.toggleNot(
+                                    widget.filterTree!,
+                                    element,
+                                  );
+                                  widget.onFilterTreeChanged(newTree);
+                                },
+                                onTap: null,
+                              )
+                            else
+                              const Text(
+                                "No active filters.",
+                                style: TextStyle(
+                                  fontStyle: FontStyle.italic,
+                                  color: Colors.grey,
+                                ),
+                              ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      SortPillsWidget(
+                        activeSorts: widget.activeSorts,
+                        onSortsChanged: widget.onSortsChanged,
+                      ),
+                    ],
+                  ),
+                ],
               ],
             ),
           ),
