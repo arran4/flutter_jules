@@ -766,7 +766,8 @@ class SessionProvider extends ChangeNotifier {
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != prStatus || item.data.ciStatus != ciStatus) {
+          if (item.data.prStatus != prStatus ||
+              item.data.ciStatus != ciStatus) {
             final updatedSession = item.data.copyWith(
               prStatus: prStatus,
               ciStatus: ciStatus,
@@ -782,7 +783,9 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      // print("Background Git status refresh failed: $e");
+      debugPrint(
+        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+      );
     }
   }
 }

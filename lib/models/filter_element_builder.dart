@@ -378,6 +378,9 @@ class FilterElementBuilder {
         case FilterType.prStatus:
           element = PrStatusElement(token.label, token.value.toString());
           break;
+        case FilterType.ciStatus:
+          element = CiStatusElement(token.label, token.value.toString());
+          break;
         case FilterType.branch:
           element = BranchElement(token.label, token.value.toString());
           break;
@@ -468,6 +471,16 @@ class FilterElementBuilder {
         FilterToken(
           id: 'prStatus:${element.value}',
           type: FilterType.prStatus,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
+    } else if (element is CiStatusElement) {
+      tokens.add(
+        FilterToken(
+          id: 'ciStatus:${element.value}',
+          type: FilterType.ciStatus,
           label: element.label,
           value: element.value,
           mode: mode,

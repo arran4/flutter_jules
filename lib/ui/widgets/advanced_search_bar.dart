@@ -174,6 +174,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final prStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.prStatus)
         .toList();
+    final ciStatusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.ciStatus)
+        .toList();
     final otherSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.text)
         .toList();
@@ -226,6 +229,21 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (prStatusSuggestions.isNotEmpty &&
+                          (ciStatusSuggestions.isNotEmpty ||
+                              flagSuggestions.isNotEmpty ||
+                              sourceSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // CI Status column
+                      if (ciStatusSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'CI Status',
+                            ciStatusSuggestions,
+                            Colors.blueGrey,
+                          ),
+                        ),
+                      if (ciStatusSuggestions.isNotEmpty &&
                           (flagSuggestions.isNotEmpty ||
                               sourceSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
@@ -361,6 +379,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.prStatus:
         newElement = PrStatusElement(token.label, token.value.toString());
         break;
+      case FilterType.ciStatus:
+        newElement = CiStatusElement(token.label, token.value.toString());
+        break;
       case FilterType.branch:
         newElement = BranchElement(token.label, token.value.toString());
         break;
@@ -406,6 +427,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.source;
       case FilterType.prStatus:
         return Icons.merge; // PR icon
+      case FilterType.ciStatus:
+        return Icons.check_circle_outline;
       case FilterType.branch:
         return Icons.account_tree;
       case FilterType.text:

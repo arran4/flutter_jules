@@ -39,6 +39,9 @@ class FilterUtils {
     final textFilters = activeFilters
         .where((f) => f.type == FilterType.text)
         .toList();
+    final ciStatusFilters = activeFilters
+        .where((f) => f.type == FilterType.ciStatus)
+        .toList();
 
     // 1. Status: OR logic for Include, AND logic for Exclude
     if (statusFilters.isNotEmpty) {
@@ -179,6 +182,34 @@ class FilterUtils {
       }
     }
 
+    // 5. CI Status: OR logic for Include, AND logic for Exclude
+    if (ciStatusFilters.isNotEmpty) {
+      final includes = ciStatusFilters.where(
+        (f) => f.mode == FilterMode.include,
+      );
+      final excludes = ciStatusFilters.where(
+        (f) => f.mode == FilterMode.exclude,
+      );
+
+      if (includes.isNotEmpty) {
+        final matchesAny = includes.any(
+          (f) =>
+              session.ciStatus?.toLowerCase() ==
+              f.value.toString().toLowerCase(),
+        );
+        if (!matchesAny) return false;
+      }
+
+      if (excludes.isNotEmpty) {
+        final matchesAny = excludes.any(
+          (f) =>
+              session.ciStatus?.toLowerCase() ==
+              f.value.toString().toLowerCase(),
+        );
+        if (matchesAny) return false;
+      }
+    }
+
     return true;
   }
 
@@ -206,6 +237,13 @@ class FilterUtils {
         LabelElement('Pending', 'pending'),
       ];
       return stdLabels.where((e) => e.value != element.value).toList();
+    } else if (element is CiStatusElement) {
+      return [
+        CiStatusElement('Success', 'success'),
+        CiStatusElement('Failure', 'failure'),
+        CiStatusElement('Pending', 'pending'),
+        CiStatusElement('No Checks', 'no checks'),
+      ].where((e) => e.value != element.value).toList();
     }
     return [];
   }

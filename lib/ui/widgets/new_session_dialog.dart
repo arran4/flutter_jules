@@ -910,11 +910,38 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     controller: _promptController,
                     autofocus: true,
                     maxLines: 6,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Prompt',
                       hintText: 'Describe what you want to do...',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
+                      suffixIcon: widget.initialSession != null
+                          ? IconButton(
+                              icon: const Icon(Icons.content_paste_go),
+                              tooltip: 'Import Prompt from Original Session',
+                              onPressed: () {
+                                if (widget.initialSession == null) return;
+                                final originalPrompt =
+                                    widget.initialSession!.prompt;
+                                final currentText = _promptController.text;
+
+                                if (currentText.trim().isNotEmpty) {
+                                  const separator =
+                                      '\n\n--- Imported Prompt ---\n';
+                                  _promptController.text =
+                                      '$currentText$separator$originalPrompt';
+                                } else {
+                                  _promptController.text = originalPrompt;
+                                }
+                                _promptController.selection =
+                                    TextSelection.fromPosition(
+                                      TextPosition(
+                                        offset: _promptController.text.length,
+                                      ),
+                                    );
+                              },
+                            )
+                          : null,
                     ),
                     onChanged: (val) => setState(() {}),
                   ),

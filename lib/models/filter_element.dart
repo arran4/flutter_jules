@@ -361,10 +361,10 @@ class CiStatusElement extends FilterElement {
 
   @override
   Map<String, dynamic> toJson() => {
-        'type': 'ci_status',
-        'label': label,
-        'value': value,
-      };
+    'type': 'ci_status',
+    'label': label,
+    'value': value,
+  };
 
   @override
   FilterState evaluate(FilterContext context) {
