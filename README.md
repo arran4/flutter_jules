@@ -1,4 +1,6 @@
-![App Icon](assets/icon/app_icon.png)
+<p align="center">
+  <img src="assets/icon/app_icon.png" width="256" alt="App Icon">
+</p>
 
 # Flutter Jules Client
 
