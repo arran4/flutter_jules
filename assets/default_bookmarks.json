@@ -130,5 +130,27 @@
         "direction": "descending"
       }
     ]
+  },
+  {
+    "name": "CI: Failure",
+    "description": "Sessions with failed CI checks.",
+    "expression": "CI(Failure)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI: Success",
+    "description": "Sessions with successful CI checks.",
+    "expression": "CI(Success)",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
   }
 ]
