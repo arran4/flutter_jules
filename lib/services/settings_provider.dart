@@ -84,9 +84,8 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules = decodedList
-            .map((json) => RefreshSchedule.fromJson(json))
-            .toList();
+        _schedules =
+            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }

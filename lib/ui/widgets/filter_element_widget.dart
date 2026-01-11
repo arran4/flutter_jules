@@ -22,10 +22,9 @@ class FilterElementWidget extends StatelessWidget {
     FilterElement target,
     FilterDropAction action,
     bool isCopy,
-  )?
-  onDrop;
+  )? onDrop;
   final Function(FilterElement target, FilterElement alternative)?
-  onAddAlternative;
+      onAddAlternative;
   final bool isNegated;
 
   const FilterElementWidget({
@@ -116,9 +115,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is PrStatusElement) {
       final label = element.label;
-      final displayLabel = label.toUpperCase().startsWith('PR:')
-          ? label
-          : 'PR: $label';
+      final displayLabel =
+          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
       return _buildLeafElement(
         context,
         element,
@@ -129,9 +127,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is BranchElement) {
       final label = element.label;
-      final displayLabel = label.startsWith('Branch:')
-          ? label
-          : 'Branch: $label';
+      final displayLabel =
+          label.startsWith('Branch:') ? label : 'Branch: $label';
       return _buildLeafElement(
         context,
         element,
@@ -139,6 +136,18 @@ class FilterElementWidget extends StatelessWidget {
         Colors.indigo.shade100,
         Colors.indigo.shade800,
         Icons.account_tree,
+      );
+    } else if (element is CiStatusElement) {
+      final label = element.label;
+      final displayLabel =
+          label.toUpperCase().startsWith('CI:') ? label : 'CI: $label';
+      return _buildLeafElement(
+        context,
+        element,
+        displayLabel,
+        Colors.blueGrey.shade100,
+        Colors.blueGrey.shade800,
+        Icons.check_circle_outline,
       );
     }
 
@@ -361,6 +370,8 @@ class FilterElementWidget extends StatelessWidget {
           label = "Add ${alt.label}";
         } else if (alt is SourceElement) {
           label = "Add Source: ${alt.label}";
+        } else if (alt is CiStatusElement) {
+          label = "Add CI: ${alt.label}";
         }
 
         items.add(PopupMenuItem(value: 100 + i, child: Text(label)));
@@ -511,11 +522,11 @@ class FilterElementWidget extends StatelessWidget {
 
     final isCtrlPressed =
         ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlLeft,
-        ) ||
-        ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlRight,
-        );
+              LogicalKeyboardKey.controlLeft,
+            ) ||
+            ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
+              LogicalKeyboardKey.controlRight,
+            );
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;
