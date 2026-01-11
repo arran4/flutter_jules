@@ -190,6 +190,7 @@ class AndElement extends FilterElement {
 
 class TimeFilterElement extends FilterElement {
   final TimeFilter timeFilter;
+  TimeFilter get value => timeFilter;
 
   TimeFilterElement(this.timeFilter);
 

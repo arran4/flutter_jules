@@ -1,5 +1,6 @@
 import 'filter_element.dart';
 import 'time_filter.dart';
+import '../utils/time_parser.dart';
 
 class FilterExpressionParser {
   final String input;
@@ -171,12 +172,42 @@ class FilterExpressionParser {
         return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
+      case 'BEFORE':
+        if (args.isEmpty) return null;
+        final date = TimeParser.parse(args[0]);
+        if (date == null) return null;
+        return TimeFilterElement(
+          TimeFilter(type: TimeFilterType.olderThan, specificTime: date),
+        );
+      case 'AFTER':
+        if (args.isEmpty) return null;
+        final date = TimeParser.parse(args[0]);
+        if (date == null) return null;
+        return TimeFilterElement(
+          TimeFilter(type: TimeFilterType.newerThan, specificTime: date),
+        );
+      case 'BETWEEN':
+        if (args.isEmpty) return null;
+        final parts = args[0].split(',');
+        if (parts.length < 2) return null;
+        final start = TimeParser.parse(parts[0].trim());
+        final end = TimeParser.parse(parts[1].trim());
+        if (start == null || end == null) return null;
+        return TimeFilterElement(
+          TimeFilter(
+            type: TimeFilterType.between,
+            specificTime: start,
+            specificTimeEnd: end,
+          ),
+        );
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');
         if (parts.length < 2) return null;
 
-        final type = TimeFilterType.values.byName(parts[0]);
+        final typeName = parts[0];
+        // Handle mapped names from toExpression if needed, or assume raw enum names
+        final type = TimeFilterType.values.byName(typeName);
         final valueStr = parts[1];
 
         // Try to parse as a specific date

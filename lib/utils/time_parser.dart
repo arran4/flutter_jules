@@ -4,7 +4,8 @@ class TimeParser {
     final now = DateTime.now();
 
     // Duration-based phrases (e.g., "last 24 hours")
-    final durationMatch = RegExp(r'last (\d+) (hours|days|weeks|months|years)').firstMatch(input);
+    final durationMatch =
+        RegExp(r'last (\d+) (hours|days|weeks|months|years)').firstMatch(input);
     if (durationMatch != null) {
       final value = int.parse(durationMatch.group(1)!);
       final unit = durationMatch.group(2)!;
@@ -44,7 +45,13 @@ class TimeParser {
 
     // Day of the week (e.g., "since wednesday")
     const dayOfWeekMap = {
-      'monday': 1, 'tuesday': 2, 'wednesday': 3, 'thursday': 4, 'friday': 5, 'saturday': 6, 'sunday': 7
+      'monday': 1,
+      'tuesday': 2,
+      'wednesday': 3,
+      'thursday': 4,
+      'friday': 5,
+      'saturday': 6,
+      'sunday': 7
     };
     for (var day in dayOfWeekMap.keys) {
       if (input.contains(day)) {
@@ -66,8 +73,18 @@ class TimeParser {
 
     // Month names (e.g., "since march")
     const monthMap = {
-      'january': 1, 'february': 2, 'march': 3, 'april': 4, 'may': 5, 'june': 6,
-      'july': 7, 'august': 8, 'september': 9, 'october': 10, 'november': 11, 'december': 12
+      'january': 1,
+      'february': 2,
+      'march': 3,
+      'april': 4,
+      'may': 5,
+      'june': 6,
+      'july': 7,
+      'august': 8,
+      'september': 9,
+      'october': 10,
+      'november': 11,
+      'december': 12
     };
 
     for (var month in monthMap.keys) {

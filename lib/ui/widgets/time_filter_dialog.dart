@@ -21,6 +21,8 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         return 'Newer than';
       case TimeFilterType.olderThan:
         return 'Older than';
+      case TimeFilterType.between:
+        return 'Between';
     }
   }
 
