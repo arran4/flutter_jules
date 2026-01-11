@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'cache_service.dart';
 import 'jules_client.dart';
-import 'exceptions.dart';
+
 import '../models.dart';
 
 class MessageQueueProvider extends ChangeNotifier {
@@ -241,6 +241,7 @@ class MessageQueueProvider extends ChangeNotifier {
   Future<void> sendQueue(
     JulesClient client, {
     Function(String)? onMessageSent,
+    Function(Session)? onSessionCreated,
     Function(String, Object)? onError,
   }) async {
     if (_isOffline) return;
@@ -255,9 +256,24 @@ class MessageQueueProvider extends ChangeNotifier {
 
     for (final msg in remaining) {
       try {
-        if (msg.type == QueuedMessageType.sessionCreation) {
+        if (msg.type == QueuedMessageType.sessionCreation ||
+            msg.sessionId == 'new_session') {
+          Session sessionToCreate;
           if (msg.metadata != null) {
-            await client.createSession(Session.fromJson(msg.metadata!));
+            sessionToCreate = Session.fromJson(msg.metadata!);
+          } else {
+            // Fallback: Create minimal session from content
+            sessionToCreate = Session(
+              id: '',
+              name: '',
+              prompt: msg.content,
+              sourceContext: SourceContext(source: ''),
+            );
+          }
+
+          final createdSession = await client.createSession(sessionToCreate);
+          if (onSessionCreated != null) {
+            onSessionCreated(createdSession);
           }
         } else {
           await client.sendMessage(msg.sessionId, msg.content);
@@ -266,56 +282,29 @@ class MessageQueueProvider extends ChangeNotifier {
         if (onMessageSent != null) onMessageSent(msg.id);
       } catch (e) {
         bool recovered = false;
-        if (e is JulesException && e.statusCode == 404) {
-          if (msg.sessionId == 'new_session') {
-            // Attempt recovery: The message was likely a session creation request
-            // that lost its type or was mishandled.
-            try {
-              Session sessionToCreate;
-              if (msg.metadata != null) {
-                sessionToCreate = Session.fromJson(msg.metadata!);
-              } else {
-                // Fallback: Create minimal session from content
-                sessionToCreate = Session(
-                  id: '',
-                  name: '',
-                  prompt: msg.content,
-                  sourceContext: SourceContext(source: ''),
-                );
-              }
-              await client.createSession(sessionToCreate);
-              recovered = true;
-              toRemove.add(msg);
-              if (onMessageSent != null) onMessageSent(msg.id);
-            } catch (_) {
-              // Recovery failed, fall through to normal error handling
-            }
+        // Recovery logic is likely not needed if we handle new_session above, but keeping for safety
+        // ... (Actually the above logic replaces the catch block recovery for 404 on new_session)
+
+        if (!recovered) {
+          if (onError != null) onError(msg.id, e);
+
+          // Record error on the message
+          final index = _queue.indexWhere((m) => m.id == msg.id);
+          if (index != -1) {
+            final currentErrors = List<String>.from(
+              _queue[index].processingErrors,
+            );
+            currentErrors.add(e.toString());
+            _queue[index] = _queue[index].copyWith(
+              processingErrors: currentErrors,
+            );
+            await _saveQueue();
+            notifyListeners();
           }
+
+          // Stop on first error to preserve order
+          break;
         }
-
-        if (recovered) {
-          continue;
-        }
-
-        if (onError != null) onError(msg.id, e);
-
-        // Record error on the message
-        final index = _queue.indexWhere((m) => m.id == msg.id);
-        if (index != -1) {
-          final currentErrors = List<String>.from(
-            _queue[index].processingErrors,
-          );
-          currentErrors.add(e.toString());
-          _queue[index] = _queue[index].copyWith(
-            processingErrors: currentErrors,
-          );
-          await _saveQueue();
-          notifyListeners();
-        }
-
-        // Stop on first error? Or continue? Usually stop to preserve order if dependent.
-        // For now, let's stop on error to be safe.
-        break;
       }
     }
 

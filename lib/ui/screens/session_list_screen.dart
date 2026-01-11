@@ -1742,6 +1742,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 );
                                                 queueProvider.sendQueue(
                                                   auth.client,
+                                                  onSessionCreated:
+                                                      (newSession) {
+                                                    // Immediately add to provider
+                                                    Provider.of<
+                                                            SessionProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    ).updateSession(
+                                                      newSession,
+                                                      authToken: auth.token,
+                                                    );
+                                                  },
                                                 );
                                               }
                                               return;
@@ -2549,20 +2561,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
           },
         ),
         const PopupMenuDivider(),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.refresh),
-              SizedBox(width: 8),
-              Text('Refresh Session'),
-            ],
+        if (!session.id.startsWith('DRAFT_CREATION_'))
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.refresh),
+                SizedBox(width: 8),
+                Text('Refresh Session'),
+              ],
+            ),
+            onTap: () {
+              Future.delayed(Duration.zero, () {
+                if (context.mounted) _refreshSession(session);
+              });
+            },
           ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) _refreshSession(session);
-            });
-          },
-        ),
         PopupMenuItem(
           child: const Row(
             children: [
