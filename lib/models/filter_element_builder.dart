@@ -121,12 +121,15 @@ class FilterElementBuilder {
 
     if (root is AndElement || root is OrElement) {
       final isAnd = root is AndElement;
-      final children =
-          root is AndElement ? root.children : (root as OrElement).children;
+      final children = root is AndElement
+          ? root.children
+          : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren =
-          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
+      final simplifiedChildren = children
+          .map((c) => simplify(c))
+          .whereType<FilterElement>()
+          .toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -309,8 +312,9 @@ class FilterElementBuilder {
   }) {
     if (root == null) return root;
 
-    final group =
-        isAnd ? AndElement([target, source]) : OrElement([target, source]);
+    final group = isAnd
+        ? AndElement([target, source])
+        : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
@@ -373,6 +377,9 @@ class FilterElementBuilder {
           break;
         case FilterType.prStatus:
           element = PrStatusElement(token.label, token.value.toString());
+          break;
+        case FilterType.ciStatus:
+          element = CiStatusElement(token.label, token.value.toString());
           break;
         case FilterType.branch:
           element = BranchElement(token.label, token.value.toString());
@@ -464,6 +471,16 @@ class FilterElementBuilder {
         FilterToken(
           id: 'prStatus:${element.value}',
           type: FilterType.prStatus,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
+    } else if (element is CiStatusElement) {
+      tokens.add(
+        FilterToken(
+          id: 'ciStatus:${element.value}',
+          type: FilterType.ciStatus,
           label: element.label,
           value: element.value,
           mode: mode,

@@ -3,6 +3,7 @@ enum FilterType {
   source,
   flag, // New, Updated, Unread
   prStatus, // PR: Open, Closed, Merged, etc.
+  ciStatus,
   branch,
   text,
 }
@@ -49,8 +50,9 @@ class FilterToken {
       type: type,
       label: label,
       value: value,
-      mode:
-          mode == FilterMode.include ? FilterMode.exclude : FilterMode.include,
+      mode: mode == FilterMode.include
+          ? FilterMode.exclude
+          : FilterMode.include,
     );
   }
 

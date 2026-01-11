@@ -29,8 +29,11 @@ void main() {
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider2<CacheService, GithubProvider,
-            SessionProvider>(
+        ChangeNotifierProxyProvider2<
+          CacheService,
+          GithubProvider,
+          SessionProvider
+        >(
           create: (_) => SessionProvider(),
           update: (_, cache, github, session) => session!
             ..setCacheService(cache)
@@ -40,14 +43,21 @@ void main() {
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
         ),
-        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
-            MessageQueueProvider>(
+        ChangeNotifierProxyProvider2<
+          CacheService,
+          AuthProvider,
+          MessageQueueProvider
+        >(
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider3<SettingsProvider, SessionProvider,
-            SourceProvider, RefreshService>(
+        ChangeNotifierProxyProvider3<
+          SettingsProvider,
+          SessionProvider,
+          SourceProvider,
+          RefreshService
+        >(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),
@@ -57,8 +67,12 @@ void main() {
           update: (_, settings, sessionProvider, sourceProvider, service) =>
               service!,
         ),
-        ChangeNotifierProxyProvider3<SessionProvider, AuthProvider,
-            GithubProvider, BulkActionExecutor>(
+        ChangeNotifierProxyProvider3<
+          SessionProvider,
+          AuthProvider,
+          GithubProvider,
+          BulkActionExecutor
+        >(
           create: (context) => BulkActionExecutor(
             sessionProvider: context.read<SessionProvider>(),
             julesClient: context.read<AuthProvider>().client,

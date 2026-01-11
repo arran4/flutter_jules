@@ -70,6 +70,7 @@ class Session {
   final int? totalSteps;
   final String? currentAction;
   final String? prStatus;
+  final String? ciStatus;
 
   Session({
     required this.name,
@@ -89,6 +90,7 @@ class Session {
     this.totalSteps,
     this.currentAction,
     this.prStatus,
+    this.ciStatus,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -146,6 +148,7 @@ class Session {
       )?.toInt(),
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
       prStatus: getStringPropOrDefault(json, 'prStatus', null),
+      ciStatus: getStringPropOrDefault(json, 'ciStatus', null),
     );
   }
 
@@ -179,6 +182,7 @@ class Session {
     if (totalSteps != null) map['totalSteps'] = totalSteps;
     if (currentAction != null) map['currentAction'] = currentAction;
     if (prStatus != null) map['prStatus'] = prStatus;
+    if (ciStatus != null) map['ciStatus'] = ciStatus;
     return map;
   }
 
@@ -200,6 +204,7 @@ class Session {
     int? totalSteps,
     String? currentAction,
     String? prStatus,
+    String? ciStatus,
   }) {
     return Session(
       name: name ?? this.name,
@@ -219,6 +224,7 @@ class Session {
       totalSteps: totalSteps ?? this.totalSteps,
       currentAction: currentAction ?? this.currentAction,
       prStatus: prStatus ?? this.prStatus,
+      ciStatus: ciStatus ?? this.ciStatus,
     );
   }
 }
