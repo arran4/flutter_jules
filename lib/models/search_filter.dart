@@ -3,8 +3,10 @@ enum FilterType {
   source,
   flag, // New, Updated, Unread
   prStatus, // PR: Open, Closed, Merged, etc.
+  ciStatus,
   branch,
   text,
+  time,
 }
 
 enum FilterMode {

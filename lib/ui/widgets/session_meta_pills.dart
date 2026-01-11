@@ -128,35 +128,99 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
 
-        // Source
-        _buildChip(
-          context,
-          label: session.sourceContext.source,
-          avatar: const Icon(Icons.source, size: 16),
-          filterToken: FilterToken(
-            id: 'source:${session.sourceContext.source}',
-            type: FilterType.source,
-            label: session.sourceContext.source,
-            value: session.sourceContext.source,
-          ),
-          sortField: SortField.source,
-        ),
-
-        // Branch
-        if (session.sourceContext.githubRepoContext?.startingBranch != null)
+        // CI Status
+        if (session.ciStatus != null)
           _buildChip(
             context,
-            label: session.sourceContext.githubRepoContext!.startingBranch,
+            label: 'CI: ${session.ciStatus}',
+            avatar: Icon(
+              session.ciStatus == 'Success'
+                  ? Icons.check_circle
+                  : (session.ciStatus == 'Failure'
+                      ? Icons.cancel
+                      : Icons.pending),
+              size: 16,
+            ),
+            backgroundColor: session.ciStatus == 'Success'
+                ? Colors.green.shade50
+                : (session.ciStatus == 'Failure'
+                    ? Colors.red.shade50
+                    : Colors.amber.shade50),
+            filterToken: FilterToken(
+              id: 'ciStatus:${session.ciStatus}',
+              type: FilterType.ciStatus,
+              label: 'CI: ${session.ciStatus}',
+              value: session.ciStatus!,
+            ),
+          ),
+
+        // Source
+        // Source
+        if (session.sourceContext != null)
+          _buildChip(
+            context,
+            label: session.sourceContext!.source,
+            avatar: const Icon(Icons.source, size: 16),
+            filterToken: FilterToken(
+              id: 'source:${session.sourceContext!.source}',
+              type: FilterType.source,
+              label: session.sourceContext!.source,
+              value: session.sourceContext!.source,
+            ),
+            sortField: SortField.source,
+          ),
+
+        // Branch
+        if (session.sourceContext?.githubRepoContext?.startingBranch != null)
+          _buildChip(
+            context,
+            label: session.sourceContext!.githubRepoContext!.startingBranch,
             avatar: const Icon(Icons.call_split, size: 16),
             filterToken: FilterToken(
-              id: 'branch:${session.sourceContext.githubRepoContext!.startingBranch}',
+              id: 'branch:${session.sourceContext!.githubRepoContext!.startingBranch}',
               type: FilterType.branch,
-              label: session.sourceContext.githubRepoContext!.startingBranch,
-              value: session.sourceContext.githubRepoContext!.startingBranch,
+              label: session.sourceContext!.githubRepoContext!.startingBranch,
+              value: session.sourceContext!.githubRepoContext!.startingBranch,
             ),
+          ),
+
+        // Mergeable State
+        if (session.mergeableState != null &&
+            session.mergeableState != 'unknown')
+          _buildChip(
+            context,
+            label: 'Mergeable: ${session.mergeableState}',
+            backgroundColor:
+                _getColorForMergeableState(session.mergeableState!),
+          ),
+
+        // File Changes
+        if (session.additions != null &&
+            session.deletions != null &&
+            session.changedFiles != null)
+          _buildChip(
+            context,
+            label:
+                '+${session.additions} -${session.deletions} (${session.changedFiles} files)',
+            avatar: const Icon(Icons.edit_document, size: 16),
+            backgroundColor: Colors.grey.shade200,
           ),
       ],
     );
+  }
+
+  Color _getColorForMergeableState(String state) {
+    switch (state.toLowerCase()) {
+      case 'clean':
+        return Colors.green.shade100;
+      case 'dirty':
+      case 'unstable':
+        return Colors.red.shade100;
+      case 'blocked':
+        return Colors.orange.shade100;
+      default: // unknown, etc.
+        return Colors.grey.shade200;
+    }
   }
 
   Color _getColorForState(SessionState state) {
@@ -190,10 +254,7 @@ class SessionMetaPills extends StatelessWidget {
         data: filterToken,
         feedback: Material(
           color: Colors.transparent,
-          child: Opacity(
-            opacity: 0.8,
-            child: chip,
-          ),
+          child: Opacity(opacity: 0.8, child: chip),
         ),
         childWhenDragging: chip,
         child: chip,

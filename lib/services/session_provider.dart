@@ -99,8 +99,18 @@ class SessionProvider extends ChangeNotifier {
           final oldSession = oldItem?.data;
 
           // Preserve PR status from cache if backend doesn't provide it
-          if (session.prStatus == null && oldSession?.prStatus != null) {
-            session = session.copyWith(prStatus: oldSession!.prStatus);
+          if (oldSession != null) {
+            session = session.copyWith(
+              prStatus: session.prStatus ?? oldSession.prStatus,
+              ciStatus: session.ciStatus ?? oldSession.ciStatus,
+              mergeableState:
+                  session.mergeableState ?? oldSession.mergeableState,
+              additions: session.additions ?? oldSession.additions,
+              deletions: session.deletions ?? oldSession.deletions,
+              changedFiles: session.changedFiles ?? oldSession.changedFiles,
+              diffUrl: session.diffUrl ?? oldSession.diffUrl,
+              patchUrl: session.patchUrl ?? oldSession.patchUrl,
+            );
           }
 
           CacheMetadata metadata;
@@ -152,7 +162,7 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
-                _refreshPrStatusInBackground(session.id, prUrl, authToken);
+                _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
           }
@@ -311,7 +321,7 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
-          _refreshPrStatusInBackground(updatedSession.id, prUrl, authToken);
+          _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
 
@@ -645,8 +655,8 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh the PR status for a session from GitHub
-  Future<void> refreshPrStatus(String sessionId, String authToken) async {
+  /// Refresh the PR and CI status for a session from GitHub
+  Future<void> refreshGitStatus(String sessionId, String authToken) async {
     if (_githubProvider == null) {
       throw Exception("GitHub provider not initialized");
     }
@@ -682,11 +692,26 @@ class SessionProvider extends ChangeNotifier {
     final repo = pathSegments[1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
-    // Fetch PR status from GitHub
-    final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+    // Fetch PR and CI statuses from GitHub in parallel
+    final results = await Future.wait([
+      _githubProvider!.getPrStatus(owner, repo, prNumber),
+      _githubProvider!.getCIStatus(owner, repo, prNumber),
+    ]);
 
-    // Update session with new PR status
-    final updatedSession = session.copyWith(prStatus: prStatus);
+    final prData = results[0] as Map<String, dynamic>?;
+    final ciStatus = results[1] as String?;
+
+    // Update session with new statuses
+    final updatedSession = session.copyWith(
+      prStatus: prData != null ? _getPrStatusString(prData) : session.prStatus,
+      ciStatus: ciStatus ?? session.ciStatus,
+      mergeableState: prData?['mergeable_state'],
+      additions: prData?['additions'],
+      deletions: prData?['deletions'],
+      changedFiles: prData?['changed_files'],
+      diffUrl: prData?['diff_url'],
+      patchUrl: prData?['patch_url'],
+    );
 
     // Update in cache
     if (_cacheService != null) {
@@ -723,13 +748,19 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
-  Future<void> _refreshPrStatusInBackground(
+  String _getPrStatusString(Map<String, dynamic> prData) {
+    if (prData['merged'] == true) return 'Merged';
+    if (prData['draft'] == true) return 'Draft';
+    if (prData['state'] == 'closed') return 'Closed';
+    return 'Open';
+  }
+
+  Future<void> _refreshGitStatusInBackground(
     String sessionId,
     String prUrl,
     String authToken,
   ) async {
     // Avoid multiple concurrent refreshes for same session if not already queued
-    // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
     if (_isPrFetchQueued(prUrl)) return;
 
     try {
@@ -739,27 +770,45 @@ class SessionProvider extends ChangeNotifier {
       final repo = pathSegments[1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
-      final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+      // Fetch statuses in parallel
+      final results = await Future.wait([
+        _githubProvider!.getPrStatus(owner, repo, prNumber),
+        _githubProvider!.getCIStatus(owner, repo, prNumber),
+      ]);
+      final prData = results[0] as Map<String, dynamic>?;
+      final ciStatus = results[1] as String?;
 
-      if (status != null) {
+      if (prData != null || ciStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != status) {
-            final updatedSession = item.data.copyWith(prStatus: status);
-            // Save to cache
-            if (_cacheService != null) {
-              await _cacheService!.updateSession(authToken, updatedSession);
-            }
-            // Update memory
-            _items[index] = CachedItem(updatedSession, item.metadata);
-            notifyListeners();
+          final prStatus = prData != null ? _getPrStatusString(prData) : null;
+
+          final updatedSession = item.data.copyWith(
+            prStatus: prStatus ?? item.data.prStatus,
+            ciStatus: ciStatus ?? item.data.ciStatus,
+            mergeableState: prData?['mergeable_state'],
+            additions: prData?['additions'],
+            deletions: prData?['deletions'],
+            changedFiles: prData?['changed_files'],
+            diffUrl: prData?['diff_url'],
+            patchUrl: prData?['patch_url'],
+          );
+
+          // Save to cache
+          if (_cacheService != null) {
+            await _cacheService!.updateSession(authToken, updatedSession);
           }
+          // Update memory
+          _items[index] = CachedItem(updatedSession, item.metadata);
+          notifyListeners();
         }
       }
     } catch (e) {
-      // print("Background PR refresh failed: $e");
+      debugPrint(
+        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+      );
     }
   }
 }

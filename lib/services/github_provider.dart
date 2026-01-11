@@ -39,7 +39,7 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getPrStatus(
+  Future<Map<String, dynamic>?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
@@ -67,16 +67,19 @@ class GithubProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
-          if (data['draft'] == true) {
-            return 'Draft';
-          } else if (data['merged'] == true) {
+          if (data['merged'] == true) {
             return 'Merged';
+          } else if (data['draft'] == true) {
+            return 'Draft';
           } else if (data['state'] == 'closed') {
             return 'Closed';
           } else {
-            return 'Open';
+            return data;
           }
         } else {
+          debugPrint(
+            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+          );
           return null;
         }
       },
@@ -88,7 +91,200 @@ class GithubProvider extends ChangeNotifier {
 
     // Wait for job to complete
     await job.completer.future;
+    return job.result as Map<String, dynamic>?;
+  }
+
+  Future<String?> getDiff(String owner, String repo, String prNumber) async {
+    if (_apiKey == null) return null;
+    final url =
+        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'token $_apiKey',
+        'Accept': 'application/vnd.github.v3.diff',
+      },
+    );
+    _updateRateLimits(response.headers);
+    if (response.statusCode == 200) {
+      return response.body;
+    }
+    return null;
+  }
+
+  Future<String?> getPatch(String owner, String repo, String prNumber) async {
+    if (_apiKey == null) return null;
+    final url =
+        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'token $_apiKey',
+        'Accept': 'application/vnd.github.v3.patch',
+      },
+    );
+    _updateRateLimits(response.headers);
+    if (response.statusCode == 200) {
+      return response.body;
+    }
+    return null;
+  }
+
+  Future<String?> getCIStatus(
+    String owner,
+    String repo,
+    String prNumber,
+  ) async {
+    if (_apiKey == null) return null;
+
+    final job = GithubJob(
+      id: 'ci_status_${owner}_${repo}_$prNumber',
+      description: 'Check CI Status: $owner/$repo #$prNumber',
+      action: () async {
+        // 1. Get the PR's head SHA
+        final prUrl = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+        );
+        final prResponse = await http.get(
+          prUrl,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+        _updateRateLimits(prResponse.headers);
+
+        if (prResponse.statusCode != 200) {
+          debugPrint(
+            'Failed to get PR for CI status ($owner/$repo #$prNumber): ${prResponse.statusCode} ${prResponse.body}',
+          );
+          // If we can't get the PR, we can't get the status.
+          return 'Unknown';
+        }
+
+        final prData = jsonDecode(prResponse.body);
+        final headSha = prData['head']['sha'];
+
+        if (headSha == null) {
+          return 'Unknown';
+        }
+
+        // 2. Get the check runs for that SHA
+        final checksUrl = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo/commits/$headSha/check-runs',
+        );
+        final checksResponse = await http.get(
+          checksUrl,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+        _updateRateLimits(checksResponse.headers);
+
+        if (checksResponse.statusCode != 200) {
+          debugPrint(
+            'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
+          );
+          return 'Unknown';
+        }
+
+        final checksData = jsonDecode(checksResponse.body);
+        final checkRuns = checksData['check_runs'] as List;
+
+        if (checkRuns.isEmpty) {
+          return 'No Checks';
+        }
+
+        // 3. Determine the overall status
+        bool isPending = false;
+        bool hasFailures = false;
+
+        for (final run in checkRuns) {
+          if (run['status'] != 'completed') {
+            isPending = true;
+            break; // If anything is pending, the whole thing is
+          }
+          if (run['conclusion'] == 'failure' ||
+              run['conclusion'] == 'timed_out' ||
+              run['conclusion'] == 'cancelled') {
+            hasFailures = true;
+          }
+        }
+
+        if (isPending) return 'Pending';
+        if (hasFailures) return 'Failure';
+
+        // If we get here, everything is completed and there are no failures
+        return 'Success';
+      },
+    );
+
+    _queue.add(job);
+    _processQueue();
+    notifyListeners();
+
+    await job.completer.future;
     return job.result as String?;
+  }
+
+  Future<Map<String, dynamic>?> getRepoDetails(
+    String owner,
+    String repo,
+  ) async {
+    if (_apiKey == null) {
+      return null;
+    }
+
+    final job = GithubJob(
+      id: 'repo_details_${owner}_$repo',
+      description: 'Get Repo Details: $owner/$repo',
+      action: () async {
+        final url = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo',
+        );
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+
+        _updateRateLimits(response.headers);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          final license = data['license'];
+          final parent = data['parent'];
+
+          return {
+            'repoName': data['name'],
+            'repoId': data['id'],
+            'isPrivateGithub': data['private'],
+            'description': data['description'],
+            'primaryLanguage': data['language'],
+            'license': license != null ? license['name'] : null,
+            'openIssuesCount': data['open_issues_count'],
+            'isFork': data['fork'],
+            'forkParent': parent != null ? parent['full_name'] : null,
+          };
+        } else {
+          debugPrint(
+            'Failed to get repo details for $owner/$repo: ${response.statusCode} ${response.body}',
+          );
+          return null;
+        }
+      },
+    );
+
+    _queue.add(job);
+    _processQueue();
+    notifyListeners();
+
+    // Wait for job to complete
+    await job.completer.future;
+    return job.result as Map<String, dynamic>?;
   }
 
   void _updateRateLimits(Map<String, String> headers) {

@@ -1,5 +1,7 @@
 import 'session.dart';
 import 'cache_metadata.dart';
+import 'time_filter.dart';
+import '../utils/time_helper.dart';
 
 enum FilterElementType {
   and,
@@ -11,7 +13,9 @@ enum FilterElementType {
   source,
   hasPr,
   prStatus,
+  ciStatus,
   branch,
+  time,
 }
 
 enum FilterState {
@@ -28,14 +32,22 @@ enum FilterState {
   bool get isExplicit => priority == 2;
 
   static FilterState combineAnd(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value < b.value ? a : b;
   }
 
   static FilterState combineOr(FilterState a, FilterState b) {
-    if (a.priority > b.priority) return a;
-    if (b.priority > a.priority) return b;
+    if (a.priority > b.priority) {
+      return a;
+    }
+    if (b.priority > a.priority) {
+      return b;
+    }
     return a.value > b.value ? a : b;
   }
 
@@ -118,8 +130,12 @@ abstract class FilterElement {
         return HasPrElement.fromJson(json);
       case 'pr_status':
         return PrStatusElement.fromJson(json);
+      case 'ci_status':
+        return CiStatusElement.fromJson(json);
       case 'branch':
         return BranchElement.fromJson(json);
+      case 'time':
+        return TimeFilterElement.fromJson(json);
       default:
         throw Exception('Unknown filter element type: $type');
     }
@@ -151,7 +167,9 @@ class AndElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineAnd(result, children[i].evaluate(context));
@@ -166,6 +184,47 @@ class AndElement extends FilterElement {
       childrenJson
           .map((c) => FilterElement.fromJson(c as Map<String, dynamic>))
           .toList(),
+    );
+  }
+}
+
+class TimeFilterElement extends FilterElement {
+  final TimeFilter timeFilter;
+
+  TimeFilterElement(this.timeFilter);
+
+  @override
+  FilterElementType get type => FilterElementType.time;
+
+  @override
+  String get groupingType => 'time';
+
+  @override
+  String toExpression() {
+    if (timeFilter.specificTime != null) {
+      return 'Time(${timeFilter.type.name} ${timeFilter.specificTime!.toIso8601String()})';
+    }
+    return 'Time(${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'time',
+        'timeFilter': timeFilter.toJson(),
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches = matchesTimeFilter(context.session, timeFilter);
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory TimeFilterElement.fromJson(Map<String, dynamic> json) {
+    return TimeFilterElement(
+      TimeFilter.fromJson(json['timeFilter'] as Map<String, dynamic>),
     );
   }
 }
@@ -195,7 +254,9 @@ class OrElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    if (children.isEmpty) return FilterState.implicitIn;
+    if (children.isEmpty) {
+      return FilterState.implicitIn;
+    }
     FilterState result = children.first.evaluate(context);
     for (int i = 1; i < children.length; i++) {
       result = FilterState.combineOr(result, children[i].evaluate(context));
@@ -325,6 +386,44 @@ class PrStatusElement extends FilterElement {
   }
 }
 
+/// CI Status filter element
+class CiStatusElement extends FilterElement {
+  final String label;
+  final String value;
+
+  CiStatusElement(this.label, this.value);
+
+  @override
+  FilterElementType get type => FilterElementType.ciStatus;
+
+  @override
+  String get groupingType => 'ci_status';
+
+  @override
+  String toExpression() {
+    return 'CI(${FilterElement._quote(value)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'ci_status',
+        'label': label,
+        'value': value,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches =
+        context.session.ciStatus?.toLowerCase() == value.toLowerCase();
+    if (context.metadata.isHidden) return FilterState.implicitOut;
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory CiStatusElement.fromJson(Map<String, dynamic> json) {
+    return CiStatusElement(json['label'] as String, json['value'] as String);
+  }
+}
+
 /// Label/Flag filter element (New, Updated, Unread, etc.)
 class LabelElement extends FilterElement {
   final String label;
@@ -342,7 +441,9 @@ class LabelElement extends FilterElement {
     if (value == 'watched') return 'label:watched';
 
     // Group "queue" type labels (Drafts, Pending)
-    if (value == 'draft' || value == 'pending') return 'label:queue';
+    if (value == 'draft' || value == 'pending') {
+      return 'label:queue';
+    }
 
     // Standard labels group together (New, Updated, Unread)
     return 'label:standard';
@@ -416,10 +517,14 @@ class LabelElement extends FilterElement {
     } else if (v == 'draft') {
       if (queueProvider != null) {
         try {
-          if (queueProvider.getDrafts(session.id).isNotEmpty) matched = true;
+          if (queueProvider.getDrafts(session.id).isNotEmpty) {
+            matched = true;
+          }
         } catch (_) {}
       }
-      if (session.id.startsWith('DRAFT_CREATION_')) matched = true;
+      if (session.id.startsWith('DRAFT_CREATION_')) {
+        matched = true;
+      }
     } else {
       matched = metadata.labels.any(
         (l) => l.toLowerCase() == value.toLowerCase(),
@@ -478,7 +583,9 @@ class StatusElement extends FilterElement {
     final query = cleanVal.toLowerCase();
     final state = context.session.state;
     if (state == null) {
-      if (context.metadata.isHidden) return FilterState.implicitOut;
+      if (context.metadata.isHidden) {
+        return FilterState.implicitOut;
+      }
       return FilterState.explicitOut;
     }
 
@@ -524,7 +631,7 @@ class SourceElement extends FilterElement {
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.sourceContext.source.toLowerCase() ==
+    final matches = context.session.sourceContext?.source.toLowerCase() ==
         value.toLowerCase();
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -598,7 +705,7 @@ class BranchElement extends FilterElement {
   @override
   FilterState evaluate(FilterContext context) {
     final branch =
-        context.session.sourceContext.githubRepoContext?.startingBranch;
+        context.session.sourceContext?.githubRepoContext?.startingBranch;
     final matches = branch?.toLowerCase() == value.toLowerCase();
 
     if (context.metadata.isHidden) {
@@ -608,9 +715,6 @@ class BranchElement extends FilterElement {
   }
 
   factory BranchElement.fromJson(Map<String, dynamic> json) {
-    return BranchElement(
-      json['label'] as String,
-      json['value'] as String,
-    );
+    return BranchElement(json['label'] as String, json['value'] as String);
   }
 }

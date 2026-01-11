@@ -143,8 +143,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                     _buildSectionHeader('1. Target Sessions'),
                     Text(
                       'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
-                      style:
-                          TextStyle(fontSize: 11, color: Colors.grey.shade600),
+                      style: TextStyle(
+                        fontSize: 11,
+                        color: Colors.grey.shade600,
+                      ),
                     ),
                     const SizedBox(height: 12),
                     AdvancedSearchBar(
@@ -169,8 +171,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                     const SizedBox(height: 16),
                     _buildSectionHeader('2. Actions to Perform'),
                     const Text(
-                        "Actions run in order. If one fails, the rest for that session are skipped.",
-                        style: TextStyle(fontSize: 11, color: Colors.grey)),
+                      "Actions run in order. If one fails, the rest for that session are skipped.",
+                      style: TextStyle(fontSize: 11, color: Colors.grey),
+                    ),
                     const SizedBox(height: 8),
                     _buildActionList(),
                     TextButton.icon(
@@ -243,8 +246,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 keyboardType: TextInputType.number,
                                 style: const TextStyle(fontSize: 12),
                                 controller: TextEditingController(
-                                    text:
-                                        _offset > 0 ? _offset.toString() : ''),
+                                  text: _offset > 0 ? _offset.toString() : '',
+                                ),
                                 onChanged: (val) {
                                   setState(() {
                                     _offset = val.isEmpty
@@ -264,11 +267,14 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                           value: _randomize,
                           onChanged: (val) =>
                               setState(() => _randomize = val ?? false),
-                          title: const Text('Randomize order',
-                              style: TextStyle(fontSize: 12)),
+                          title: const Text(
+                            'Randomize order',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           subtitle: const Text(
-                              'Process sessions in random order (useful for sampling)',
-                              style: TextStyle(fontSize: 10)),
+                            'Process sessions in random order (useful for sampling)',
+                            style: TextStyle(fontSize: 10),
+                          ),
                         ),
                         CheckboxListTile(
                           dense: true,
@@ -276,11 +282,14 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                           value: _stopOnError,
                           onChanged: (val) =>
                               setState(() => _stopOnError = val ?? false),
-                          title: const Text('Stop on first error',
-                              style: TextStyle(fontSize: 12)),
+                          title: const Text(
+                            'Stop on first error',
+                            style: TextStyle(fontSize: 12),
+                          ),
                           subtitle: const Text(
-                              'Cancel entire job if any session fails',
-                              style: TextStyle(fontSize: 10)),
+                            'Cancel entire job if any session fails',
+                            style: TextStyle(fontSize: 10),
+                          ),
                         ),
                       ],
                     ),
@@ -303,13 +312,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                         TextSpan(text: '$_totalMatches total'),
                         if (_effectiveCount != _totalMatches) ...[
                           const TextSpan(
-                              text: ' → ',
-                              style: TextStyle(fontWeight: FontWeight.bold)),
+                            text: ' → ',
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
                           TextSpan(
                             text: '$_effectiveCount will run',
                             style: TextStyle(
-                                color: Colors.blue.shade700,
-                                fontWeight: FontWeight.bold),
+                              color: Colors.blue.shade700,
+                              fontWeight: FontWeight.bold,
+                            ),
                           ),
                         ],
                         if (_effectiveCount > 50)
@@ -396,15 +407,19 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                     items: BulkActionType.values.map((type) {
                       return DropdownMenuItem(
                         value: type,
-                        child: Text(type.displayName,
-                            style: const TextStyle(fontSize: 13)),
+                        child: Text(
+                          type.displayName,
+                          style: const TextStyle(fontSize: 13),
+                        ),
                       );
                     }).toList(),
                     onChanged: (newType) {
                       if (newType != null) {
                         setState(() {
                           _actions[index] = BulkActionStep(
-                              type: newType, message: action.message);
+                            type: newType,
+                            message: action.message,
+                          );
                         });
                       }
                     },
@@ -420,16 +435,21 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                             : 'Message...',
                         isDense: true,
                         contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 8, vertical: 8),
+                          horizontal: 8,
+                          vertical: 8,
+                        ),
                         border: const OutlineInputBorder(),
                       ),
                       style: const TextStyle(fontSize: 12),
                       controller: TextEditingController(text: action.message)
                         ..selection = TextSelection.collapsed(
-                            offset: (action.message ?? '').length),
+                          offset: (action.message ?? '').length,
+                        ),
                       onChanged: (val) {
-                        _actions[index] =
-                            BulkActionStep(type: action.type, message: val);
+                        _actions[index] = BulkActionStep(
+                          type: action.type,
+                          message: val,
+                        );
                       },
                     ),
                   ),
@@ -437,8 +457,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
               ],
             ),
             trailing: IconButton(
-              icon: const Icon(Icons.remove_circle_outline,
-                  color: Colors.red, size: 20),
+              icon: const Icon(
+                Icons.remove_circle_outline,
+                color: Colors.red,
+                size: 20,
+              ),
               onPressed: () => setState(() => _actions.removeAt(index)),
             ),
           );
@@ -447,12 +470,13 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     );
   }
 
-  Widget _buildNumberInput(
-      {required String label,
-      required int value,
-      required Function(int) onChanged,
-      required int min,
-      required int max}) {
+  Widget _buildNumberInput({
+    required String label,
+    required int value,
+    required Function(int) onChanged,
+    required int min,
+    required int max,
+  }) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -460,12 +484,14 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         Row(
           children: [
             IconButton(
-                onPressed: value > min ? () => onChanged(value - 1) : null,
-                icon: const Icon(Icons.remove)),
+              onPressed: value > min ? () => onChanged(value - 1) : null,
+              icon: const Icon(Icons.remove),
+            ),
             Text('$value', style: const TextStyle(fontWeight: FontWeight.bold)),
             IconButton(
-                onPressed: value < max ? () => onChanged(value + 1) : null,
-                icon: const Icon(Icons.add)),
+              onPressed: value < max ? () => onChanged(value + 1) : null,
+              icon: const Icon(Icons.add),
+            ),
           ],
         ),
       ],
@@ -573,10 +599,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     showDialog(
       context: context,
       barrierDismissible: false,
-      builder: (context) => BulkActionProgressDialog(
-        config: config,
-        targets: targets,
-      ),
+      builder: (context) =>
+          BulkActionProgressDialog(config: config, targets: targets),
     );
   }
 }

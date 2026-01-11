@@ -4,6 +4,8 @@ import '../models/cache_metadata.dart';
 import '../services/message_queue_provider.dart';
 import '../models/filter_element.dart';
 import '../models/enums.dart';
+import '../models/time_filter.dart';
+import 'time_helper.dart';
 
 class FilterUtils {
   static bool matches(
@@ -34,6 +36,10 @@ class FilterUtils {
         activeFilters.where((f) => f.type == FilterType.flag).toList();
     final textFilters =
         activeFilters.where((f) => f.type == FilterType.text).toList();
+    final ciStatusFilters =
+        activeFilters.where((f) => f.type == FilterType.ciStatus).toList();
+    final timeFilters =
+        activeFilters.where((f) => f.type == FilterType.time).toList();
 
     // 1. Status: OR logic for Include, AND logic for Exclude
     if (statusFilters.isNotEmpty) {
@@ -58,14 +64,14 @@ class FilterUtils {
 
       if (includes.isNotEmpty) {
         final matchesAny = includes.any(
-          (f) => session.sourceContext.source == f.value,
+          (f) => session.sourceContext?.source == f.value,
         );
         if (!matchesAny) return false;
       }
 
       if (excludes.isNotEmpty) {
         final matchesAny = excludes.any(
-          (f) => session.sourceContext.source == f.value,
+          (f) => session.sourceContext?.source == f.value,
         );
         if (matchesAny) return false;
       }
@@ -174,6 +180,44 @@ class FilterUtils {
       }
     }
 
+    // 5. Time Filters
+    if (timeFilters.isNotEmpty) {
+      for (final filter in timeFilters) {
+        final timeFilter = filter.value as TimeFilter;
+        final matches = matchesTimeFilter(session, timeFilter);
+
+        if (filter.mode == FilterMode.include && !matches) return false;
+        if (filter.mode == FilterMode.exclude && matches) return false;
+      }
+    }
+    // 6. CI Status: OR logic for Include, AND logic for Exclude
+    if (ciStatusFilters.isNotEmpty) {
+      final includes = ciStatusFilters.where(
+        (f) => f.mode == FilterMode.include,
+      );
+      final excludes = ciStatusFilters.where(
+        (f) => f.mode == FilterMode.exclude,
+      );
+
+      if (includes.isNotEmpty) {
+        final matchesAny = includes.any(
+          (f) =>
+              session.ciStatus?.toLowerCase() ==
+              f.value.toString().toLowerCase(),
+        );
+        if (!matchesAny) return false;
+      }
+
+      if (excludes.isNotEmpty) {
+        final matchesAny = excludes.any(
+          (f) =>
+              session.ciStatus?.toLowerCase() ==
+              f.value.toString().toLowerCase(),
+        );
+        if (matchesAny) return false;
+      }
+    }
+
     return true;
   }
 
@@ -201,6 +245,13 @@ class FilterUtils {
         LabelElement('Pending', 'pending'),
       ];
       return stdLabels.where((e) => e.value != element.value).toList();
+    } else if (element is CiStatusElement) {
+      return [
+        CiStatusElement('Success', 'success'),
+        CiStatusElement('Failure', 'failure'),
+        CiStatusElement('Pending', 'pending'),
+        CiStatusElement('No Checks', 'no checks'),
+      ].where((e) => e.value != element.value).toList();
     }
     return [];
   }

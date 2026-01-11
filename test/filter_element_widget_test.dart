@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/models/filter_element.dart';
+import 'package:flutter_jules/models/time_filter.dart';
 import 'package:flutter_jules/ui/widgets/filter_element_widget.dart';
 
 void main() {
@@ -58,16 +59,41 @@ void main() {
         expect(find.text('PR: Draft'), findsOneWidget);
         expect(find.text('PR: PR: Draft'), findsNothing);
       },
+      FilterElementType.ciStatus: (tester) async {
+        // CiStatusElement
+        // Case 1: Simple label
+        await pumpElement(tester, CiStatusElement('Success', 'success'));
+        expect(find.text('CI: Success'), findsOneWidget);
+        expect(find.byIcon(Icons.check_circle_outline), findsOneWidget);
+
+        // Case 2: Redundant prefix regression test
+        await pumpElement(tester, CiStatusElement('CI: Failure', 'failure'));
+        expect(find.text('CI: Failure'), findsOneWidget);
+        expect(find.text('CI: CI: Failure'), findsNothing);
+      },
       FilterElementType.branch: (tester) async {
         // BranchElement
         await pumpElement(tester, BranchElement('main', 'main'));
         expect(find.text('Branch: main'), findsOneWidget);
         expect(find.byIcon(Icons.account_tree), findsOneWidget);
       },
+      FilterElementType.time: (tester) async {
+        // TimeFilterElement
+        final tf = TimeFilter(
+          type: TimeFilterType.newerThan,
+          value: 5,
+          unit: TimeFilterUnit.days,
+        );
+        await pumpElement(tester, TimeFilterElement(tf));
+        expect(find.byIcon(Icons.access_time), findsOneWidget);
+        expect(find.text('Time: newerThan 5 days'), findsOneWidget);
+      },
       FilterElementType.and: (tester) async {
         // AndElement
         await pumpElement(
-            tester, AndElement([TextElement('A'), TextElement('B')]));
+          tester,
+          AndElement([TextElement('A'), TextElement('B')]),
+        );
         expect(find.text('AND'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.merge_type), findsOneWidget);
@@ -75,7 +101,9 @@ void main() {
       FilterElementType.or: (tester) async {
         // OrElement
         await pumpElement(
-            tester, OrElement([TextElement('A'), TextElement('B')]));
+          tester,
+          OrElement([TextElement('A'), TextElement('B')]),
+        );
         expect(find.text('OR'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.call_split), findsOneWidget);
@@ -91,20 +119,21 @@ void main() {
 
     // 1. SAFETY NET TEST: Ensures no FilterElementType is left behind.
     test(
-        'Coverage Assurance: All FilterElementTypes must have a defined test case',
-        () {
-      final definedTypes = testCases.keys.toSet();
-      final allTypes = FilterElementType.values.toSet();
-      final missingTypes = allTypes.difference(definedTypes);
+      'Coverage Assurance: All FilterElementTypes must have a defined test case',
+      () {
+        final definedTypes = testCases.keys.toSet();
+        final allTypes = FilterElementType.values.toSet();
+        final missingTypes = allTypes.difference(definedTypes);
 
-      if (missingTypes.isNotEmpty) {
-        fail(
-          'Rendering logic gap detected! The following types have been defined in the FilterElementType enum '
-          'but do not have a corresponding visual test case: $missingTypes.\n'
-          'Please add them to the `testCases` map in test/filter_element_widget_test.dart to ensure they are rendered correctly.',
-        );
-      }
-    });
+        if (missingTypes.isNotEmpty) {
+          fail(
+            'Rendering logic gap detected! The following types have been defined in the FilterElementType enum '
+            'but do not have a corresponding visual test case: $missingTypes.\n'
+            'Please add them to the `testCases` map in test/filter_element_widget_test.dart to ensure they are rendered correctly.',
+          );
+        }
+      },
+    );
 
     // 2. DYNAMIC TESTS: Run the verification for each defined type.
     testCases.forEach((type, testLogic) {

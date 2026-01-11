@@ -69,10 +69,7 @@ class BulkActionStep {
 
   const BulkActionStep({required this.type, this.message});
 
-  Map<String, dynamic> toJson() => {
-        'type': type.index,
-        'message': message,
-      };
+  Map<String, dynamic> toJson() => {'type': type.index, 'message': message};
 
   factory BulkActionStep.fromJson(Map<String, dynamic> json) => BulkActionStep(
         type: BulkActionType.values[json['type']],
