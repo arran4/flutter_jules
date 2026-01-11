@@ -34,7 +34,12 @@ class SessionListScreen extends StatefulWidget {
   State<SessionListScreen> createState() => _SessionListScreenState();
 }
 
+class NewSessionIntent extends Intent {
+  const NewSessionIntent();
+}
+
 class _SessionListScreenState extends State<SessionListScreen> {
+  final FocusNode _focusNode = FocusNode();
   // Search & Filter State
   // Search & Filter State
   FilterElement? _filterTree;
@@ -52,6 +57,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void initState() {
     super.initState();
+    _focusNode.requestFocus();
     if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
@@ -73,6 +79,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   void dispose() {
+    _focusNode.dispose();
     super.dispose();
   }
 
@@ -1299,10 +1306,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         _displayItems.sort(_compareSessions);
 
-        return Scaffold(
-          appBar: AppBar(
-            title: const Text('Sessions'),
-            bottom: isLoading
+        return Shortcuts(
+          shortcuts: <LogicalKeySet, Intent>{
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
+                const NewSessionIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              NewSessionIntent: CallbackAction<NewSessionIntent>(
+                onInvoke: (NewSessionIntent intent) => _createSession(),
+              ),
+            },
+            child: Focus(
+              focusNode: _focusNode,
+              autofocus: true,
+              child: Scaffold(
+                appBar: AppBar(
+                  title: const Text('Sessions'),
+                  bottom: isLoading
                 ? const PreferredSize(
                     preferredSize: Size.fromHeight(4.0),
                     child: LinearProgressIndicator(),
@@ -2161,6 +2182,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
           floatingActionButton: FloatingActionButton(
             onPressed: _createSession,
             child: const Icon(Icons.add),
+          ),
+        ),
+            ),
           ),
         );
       },
