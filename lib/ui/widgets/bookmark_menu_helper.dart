@@ -119,6 +119,39 @@ class BookmarkMenuHelper {
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                         ),
+                      if (bookmark.expression.isNotEmpty)
+                        Text(
+                          bookmark.expression,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                            fontFamily: 'monospace',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (bookmark.expression.isNotEmpty)
+                        Text(
+                          bookmark.expression,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                            fontFamily: 'monospace',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                      if (bookmark.expression.isNotEmpty)
+                        Text(
+                          bookmark.expression,
+                          style: TextStyle(
+                            fontSize: 10,
+                            color: Colors.grey[500],
+                            fontFamily: 'monospace',
+                          ),
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
                     ],
                   ),
                 ),

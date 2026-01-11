@@ -130,5 +130,16 @@
         "direction": "descending"
       }
     ]
+  },
+  {
+    "name": "Complex PR View",
+    "description": "Completed PRs that are Unread/Updated or in Draft/Open state.",
+    "expression": "AND(State(COMPLETED) Has(PR) OR(Unread() Updated()) OR(PR(Draft) PR(open)))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
   }
 ]
