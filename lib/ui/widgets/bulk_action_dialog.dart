@@ -8,6 +8,7 @@ import '../../services/session_provider.dart';
 import '../../services/message_queue_provider.dart';
 import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
+import 'delay_input_widget.dart';
 
 class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;
@@ -32,7 +33,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   late List<SortOption> _sorts;
   final List<BulkActionStep> _actions = [];
   int _parallelQueries = 1;
-  int _waitBetweenSeconds = 2;
+  Duration _waitBetween = const Duration(seconds: 2);
   String _searchText = '';
 
   // Execution control
@@ -197,13 +198,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildNumberInput(
-                            label: 'Wait Between (sec)',
-                            value: _waitBetweenSeconds,
-                            onChanged: (v) =>
-                                setState(() => _waitBetweenSeconds = v),
-                            min: 0,
-                            max: 60,
+                          child: DelayInputWidget(
+                            label: 'Wait Between',
+                            initialDelay: _waitBetween,
+                            onDelayChanged: (d) =>
+                                setState(() => _waitBetween = d),
                           ),
                         ),
                       ],
@@ -528,7 +527,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       sorts: _sorts,
       actions: _actions,
       parallelQueries: _parallelQueries,
-      waitBetweenSeconds: _waitBetweenSeconds,
+      waitBetweenSeconds: _waitBetween.inSeconds,
       limit: _limit,
       offset: _offset,
       randomize: _randomize,
