@@ -53,7 +53,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
-  bool _showFilterMenu = false;
+  bool _showFilterPresets = false;
 
   @override
   void initState() {
@@ -700,18 +700,18 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                     IconButton(
                       icon: Icon(
-                        _showFilterMenu
+                        _showFilterPresets
                             ? Icons.filter_list_off
                             : Icons.filter_list,
                       ),
                       onPressed: () {
                         setState(() {
-                          _showFilterMenu = !_showFilterMenu;
+                          _showFilterPresets = !_showFilterPresets;
                         });
                       },
-                      tooltip: _showFilterMenu
-                          ? 'Hide Filter Menu'
-                          : 'Show Filter Menu',
+                      tooltip: _showFilterPresets
+                          ? 'Hide Filter Presets'
+                          : 'Show Filter Presets',
                     ),
                     IconButton(
                       icon: const Icon(Icons.access_time),
@@ -731,16 +731,16 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                 const SizedBox(height: 12),
 
-                // Filters and Sorts inline (collapsible)
-                if (_showFilterMenu)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        // Left side: Active Filters
+                // Filters and Sorts inline
+                Padding(
+                  padding: const EdgeInsets.only(top: 8.0),
+                  child: Row(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Left side: Active Filters
+                      if (widget.filterTree != null)
                         Expanded(
-                          flex: 2,
+                          flex: _showFilterPresets ? 2 : 1,
                           child: ExpansionTile(
                             title: const Text('Active Filters'),
                             initiallyExpanded: true,
@@ -839,8 +839,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             ],
                           ),
                         ),
+                      if (widget.filterTree != null && _showFilterPresets)
                         const VerticalDivider(width: 24),
-                        // Right side: Presets
+                      // Right side: Presets
+                      if (_showFilterPresets)
                         Expanded(
                           flex: 1,
                           child: ExpansionTile(
@@ -951,38 +953,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             ],
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                else if (widget.filterTree != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _expressionController,
-                            readOnly: true,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.blueAccent,
-                              fontFamily: 'monospace',
-                            ),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _showFilterMenu = true;
-                              });
-                            },
-                          ),
-                        ),
-                      ],
-                    ),
+                    ],
                   ),
+                ),
               ],
             ),
           ),
