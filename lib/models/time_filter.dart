@@ -1,3 +1,5 @@
+enum TimeFilterField { created, updated }
+
 enum TimeFilterType { newerThan, olderThan, between }
 
 enum TimeFilterUnit { hours, days, months }
@@ -8,6 +10,7 @@ class TimeFilter {
   final TimeFilterUnit unit;
   final DateTime? specificTime;
   final DateTime? specificTimeEnd;
+  final TimeFilterField field;
 
   TimeFilter({
     required this.type,
@@ -15,6 +18,7 @@ class TimeFilter {
     this.unit = TimeFilterUnit.days,
     this.specificTime,
     this.specificTimeEnd,
+    this.field = TimeFilterField.updated,
   });
 
   factory TimeFilter.fromJson(Map<String, dynamic> json) {
@@ -28,6 +32,9 @@ class TimeFilter {
       specificTimeEnd: json['specificTimeEnd'] != null
           ? DateTime.parse(json['specificTimeEnd'])
           : null,
+      field: json['field'] != null
+          ? TimeFilterField.values.byName(json['field'])
+          : TimeFilterField.updated,
     );
   }
 
@@ -38,6 +45,7 @@ class TimeFilter {
       'unit': unit.name,
       'specificTime': specificTime?.toIso8601String(),
       'specificTimeEnd': specificTimeEnd?.toIso8601String(),
+      'field': field.name,
     };
   }
 }
