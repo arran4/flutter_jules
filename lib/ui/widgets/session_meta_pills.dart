@@ -103,23 +103,30 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
 
-        // PR Status (for Open/Draft/Merged)
+        // PR Status (for Open/Draft/Merged/Closed)
         if (session.prStatus != null &&
             (session.prStatus == 'Open' ||
                 session.prStatus == 'Draft' ||
-                session.prStatus == 'Merged'))
+                session.prStatus == 'Merged' ||
+                session.prStatus == 'Closed'))
           _buildChip(
             context,
             label: 'PR: ${session.prStatus}',
             avatar: Icon(
-              session.prStatus == 'Draft' ? Icons.edit_note : Icons.merge_type,
+              session.prStatus == 'Draft'
+                  ? Icons.edit_note
+                  : (session.prStatus == 'Closed'
+                      ? Icons.highlight_off
+                      : Icons.merge_type),
               size: 16,
             ),
             backgroundColor: session.prStatus == 'Draft'
                 ? Colors.amber.shade50
                 : (session.prStatus == 'Merged'
-                      ? Colors.purple.shade50
-                      : Colors.blue.shade50),
+                    ? Colors.purple.shade50
+                    : (session.prStatus == 'Closed'
+                        ? Colors.red.shade50
+                        : Colors.blue.shade50)),
             filterToken: FilterToken(
               id: 'prStatus:${session.prStatus}',
               type: FilterType.prStatus,
