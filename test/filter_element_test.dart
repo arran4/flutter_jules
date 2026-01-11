@@ -1,3 +1,6 @@
+import 'package:flutter_jules/models/cache_metadata.dart';
+import 'package:flutter_jules/models/session.dart';
+import 'package:flutter_jules/models/source.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/models/filter_element.dart';
 import 'package:flutter_jules/models/filter_element_builder.dart';
@@ -543,5 +546,41 @@ void main() {
 
       expect(result, isA<OrElement>());
     });
+  });
+
+  test('NoSourceElement should correctly filter sessions', () {
+    final noSourceElement = NoSourceElement();
+
+    final sessionWithSource = Session(
+      name: 'test',
+      id: '1',
+      prompt: 'test',
+      sourceContext: SourceContext(source: 'sources/github/test/repo'),
+    );
+
+    final sessionWithoutSource = Session(
+      name: 'test',
+      id: '2',
+      prompt: 'test',
+    );
+
+    final contextWithSource = FilterContext(
+      session: sessionWithSource,
+      metadata: CacheMetadata.empty(),
+    );
+
+    final contextWithoutSource = FilterContext(
+      session: sessionWithoutSource,
+      metadata: CacheMetadata.empty(),
+    );
+
+    expect(
+      noSourceElement.evaluate(contextWithSource),
+      FilterState.explicitOut,
+    );
+    expect(
+      noSourceElement.evaluate(contextWithoutSource),
+      FilterState.explicitIn,
+    );
   });
 }

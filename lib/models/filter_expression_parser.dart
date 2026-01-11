@@ -146,6 +146,7 @@ class FilterExpressionParser {
         if (args.isEmpty) return null;
         final arg = args[0].toUpperCase();
         if (arg == 'PR') return HasPrElement();
+        if (arg == 'NOSOURCE') return NoSourceElement();
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }
