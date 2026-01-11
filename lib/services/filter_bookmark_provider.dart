@@ -77,7 +77,6 @@ class FilterBookmarkProvider with ChangeNotifier {
     // Prevent duplicates by name
     _bookmarks.removeWhere((b) => b.name == bookmark.name);
     _bookmarks.add(bookmark);
-    _bookmarks.sort((a, b) => a.name.compareTo(b.name));
     await _saveBookmarks();
     notifyListeners();
   }
@@ -168,11 +167,20 @@ class FilterBookmarkProvider with ChangeNotifier {
         _bookmarks = imported;
       }
 
-      _bookmarks.sort((a, b) => a.name.compareTo(b.name));
       await _saveBookmarks();
       notifyListeners();
     } catch (e) {
       throw Exception('Failed to import bookmarks: $e');
     }
+  }
+
+  Future<void> reorderBookmark(int oldIndex, int newIndex) async {
+    if (oldIndex < newIndex) {
+      newIndex -= 1;
+    }
+    final bookmark = _bookmarks.removeAt(oldIndex);
+    _bookmarks.insert(newIndex, bookmark);
+    await _saveBookmarks();
+    notifyListeners();
   }
 }
