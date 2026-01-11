@@ -133,8 +133,11 @@ class GitHubRepo {
       description: getStringPropOrDefault(json, 'description', null),
       primaryLanguage: getStringPropOrDefault(json, 'primaryLanguage', null),
       license: getStringPropOrDefault(json, 'license', null),
-      openIssuesCount:
-          getNumberPropOrDefault<num?>(json, 'openIssuesCount', null)?.toInt(),
+      openIssuesCount: getNumberPropOrDefault<num?>(
+        json,
+        'openIssuesCount',
+        null,
+      )?.toInt(),
       isFork: json['isFork'] as bool?,
       forkParent: getStringPropOrDefault(json, 'forkParent', null),
     );
