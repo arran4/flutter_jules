@@ -698,12 +698,26 @@ class SessionProvider extends ChangeNotifier {
       _githubProvider!.getCIStatus(owner, repo, prNumber),
     ]);
 
-    final prResponse = results[0] as GitHubPrResponse?;
+    Object? result0 = results[0];
+    GitHubPrResponse? prResponse;
+    String? rawPrStatus;
+
+    if (result0 is GitHubPrResponse) {
+      prResponse = result0;
+    } else if (result0 is String) {
+      debugPrint('Warning: getPrStatus returned String: $result0');
+      rawPrStatus = result0;
+    } else if (result0 is Map<String, dynamic>) {
+       // debugPrint('Warning: getPrStatus returned Map');
+       // Backward compatibility if needed
+       prResponse = GitHubPrResponse(result0);
+    }
+
     final ciStatus = results[1] as String?;
 
     // Update session with new statuses
     final updatedSession = session.copyWith(
-      prStatus: prResponse?.displayStatus ?? session.prStatus,
+      prStatus: prResponse?.displayStatus ?? rawPrStatus ?? session.prStatus,
       ciStatus: ciStatus ?? session.ciStatus,
       mergeableState: prResponse?.mergeableState,
       additions: prResponse?.additions,
@@ -768,17 +782,30 @@ class SessionProvider extends ChangeNotifier {
         _githubProvider!.getPrStatus(owner, repo, prNumber),
         _githubProvider!.getCIStatus(owner, repo, prNumber),
       ]);
-      final prResponse = results[0] as GitHubPrResponse?;
+      
+      Object? result0 = results[0];
+      GitHubPrResponse? prResponse;
+      String? rawPrStatus;
+
+      if (result0 is GitHubPrResponse) {
+        prResponse = result0;
+      } else if (result0 is String) {
+        // debugPrint('Warning: background getPrStatus returned String: $result0');
+        rawPrStatus = result0;
+      } else if (result0 is Map<String, dynamic>) {
+         prResponse = GitHubPrResponse(result0);
+      }
+
       final ciStatus = results[1] as String?;
 
-      if (prResponse != null || ciStatus != null) {
+      if (prResponse != null || ciStatus != null || rawPrStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
 
           final updatedSession = item.data.copyWith(
-            prStatus: prResponse?.displayStatus ?? item.data.prStatus,
+            prStatus: prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
             ciStatus: ciStatus ?? item.data.ciStatus,
             mergeableState: prResponse?.mergeableState,
             additions: prResponse?.additions,
