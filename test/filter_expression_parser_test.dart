@@ -26,6 +26,10 @@ void main() {
       expect(drafts.value, 'draft');
     });
 
+    test('Should parse Has(NoSource)', () {
+      expect(FilterExpressionParser.parse('Has(NoSource)'), isA<NoSourceElement>());
+    });
+
     test('Should strip technical prefixes in State()', () {
       const input1 = 'State(SessionState.IN_PROGRESS)';
       const input2 = 'State(State.COMPLETED)';

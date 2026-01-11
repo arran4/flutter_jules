@@ -46,6 +46,6 @@ void main() {
     );
 
     expect(find.text('PR: Open'), findsOneWidget);
-    expect(find.byIcon(Icons.merge_type), findsOneWidget);
+    expect(find.byIcon(Icons.code), findsOneWidget);
   });
 }

@@ -27,7 +27,7 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
   @override
   void initState() {
     super.initState();
-    _delayController.text = widget.config.waitBetweenSeconds.toString();
+    _delayController.text = widget.config.waitBetween.inSeconds.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BulkActionExecutor>().startJob(
             widget.config,

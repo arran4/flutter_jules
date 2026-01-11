@@ -118,6 +118,11 @@ class SettingsProvider extends ChangeNotifier {
   List<RefreshSchedule> _defaultSchedules() {
     return [
       RefreshSchedule(
+        name: 'Refresh while session is open',
+        intervalInMinutes: 5,
+        refreshPolicy: ListRefreshPolicy.quick,
+      ),
+      RefreshSchedule(
         name: 'Full Refresh',
         intervalInMinutes: 60,
         refreshPolicy: ListRefreshPolicy.full,
