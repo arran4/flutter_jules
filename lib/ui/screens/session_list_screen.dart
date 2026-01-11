@@ -103,6 +103,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load last used filter if no explicit filter is set
+      if (widget.sourceFilter == null) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.lastFilter != _filterTree) {
+          setState(() {
+            _filterTree = settings.lastFilter;
+          });
+        }
+      }
+
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.token != null) {
         // Trigger generic load
@@ -1610,6 +1620,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     setState(() {
                                       _filterTree = tree;
                                     });
+                                    // Also save to settings
+                                    final settings =
+                                        Provider.of<SettingsProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    settings.setLastFilter(tree);
                                   },
                                   searchText: _searchText,
                                   onSearchChanged: (text) {
