@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import '../../models.dart';
+import 'note_dialog.dart';
 
 class SessionMetaPills extends StatelessWidget {
   final Session session;
@@ -184,6 +185,19 @@ class SessionMetaPills extends StatelessWidget {
             avatar: const Icon(Icons.edit_document, size: 16),
             backgroundColor: Colors.grey.shade200,
           ),
+        if (session.note?.content.isNotEmpty ?? false)
+          _buildChip(
+            context,
+            label: 'Note',
+            avatar: const Icon(Icons.note, size: 16),
+            tooltip: session.note!.content,
+            filterToken: const FilterToken(
+              id: 'flag:has_notes',
+              type: FilterType.flag,
+              label: 'Has Notes',
+              value: 'has_notes',
+            ),
+          ),
       ],
     );
   }
@@ -262,6 +276,7 @@ class SessionMetaPills extends StatelessWidget {
     Widget? avatar,
     FilterToken? filterToken,
     SortField? sortField,
+    String? tooltip,
   }) {
     Widget chip = Chip(
       label: Text(label, style: compact ? const TextStyle(fontSize: 10) : null),
@@ -271,6 +286,13 @@ class SessionMetaPills extends StatelessWidget {
       padding: compact ? const EdgeInsets.all(0) : null,
       visualDensity: compact ? VisualDensity.compact : null,
     );
+
+    if (tooltip != null) {
+      chip = Tooltip(
+        message: tooltip,
+        child: chip,
+      );
+    }
 
     if (filterToken != null) {
       chip = Draggable<FilterToken>(
