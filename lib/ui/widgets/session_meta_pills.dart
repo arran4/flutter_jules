@@ -103,23 +103,16 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
 
-        // PR Status (for Open/Draft/Merged)
-        if (session.prStatus != null &&
-            (session.prStatus == 'Open' ||
-                session.prStatus == 'Draft' ||
-                session.prStatus == 'Merged'))
+        // PR Status
+        if (session.prStatus != null)
           _buildChip(
             context,
             label: 'PR: ${session.prStatus}',
             avatar: Icon(
-              session.prStatus == 'Draft' ? Icons.edit_note : Icons.merge_type,
+              _getIconForPrStatus(session.prStatus),
               size: 16,
             ),
-            backgroundColor: session.prStatus == 'Draft'
-                ? Colors.amber.shade50
-                : (session.prStatus == 'Merged'
-                    ? Colors.purple.shade50
-                    : Colors.blue.shade50),
+            backgroundColor: _getColorForPrStatus(session.prStatus),
             filterToken: FilterToken(
               id: 'prStatus:${session.prStatus}',
               type: FilterType.prStatus,
@@ -192,6 +185,30 @@ class SessionMetaPills extends StatelessWidget {
       return Colors.blue.shade50;
     }
     return Colors.grey.shade50;
+  }
+
+  IconData _getIconForPrStatus(String? status) {
+    switch (status) {
+      case 'Draft':
+        return Icons.edit_note;
+      case 'Closed':
+        return Icons.close;
+      default:
+        return Icons.merge_type;
+    }
+  }
+
+  Color _getColorForPrStatus(String? status) {
+    switch (status) {
+      case 'Draft':
+        return Colors.amber.shade50;
+      case 'Merged':
+        return Colors.purple.shade50;
+      case 'Closed':
+        return Colors.red.shade100;
+      default:
+        return Colors.blue.shade50;
+    }
   }
 
   Widget _buildChip(

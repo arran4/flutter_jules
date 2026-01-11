@@ -1920,40 +1920,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                     'watched',
                                                               ),
                                                             ),
-                                                          // PR Status - only for final states (Closed/Merged)
-                                                          if (session.prStatus !=
-                                                                  null &&
-                                                              (session.prStatus ==
-                                                                      'Closed' ||
-                                                                  session.prStatus ==
-                                                                      'Merged'))
-                                                            _buildPill(
-                                                              context,
-                                                              metadata:
-                                                                  metadata,
-                                                              session: session,
-                                                              label:
-                                                                  '${session.prStatus}',
-                                                              backgroundColor:
-                                                                  session.prStatus ==
-                                                                          'Merged'
-                                                                      ? Colors
-                                                                          .green
-                                                                      : Colors
-                                                                          .red,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  FilterToken(
-                                                                id: 'prStatus:${session.prStatus}',
-                                                                type: FilterType
-                                                                    .prStatus,
-                                                                label:
-                                                                    'PR: ${session.prStatus}',
-                                                                value: session
-                                                                    .prStatus!,
-                                                              ),
-                                                            ),
 
                                                           // Render custom labels
                                                           for (final label
