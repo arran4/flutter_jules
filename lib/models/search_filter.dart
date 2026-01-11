@@ -50,9 +50,8 @@ class FilterToken {
       type: type,
       label: label,
       value: value,
-      mode: mode == FilterMode.include
-          ? FilterMode.exclude
-          : FilterMode.include,
+      mode:
+          mode == FilterMode.include ? FilterMode.exclude : FilterMode.include,
     );
   }
 
