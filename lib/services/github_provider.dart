@@ -89,8 +89,9 @@ class GithubProvider extends ChangeNotifier {
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
     if (_apiKey == null) return null;
-    final url =
-        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final url = Uri.parse(
+      'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+    );
     final response = await http.get(
       url,
       headers: {
@@ -107,8 +108,9 @@ class GithubProvider extends ChangeNotifier {
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
     if (_apiKey == null) return null;
-    final url =
-        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final url = Uri.parse(
+      'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+    );
     final response = await http.get(
       url,
       headers: {
@@ -233,9 +235,7 @@ class GithubProvider extends ChangeNotifier {
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
-        final url = Uri.parse(
-          'https://api.github.com/repos/$owner/$repo',
-        );
+        final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
         final response = await http.get(
           url,
           headers: {
