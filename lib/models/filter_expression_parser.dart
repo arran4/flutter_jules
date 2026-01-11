@@ -34,6 +34,33 @@ class FilterExpressionParser {
 
   FilterElement? _parseElement() {
     _skipWhitespace();
+    if (pos < input.length && input[pos] == '#') {
+      pos++;
+      final args = <String>[];
+      if (pos < input.length && input[pos] == '(') {
+        pos++;
+        final start = pos;
+        int depth = 1;
+        while (pos < input.length && depth > 0) {
+          if (input[pos] == '(') depth++;
+          if (input[pos] == ')') depth--;
+          if (depth > 0) pos++;
+        }
+        final content = input.substring(start, pos).trim();
+        if (content.isNotEmpty) {
+          args.add(_unescape(content));
+        }
+        if (pos < input.length && input[pos] == ')') {
+          pos++;
+        }
+      } else {
+        final ident = _readIdentifier();
+        if (ident.isNotEmpty) {
+          args.add(ident);
+        }
+      }
+      return _createFilter('HASHTAG', [], args);
+    }
     final name = _readIdentifier();
     if (name.isEmpty) return null;
 

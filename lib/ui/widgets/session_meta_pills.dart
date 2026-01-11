@@ -190,13 +190,13 @@ class SessionMetaPills extends StatelessWidget {
           ...session.tags!.map(
             (tag) => _buildChip(
               context,
-              label: tag,
+              label: '#$tag',
               avatar: const Icon(Icons.tag, size: 16),
               backgroundColor: Colors.indigo.shade50,
               filterToken: FilterToken(
                 id: 'tag:$tag',
                 type: FilterType.tag,
-                label: tag,
+                label: '#$tag',
                 value: tag,
               ),
             ),

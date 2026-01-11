@@ -79,7 +79,7 @@ class TagManagementDialogState extends State<TagManagementDialog> {
             runSpacing: 4.0,
             children: _currentTags
                 .map((tag) => Chip(
-                      label: Text(tag),
+                      label: Text('#$tag'),
                       onDeleted: () {
                         setState(() {
                           _currentTags.remove(tag);
@@ -129,7 +129,7 @@ class TagManagementDialogState extends State<TagManagementDialog> {
           runSpacing: 4.0,
           children: availableTags
               .map((tag) => ActionChip(
-                    label: Text(tag),
+                    label: Text('#$tag'),
                     onPressed: () {
                       _addNewTag(tag);
                     },
