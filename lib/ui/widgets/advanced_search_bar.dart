@@ -7,7 +7,7 @@ import 'filter_element_widget.dart';
 import 'package:provider/provider.dart';
 import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
-import '../screens/bookmark_manager_screen.dart';
+import 'filter_presets_popup.dart';
 import 'sort_pills_widget.dart';
 import 'time_filter_dialog.dart';
 
@@ -53,13 +53,13 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
-  bool _showFilterMenu = false;
+  bool _showFilterMenu = true;
 
   @override
   void initState() {
     super.initState();
     _textController.text = widget.searchText;
-    _expressionController.text = widget.filterTree?.toExpression() ?? '';
+    _updateExpressionController();
     _focusNode = FocusNode(onKeyEvent: _handleFocusKey);
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(() {
@@ -76,11 +76,29 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   @override
   void didUpdateWidget(AdvancedSearchBar oldWidget) {
     super.didUpdateWidget(oldWidget);
-    if (widget.filterTree != oldWidget.filterTree) {
-      final newExpr = widget.filterTree?.toExpression() ?? '';
-      if (_expressionController.text != newExpr) {
-        _expressionController.text = newExpr;
+    if (widget.filterTree != oldWidget.filterTree ||
+        widget.activeSorts != oldWidget.activeSorts) {
+      _updateExpressionController();
+    }
+  }
+
+  void _updateExpressionController() {
+    final filterExpr = widget.filterTree?.toExpression() ?? '';
+    final sortExpr = widget.activeSorts.map((s) {
+      final dir = s.direction == SortDirection.ascending ? 'asc' : 'desc';
+      return 'sort:${s.label}:$dir';
+    }).join(' ');
+
+    var fullExpr = filterExpr;
+    if (sortExpr.isNotEmpty) {
+      if (fullExpr.isNotEmpty) {
+        fullExpr += ' ';
       }
+      fullExpr += sortExpr;
+    }
+
+    if (_expressionController.text != fullExpr) {
+      _expressionController.text = fullExpr;
     }
   }
 
@@ -618,233 +636,129 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       },
                       tooltip: 'Filter by Time',
                     ),
+                    FilterPresetsPopup(
+                      filterTree: widget.filterTree,
+                      activeSorts: widget.activeSorts,
+                      availableSuggestions: widget.availableSuggestions,
+                      onPresetApplied: (bookmark) {
+                        widget.onFilterTreeChanged(bookmark.tree);
+                        widget.onSortsChanged(bookmark.sorts);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Applied preset: ${bookmark.name}'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      },
+                    ),
                   ],
                 ),
-
-                const SizedBox(height: 12),
-
-                // Filters and Sorts inline (collapsible)
+                // Collapsible Filter & Sort section
                 if (_showFilterMenu)
                   Padding(
-                    padding: const EdgeInsets.only(top: 8),
-                    child: Row(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    padding: const EdgeInsets.only(top: 8.0),
+                    child: Wrap(
+                      spacing: 8.0,
+                      runSpacing: 4.0,
+                      crossAxisAlignment: WrapCrossAlignment.start,
                       children: [
-                        // Left side: Active Filters
-                        Expanded(
-                          flex: 2,
-                          child: ExpansionTile(
-                            title: const Text('Active Filters'),
-                            initiallyExpanded: true,
-                            children: [
-                              if (widget.filterTree != null)
-                                FilterElementWidget(
-                                  element: widget.filterTree,
-                                  onAddAlternative: (target, alternative) {
-                                    final newTree =
-                                        FilterElementBuilder.groupFilters(
-                                      widget.filterTree,
-                                      target,
-                                      alternative,
-                                      isAnd: false,
-                                    );
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onDrop:
-                                      (source, target, action, isCtrlPressed) {
-                                    var newTree = widget.filterTree;
-                                    final sourceCopy =
-                                        FilterElement.fromJson(source.toJson());
-                                    final isCopy = isCtrlPressed;
+                        if (widget.filterTree != null)
+                          FilterElementWidget(
+                            element: widget.filterTree,
+                            onAddAlternative: (target, alternative) {
+                              final newTree = FilterElementBuilder.groupFilters(
+                                widget.filterTree,
+                                target,
+                                alternative,
+                                isAnd: false,
+                              );
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onDrop:
+                                (source, target, action, isCtrlPressed) {
+                              var newTree = widget.filterTree;
+                              final sourceCopy =
+                                  FilterElement.fromJson(source.toJson());
+                              final isCopy = isCtrlPressed;
 
-                                    switch (action) {
-                                      case FilterDropAction.groupOr:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: false);
-                                        break;
-                                      case FilterDropAction.groupAnd:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: true);
-                                        break;
-                                      case FilterDropAction.addToGroup:
-                                        newTree = FilterElementBuilder
-                                            .addFilterToComposite(
-                                                newTree, target, sourceCopy);
-                                        break;
-                                      case FilterDropAction.groupAboveAnd:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: true);
-                                        break;
-                                      case FilterDropAction.groupAboveOr:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: false);
-                                        break;
-                                    }
+                              switch (action) {
+                                case FilterDropAction.groupOr:
+                                  newTree =
+                                      FilterElementBuilder.groupFilters(
+                                          newTree, target, sourceCopy,
+                                          isAnd: false);
+                                  break;
+                                case FilterDropAction.groupAnd:
+                                  newTree =
+                                      FilterElementBuilder.groupFilters(
+                                          newTree, target, sourceCopy,
+                                          isAnd: true);
+                                  break;
+                                case FilterDropAction.addToGroup:
+                                  newTree = FilterElementBuilder
+                                      .addFilterToComposite(
+                                          newTree, target, sourceCopy);
+                                  break;
+                                case FilterDropAction.groupAboveAnd:
+                                  newTree =
+                                      FilterElementBuilder.groupFilters(
+                                          newTree, target, sourceCopy,
+                                          isAnd: true);
+                                  break;
+                                case FilterDropAction.groupAboveOr:
+                                  newTree =
+                                      FilterElementBuilder.groupFilters(
+                                          newTree, target, sourceCopy,
+                                          isAnd: false);
+                                  break;
+                              }
 
-                                    if (!isCopy && newTree != null) {
-                                      newTree =
-                                          FilterElementBuilder.removeFilter(
-                                              newTree, source);
-                                    }
+                              if (!isCopy && newTree != null) {
+                                newTree =
+                                    FilterElementBuilder.removeFilter(
+                                        newTree, source);
+                              }
 
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onRemove: (element) {
-                                    final newTree =
-                                        FilterElementBuilder.removeFilter(
-                                            widget.filterTree, element);
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onToggleNot: (element) {
-                                    final newTree =
-                                        FilterElementBuilder.toggleNot(
-                                            widget.filterTree!, element);
-                                    widget.onFilterTreeChanged(newTree);
-                                  },
-                                  onTap: null,
-                                )
-                              else
-                                const Text(
-                                  'No filters applied.',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey),
-                                ),
-                              const SizedBox(height: 16),
-                              SortPillsWidget(
-                                activeSorts: widget.activeSorts,
-                                onSortsChanged: widget.onSortsChanged,
-                              ),
-                            ],
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onRemove: (element) {
+                              final newTree =
+                                  FilterElementBuilder.removeFilter(
+                                      widget.filterTree, element);
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onToggleNot: (element) {
+                              final newTree =
+                                  FilterElementBuilder.toggleNot(
+                                      widget.filterTree!, element);
+                              widget.onFilterTreeChanged(newTree);
+                            },
+                            onTap: null,
+                          )
+                        else if (widget.activeSorts.isEmpty)
+                           Padding(
+                            padding: const EdgeInsets.symmetric(vertical: 8.0),
+                            child: Text(
+                              'No filters or sorts applied.',
+                              style:
+                                  TextStyle(fontSize: 12, color: Colors.grey),
+                            ),
                           ),
-                        ),
-                        const VerticalDivider(width: 24),
-                        // Right side: Presets
-                        Expanded(
-                          flex: 1,
-                          child: ExpansionTile(
-                            title: const Text('Filter Presets'),
-                            initiallyExpanded: true,
-                            children: [
-                              Consumer<FilterBookmarkProvider>(
-                                builder: (context, bookmarkProvider, child) {
-                                  if (bookmarkProvider.isLoading) {
-                                    return const Center(
-                                        child: CircularProgressIndicator());
-                                  }
-                                  return Column(
-                                    children: [
-                                      ...bookmarkProvider.bookmarks
-                                          .map((bookmark) {
-                                        return InkWell(
-                                          onTap: () {
-                                            widget.onFilterTreeChanged(
-                                                bookmark.tree);
-                                            widget
-                                                .onSortsChanged(bookmark.sorts);
-                                            ScaffoldMessenger.of(context)
-                                                .showSnackBar(
-                                              SnackBar(
-                                                content: Text(
-                                                    'Applied preset: ${bookmark.name}'),
-                                                duration:
-                                                    const Duration(seconds: 2),
-                                              ),
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.symmetric(
-                                                vertical: 6),
-                                            child: Row(
-                                              children: [
-                                                Icon(
-                                                  Icons.bookmark,
-                                                  size: 16,
-                                                  color: bookmarkProvider
-                                                          .isSystemBookmark(
-                                                              bookmark.name)
-                                                      ? Colors.blue
-                                                      : Colors.orange,
-                                                ),
-                                                const SizedBox(width: 8),
-                                                Expanded(
-                                                  child: Text(
-                                                    bookmark.name,
-                                                    style: const TextStyle(
-                                                        fontSize: 12),
-                                                    overflow:
-                                                        TextOverflow.ellipsis,
-                                                  ),
-                                                ),
-                                              ],
-                                            ),
-                                          ),
-                                        );
-                                      }),
-                                      const Divider(height: 16),
-                                      Row(
-                                        mainAxisAlignment:
-                                            MainAxisAlignment.end,
-                                        children: [
-                                          TextButton.icon(
-                                            onPressed: () =>
-                                                _saveCurrentFilters(context),
-                                            icon: const Icon(Icons.save,
-                                                size: 16),
-                                            label: const Text('Save Current'),
-                                            style: TextButton.styleFrom(
-                                              textStyle:
-                                                  const TextStyle(fontSize: 12),
-                                              foregroundColor: Colors.grey[700],
-                                            ),
-                                          ),
-                                          TextButton.icon(
-                                            onPressed: () {
-                                              Navigator.of(context).push(
-                                                MaterialPageRoute(
-                                                  builder: (context) =>
-                                                      BookmarkManagerScreen(
-                                                    availableSuggestions: widget
-                                                        .availableSuggestions,
-                                                  ),
-                                                ),
-                                              );
-                                            },
-                                            icon: const Icon(Icons.settings,
-                                                size: 16),
-                                            label: const Text('Manage'),
-                                            style: TextButton.styleFrom(
-                                              textStyle:
-                                                  const TextStyle(fontSize: 12),
-                                              foregroundColor: Colors.grey[700],
-                                            ),
-                                          ),
-                                        ],
-                                      ),
-                                    ],
-                                  );
-                                },
-                              ),
-                            ],
-                          ),
+                        SortPillsWidget(
+                          activeSorts: widget.activeSorts,
+                          onSortsChanged: widget.onSortsChanged,
                         ),
                       ],
                     ),
                   )
-                else if (widget.filterTree != null)
+                else if (widget.filterTree != null ||
+                    widget.activeSorts.isNotEmpty)
                   Padding(
                     padding: const EdgeInsets.only(top: 4),
                     child: Row(
