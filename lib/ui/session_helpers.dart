@@ -205,8 +205,7 @@ Future<void> handleNewSessionResultInBackground({
   }
 
   if (hideOriginal && anySucceeded) {
-    await sessionProvider.toggleHidden(
-        originalSession.id, authProvider.token!);
+    await sessionProvider.toggleHidden(originalSession.id, authProvider.token!);
     showMessage("Original session hidden.");
   } else if (anySucceeded) {
     showMessage("New session(s) created.");

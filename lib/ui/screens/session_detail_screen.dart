@@ -977,11 +977,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     final scaffoldMessenger = ScaffoldMessenger.of(
                       sessionProvider.scaffoldKey.currentContext!,
                     );
-                    final showMessage = (String msg) {
+                    void showMessage(String msg) {
                       scaffoldMessenger.showSnackBar(
                         SnackBar(content: Text(msg)),
                       );
-                    };
+                    }
 
                     handleNewSessionResultInBackground(
                       result: result,

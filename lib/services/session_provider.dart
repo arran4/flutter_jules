@@ -820,7 +820,7 @@ class SessionProvider extends ChangeNotifier {
           final updatedSession = item.data.copyWith(
             prStatus:
                 prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
-            ciStatus: ciStatus ?? item..ciStatus,
+            ciStatus: ciStatus ?? item.data.ciStatus,
             mergeableState: prResponse?.mergeableState,
             additions: prResponse?.additions,
             deletions: prResponse?.deletions,
