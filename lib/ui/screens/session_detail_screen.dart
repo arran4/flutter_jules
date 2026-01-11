@@ -18,6 +18,7 @@ import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
+import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
@@ -300,8 +301,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique =
-                _activities.where((a) => !newIds.contains(a.id)).toList();
+            final oldUnique = _activities
+                .where((a) => !newIds.contains(a.id))
+                .toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -557,6 +559,136 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _createNewSessionFromCurrent() async {
+    final NewSessionResult? result = await showDialog<NewSessionResult>(
+      context: context,
+      builder: (context) => NewSessionDialog(initialSession: _session),
+    );
+
+    if (result == null || !mounted) return;
+
+    _handleNewSessionResult(result);
+  }
+
+  Future<void> _handleNewSessionResult(NewSessionResult result) async {
+    if (result.isDraft) {
+      // Handle drafts
+      final queueProvider = Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      );
+      for (final session in result.sessions) {
+        queueProvider.addCreateSessionRequest(session, isDraft: true);
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '${result.sessions.length} draft(s) saved successfully',
+          ),
+        ),
+      );
+      return;
+    }
+
+    // Handle session creation
+    final sessionsToCreate = result.sessions;
+    if (sessionsToCreate.length > 1) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Starting creation of ${sessionsToCreate.length} sessions...',
+          ),
+        ),
+      );
+    }
+
+    for (final session in sessionsToCreate) {
+      await _performCreate(session, sessionsToCreate.length > 1);
+    }
+  }
+
+  Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
+    try {
+      final client = Provider.of<AuthProvider>(context, listen: false).client;
+      await client.createSession(sessionToCreate);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Session created successfully!')),
+      );
+
+      // Optionally, refresh the main list in the background
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      sessionProvider.fetchSessions(
+        client,
+        force: true,
+        shallow: true,
+        authToken: auth.token,
+      );
+    } catch (e) {
+      if (!mounted) return;
+
+      bool handled = false;
+      if (e is JulesException && e.responseBody != null) {
+        try {
+          final body = jsonDecode(e.responseBody!);
+          if (body is Map && body.containsKey('error')) {
+            final error = body['error'];
+            if (error is Map) {
+              final status = error['status'];
+              if (status == 'RESOURCE_EXHAUSTED' || status == 'UNAVAILABLE') {
+                Provider.of<MessageQueueProvider>(
+                  context,
+                  listen: false,
+                ).addCreateSessionRequest(
+                  sessionToCreate,
+                  reason: status.toLowerCase(),
+                );
+                if (!isBulk) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        'API limit reached. Session creation queued.',
+                      ),
+                    ),
+                  );
+                }
+                handled = true;
+              }
+            }
+          }
+        } catch (_) {}
+      }
+
+      if (!handled) {
+        Provider.of<MessageQueueProvider>(
+          context,
+          listen: false,
+        ).addCreateSessionRequest(sessionToCreate, reason: 'creation_failed');
+        if (!isBulk) {
+          showDialog(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Error Creating Session'),
+              content: SelectableText(e.toString()),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Close'),
+                ),
+              ],
+            ),
+          );
+        }
+      }
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -592,6 +724,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
+            IconButton(
+              icon: const Icon(Icons.add_circle_outline),
+              tooltip: 'New Session',
+              onPressed: _createNewSessionFromCurrent,
+            ),
             if (_session.outputs != null &&
                 _session.outputs!.any((o) => o.pullRequest != null))
               IconButton(
@@ -795,8 +932,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   context,
                   listen: false,
                 ).items.any(
-                      (i) => i.data.id == _session.id && i.metadata.isWatched,
-                    ))
+                  (i) => i.data.id == _session.id && i.metadata.isWatched,
+                ))
                   const PopupMenuItem(
                     value: 'watch',
                     child: Row(
@@ -938,7 +1075,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -947,8 +1085,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages =
-        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+    final queuedMessages = queueProvider.queue
+        .where((m) => m.sessionId == _session.id)
+        .toList();
 
     final queuedActivities = queuedMessages.map(
       (m) => Activity(
@@ -1068,11 +1207,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            DateTime.now().difference(updateTime).inMinutes > 15
-                                ? Colors.orange
-                                : Colors.grey,
-                      ),
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
+                  ),
                 ),
               ),
             );
@@ -1173,7 +1311,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal = activity.id.startsWith('pending-') ||
+          final isLocal =
+              activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -1701,7 +1840,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(

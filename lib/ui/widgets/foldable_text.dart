@@ -38,8 +38,9 @@ class _FoldableTextState extends State<FoldableText> {
               widget.text,
               style: style,
               maxLines: _isExpanded ? null : widget.maxLines,
-              overflow:
-                  _isExpanded ? TextOverflow.visible : TextOverflow.ellipsis,
+              overflow: _isExpanded
+                  ? TextOverflow.visible
+                  : TextOverflow.ellipsis,
             ),
           );
         } else {

@@ -77,6 +77,9 @@ class GithubProvider extends ChangeNotifier {
             return 'Open';
           }
         } else {
+          debugPrint(
+            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+          );
           return null;
         }
       },
@@ -116,6 +119,9 @@ class GithubProvider extends ChangeNotifier {
         _updateRateLimits(prResponse.headers);
 
         if (prResponse.statusCode != 200) {
+          debugPrint(
+            'Failed to get PR for CI status ($owner/$repo #$prNumber): ${prResponse.statusCode} ${prResponse.body}',
+          );
           // If we can't get the PR, we can't get the status.
           return 'Unknown';
         }
@@ -141,6 +147,9 @@ class GithubProvider extends ChangeNotifier {
         _updateRateLimits(checksResponse.headers);
 
         if (checksResponse.statusCode != 200) {
+          debugPrint(
+            'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
+          );
           return 'Unknown';
         }
 
