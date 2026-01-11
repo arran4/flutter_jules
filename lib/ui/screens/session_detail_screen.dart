@@ -301,9 +301,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique = _activities
-                .where((a) => !newIds.contains(a.id))
-                .toList();
+            final oldUnique =
+                _activities.where((a) => !newIds.contains(a.id)).toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -651,7 +650,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 );
                 if (!isBulk) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
+                    const SnackBar(
                       content: Text(
                         'API limit reached. Session creation queued.',
                       ),
@@ -932,8 +931,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   context,
                   listen: false,
                 ).items.any(
-                  (i) => i.data.id == _session.id && i.metadata.isWatched,
-                ))
+                      (i) => i.data.id == _session.id && i.metadata.isWatched,
+                    ))
                   const PopupMenuItem(
                     value: 'watch',
                     child: Row(
@@ -1075,8 +1074,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr =
-        _session.outputs != null &&
+    bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     // Group Activities
@@ -1085,9 +1083,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages = queueProvider.queue
-        .where((m) => m.sessionId == _session.id)
-        .toList();
+    final queuedMessages =
+        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
 
     final queuedActivities = queuedMessages.map(
       (m) => Activity(
@@ -1207,10 +1204,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DateTime.now().difference(updateTime).inMinutes > 15
-                        ? Colors.orange
-                        : Colors.grey,
-                  ),
+                        color:
+                            DateTime.now().difference(updateTime).inMinutes > 15
+                                ? Colors.orange
+                                : Colors.grey,
+                      ),
                 ),
               ),
             );
@@ -1311,8 +1309,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal =
-              activity.id.startsWith('pending-') ||
+          final isLocal = activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -1840,8 +1837,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove =
-        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(

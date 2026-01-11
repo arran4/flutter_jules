@@ -7,7 +7,7 @@ void main() {
     late List<Activity> activities;
 
     setUpAll(() {
-      final json = jsonDecode(TEST_ACTIVITIES_JSON);
+      final json = jsonDecode(testActivitiesJson);
       activities = (json['activities'] as List)
           .map((e) => Activity.fromJson(e as Map<String, dynamic>))
           .toList();
@@ -108,7 +108,7 @@ void main() {
 }
 
 // Formatted, multi-line JSON for better readability
-const TEST_ACTIVITIES_JSON = r'''
+const testActivitiesJson = r'''
 {
   "activities": [
     {
