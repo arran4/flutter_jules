@@ -99,8 +99,18 @@ class SessionProvider extends ChangeNotifier {
           final oldSession = oldItem?.data;
 
           // Preserve PR status from cache if backend doesn't provide it
-          if (session.prStatus == null && oldSession?.prStatus != null) {
-            session = session.copyWith(prStatus: oldSession!.prStatus);
+          if (oldSession != null) {
+            session = session.copyWith(
+              prStatus: session.prStatus ?? oldSession.prStatus,
+              ciStatus: session.ciStatus ?? oldSession.ciStatus,
+              mergeableState:
+                  session.mergeableState ?? oldSession.mergeableState,
+              additions: session.additions ?? oldSession.additions,
+              deletions: session.deletions ?? oldSession.deletions,
+              changedFiles: session.changedFiles ?? oldSession.changedFiles,
+              diffUrl: session.diffUrl ?? oldSession.diffUrl,
+              patchUrl: session.patchUrl ?? oldSession.patchUrl,
+            );
           }
 
           CacheMetadata metadata;
@@ -688,13 +698,19 @@ class SessionProvider extends ChangeNotifier {
       _githubProvider!.getCIStatus(owner, repo, prNumber),
     ]);
 
-    final prStatus = results[0];
-    final ciStatus = results[1];
+    final prData = results[0] as Map<String, dynamic>?;
+    final ciStatus = results[1] as String?;
 
     // Update session with new statuses
     final updatedSession = session.copyWith(
-      prStatus: prStatus,
-      ciStatus: ciStatus,
+      prStatus: prData != null ? _getPrStatusString(prData) : session.prStatus,
+      ciStatus: ciStatus ?? session.ciStatus,
+      mergeableState: prData?['mergeable_state'],
+      additions: prData?['additions'],
+      deletions: prData?['deletions'],
+      changedFiles: prData?['changed_files'],
+      diffUrl: prData?['diff_url'],
+      patchUrl: prData?['patch_url'],
     );
 
     // Update in cache
@@ -732,6 +748,13 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
+  String _getPrStatusString(Map<String, dynamic> prData) {
+    if (prData['merged'] == true) return 'Merged';
+    if (prData['draft'] == true) return 'Draft';
+    if (prData['state'] == 'closed') return 'Closed';
+    return 'Open';
+  }
+
   Future<void> _refreshGitStatusInBackground(
     String sessionId,
     String prUrl,
@@ -752,28 +775,34 @@ class SessionProvider extends ChangeNotifier {
         _githubProvider!.getPrStatus(owner, repo, prNumber),
         _githubProvider!.getCIStatus(owner, repo, prNumber),
       ]);
-      final prStatus = results[0];
-      final ciStatus = results[1];
+      final prData = results[0] as Map<String, dynamic>?;
+      final ciStatus = results[1] as String?;
 
-      if (prStatus != null || ciStatus != null) {
+      if (prData != null || ciStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != prStatus ||
-              item.data.ciStatus != ciStatus) {
-            final updatedSession = item.data.copyWith(
-              prStatus: prStatus,
-              ciStatus: ciStatus,
-            );
-            // Save to cache
-            if (_cacheService != null) {
-              await _cacheService!.updateSession(authToken, updatedSession);
-            }
-            // Update memory
-            _items[index] = CachedItem(updatedSession, item.metadata);
-            notifyListeners();
+          final prStatus = prData != null ? _getPrStatusString(prData) : null;
+
+          final updatedSession = item.data.copyWith(
+            prStatus: prStatus ?? item.data.prStatus,
+            ciStatus: ciStatus ?? item.data.ciStatus,
+            mergeableState: prData?['mergeable_state'],
+            additions: prData?['additions'],
+            deletions: prData?['deletions'],
+            changedFiles: prData?['changed_files'],
+            diffUrl: prData?['diff_url'],
+            patchUrl: prData?['patch_url'],
+          );
+
+          // Save to cache
+          if (_cacheService != null) {
+            await _cacheService!.updateSession(authToken, updatedSession);
           }
+          // Update memory
+          _items[index] = CachedItem(updatedSession, item.metadata);
+          notifyListeners();
         }
       }
     } catch (e) {
