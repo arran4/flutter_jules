@@ -100,7 +100,15 @@ class SessionProvider extends ChangeNotifier {
 
           // Preserve PR status from cache if backend doesn't provide it
           if (session.prStatus == null && oldSession?.prStatus != null) {
-            session = session.copyWith(prStatus: oldSession!.prStatus);
+            session = session.copyWith(
+              prStatus: oldSession!.prStatus,
+              mergeableState: oldSession.mergeableState,
+              additions: oldSession.additions,
+              deletions: oldSession.deletions,
+              changedFiles: oldSession.changedFiles,
+              diffUrl: oldSession.diffUrl,
+              patchUrl: oldSession.patchUrl,
+            );
           }
 
           CacheMetadata metadata;
@@ -683,10 +691,22 @@ class SessionProvider extends ChangeNotifier {
     final prNumber = pathSegments[pathSegments.length - 1];
 
     // Fetch PR status from GitHub
-    final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+    final prData = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+
+    if (prData == null) {
+      throw Exception("Failed to fetch PR status from GitHub");
+    }
 
     // Update session with new PR status
-    final updatedSession = session.copyWith(prStatus: prStatus);
+    final updatedSession = session.copyWith(
+      prStatus: prData['prStatus'],
+      mergeableState: prData['mergeableState'],
+      additions: prData['additions'],
+      deletions: prData['deletions'],
+      changedFiles: prData['changedFiles'],
+      diffUrl: prData['diffUrl'],
+      patchUrl: prData['patchUrl'],
+    );
 
     // Update in cache
     if (_cacheService != null) {
@@ -739,15 +759,23 @@ class SessionProvider extends ChangeNotifier {
       final repo = pathSegments[1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
-      final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
+      final prData = await _githubProvider!.getPrStatus(owner, repo, prNumber);
 
-      if (status != null) {
+      if (prData != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != status) {
-            final updatedSession = item.data.copyWith(prStatus: status);
+          if (item.data.prStatus != prData['prStatus']) {
+            final updatedSession = item.data.copyWith(
+              prStatus: prData['prStatus'],
+              mergeableState: prData['mergeableState'],
+              additions: prData['additions'],
+              deletions: prData['deletions'],
+              changedFiles: prData['changedFiles'],
+              diffUrl: prData['diffUrl'],
+              patchUrl: prData['patchUrl'],
+            );
             // Save to cache
             if (_cacheService != null) {
               await _cacheService!.updateSession(authToken, updatedSession);

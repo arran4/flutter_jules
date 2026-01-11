@@ -19,6 +19,8 @@ import '../widgets/bulk_action_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/diff_viewer.dart';
+import '../../services/github_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 
@@ -2321,6 +2323,82 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ),
             onTap: () => _refreshPrStatus(session),
           ),
+          if (session.diffUrl != null)
+            PopupMenuItem(
+              child: const Row(
+                children: [
+                  Icon(Icons.difference),
+                  SizedBox(width: 8),
+                  Text('View Diff'),
+                ],
+              ),
+              onTap: () async {
+                final diff = await Provider.of<GithubProvider>(context, listen: false)
+                    .getPrDiff(session.diffUrl!);
+                if (diff != null && context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => DiffViewer(diff: diff, title: 'Diff'),
+                  );
+                }
+              },
+            ),
+          if (session.patchUrl != null)
+            PopupMenuItem(
+              child: const Row(
+                children: [
+                  Icon(Icons.patch),
+                  SizedBox(width: 8),
+                  Text('View Patch'),
+                ],
+              ),
+              onTap: () async {
+                final patch = await Provider.of<GithubProvider>(context, listen: false)
+                    .getPrPatch(session.patchUrl!);
+                if (patch != null && context.mounted) {
+                  showDialog(
+                    context: context,
+                    builder: (context) => DiffViewer(diff: patch, title: 'Patch'),
+                  );
+                }
+              },
+            ),
+          if (session.diffUrl != null)
+            PopupMenuItem(
+              child: const Row(
+                children: [
+                  Icon(Icons.copy),
+                  SizedBox(width: 8),
+                  Text('Copy Diff URL'),
+                ],
+              ),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: session.diffUrl!));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Diff URL copied to clipboard"),
+                  ),
+                );
+              },
+            ),
+          if (session.patchUrl != null)
+            PopupMenuItem(
+              child: const Row(
+                children: [
+                  Icon(Icons.copy),
+                  SizedBox(width: 8),
+                  Text('Copy Patch URL'),
+                ],
+              ),
+              onTap: () {
+                Clipboard.setData(ClipboardData(text: session.patchUrl!));
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text("Patch URL copied to clipboard"),
+                  ),
+                );
+              },
+            ),
         ],
         PopupMenuItem(
           child: const Row(

@@ -39,7 +39,7 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getPrStatus(
+  Future<Map<String, dynamic>?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
@@ -67,15 +67,26 @@ class GithubProvider extends ChangeNotifier {
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
+          String prStatus;
           if (data['draft'] == true) {
-            return 'Draft';
+            prStatus = 'Draft';
           } else if (data['merged'] == true) {
-            return 'Merged';
+            prStatus = 'Merged';
           } else if (data['state'] == 'closed') {
-            return 'Closed';
+            prStatus = 'Closed';
           } else {
-            return 'Open';
+            prStatus = 'Open';
           }
+
+          return {
+            'prStatus': prStatus,
+            'mergeableState': data['mergeable_state'],
+            'additions': data['additions'],
+            'deletions': data['deletions'],
+            'changedFiles': data['changed_files'],
+            'diffUrl': data['diff_url'],
+            'patchUrl': data['patch_url'],
+          };
         } else {
           return null;
         }
@@ -88,7 +99,37 @@ class GithubProvider extends ChangeNotifier {
 
     // Wait for job to complete
     await job.completer.future;
-    return job.result as String?;
+    return job.result as Map<String, dynamic>?;
+  }
+
+  Future<String?> getPrDiff(String url) async {
+    return _getGitHubContent(url, 'application/vnd.github.v3.diff');
+  }
+
+  Future<String?> getPrPatch(String url) async {
+    return _getGitHubContent(url, 'application/vnd.github.v3.patch');
+  }
+
+  Future<String?> _getGitHubContent(String url, String acceptHeader) async {
+    if (_apiKey == null) {
+      return null;
+    }
+
+    final response = await http.get(
+      Uri.parse(url),
+      headers: {
+        'Authorization': 'token $_apiKey',
+        'Accept': acceptHeader,
+      },
+    );
+
+    _updateRateLimits(response.headers);
+
+    if (response.statusCode == 200) {
+      return response.body;
+    } else {
+      return null;
+    }
   }
 
   void _updateRateLimits(Map<String, String> headers) {

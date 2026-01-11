@@ -155,8 +155,48 @@ class SessionMetaPills extends StatelessWidget {
               value: session.sourceContext.githubRepoContext!.startingBranch,
             ),
           ),
+
+        // Mergeable State
+        if (session.mergeableState != null &&
+            session.mergeableState != 'unknown')
+          _buildChip(
+            context,
+            label: 'Mergeable: ${session.mergeableState}',
+            avatar: const Icon(Icons.merge, size: 16),
+            backgroundColor: _getColorForMergeableState(session.mergeableState!),
+          ),
+
+        // File Changes
+        if (session.additions != null || session.deletions != null)
+          _buildChip(
+            context,
+            label:
+                '+${session.additions ?? 0} / -${session.deletions ?? 0} (${session.changedFiles ?? 0} files)',
+            avatar: const Icon(Icons.difference, size: 16),
+            backgroundColor: Colors.grey.shade200,
+          ),
       ],
     );
+  }
+
+  Color _getColorForMergeableState(String state) {
+    switch (state.toLowerCase()) {
+      case 'clean':
+      case 'behind':
+        return Colors.green.shade50;
+      case 'unstable':
+      case 'has_hooks':
+      case 'pending':
+        return Colors.orange.shade50;
+      case 'dirty':
+      case 'blocked':
+      case 'conflicting':
+        return Colors.red.shade50;
+      case 'draft':
+        return Colors.grey.shade300;
+      default:
+        return Colors.grey.shade200;
+    }
   }
 
   Color _getColorForState(SessionState state) {

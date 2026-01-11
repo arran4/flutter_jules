@@ -17,6 +17,8 @@ import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/activity_item.dart';
+import '../widgets/diff_viewer.dart';
+import '../../services/github_provider.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/session_meta_pills.dart';
 import 'dart:convert';
@@ -695,6 +697,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       const SnackBar(content: Text('PR URL copied')),
                     );
                   }
+                } else if (value == 'copy_diff_url') {
+                  await Clipboard.setData(ClipboardData(text: _session.diffUrl!));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Diff URL copied')),
+                    );
+                  }
+                } else if (value == 'copy_patch_url') {
+                  await Clipboard.setData(ClipboardData(text: _session.patchUrl!));
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Patch URL copied')),
+                    );
+                  }
                 } else if (value == 'full_refresh') {
                   _fetchActivities(force: true, shallow: false);
                 } else if (value == 'copy_id') {
@@ -739,11 +755,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     listen: false,
                   ).toggleHidden(_session.id, auth.token!);
                   if (context.mounted) Navigator.pop(context);
+                } else if (value == 'view_diff') {
+                  final diff = await Provider.of<GithubProvider>(context, listen: false)
+                      .getPrDiff(_session.diffUrl!);
+                  if (diff != null && context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => DiffViewer(diff: diff, title: 'Diff'),
+                    );
+                  }
+                } else if (value == 'view_patch') {
+                  final patch = await Provider.of<GithubProvider>(context, listen: false)
+                      .getPrPatch(_session.patchUrl!);
+                  if (patch != null && context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => DiffViewer(diff: patch, title: 'Patch'),
+                    );
+                  }
                 }
               },
               itemBuilder: (context) => [
                 if (_session.outputs != null &&
-                    _session.outputs!.any((o) => o.pullRequest != null))
+                    _session.outputs!.any((o) => o.pullRequest != null)) ...[
                   const PopupMenuItem(
                     value: 'pr_back',
                     child: Row(
@@ -766,6 +800,51 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ],
                     ),
                   ),
+                  if (_session.diffUrl != null)
+                    const PopupMenuItem(
+                      value: 'view_diff',
+                      child: Row(
+                        children: [
+                          Icon(Icons.difference),
+                          SizedBox(width: 8),
+                          Text('View Diff'),
+                        ],
+                      ),
+                    ),
+                  if (_session.patchUrl != null)
+                    const PopupMenuItem(
+                      value: 'view_patch',
+                      child: Row(
+                        children: [
+                          Icon(Icons.patch),
+                          SizedBox(width: 8),
+                          Text('View Patch'),
+                        ],
+                      ),
+                    ),
+                  if (_session.diffUrl != null)
+                    const PopupMenuItem(
+                      value: 'copy_diff_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy),
+                          SizedBox(width: 8),
+                          Text('Copy Diff URL'),
+                        ],
+                      ),
+                    ),
+                  if (_session.patchUrl != null)
+                    const PopupMenuItem(
+                      value: 'copy_patch_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy),
+                          SizedBox(width: 8),
+                          Text('Copy Patch URL'),
+                        ],
+                      ),
+                    ),
+                ],
                 const PopupMenuItem(
                   value: 'hide_back',
                   child: Row(
