@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
 
 enum SessionRefreshPolicy { none, shallow, full }
@@ -18,6 +19,16 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnCompletion = 'notify_on_completion';
   static const String keyNotifyOnWatch = 'notify_on_watch';
   static const String keyNotifyOnFailure = 'notify_on_failure';
+  static const String _bulkActionConfigKey = 'bulk_action_config';
+
+  // Bulk Action Memory
+  List<BulkActionStep> _lastBulkActions = [];
+  int _lastBulkParallelQueries = 1;
+  int _lastBulkWaitBetweenSeconds = 2;
+  int? _lastBulkLimit;
+  int _lastBulkOffset = 0;
+  bool _lastBulkRandomize = false;
+  bool _lastBulkStopOnError = false;
 
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
@@ -44,6 +55,15 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+
+  // Bulk Action Getters
+  List<BulkActionStep> get lastBulkActions => _lastBulkActions;
+  int get lastBulkParallelQueries => _lastBulkParallelQueries;
+  int get lastBulkWaitBetweenSeconds => _lastBulkWaitBetweenSeconds;
+  int? get lastBulkLimit => _lastBulkLimit;
+  int get lastBulkOffset => _lastBulkOffset;
+  bool get lastBulkRandomize => _lastBulkRandomize;
+  bool get lastBulkStopOnError => _lastBulkStopOnError;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -79,6 +99,7 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
     _loadSchedules();
+    _loadBulkActionConfig();
     _isInitialized = true;
 
     notifyListeners();
@@ -215,5 +236,59 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  void _loadBulkActionConfig() {
+    final jsonString = _prefs?.getString(_bulkActionConfigKey);
+    if (jsonString != null) {
+      try {
+        final json = jsonDecode(jsonString);
+        if (json['actions'] != null && json['actions'] is List) {
+          _lastBulkActions = (json['actions'] as List)
+              .map((a) => BulkActionStep.fromJson(a))
+              .toList();
+        }
+        _lastBulkParallelQueries = json['parallelQueries'] ?? 1;
+        _lastBulkWaitBetweenSeconds = json['waitBetweenSeconds'] ?? 2;
+        _lastBulkLimit = json['limit'];
+        _lastBulkOffset = json['offset'] ?? 0;
+        _lastBulkRandomize = json['randomize'] ?? false;
+        _lastBulkStopOnError = json['stopOnError'] ?? false;
+      } catch (e) {
+        // Could log this
+      }
+    }
+  }
+
+  Future<void> saveBulkActionConfig({
+    required List<BulkActionStep> actions,
+    required int parallelQueries,
+    required int waitBetweenSeconds,
+    required int? limit,
+    required int offset,
+    required bool randomize,
+    required bool stopOnError,
+  }) async {
+    _lastBulkActions = actions;
+    _lastBulkParallelQueries = parallelQueries;
+    _lastBulkWaitBetweenSeconds = waitBetweenSeconds;
+    _lastBulkLimit = limit;
+    _lastBulkOffset = offset;
+    _lastBulkRandomize = randomize;
+    _lastBulkStopOnError = stopOnError;
+
+    final Map<String, dynamic> config = {
+      'actions': actions.map((a) => a.toJson()).toList(),
+      'parallelQueries': parallelQueries,
+      'waitBetweenSeconds': waitBetweenSeconds,
+      'limit': limit,
+      'offset': offset,
+      'randomize': randomize,
+      'stopOnError': stopOnError,
+    };
+
+    final jsonString = jsonEncode(config);
+    await _prefs?.setString(_bulkActionConfigKey, jsonString);
+    notifyListeners();
   }
 }
