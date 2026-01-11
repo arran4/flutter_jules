@@ -8,6 +8,8 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
+import '../../services/github_provider.dart';
+import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
@@ -182,6 +184,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // Only show loading state on explicit user action
     if (force) {
@@ -193,7 +198,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     try {
       if (force || sourceProvider.items.isEmpty) {
-        await sourceProvider.fetchSources(auth.client, authToken: auth.token);
+        await sourceProvider.fetchSources(
+          auth.client,
+          authToken: auth.token,
+          force: force,
+          githubProvider: githubProvider,
+          sessionProvider: sessionProvider,
+        );
       }
 
       if (mounted) {
@@ -256,10 +267,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       // Priority 1.5: Draft value
-      if (_selectedSource == null && widget.initialSession != null) {
+      if (_selectedSource == null &&
+          widget.initialSession?.sourceContext != null) {
         try {
           _selectedSource = sources.firstWhere(
-            (s) => s.name == widget.initialSession!.sourceContext.source,
+            (s) => s.name == widget.initialSession!.sourceContext!.source,
           );
         } catch (_) {}
       }
@@ -302,11 +314,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       // Validated selection
-      if (_selectedSource != null && widget.initialSession != null) {
+      if (_selectedSource != null &&
+          widget.initialSession?.sourceContext != null) {
         // Try to match branch from draft
-        if (widget.initialSession!.sourceContext.githubRepoContext != null) {
+        if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
+              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
         }
       } else {
         // Set default branch
@@ -598,15 +611,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       await prefs.setInt('new_session_last_mode', _selectedModeIndex);
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
     } else {
-      if (_selectedSource == null) return;
-
       // Single Mode
       // Save preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      await prefs.setString('new_session_last_source', _selectedSource!.name);
-      if (_selectedBranch != null) {
-        prefs.setString('new_session_last_branch', _selectedBranch!);
+      if (_selectedSource != null) {
+        await prefs.setString(
+          'new_session_last_source',
+          _selectedSource!.name,
+        );
+        if (_selectedBranch != null) {
+          prefs.setString('new_session_last_branch', _selectedBranch!);
+        }
+      } else {
+        await prefs.remove('new_session_last_source');
+        await prefs.remove('new_session_last_branch');
       }
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
@@ -615,12 +634,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           name: '', // Server assigns
           id: '', // Server assigns
           prompt: _promptController.text,
-          sourceContext: SourceContext(
-            source: _selectedSource!.name,
-            githubRepoContext: GitHubRepoContext(
-              startingBranch: _selectedBranch ?? 'main',
-            ),
-          ),
+          sourceContext: _selectedSource == null
+              ? null
+              : SourceContext(
+                  source: _selectedSource!.name,
+                  githubRepoContext: GitHubRepoContext(
+                    startingBranch: _selectedBranch ?? 'main',
+                  ),
+                ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
           images: images,
@@ -688,12 +709,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           name: widget.initialSession?.name ?? '',
           id: widget.initialSession?.id ?? '',
           prompt: _promptController.text,
-          sourceContext: SourceContext(
-            source: _selectedSource?.name ?? 'sources/default',
-            githubRepoContext: GitHubRepoContext(
-              startingBranch: _selectedBranch ?? 'main',
-            ),
-          ),
+          sourceContext: _selectedSource == null
+              ? null
+              : SourceContext(
+                  source: _selectedSource!.name,
+                  githubRepoContext: GitHubRepoContext(
+                    startingBranch: _selectedBranch ?? 'main',
+                  ),
+                ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
         ),
@@ -714,7 +737,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       name: '',
       id: '',
       prompt: '',
-      sourceContext: SourceContext(source: ''),
+      sourceContext: null,
     );
     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
@@ -896,11 +919,38 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     controller: _promptController,
                     autofocus: true,
                     maxLines: 6,
-                    decoration: const InputDecoration(
+                    decoration: InputDecoration(
                       labelText: 'Prompt',
                       hintText: 'Describe what you want to do...',
-                      border: OutlineInputBorder(),
+                      border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
+                      suffixIcon: widget.initialSession != null
+                          ? IconButton(
+                              icon: const Icon(Icons.content_paste_go),
+                              tooltip: 'Import Prompt from Original Session',
+                              onPressed: () {
+                                if (widget.initialSession == null) return;
+                                final originalPrompt =
+                                    widget.initialSession!.prompt;
+                                final currentText = _promptController.text;
+
+                                if (currentText.trim().isNotEmpty) {
+                                  const separator =
+                                      '\n\n--- Imported Prompt ---\n';
+                                  _promptController.text =
+                                      '$currentText$separator$originalPrompt';
+                                } else {
+                                  _promptController.text = originalPrompt;
+                                }
+                                _promptController.selection =
+                                    TextSelection.fromPosition(
+                                  TextPosition(
+                                    offset: _promptController.text.length,
+                                  ),
+                                );
+                              },
+                            )
+                          : null,
                     ),
                     onChanged: (val) => setState(() {}),
                   ),
@@ -947,13 +997,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               : () => _fetchSources(force: true),
                           icon: _isRefreshing
                               ? const SizedBox(
-                                  width: 12,
-                                  height: 12,
+                                  width: 16,
+                                  height: 16,
                                   child: CircularProgressIndicator(
                                     strokeWidth: 2,
                                   ),
                                 )
-                              : const Icon(Icons.refresh, size: 14),
+                              : const Icon(Icons.refresh, size: 20),
                           label: Text(_refreshStatus),
                         ),
                       ],
@@ -1112,11 +1162,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_promptController.text.isNotEmpty &&
-                              (_selectedSource != null ||
-                                  _bulkSelections.length > 1))
-                          ? _create
-                          : null,
+                      onPressed:
+                          (_promptController.text.isNotEmpty) ? _create : null,
                       child: const Text('Send Now'),
                     ),
                   ],

@@ -21,6 +21,7 @@ import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
+import '../session_helpers.dart';
 
 import 'dart:convert';
 import '../../services/exceptions.dart';
@@ -829,8 +830,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
           break;
         case SortField.source:
-          cmp = a.data.sourceContext.source.compareTo(
-            b.data.sourceContext.source,
+          cmp = (a.data.sourceContext?.source ?? '').compareTo(
+            b.data.sourceContext?.source ?? '',
           );
           break;
         case SortField.status:
@@ -1376,7 +1377,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               } else if (context.mounted) {
                                 ScaffoldMessenger.of(context).showSnackBar(
                                   const SnackBar(
-                                      content: Text("Still offline")),
+                                    content: Text("Still offline"),
+                                  ),
                                 );
                               }
                             },
@@ -1575,7 +1577,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               if (lastFetchTime != null)
                                 Padding(
                                   padding: const EdgeInsets.symmetric(
-                                      horizontal: 16),
+                                    horizontal: 16,
+                                  ),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
                                     child: Text(
@@ -1699,8 +1702,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   context,
                                                   listen: false,
                                                 );
-                                                queueProvider
-                                                    .sendQueue(auth.client);
+                                                queueProvider.sendQueue(
+                                                  auth.client,
+                                                );
                                               }
                                               return;
                                             }
@@ -1711,7 +1715,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                               MaterialPageRoute(
                                                 builder: (_) =>
                                                     SessionDetailScreen(
-                                                        session: session),
+                                                  session: session,
+                                                ),
                                               ),
                                             );
 
@@ -2008,8 +2013,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     InkWell(
                                                       borderRadius:
                                                           BorderRadius.circular(
-                                                        16,
-                                                      ),
+                                                              16),
                                                       onTapDown: (details) {
                                                         _showTileMenu(
                                                           context,
@@ -2021,8 +2025,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         );
                                                       },
                                                       child: const Padding(
-                                                        padding:
-                                                            EdgeInsets.all(8.0),
+                                                        padding: EdgeInsets.all(
+                                                          8.0,
+                                                        ),
                                                         child: Icon(
                                                           Icons.more_vert,
                                                           size: 20,
@@ -2080,8 +2085,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                             16,
                                                                       ),
                                                                       SizedBox(
-                                                                          width:
-                                                                              8),
+                                                                        width:
+                                                                            8,
+                                                                      ),
                                                                       Text(
                                                                         "Filter 'Has PR'",
                                                                       ),
@@ -2134,8 +2140,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                             16,
                                                                       ),
                                                                       SizedBox(
-                                                                          width:
-                                                                              8),
+                                                                        width:
+                                                                            8,
+                                                                      ),
                                                                       Text(
                                                                         "Exclude 'Has PR'",
                                                                       ),
@@ -2189,10 +2196,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                             16,
                                                                       ),
                                                                       SizedBox(
-                                                                          width:
-                                                                              8),
+                                                                        width:
+                                                                            8,
+                                                                      ),
                                                                       Text(
-                                                                          "Copy PR URL"),
+                                                                        "Copy PR URL",
+                                                                      ),
                                                                     ],
                                                                   ),
                                                                   onTap: () {
@@ -2345,7 +2354,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     showMenu(
       context: context,
       position: finalPosition,
-      items: [
+      items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem(
           child: Row(
             children: [
@@ -2462,6 +2471,46 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.add_circle_outline),
+              SizedBox(width: 8),
+              Text('Resubmit as new session'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(
+              Duration.zero,
+              () {
+                if (context.mounted) {
+                  resubmitSession(context, session, hideOriginal: false);
+                }
+              },
+            );
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit as new session and hide'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(
+              Duration.zero,
+              () {
+                if (context.mounted) {
+                  resubmitSession(context, session, hideOriginal: true);
+                }
+              },
+            );
+          },
+        ),
+        const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
             children: [
@@ -2592,11 +2641,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ],
       ],
     ).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
-        _openSourceUrl(session.sourceContext.source);
+      if (value == 'source' && session.sourceContext?.source != null) {
+        _openSourceUrl(session.sourceContext!.source);
       }
     });
   }
 }
-
-// Removed ListItem classes as they are no longer needed

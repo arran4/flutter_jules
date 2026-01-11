@@ -1,5 +1,6 @@
 import 'filter_element.dart';
 import 'search_filter.dart';
+import 'time_filter.dart';
 
 /// Builder class for intelligently constructing filter trees
 class FilterElementBuilder {
@@ -382,6 +383,9 @@ class FilterElementBuilder {
           break;
         case FilterType.text:
           element = TextElement(token.value.toString());
+          break;
+        case FilterType.time:
+          element = TimeFilterElement(token.value as TimeFilter);
           break;
       }
 

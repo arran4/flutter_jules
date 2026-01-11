@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
+import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {
@@ -149,6 +150,22 @@ class FilterElementWidget extends StatelessWidget {
         Colors.blueGrey.shade800,
         Icons.check_circle_outline,
       );
+    } else if (element is TimeFilterElement) {
+      final tf = element.timeFilter;
+      String label;
+      if (tf.specificTime != null) {
+        label = 'Time: ${tf.type.name} ${tf.specificTime}';
+      } else {
+        label = 'Time: ${tf.type.name} ${tf.value} ${tf.unit.name}';
+      }
+      return _buildLeafElement(
+        context,
+        element,
+        label,
+        Colors.brown.shade100,
+        Colors.brown.shade800,
+        Icons.access_time,
+      );
     }
 
     return const SizedBox.shrink();
@@ -192,38 +209,42 @@ class FilterElementWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: [
               // Header with operator label
-              InkWell(
-                onTap: onTap != null ? () => onTap!(element) : null,
-                borderRadius: const BorderRadius.only(
-                  topLeft: Radius.circular(8),
-                  topRight: Radius.circular(8),
-                ),
-                child: Container(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 8,
-                    vertical: 4,
+              GestureDetector(
+                onSecondaryTapUp: (details) =>
+                    _showContextMenu(context, details, element),
+                child: InkWell(
+                  onTap: onTap != null ? () => onTap!(element) : null,
+                  borderRadius: const BorderRadius.only(
+                    topLeft: Radius.circular(8),
+                    topRight: Radius.circular(8),
                   ),
-                  decoration: BoxDecoration(
-                    color: backgroundColor,
-                    borderRadius: const BorderRadius.only(
-                      topLeft: Radius.circular(7),
-                      topRight: Radius.circular(7),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 8,
+                      vertical: 4,
                     ),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(icon, size: 14, color: textColor),
-                      const SizedBox(width: 4),
-                      Text(
-                        label,
-                        style: TextStyle(
-                          fontSize: 11,
-                          fontWeight: FontWeight.bold,
-                          color: textColor,
-                        ),
+                    decoration: BoxDecoration(
+                      color: backgroundColor,
+                      borderRadius: const BorderRadius.only(
+                        topLeft: Radius.circular(7),
+                        topRight: Radius.circular(7),
                       ),
-                    ],
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(icon, size: 14, color: textColor),
+                        const SizedBox(width: 4),
+                        Text(
+                          label,
+                          style: TextStyle(
+                            fontSize: 11,
+                            fontWeight: FontWeight.bold,
+                            color: textColor,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
                 ),
               ),
@@ -350,10 +371,12 @@ class FilterElementWidget extends StatelessWidget {
     final items = <PopupMenuEntry<int>>[];
 
     // 1. Exclude/Include logic
+    final isComposite = element is AndElement || element is OrElement;
+    final excludeText = isComposite ? "Exclude this group" : "Exclude this";
     items.add(
       PopupMenuItem(
         value: 1,
-        child: Text(isNegated ? "Include this" : "Exclude this"),
+        child: Text(isNegated ? "Include this" : excludeText),
       ),
     );
 

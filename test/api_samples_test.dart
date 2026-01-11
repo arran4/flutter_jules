@@ -30,8 +30,8 @@ void main() {
       expect(session.name, "sessions/31415926535897932384");
       expect(session.id, "31415926535897932384");
       expect(session.title, "Boba App");
-      expect(session.sourceContext.source, "sources/github/bobalover/boba");
-      expect(session.sourceContext.githubRepoContext?.startingBranch, "main");
+      expect(session.sourceContext?.source, "sources/github/bobalover/boba");
+      expect(session.sourceContext?.githubRepoContext?.startingBranch, "main");
       expect(session.prompt, "Create a boba app!");
     });
 
