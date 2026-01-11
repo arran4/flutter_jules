@@ -133,12 +133,14 @@ class BulkActionExecutor extends ChangeNotifier {
 
   void _addLog(String message, bool isError, [String? sessionId]) {
     _logs.insert(
-        0,
-        BulkLogEntry(
-            message: message,
-            isError: isError,
-            sessionId: sessionId,
-            timestamp: DateTime.now()));
+      0,
+      BulkLogEntry(
+        message: message,
+        isError: isError,
+        sessionId: sessionId,
+        timestamp: DateTime.now(),
+      ),
+    );
     if (_logs.length > 500) _logs.removeLast();
     notifyListeners();
   }
@@ -155,8 +157,9 @@ class BulkActionExecutor extends ChangeNotifier {
     while (_currentParallelCount < (_config?.parallelQueries ?? 1) &&
         _queue.any((s) => !_pausedSessionIds.contains(s.id)) &&
         _status == BulkJobStatus.running) {
-      final sessionIndex =
-          _queue.indexWhere((s) => !_pausedSessionIds.contains(s.id));
+      final sessionIndex = _queue.indexWhere(
+        (s) => !_pausedSessionIds.contains(s.id),
+      );
       if (sessionIndex == -1) break;
 
       final session = _queue.removeAt(sessionIndex);
@@ -184,129 +187,212 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   Future<void> _runActionsForSession(Session session) async {
+    final sessionTitle = session.title ?? session.name;
     _addLog(
-      "Processing session: ${session.title ?? session.name}",
+      "Starting to process session: \"$sessionTitle\"",
       false,
       session.id,
     );
 
     final authToken = authProvider.token;
+    int stepNumber = 0;
 
     for (var step in _config!.actions) {
+      stepNumber++;
+      final stepName = step.type.displayName;
+
       if (_status != BulkJobStatus.running && _status != BulkJobStatus.paused) {
-        break; // Allow finishing current session even if paused? No, stop actions in sequence.
+        _addLog(
+          "Job is no longer running. Stopping further actions for this session.",
+          true,
+          session.id,
+        );
+        break;
       }
 
       try {
         await _executeStep(session, step, authToken);
+        _addLog(
+          "Successfully executed step $stepNumber/${_config!.actions.length}: $stepName for session \"$sessionTitle\"",
+          false,
+          session.id,
+        );
       } catch (e) {
-        _addLog("Error executing ${step.type.displayName} on ${session.id}: $e",
-            true, session.id);
+        _addLog(
+          "Error executing step $stepNumber/${_config!.actions.length} ($stepName) on session \"$sessionTitle\": $e",
+          true,
+          session.id,
+        );
 
-        // Check if we should stop the entire job on error
         if (_config!.stopOnError) {
-          _addLog("Stop-on-error is enabled. Canceling entire job.", true);
+          _addLog(
+            "Configuration is set to stop on first error. Canceling the entire job.",
+            true,
+          );
           cancelJob();
           return;
         }
 
         _addLog(
-            "Aborting remaining actions for this session.", true, session.id);
-        break; // Stop execution for THIS session if one step fails.
+          "Aborting remaining actions for this session due to the error.",
+          true,
+          session.id,
+        );
+        break;
       }
     }
+    _addLog(
+      "Finished processing all actions for session: \"$sessionTitle\"",
+      false,
+      session.id,
+    );
   }
 
   Future<void> _executeStep(
-      Session session, BulkActionStep step, String? authToken) async {
+    Session session,
+    BulkActionStep step,
+    String? authToken,
+  ) async {
+    final sessionTitle = session.title ?? session.name;
     switch (step.type) {
       case BulkActionType.openPrInBrowser:
         final url = _getPrUrl(session);
         if (url != null) {
+          _addLog("Opening PR URL in browser: $url", false, session.id);
           await launchUrl(Uri.parse(url));
         } else {
-          throw Exception("No PR URL found");
+          throw Exception("No PR URL was found for session \"$sessionTitle\"");
         }
         break;
       case BulkActionType.markAsRead:
         if (authToken != null) {
           await sessionProvider.markAsRead(session.id, authToken);
+          _addLog("Marked session as read.", false, session.id);
         }
         break;
       case BulkActionType.markAsUnread:
         if (authToken != null) {
           await sessionProvider.markAsUnread(session.id, authToken);
+          _addLog("Marked session as unread.", false, session.id);
         }
         break;
       case BulkActionType.hide:
         if (authToken != null) {
           await sessionProvider.toggleHidden(session.id, authToken);
+          _addLog("Toggled visibility to hidden.", false, session.id);
         }
         break;
       case BulkActionType.unhide:
-        // Assume toggleHidden works for both, but maybe we should be explicit
-        // If we want to ENSURE unhide, we might need a specific method in provider or check state
         if (authToken != null) {
           await sessionProvider.toggleHidden(session.id, authToken);
+          _addLog("Toggled visibility to unhidden.", false, session.id);
         }
         break;
       case BulkActionType.refreshSession:
-        await sessionProvider.refreshSession(julesClient, session.name,
-            authToken: authToken);
+        await sessionProvider.refreshSession(
+          julesClient,
+          session.name,
+          authToken: authToken,
+        );
+        _addLog(
+          "Performed a shallow refresh of the session.",
+          false,
+          session.id,
+        );
         break;
       case BulkActionType.deepRefresh:
-        await sessionProvider.refreshSession(julesClient, session.name,
-            authToken: authToken);
-        // Activities are already refreshed inside refreshSession!
+        await sessionProvider.refreshSession(
+          julesClient,
+          session.name,
+          authToken: authToken,
+        );
+        _addLog(
+          "Performed a deep refresh (including activities).",
+          false,
+          session.id,
+        );
         break;
       case BulkActionType.watchSession:
         if (authToken != null) {
-          // Ensure it's watched
-          final item =
-              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          final item = sessionProvider.items.firstWhere(
+            (i) => i.data.id == session.id,
+            orElse: () =>
+                throw Exception("Could not find session in local cache."),
+          );
           if (!item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
+            _addLog("Enabled watching for this session.", false, session.id);
+          } else {
+            _addLog(
+              "Session was already being watched. No action taken.",
+              false,
+              session.id,
+            );
           }
         }
         break;
       case BulkActionType.unwatchSession:
         if (authToken != null) {
-          final item =
-              sessionProvider.items.firstWhere((i) => i.data.id == session.id);
+          final item = sessionProvider.items.firstWhere(
+            (i) => i.data.id == session.id,
+            orElse: () =>
+                throw Exception("Could not find session in local cache."),
+          );
           if (item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
+            _addLog("Disabled watching for this session.", false, session.id);
+          } else {
+            _addLog(
+              "Session was not being watched. No action taken.",
+              false,
+              session.id,
+            );
           }
         }
         break;
       case BulkActionType.openJulesLink:
-        final url =
-            "https://jules.corp.google.com/session/${session.id}"; // Placeholder, check real URL
+        final url = "https://jules.corp.google.com/session/${session.id}";
+        _addLog("Opening session in Jules UI: $url", false, session.id);
         await launchUrl(Uri.parse(url));
         break;
       case BulkActionType.quickReply:
-        if (step.message == null || step.message!.isEmpty) {
-          throw Exception("Message required for quick reply");
+        final message = step.message;
+        if (message == null || message.isEmpty) {
+          throw Exception("A message is required for a quick reply.");
         }
-        await julesClient.sendMessage(session.name, step.message!);
+        _addLog("Sending quick reply: \"$message\"", false, session.id);
+        await julesClient.sendMessage(session.name, message);
         if (authToken != null) {
           await sessionProvider.addPendingMessage(
-              session.id, step.message!, authToken);
+            session.id,
+            message,
+            authToken,
+          );
         }
         break;
       case BulkActionType.viewSourceRepo:
         final url = _getSourceRepoUrl(session);
         if (url != null) {
+          _addLog(
+            "Opening source repository in browser: $url",
+            false,
+            session.id,
+          );
           await launchUrl(Uri.parse(url));
         } else {
-          throw Exception("No source repo URL found");
+          throw Exception(
+            "No source repository URL was found for session \"$sessionTitle\"",
+          );
         }
         break;
       case BulkActionType.forceRefreshPrStatus:
         if (authToken != null) {
-          await sessionProvider.refreshPrStatus(session.id, authToken);
+          _addLog("Forcing a refresh of the PR status.", false, session.id);
+          await sessionProvider.refreshGitStatus(session.id, authToken);
         }
         break;
       case BulkActionType.forceApprovePlan:
+        _addLog("Forcing approval of the current plan.", false, session.id);
         await julesClient.approvePlan(session.name);
         break;
       case BulkActionType.duplicateSession:
@@ -317,11 +403,20 @@ class BulkActionExecutor extends ChangeNotifier {
           updateTime: null,
           state: SessionState.STATE_UNSPECIFIED,
         );
+        _addLog(
+          "Creating a new session by duplicating this one.",
+          false,
+          session.id,
+        );
         await julesClient.createSession(newSession);
         break;
       case BulkActionType.sleep:
         final seconds = int.tryParse(step.message ?? '0') ?? 0;
-        await Future.delayed(Duration(seconds: seconds));
+        if (seconds > 0) {
+          _addLog("Sleeping for $seconds seconds...", false, session.id);
+          await Future.delayed(Duration(seconds: seconds));
+          _addLog("Finished sleeping.", false, session.id);
+        }
         break;
     }
   }
