@@ -33,9 +33,9 @@
     ]
   },
   {
-    "name": "Pending",
-    "description": "Sessions that are queued, planning, or awaiting user input.",
-    "expression": "OR(State(QUEUED) State(PLANNING) State(AWAITING_PLAN_APPROVAL) State(AWAITING_USER_FEEDBACK))",
+    "name": "Pending Sessions",
+    "description": "Sessions queued and waiting to be sent to server.",
+    "expression": "State(QUEUED)",
     "sorts": [
       {
         "field": "created",
