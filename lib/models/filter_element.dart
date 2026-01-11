@@ -11,6 +11,7 @@ enum FilterElementType {
   label,
   status,
   source,
+  noSource,
   hasPr,
   prStatus,
   ciStatus,
@@ -126,6 +127,8 @@ abstract class FilterElement {
         return StatusElement.fromJson(json);
       case 'source':
         return SourceElement.fromJson(json);
+      case 'no_source':
+        return NoSourceElement.fromJson(json);
       case 'has_pr':
         return HasPrElement.fromJson(json);
       case 'pr_status':
@@ -675,6 +678,38 @@ class HasPrElement extends FilterElement {
 
   factory HasPrElement.fromJson(Map<String, dynamic> json) {
     return HasPrElement();
+  }
+}
+
+/// Has No Source filter element
+class NoSourceElement extends FilterElement {
+  NoSourceElement();
+
+  @override
+  FilterElementType get type => FilterElementType.noSource;
+
+  @override
+  String get groupingType => 'no_source';
+
+  @override
+  String toExpression() {
+    return 'Has(NoSource)';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'no_source'};
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches = context.session.sourceContext == null;
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory NoSourceElement.fromJson(Map<String, dynamic> json) {
+    return NoSourceElement();
   }
 }
 

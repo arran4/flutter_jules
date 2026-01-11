@@ -717,6 +717,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
       }
     }
 
+    suggestions.add(
+      const FilterToken(
+        id: 'source:no_source',
+        type: FilterType.source,
+        label: 'No Source',
+        value: 'no_source',
+      ),
+    );
+
     // Flags
     suggestions.add(
       const FilterToken(
@@ -902,7 +911,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         element = StatusElement(token.label, token.value.toString());
         break;
       case FilterType.source:
-        element = SourceElement(token.label, token.value.toString());
+        if (token.value.toString() == 'no_source') {
+          element = NoSourceElement();
+        } else {
+          element = SourceElement(token.label, token.value.toString());
+        }
         break;
       case FilterType.prStatus:
         element = PrStatusElement(token.label, token.value.toString());
