@@ -7,6 +7,7 @@ enum FilterType {
   branch,
   text,
   time,
+  tag,
 }
 
 enum FilterMode {
