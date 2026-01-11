@@ -130,5 +130,16 @@
         "direction": "descending"
       }
     ]
+  },
+  {
+    "name": "Review Queue",
+    "description": "Sessions that are completed, awaiting feedback/approval, or have open/draft PRs.",
+    "expression": "AND(OR(State(COMPLETED) State(AWAITING_USER_FEEDBACK) State(AWAITING_PLAN_APPROVAL)) OR(PR(Draft) PR(open)))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
   }
 ]
