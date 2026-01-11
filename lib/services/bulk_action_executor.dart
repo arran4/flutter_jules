@@ -226,8 +226,9 @@ class BulkActionExecutor extends ChangeNotifier {
 
         if (_config!.stopOnError) {
           _addLog(
-              "Configuration is set to stop on first error. Canceling the entire job.",
-              true);
+            "Configuration is set to stop on first error. Canceling the entire job.",
+            true,
+          );
           cancelJob();
           return;
         }
@@ -293,8 +294,11 @@ class BulkActionExecutor extends ChangeNotifier {
           session.name,
           authToken: authToken,
         );
-        _addLog("Performed a shallow refresh of the session.", false,
-            session.id);
+        _addLog(
+          "Performed a shallow refresh of the session.",
+          false,
+          session.id,
+        );
         break;
       case BulkActionType.deepRefresh:
         await sessionProvider.refreshSession(
@@ -303,7 +307,10 @@ class BulkActionExecutor extends ChangeNotifier {
           authToken: authToken,
         );
         _addLog(
-            "Performed a deep refresh (including activities).", false, session.id);
+          "Performed a deep refresh (including activities).",
+          false,
+          session.id,
+        );
         break;
       case BulkActionType.watchSession:
         if (authToken != null) {
@@ -317,7 +324,10 @@ class BulkActionExecutor extends ChangeNotifier {
             _addLog("Enabled watching for this session.", false, session.id);
           } else {
             _addLog(
-                "Session was already being watched. No action taken.", false, session.id);
+              "Session was already being watched. No action taken.",
+              false,
+              session.id,
+            );
           }
         }
         break;
@@ -333,7 +343,10 @@ class BulkActionExecutor extends ChangeNotifier {
             _addLog("Disabled watching for this session.", false, session.id);
           } else {
             _addLog(
-                "Session was not being watched. No action taken.", false, session.id);
+              "Session was not being watched. No action taken.",
+              false,
+              session.id,
+            );
           }
         }
         break;
@@ -351,18 +364,25 @@ class BulkActionExecutor extends ChangeNotifier {
         await julesClient.sendMessage(session.name, message);
         if (authToken != null) {
           await sessionProvider.addPendingMessage(
-              session.id, message, authToken);
+            session.id,
+            message,
+            authToken,
+          );
         }
         break;
       case BulkActionType.viewSourceRepo:
         final url = _getSourceRepoUrl(session);
         if (url != null) {
-          _addLog("Opening source repository in browser: $url", false,
-              session.id);
+          _addLog(
+            "Opening source repository in browser: $url",
+            false,
+            session.id,
+          );
           await launchUrl(Uri.parse(url));
         } else {
           throw Exception(
-              "No source repository URL was found for session \"$sessionTitle\"");
+            "No source repository URL was found for session \"$sessionTitle\"",
+          );
         }
         break;
       case BulkActionType.forceRefreshPrStatus:
@@ -384,7 +404,10 @@ class BulkActionExecutor extends ChangeNotifier {
           state: SessionState.STATE_UNSPECIFIED,
         );
         _addLog(
-            "Creating a new session by duplicating this one.", false, session.id);
+          "Creating a new session by duplicating this one.",
+          false,
+          session.id,
+        );
         await julesClient.createSession(newSession);
         break;
       case BulkActionType.sleep:

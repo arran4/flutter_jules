@@ -18,115 +18,120 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
-          GithubProvider>(
-        builder: (context, settings, devMode, auth, github, child) {
-          return ListView(
-            children: [
-              _buildSectionHeader(context, 'Session Updates'),
-              _buildSessionDropdown(
-                context,
-                title: 'On Session Open',
-                value: settings.refreshOnOpen,
-                onChanged: settings.setRefreshOnOpen,
-              ),
-              _buildSessionDropdown(
-                context,
-                title: 'On Message Sent',
-                value: settings.refreshOnMessage,
-                onChanged: settings.setRefreshOnMessage,
-              ),
-              const Divider(),
-              _buildSectionHeader(context, 'List Updates'),
-              _buildListDropdown(
-                context,
-                title: 'On Return to List',
-                value: settings.refreshOnReturn,
-                onChanged: settings.setRefreshOnReturn,
-              ),
-              _buildListDropdown(
-                context,
-                title: 'On Session Created',
-                value: settings.refreshOnCreate,
-                onChanged: settings.setRefreshOnCreate,
-              ),
-              const Divider(),
-              _buildAutomaticRefreshSection(context, settings),
-              const Divider(),
-              _buildSectionHeader(context, 'Performance'),
-              ListTile(
-                title: const Text('Sessions Page Size'),
-                subtitle: Text('${settings.sessionPageSize} items'),
-              ),
-              Slider(
-                value: settings.sessionPageSize.toDouble(),
-                min: 10,
-                max: 100,
-                divisions: 9,
-                label: settings.sessionPageSize.toString(),
-                onChanged: (double value) {
-                  settings.setSessionPageSize(value.toInt());
-                },
-              ),
-              const Divider(),
-              _buildSectionHeader(context, 'Developer'),
-              SwitchListTile(
-                title: const Text('Developer Mode'),
-                subtitle: const Text('Enable advanced features and stats'),
-                value: devMode.isDevMode,
-                onChanged: (value) => devMode.toggleDevMode(value),
-              ),
-              SwitchListTile(
-                title: const Text('API Logging'),
-                subtitle: const Text(
-                  'Log API requests and responses to console',
-                ),
-                value: devMode.enableApiLogging,
-                onChanged: (value) => devMode.toggleApiLogging(value),
-              ),
-              const Divider(),
-              _buildSectionHeader(context, 'Authentication'),
-              ListTile(
-                title: const Text('Current Session'),
-                subtitle: Text(
-                  auth.tokenType == TokenType.apiKey
-                      ? 'API Key'
-                      : 'Google Access Token',
-                ),
-                trailing: const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
-              ),
-              ListTile(
-                title: const Text('Update API Key'),
-                leading: const Icon(Icons.vpn_key),
-                onTap: () => _showApiKeyDialog(context, auth),
-              ),
-              ListTile(
-                title: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: Colors.red),
-                ),
-                leading: const Icon(Icons.logout, color: Colors.red),
-                onTap: () => _showSignOutDialog(context, auth),
-              ),
-              const Divider(),
-              _buildSectionHeader(context, 'GitHub'),
-              ListTile(
-                title: const Text('Personal Access Token'),
-                subtitle: Text(
-                  github.apiKey != null
-                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
-                      : 'Not set',
-                ),
-                leading: const Icon(Icons.code),
-                onTap: () => _showGitHubKeyDialog(context, github),
-              ),
-            ],
-          );
-        },
-      ),
+      body:
+          Consumer4<
+            SettingsProvider,
+            DevModeProvider,
+            AuthProvider,
+            GithubProvider
+          >(
+            builder: (context, settings, devMode, auth, github, child) {
+              return ListView(
+                children: [
+                  _buildSectionHeader(context, 'Session Updates'),
+                  _buildSessionDropdown(
+                    context,
+                    title: 'On Session Open',
+                    value: settings.refreshOnOpen,
+                    onChanged: settings.setRefreshOnOpen,
+                  ),
+                  _buildSessionDropdown(
+                    context,
+                    title: 'On Message Sent',
+                    value: settings.refreshOnMessage,
+                    onChanged: settings.setRefreshOnMessage,
+                  ),
+                  const Divider(),
+                  _buildSectionHeader(context, 'List Updates'),
+                  _buildListDropdown(
+                    context,
+                    title: 'On Return to List',
+                    value: settings.refreshOnReturn,
+                    onChanged: settings.setRefreshOnReturn,
+                  ),
+                  _buildListDropdown(
+                    context,
+                    title: 'On Session Created',
+                    value: settings.refreshOnCreate,
+                    onChanged: settings.setRefreshOnCreate,
+                  ),
+                  const Divider(),
+                  _buildAutomaticRefreshSection(context, settings),
+                  const Divider(),
+                  _buildSectionHeader(context, 'Performance'),
+                  ListTile(
+                    title: const Text('Sessions Page Size'),
+                    subtitle: Text('${settings.sessionPageSize} items'),
+                  ),
+                  Slider(
+                    value: settings.sessionPageSize.toDouble(),
+                    min: 10,
+                    max: 100,
+                    divisions: 9,
+                    label: settings.sessionPageSize.toString(),
+                    onChanged: (double value) {
+                      settings.setSessionPageSize(value.toInt());
+                    },
+                  ),
+                  const Divider(),
+                  _buildSectionHeader(context, 'Developer'),
+                  SwitchListTile(
+                    title: const Text('Developer Mode'),
+                    subtitle: const Text('Enable advanced features and stats'),
+                    value: devMode.isDevMode,
+                    onChanged: (value) => devMode.toggleDevMode(value),
+                  ),
+                  SwitchListTile(
+                    title: const Text('API Logging'),
+                    subtitle: const Text(
+                      'Log API requests and responses to console',
+                    ),
+                    value: devMode.enableApiLogging,
+                    onChanged: (value) => devMode.toggleApiLogging(value),
+                  ),
+                  const Divider(),
+                  _buildSectionHeader(context, 'Authentication'),
+                  ListTile(
+                    title: const Text('Current Session'),
+                    subtitle: Text(
+                      auth.tokenType == TokenType.apiKey
+                          ? 'API Key'
+                          : 'Google Access Token',
+                    ),
+                    trailing: const Icon(
+                      Icons.check_circle,
+                      color: Colors.green,
+                    ),
+                  ),
+                  ListTile(
+                    title: const Text('Update API Key'),
+                    leading: const Icon(Icons.vpn_key),
+                    onTap: () => _showApiKeyDialog(context, auth),
+                  ),
+                  ListTile(
+                    title: const Text(
+                      'Sign Out',
+                      style: TextStyle(color: Colors.red),
+                    ),
+                    leading: const Icon(Icons.logout, color: Colors.red),
+                    onTap: () => _showSignOutDialog(context, auth),
+                  ),
+                  const Divider(),
+                  _buildSectionHeader(context, 'GitHub'),
+                  ListTile(
+                    title: const Text('Personal Access Token'),
+                    subtitle: Text(
+                      github.apiKey != null
+                          ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                          : 'Not set',
+                    ),
+                    leading: const Icon(Icons.code),
+                    onTap: () => _showGitHubKeyDialog(context, github),
+                  ),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -177,9 +182,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -199,9 +204,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
