@@ -2,7 +2,8 @@ import 'dart:async';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 class NotificationService {
-  static final NotificationService _notificationService = NotificationService._internal();
+  static final NotificationService _notificationService =
+      NotificationService._internal();
 
   factory NotificationService() {
     return _notificationService;
@@ -12,13 +13,14 @@ class NotificationService {
 
   final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
       FlutterLocalNotificationsPlugin();
-  final StreamController<String?> onNotificationPayload =
-      StreamController<String?>.broadcast();
+  final StreamController<NotificationResponse> onNotificationResponse =
+      StreamController<NotificationResponse>.broadcast();
 
-  Stream<String?> get onNotificationPayloadStream => onNotificationPayload.stream;
+  Stream<NotificationResponse> get onNotificationResponseStream =>
+      onNotificationResponse.stream;
 
   void dispose() {
-    onNotificationPayload.close();
+    onNotificationResponse.close();
   }
 
   Future<void> init() async {
@@ -32,7 +34,8 @@ class NotificationService {
       requestSoundPermission: true,
     );
 
-    const InitializationSettings initializationSettings = InitializationSettings(
+    const InitializationSettings initializationSettings =
+        InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
@@ -41,15 +44,14 @@ class NotificationService {
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
       onDidReceiveNotificationResponse: (NotificationResponse response) async {
-        if (response.payload != null) {
-          onNotificationPayload.add(response.payload);
-        }
+        onNotificationResponse.add(response);
       },
     );
   }
 
-  Future<void> showNotification(String title, String body, {String? payload}) async {
-    final AndroidNotificationDetails androidPlatformChannelSpecifics =
+  Future<void> showNotification(String title, String body,
+      {String? payload}) async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'jules_channel_id',
       'Jules Notifications',
@@ -58,8 +60,8 @@ class NotificationService {
       priority: Priority.high,
       showWhen: false,
       actions: <AndroidNotificationAction>[
-        const AndroidNotificationAction('show_task', 'Show Task'),
-        const AndroidNotificationAction('open_pr', 'Open PR'),
+        AndroidNotificationAction('show_task', 'Show Task'),
+        AndroidNotificationAction('open_pr', 'Open PR'),
       ],
     );
 

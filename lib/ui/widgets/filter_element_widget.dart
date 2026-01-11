@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
-import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {

@@ -2,7 +2,6 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
 import '../../models/filter_element_builder.dart';
-import '../../models/filter_expression_parser.dart';
 import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'package:provider/provider.dart';
@@ -10,7 +9,6 @@ import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
 import 'sort_pills_widget.dart';
-import 'bookmark_menu_helper.dart';
 import 'time_filter_dialog.dart';
 
 /// Refactored search bar using hierarchical FilterElement structure.
@@ -697,7 +695,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       tooltip: _showFilterMenu
                           ? 'Hide Filter Menu'
                           : 'Show Filter Menu',
-                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.access_time),
@@ -754,8 +751,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                         FilterElementBuilder.simplify(newTree);
                                     widget.onFilterTreeChanged(simplified);
                                   },
-                                  onDrop: (source, target, action,
-                                      isCtrlPressed) {
+                                  onDrop:
+                                      (source, target, action, isCtrlPressed) {
                                     var newTree = widget.filterTree;
                                     final sourceCopy =
                                         FilterElement.fromJson(source.toJson());
@@ -794,8 +791,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                     }
 
                                     if (!isCopy && newTree != null) {
-                                      newTree = FilterElementBuilder.removeFilter(
-                                          newTree, source);
+                                      newTree =
+                                          FilterElementBuilder.removeFilter(
+                                              newTree, source);
                                     }
 
                                     final simplified =

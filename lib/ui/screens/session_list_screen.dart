@@ -3,6 +3,7 @@ import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../../services/auth_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
@@ -23,8 +24,8 @@ import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
 
+import 'dart:async';
 import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
 
@@ -57,31 +58,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
   // Computed suggestions based on available data
   List<FilterToken> _availableSuggestions = [];
   late NotificationService _notificationService;
+  StreamSubscription<NotificationResponse>? _notificationSubscription;
 
   @override
   void initState() {
     super.initState();
     _notificationService = context.read<NotificationService>();
-    _notificationService.onNotificationPayloadStream.listen((response) {
+    _notificationSubscription =
+        _notificationService.onNotificationResponseStream.listen((response) {
+      if (!mounted) return;
       if (response.payload != null) {
-        final session = _displayItems
-            .firstWhere((item) => item.data.name == response.payload)
-            .data;
-        if (response.actionId == 'open_pr') {
-          if (session.outputs != null &&
-              session.outputs!.any((o) => o.pullRequest != null)) {
-            final pr = session.outputs!
-                .firstWhere((o) => o.pullRequest != null)
-                .pullRequest!;
-            launchUrl(Uri.parse(pr.url));
+        try {
+          final session = _displayItems
+              .firstWhere((item) => item.data.name == response.payload)
+              .data;
+
+          if (response.actionId == 'open_pr') {
+            if (session.outputs != null &&
+                session.outputs!.any((o) => o.pullRequest != null)) {
+              final pr = session.outputs!
+                  .firstWhere((o) => o.pullRequest != null)
+                  .pullRequest!;
+              launchUrl(Uri.parse(pr.url));
+            }
+          } else {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (_) => SessionDetailScreen(session: session),
+              ),
+            );
           }
-        } else {
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-              builder: (_) => SessionDetailScreen(session: session),
-            ),
-          );
+        } catch (_) {
+          // Session not loaded or found
         }
       }
     });
@@ -108,6 +117,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   void dispose() {
+    _notificationSubscription?.cancel();
     _focusNode.dispose();
     super.dispose();
   }

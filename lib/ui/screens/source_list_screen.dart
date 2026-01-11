@@ -582,7 +582,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon, size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(icon,
+              size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
           const SizedBox(width: 4),
           Text(
             text,

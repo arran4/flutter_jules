@@ -58,7 +58,7 @@ class RefreshService extends ChangeNotifier {
 
   void _executeRefresh(RefreshSchedule schedule) async {
     final client = JulesClient(accessToken: _authProvider.token);
-    final oldSessions = _sessionProvider.items.map((e) => e.item).toList();
+    final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
 
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
@@ -78,7 +78,7 @@ class RefreshService extends ChangeNotifier {
         return;
     }
 
-    final newSessions = _sessionProvider.items.map((e) => e.item).toList();
+    final newSessions = _sessionProvider.items.map((e) => e.data).toList();
     _compareSessions(oldSessions, newSessions);
   }
 
@@ -95,28 +95,28 @@ class RefreshService extends ChangeNotifier {
             newSession.state == SessionState.AWAITING_PLAN_APPROVAL) {
           _notificationService.showNotification(
             'Task requires your attention',
-            newSession.title,
+            newSession.title ?? 'Untitled Task',
             payload: newSession.name,
           );
         } else if (_settingsProvider.notifyOnCompletion &&
             newSession.state == SessionState.COMPLETED) {
           _notificationService.showNotification(
             'Task completed',
-            newSession.title,
+            newSession.title ?? 'Untitled Task',
             payload: newSession.name,
           );
         } else if (_settingsProvider.notifyOnFailure &&
             newSession.state == SessionState.FAILED) {
           _notificationService.showNotification(
             'Task failed',
-            newSession.title,
+            newSession.title ?? 'Untitled Task',
             payload: newSession.name,
           );
         } else if (_settingsProvider.notifyOnWatch &&
-            newSession.title.toLowerCase().contains('watched')) {
+            (newSession.title?.toLowerCase().contains('watched') ?? false)) {
           _notificationService.showNotification(
             isNew ? 'New task created' : 'Watched task updated',
-            newSession.title,
+            newSession.title ?? 'Untitled Task',
             payload: newSession.name,
           );
         }

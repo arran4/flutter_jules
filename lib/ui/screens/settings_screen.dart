@@ -56,25 +56,29 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'Notifications'),
               SwitchListTile(
                 title: const Text('Task Needs Attention'),
-                subtitle: const Text('Receive a notification when a task requires your input.'),
+                subtitle: const Text(
+                    'Receive a notification when a task requires your input.'),
                 value: settings.notifyOnAttention,
                 onChanged: (value) => settings.setNotifyOnAttention(value),
               ),
               SwitchListTile(
                 title: const Text('Task Completes'),
-                subtitle: const Text('Receive a notification when a task is completed.'),
+                subtitle: const Text(
+                    'Receive a notification when a task is completed.'),
                 value: settings.notifyOnCompletion,
                 onChanged: (value) => settings.setNotifyOnCompletion(value),
               ),
               SwitchListTile(
                 title: const Text('Watched Task Updates'),
-                subtitle: const Text('Receive a notification for any update on a task you are watching.'),
+                subtitle: const Text(
+                    'Receive a notification for any update on a task you are watching.'),
                 value: settings.notifyOnWatch,
                 onChanged: (value) => settings.setNotifyOnWatch(value),
               ),
               SwitchListTile(
                 title: const Text('Task Fails'),
-                subtitle: const Text('Receive a notification when a task fails.'),
+                subtitle:
+                    const Text('Receive a notification when a task fails.'),
                 value: settings.notifyOnFailure,
                 onChanged: (value) => settings.setNotifyOnFailure(value),
               ),
