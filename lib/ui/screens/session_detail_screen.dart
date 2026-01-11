@@ -31,7 +31,8 @@ class SessionDetailScreen extends StatefulWidget {
   State<SessionDetailScreen> createState() => _SessionDetailScreenState();
 }
 
-class _SessionDetailScreenState extends State<SessionDetailScreen> {
+class _SessionDetailScreenState extends State<SessionDetailScreen>
+    with WidgetsBindingObserver {
   late Session _session;
   List<Activity> _activities = [];
   bool _isLoading = false;
@@ -48,6 +49,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   // Concurrency Control
   Future<void> _apiLock = Future.value();
   int _busyCount = 0;
+  Timer? _refreshTimer;
 
   final FocusNode _messageFocusNode = FocusNode();
 
@@ -117,13 +119,43 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _fetchActivities(force: true, shallow: false);
           break;
       }
+      _setupRefreshTimer();
     });
+    Provider.of<SettingsProvider>(context, listen: false)
+        .addListener(_setupRefreshTimer);
+    WidgetsBinding.instance.addObserver(this);
+  }
+
+  @override
+  void didChangeAppLifecycleState(AppLifecycleState state) {
+    if (state == AppLifecycleState.resumed) {
+      _setupRefreshTimer();
+    } else if (state == AppLifecycleState.paused) {
+      _refreshTimer?.cancel();
+    }
+  }
+
+  void _setupRefreshTimer() {
+    _refreshTimer?.cancel();
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final schedule = settings.sessionRefreshSchedule;
+    if (schedule.inMinutes > 0) {
+      _refreshTimer = Timer.periodic(Duration(minutes: schedule.inMinutes), (timer) {
+        if (mounted) {
+          _fetchActivities(force: true, shallow: true);
+        }
+      });
+    }
   }
 
   @override
   void dispose() {
+    _refreshTimer?.cancel();
+    Provider.of<SettingsProvider>(context, listen: false)
+        .removeListener(_setupRefreshTimer);
     _messageController.dispose();
     _messageFocusNode.dispose();
+    WidgetsBinding.instance.removeObserver(this);
     super.dispose();
   }
 

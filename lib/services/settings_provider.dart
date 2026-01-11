@@ -7,6 +7,18 @@ enum SessionRefreshPolicy { none, shallow, full }
 
 enum ListRefreshPolicy { none, dirty, watched, quick, full }
 
+enum SessionRefreshSchedule {
+  disabled(0),
+  everyMinute(1),
+  every5Minutes(5),
+  every15Minutes(15),
+  every30Minutes(30),
+  every60Minutes(60);
+
+  const SessionRefreshSchedule(this.inMinutes);
+  final int inMinutes;
+}
+
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';
@@ -14,6 +26,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnCreate = 'refresh_on_create';
   static const String _sessionPageSizeKey = 'session_page_size';
   static const String _refreshSchedulesKey = 'refresh_schedules';
+  static const String _sessionRefreshScheduleKey = 'session_refresh_schedule';
 
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
@@ -21,6 +34,7 @@ class SettingsProvider extends ChangeNotifier {
   ListRefreshPolicy _refreshOnCreate = ListRefreshPolicy.quick;
   int _sessionPageSize = 100;
   List<RefreshSchedule> _schedules = [];
+  late SessionRefreshSchedule _sessionRefreshSchedule;
   bool _isInitialized = false;
 
   SharedPreferences? _prefs;
@@ -31,6 +45,7 @@ class SettingsProvider extends ChangeNotifier {
   ListRefreshPolicy get refreshOnCreate => _refreshOnCreate;
   int get sessionPageSize => _sessionPageSize;
   List<RefreshSchedule> get schedules => _schedules;
+  SessionRefreshSchedule get sessionRefreshSchedule => _sessionRefreshSchedule;
   bool get isInitialized => _isInitialized;
 
   Future<void> init() async {
@@ -62,6 +77,11 @@ class SettingsProvider extends ChangeNotifier {
       ListRefreshPolicy.quick,
     );
     _sessionPageSize = _prefs!.getInt(_sessionPageSizeKey) ?? 100;
+    _sessionRefreshSchedule = _loadEnum(
+      _sessionRefreshScheduleKey,
+      SessionRefreshSchedule.values,
+      SessionRefreshSchedule.every5Minutes,
+    );
     _loadSchedules();
     _isInitialized = true;
 
@@ -171,5 +191,11 @@ class SettingsProvider extends ChangeNotifier {
     _refreshOnCreate = policy;
     notifyListeners();
     await _prefs?.setInt(keyRefreshOnCreate, policy.index);
+  }
+
+  Future<void> setSessionRefreshSchedule(SessionRefreshSchedule schedule) async {
+    _sessionRefreshSchedule = schedule;
+    notifyListeners();
+    await _prefs?.setInt(_sessionRefreshScheduleKey, schedule.index);
   }
 }

@@ -41,6 +41,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     value: settings.refreshOnMessage,
                     onChanged: settings.setRefreshOnMessage,
                   ),
+                  _buildSessionScheduleDropdown(
+                    context,
+                    title: 'While Session is Open',
+                    value: settings.sessionRefreshSchedule,
+                    onChanged: settings.setSessionRefreshSchedule,
+                  ),
                   const Divider(),
                   _buildSectionHeader(context, 'List Updates'),
                   _buildListDropdown(
@@ -490,5 +496,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case ListRefreshPolicy.full:
         return 'Full Refresh';
     }
+  }
+
+  Widget _buildSessionScheduleDropdown(
+    BuildContext context, {
+    required String title,
+    required SessionRefreshSchedule value,
+    required Function(SessionRefreshSchedule) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<SessionRefreshSchedule>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: SessionRefreshSchedule.values.map((schedule) {
+          return DropdownMenuItem(
+            value: schedule,
+            child: Text(_formatSessionSchedule(schedule)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatSessionSchedule(SessionRefreshSchedule schedule) {
+    if (schedule.inMinutes == 0) {
+      return 'Disabled';
+    } else if (schedule.inMinutes == 1) {
+      return 'Every minute';
+    }
+    return 'Every ${schedule.inMinutes} minutes';
   }
 }
