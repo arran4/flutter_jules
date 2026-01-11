@@ -77,6 +77,7 @@ class Session {
   final int? changedFiles;
   final String? diffUrl;
   final String? patchUrl;
+  final List<String>? tags;
 
   Session({
     required this.name,
@@ -103,6 +104,7 @@ class Session {
     this.changedFiles,
     this.diffUrl,
     this.patchUrl,
+    this.tags,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -169,6 +171,7 @@ class Session {
           getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
+      tags: getStringArrayPropOrDefault(json, 'tags', null),
     );
   }
 
@@ -211,6 +214,7 @@ class Session {
     if (changedFiles != null) map['changedFiles'] = changedFiles;
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
+    if (tags != null) map['tags'] = tags;
     return map;
   }
 
@@ -240,6 +244,7 @@ class Session {
     int? changedFiles,
     String? diffUrl,
     String? patchUrl,
+    List<String>? tags,
   }) {
     return Session(
       name: name ?? this.name,
@@ -268,6 +273,7 @@ class Session {
       changedFiles: changedFiles ?? this.changedFiles,
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
+      tags: tags ?? this.tags,
     );
   }
 }

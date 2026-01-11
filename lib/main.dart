@@ -12,6 +12,7 @@ import 'services/cache_service.dart';
 import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
+import 'services/tags_provider.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -75,6 +76,11 @@ void main() async {
             githubProvider: context.read<GithubProvider>(),
           ),
           update: (context, session, auth, github, executor) => executor!,
+        ),
+        ChangeNotifierProxyProvider<SessionProvider, TagsProvider>(
+          create: (context) => TagsProvider(context.read<SessionProvider>()),
+          update: (_, sessionProvider, tagsProvider) =>
+              tagsProvider ?? TagsProvider(sessionProvider),
         ),
       ],
       child: const MyApp(),

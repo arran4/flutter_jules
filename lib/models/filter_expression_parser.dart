@@ -232,6 +232,8 @@ class FilterExpressionParser {
         return TimeFilterElement(
           TimeFilter(type: type, value: value, unit: unit),
         );
+      case 'HASHTAG':
+        return args.isNotEmpty ? TagElement(args[0], args[0]) : null;
       default:
         return null;
     }

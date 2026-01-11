@@ -24,6 +24,7 @@ import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
+import '../widgets/tag_management_dialog.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -2708,6 +2709,26 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.label, color: Colors.grey),
+              SizedBox(width: 8),
+              Text('Manage Tags'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => TagManagementDialog(session: session),
+                );
+              }
+            });
+          },
+        ),
       ],
     ).then((value) {
       if (value == 'source' && session.sourceContext?.source != null) {
