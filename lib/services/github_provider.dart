@@ -66,7 +66,16 @@ class GithubProvider extends ChangeNotifier {
         _updateRateLimits(response.headers);
 
         if (response.statusCode == 200) {
-          return jsonDecode(response.body);
+          final data = jsonDecode(response.body);
+          if (data['merged'] == true) {
+            return 'Merged';
+          } else if (data['draft'] == true) {
+            return 'Draft';
+          } else if (data['state'] == 'closed') {
+            return 'Closed';
+          } else {
+            return data;
+          }
         } else {
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
