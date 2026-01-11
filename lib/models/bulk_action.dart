@@ -85,7 +85,7 @@ class BulkJobConfig {
   final List<SortOption> sorts;
   final List<BulkActionStep> actions;
   final int parallelQueries;
-  final int waitBetweenSeconds;
+  final Duration waitBetween;
 
   // Execution control
   final int? limit; // Maximum number of sessions to process
@@ -99,7 +99,7 @@ class BulkJobConfig {
     required this.sorts,
     required this.actions,
     this.parallelQueries = 1,
-    this.waitBetweenSeconds = 2,
+    this.waitBetween = const Duration(seconds: 2),
     this.limit,
     this.offset = 0,
     this.randomize = false,
