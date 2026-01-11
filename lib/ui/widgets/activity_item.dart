@@ -109,10 +109,6 @@ class _ActivityItemState extends State<ActivityItem> {
         (a) => a.bashOutput != null,
         orElse: () => Artifact(),
       );
-      final mediaArtifact = activity.artifacts!.firstWhere(
-        (a) => a.media != null,
-        orElse: () => Artifact(),
-      );
 
       if (bashArtifact.bashOutput != null) {
         title = "Command";
@@ -124,11 +120,6 @@ class _ActivityItemState extends State<ActivityItem> {
           icon = Icons.terminal;
           iconColor = Colors.grey;
         }
-      } else if (mediaArtifact.media != null) {
-        title = "Media";
-        summary = mediaArtifact.media!.mimeType;
-        icon = Icons.image;
-        iconColor = Colors.purple;
       } else {
         // Just generic artifacts (e.g. ChangeSet)
         // Check if it's the "Simple ChangeSet" case
@@ -407,8 +398,7 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     }
 
-    final hasOtherContent =
-        activity.progressUpdated != null ||
+    final hasOtherContent = activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;
@@ -512,55 +502,6 @@ class _ActivityItemState extends State<ActivityItem> {
                                 color: Colors.blueGrey,
                                 fontWeight: FontWeight.w500,
                               ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
-                ],
-                if (artifact.media != null) ...[
-                  if (artifact.media!.data.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.memory(
-                        base64Decode(artifact.media!.data),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Icon(Icons.broken_image, color: Colors.grey),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Failed to load image",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ] else ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.image, color: Colors.grey),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Image (${artifact.media!.mimeType}) - No Data",
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
                             ),
                           ),
                         ],

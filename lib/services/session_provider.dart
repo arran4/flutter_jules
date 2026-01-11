@@ -107,15 +107,13 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed =
-                (oldSession!.updateTime != session.updateTime) ||
+            final changed = (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated: changed
-                  ? DateTime.now()
-                  : oldItem.metadata.lastUpdated,
+              lastUpdated:
+                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -133,9 +131,8 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl = oldSession != null
-                  ? _getPrUrl(oldSession)
-                  : null;
+              final oldPrUrl =
+                  oldSession != null ? _getPrUrl(oldSession) : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
@@ -155,7 +152,7 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
-                _refreshGitStatusInBackground(session.id, prUrl, authToken);
+                _refreshPrStatusInBackground(session.id, prUrl, authToken);
               }
             }
           }
@@ -219,8 +216,7 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed =
-          (oldItem.data.updateTime != session.updateTime) ||
+      final changed = (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -273,7 +269,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-            (oldItem.data.state != updatedSession.state);
+                (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -315,7 +311,7 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
-          _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
+          _refreshPrStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
 
@@ -461,9 +457,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems = _items
-          .where((item) => item.metadata.isWatched)
-          .toList();
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -650,8 +645,8 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
-  /// Refresh the PR and CI status for a session from GitHub
-  Future<void> refreshGitStatus(String sessionId, String authToken) async {
+  /// Refresh the PR status for a session from GitHub
+  Future<void> refreshPrStatus(String sessionId, String authToken) async {
     if (_githubProvider == null) {
       throw Exception("GitHub provider not initialized");
     }
@@ -670,9 +665,8 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr = session.outputs!
-        .firstWhere((o) => o.pullRequest != null)
-        .pullRequest!;
+    final pr =
+        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
@@ -688,20 +682,11 @@ class SessionProvider extends ChangeNotifier {
     final repo = pathSegments[1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
-    // Fetch PR and CI statuses from GitHub in parallel
-    final results = await Future.wait([
-      _githubProvider!.getPrStatus(owner, repo, prNumber),
-      _githubProvider!.getCIStatus(owner, repo, prNumber),
-    ]);
+    // Fetch PR status from GitHub
+    final prStatus = await _githubProvider!.getPrStatus(owner, repo, prNumber);
 
-    final prStatus = results[0];
-    final ciStatus = results[1];
-
-    // Update session with new statuses
-    final updatedSession = session.copyWith(
-      prStatus: prStatus,
-      ciStatus: ciStatus,
-    );
+    // Update session with new PR status
+    final updatedSession = session.copyWith(prStatus: prStatus);
 
     // Update in cache
     if (_cacheService != null) {
@@ -738,12 +723,13 @@ class SessionProvider extends ChangeNotifier {
     return _githubProvider!.queue.any((job) => job.id == jobId);
   }
 
-  Future<void> _refreshGitStatusInBackground(
+  Future<void> _refreshPrStatusInBackground(
     String sessionId,
     String prUrl,
     String authToken,
   ) async {
     // Avoid multiple concurrent refreshes for same session if not already queued
+    // (This check is redundant if caller checks _isPrFetchQueued, but good for safety)
     if (_isPrFetchQueued(prUrl)) return;
 
     try {
@@ -753,25 +739,15 @@ class SessionProvider extends ChangeNotifier {
       final repo = pathSegments[1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
-      // Fetch statuses in parallel
-      final results = await Future.wait([
-        _githubProvider!.getPrStatus(owner, repo, prNumber),
-        _githubProvider!.getCIStatus(owner, repo, prNumber),
-      ]);
-      final prStatus = results[0];
-      final ciStatus = results[1];
+      final status = await _githubProvider!.getPrStatus(owner, repo, prNumber);
 
-      if (prStatus != null || ciStatus != null) {
+      if (status != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
-          if (item.data.prStatus != prStatus ||
-              item.data.ciStatus != ciStatus) {
-            final updatedSession = item.data.copyWith(
-              prStatus: prStatus,
-              ciStatus: ciStatus,
-            );
+          if (item.data.prStatus != status) {
+            final updatedSession = item.data.copyWith(prStatus: status);
             // Save to cache
             if (_cacheService != null) {
               await _cacheService!.updateSession(authToken, updatedSession);
@@ -783,9 +759,7 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint(
-        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
-      );
+      // print("Background PR refresh failed: $e");
     }
   }
 }

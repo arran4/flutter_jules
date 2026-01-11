@@ -84,10 +84,6 @@ class ActivityDisplayInfo {
         (a) => a.bashOutput != null,
         orElse: () => Artifact(),
       );
-      final mediaArtifact = activity.artifacts!.firstWhere(
-        (a) => a.media != null,
-        orElse: () => Artifact(),
-      );
 
       if (bashArtifact.bashOutput != null) {
         title = "Command";
@@ -99,11 +95,6 @@ class ActivityDisplayInfo {
           icon = Icons.terminal;
           iconColor = Colors.grey;
         }
-      } else if (mediaArtifact.media != null) {
-        title = "Media";
-        summary = mediaArtifact.media!.mimeType;
-        icon = Icons.image;
-        iconColor = Colors.purple;
       } else {
         final changeSetArtifact = activity.artifacts!.firstWhere(
           (a) => a.changeSet != null,

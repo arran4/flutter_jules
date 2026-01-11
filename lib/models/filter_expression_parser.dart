@@ -92,8 +92,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (pos < input.length &&
-        RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (
+        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);
@@ -165,9 +165,6 @@ class FilterExpressionParser {
       case 'PR':
       case 'PR_STATUS':
         return args.isNotEmpty ? PrStatusElement(args[0], args[0]) : null;
-      case 'CI':
-      case 'CI_STATUS':
-        return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
       default:

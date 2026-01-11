@@ -227,7 +227,10 @@ void main() {
 
     test('Remove from AND reduces correctly', () {
       final remove = HasPrElement();
-      final root = AndElement([LabelElement('Unread', 'unread'), remove]);
+      final root = AndElement([
+        LabelElement('Unread', 'unread'),
+        remove,
+      ]);
 
       final result = FilterElementBuilder.removeFilter(root, remove);
 
@@ -237,7 +240,10 @@ void main() {
     test('Remove from nested structure', () {
       final remove = LabelElement('New', 'new');
       final root = AndElement([
-        OrElement([LabelElement('Unread', 'unread'), remove]),
+        OrElement([
+          LabelElement('Unread', 'unread'),
+          remove,
+        ]),
         HasPrElement(),
       ]);
 
@@ -275,7 +281,10 @@ void main() {
 
     test('Toggle NOT in nested structure', () {
       final target = HasPrElement();
-      final root = AndElement([LabelElement('Unread', 'unread'), target]);
+      final root = AndElement([
+        LabelElement('Unread', 'unread'),
+        target,
+      ]);
 
       final result = FilterElementBuilder.toggleNot(root, target);
 
@@ -321,7 +330,10 @@ void main() {
     test('Simplify flattens nested ORs', () {
       final nested = OrElement([
         LabelElement('A', 'a'),
-        OrElement([LabelElement('B', 'b'), LabelElement('C', 'c')]),
+        OrElement([
+          LabelElement('B', 'b'),
+          LabelElement('C', 'c'),
+        ]),
         LabelElement('D', 'd'),
       ]);
 
