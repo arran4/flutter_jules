@@ -708,9 +708,9 @@ class SessionProvider extends ChangeNotifier {
       debugPrint('Warning: getPrStatus returned String: $result0');
       rawPrStatus = result0;
     } else if (result0 is Map<String, dynamic>) {
-       // debugPrint('Warning: getPrStatus returned Map');
-       // Backward compatibility if needed
-       prResponse = GitHubPrResponse(result0);
+      // debugPrint('Warning: getPrStatus returned Map');
+      // Backward compatibility if needed
+      prResponse = GitHubPrResponse(result0);
     }
 
     final ciStatus = results[1] as String?;
@@ -782,7 +782,7 @@ class SessionProvider extends ChangeNotifier {
         _githubProvider!.getPrStatus(owner, repo, prNumber),
         _githubProvider!.getCIStatus(owner, repo, prNumber),
       ]);
-      
+
       Object? result0 = results[0];
       GitHubPrResponse? prResponse;
       String? rawPrStatus;
@@ -793,7 +793,7 @@ class SessionProvider extends ChangeNotifier {
         // debugPrint('Warning: background getPrStatus returned String: $result0');
         rawPrStatus = result0;
       } else if (result0 is Map<String, dynamic>) {
-         prResponse = GitHubPrResponse(result0);
+        prResponse = GitHubPrResponse(result0);
       }
 
       final ciStatus = results[1] as String?;
@@ -805,7 +805,8 @@ class SessionProvider extends ChangeNotifier {
           final item = _items[index];
 
           final updatedSession = item.data.copyWith(
-            prStatus: prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
+            prStatus:
+                prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
             ciStatus: ciStatus ?? item.data.ciStatus,
             mergeableState: prResponse?.mergeableState,
             additions: prResponse?.additions,

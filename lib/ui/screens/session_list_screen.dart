@@ -1746,7 +1746,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       (newSession) {
                                                     // Immediately add to provider
                                                     Provider.of<
-                                                            SessionProvider>(
+                                                        SessionProvider>(
                                                       context,
                                                       listen: false,
                                                     ).updateSession(
