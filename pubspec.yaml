@@ -30,8 +30,30 @@ dev_dependencies:
   flutter_lints: ^2.0.0
   mockito: ^5.6.1
   build_runner: ^2.10.4
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/icon/app_icon.png"
+  min_sdk_android: 21
+  web:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+    background_color: "#0175c2"
+    theme_color: "#0175c2"
+  windows:
+    generate: true
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
+  linux:
+    generate: true
+    image_path: "assets/icon/app_icon.png"
 
 flutter:
   uses-material-design: true
   assets:
     - assets/default_bookmarks.json
+    - assets/icon/app_icon.png
