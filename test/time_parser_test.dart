@@ -8,8 +8,10 @@ void main() {
       expect(TimeParser.parse('yesterday')?.day, now.day - 1);
       expect(TimeParser.parse('today')?.day, now.day);
       expect(TimeParser.parse('tomorrow')?.day, now.day + 1);
-      expect(TimeParser.parse('last week')?.day,
-          now.subtract(const Duration(days: 7)).day);
+      expect(
+        TimeParser.parse('last week')?.day,
+        now.subtract(const Duration(days: 7)).day,
+      );
 
       final expectedMonth = now.month == 1 ? 12 : now.month - 1;
       expect(TimeParser.parse('last month')?.month, expectedMonth);
@@ -19,7 +21,9 @@ void main() {
 
     test('should parse absolute date and time formats', () {
       expect(
-          TimeParser.parse('2023-10-27 10:00:00'), DateTime(2023, 10, 27, 10));
+        TimeParser.parse('2023-10-27 10:00:00'),
+        DateTime(2023, 10, 27, 10),
+      );
       expect(TimeParser.parse('2023-10-27'), DateTime(2023, 10, 27));
     });
 
@@ -40,10 +44,14 @@ void main() {
 
     test('should parse duration-based phrases', () {
       final now = DateTime.now();
-      expect(TimeParser.parse('last 24 hours')?.hour,
-          now.subtract(const Duration(hours: 24)).hour);
-      expect(TimeParser.parse('last 7 days')?.day,
-          now.subtract(const Duration(days: 7)).day);
+      expect(
+        TimeParser.parse('last 24 hours')?.hour,
+        now.subtract(const Duration(hours: 24)).hour,
+      );
+      expect(
+        TimeParser.parse('last 7 days')?.day,
+        now.subtract(const Duration(days: 7)).day,
+      );
     });
 
     test('should parse day of the week', () {

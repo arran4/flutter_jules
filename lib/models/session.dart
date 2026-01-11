@@ -165,19 +165,18 @@ class Session {
       mergeableState: getStringPropOrDefault(json, 'mergeableState', null),
       additions: getNumberPropOrDefault<num?>(json, 'additions', null)?.toInt(),
       deletions: getNumberPropOrDefault<num?>(json, 'deletions', null)?.toInt(),
-      changedFiles:
-          getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
+      changedFiles: getNumberPropOrDefault<num?>(
+        json,
+        'changedFiles',
+        null,
+      )?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
-      'name': name,
-      'id': id,
-      'prompt': prompt,
-    };
+    final map = <String, dynamic>{'name': name, 'id': id, 'prompt': prompt};
     if (sourceContext != null) {
       map['sourceContext'] = sourceContext!.toJson();
     }

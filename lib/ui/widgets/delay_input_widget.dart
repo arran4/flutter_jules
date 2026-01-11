@@ -69,8 +69,10 @@ class _DelayInputWidgetState extends State<DelayInputWidget> {
       mainAxisSize: MainAxisSize.min,
       children: [
         if (widget.label != null)
-          Text(widget.label!,
-              style: const TextStyle(fontSize: 12, color: Colors.grey)),
+          Text(
+            widget.label!,
+            style: const TextStyle(fontSize: 12, color: Colors.grey),
+          ),
         Row(
           crossAxisAlignment: CrossAxisAlignment.center,
           children: [
