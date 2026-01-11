@@ -6,6 +6,7 @@ enum FilterType {
   ciStatus,
   branch,
   text,
+  time,
 }
 
 enum FilterMode {
