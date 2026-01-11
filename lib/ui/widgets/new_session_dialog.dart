@@ -86,7 +86,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -150,7 +151,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-                  _filteredSources.length;
+              _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -306,7 +307,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -382,8 +386,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading:
-                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                        leading: isPrivate
+                            ? const Icon(Icons.lock, size: 16)
+                            : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -912,7 +917,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 final currentText = _promptController.text;
 
                                 if (currentText.trim().isNotEmpty) {
-                                  final separator =
+                                  const separator =
                                       '\n\n--- Imported Prompt ---\n';
                                   _promptController.text =
                                       '$currentText$separator$originalPrompt';
@@ -921,9 +926,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 }
                                 _promptController.selection =
                                     TextSelection.fromPosition(
-                                  TextPosition(
-                                      offset: _promptController.text.length),
-                                );
+                                      TextPosition(
+                                        offset: _promptController.text.length,
+                                      ),
+                                    );
                               },
                             )
                           : null,
@@ -1059,9 +1065,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   border: const OutlineInputBorder(),
                                   prefixIcon:
                                       (_selectedSource?.githubRepo?.isPrivate ==
-                                              true)
-                                          ? const Icon(Icons.lock, size: 16)
-                                          : const Icon(Icons.source, size: 16),
+                                          true)
+                                      ? const Icon(Icons.lock, size: 16)
+                                      : const Icon(Icons.source, size: 16),
                                   suffixIcon: IconButton(
                                     icon: const Icon(Icons.close, size: 16),
                                     onPressed: () {
@@ -1138,7 +1144,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ),
                     const SizedBox(width: 8),
                     FilledButton(
-                      onPressed: (_promptController.text.isNotEmpty &&
+                      onPressed:
+                          (_promptController.text.isNotEmpty &&
                               (_selectedSource != null ||
                                   _bulkSelections.length > 1))
                           ? _create
