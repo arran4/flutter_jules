@@ -7,6 +7,8 @@ import 'cache_service.dart';
 import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
+  final GlobalKey<ScaffoldMessengerState> scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<CachedItem<Session>> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -807,7 +809,7 @@ class SessionProvider extends ChangeNotifier {
           final updatedSession = item.data.copyWith(
             prStatus:
                 prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
-            ciStatus: ciStatus ?? item.data.ciStatus,
+            ciStatus: ciStatus ?? item..ciStatus,
             mergeableState: prResponse?.mergeableState,
             additions: prResponse?.additions,
             deletions: prResponse?.deletions,
