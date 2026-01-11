@@ -5,6 +5,7 @@ import '../../models/session.dart';
 import '../../models/search_filter.dart';
 import '../../models/filter_element.dart';
 import '../../services/session_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';
 import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
@@ -30,7 +31,7 @@ class BulkActionDialog extends StatefulWidget {
 class _BulkActionDialogState extends State<BulkActionDialog> {
   FilterElement? _filterTree;
   late List<SortOption> _sorts;
-  final List<BulkActionStep> _actions = [];
+  List<BulkActionStep> _actions = [];
   int _parallelQueries = 1;
   int _waitBetweenSeconds = 2;
   String _searchText = '';
@@ -52,8 +53,19 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     _sorts = List.from(widget.currentSorts);
     _searchText = widget.mainSearchText;
 
-    // Add a default action
-    _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
+    // Load last used settings
+    final settings = context.read<SettingsProvider>();
+    _actions = List<BulkActionStep>.from(settings.lastBulkActions);
+    _parallelQueries = settings.lastBulkParallelQueries;
+    _waitBetweenSeconds = settings.lastBulkWaitBetweenSeconds;
+    _limit = settings.lastBulkLimit;
+    _offset = settings.lastBulkOffset;
+    _randomize = settings.lastBulkRandomize;
+    _stopOnError = settings.lastBulkStopOnError;
+
+    if (_actions.isEmpty) {
+      _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _updatePreview());
   }
@@ -225,6 +237,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 ),
                                 keyboardType: TextInputType.number,
                                 style: const TextStyle(fontSize: 12),
+                                controller: TextEditingController(
+                                  text: _limit != null ? _limit.toString() : '',
+                                ),
                                 onChanged: (val) {
                                   setState(() {
                                     _limit =
@@ -522,6 +537,17 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   }
 
   void _startJob() {
+    // Save configuration
+    context.read<SettingsProvider>().saveBulkActionConfig(
+          actions: _actions,
+          parallelQueries: _parallelQueries,
+          waitBetweenSeconds: _waitBetweenSeconds,
+          limit: _limit,
+          offset: _offset,
+          randomize: _randomize,
+          stopOnError: _stopOnError,
+        );
+
     final config = BulkJobConfig(
       targetType: BulkTargetType.filtered,
       filterTree: _filterTree,
