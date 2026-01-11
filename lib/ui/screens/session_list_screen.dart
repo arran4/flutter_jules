@@ -2069,9 +2069,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                 }
 
                                                                 return PopupText(
-                                                                  session.title ??
-                                                                      session
-                                                                          .prompt,
+                                                                  (session.title ??
+                                                                          session
+                                                                              .prompt)
+                                                                      .replaceAll(
+                                                                    '\n',
+                                                                    ' ',
+                                                                  ),
                                                                   maxLines:
                                                                       maxLines,
                                                                   style:
