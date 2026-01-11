@@ -1,6 +1,6 @@
 [
   {
-    "name": "Default View",
+    "name": "Empty View",
     "description": "The standard view, sorted by last update.",
     "expression": "",
     "sorts": [
@@ -101,7 +101,7 @@
   {
     "name": "Completed w/ PR (Unread/Updated)",
     "description": "Completed sessions with PRs that are unread or recently updated.",
-    "expression": "AND(State(COMPLETED) Has(PR) OR(Unread() Updated()))",
+    "expression": "AND(State(COMPLETED) Has(PR) OR(Unread() Updated()) NOT(OR(PR(Merged) PR(closed))))",
     "sorts": [
       {
         "field": "updated",
@@ -113,6 +113,17 @@
     "name": "Completed w/o PR (Unread/Updated)",
     "description": "Completed sessions without PRs that are unread or recently updated.",
     "expression": "AND(State(COMPLETED) NOT(Has(PR)) OR(Unread() Updated()))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Completed PRs (Open/Draft)",
+    "description": "Completed sessions with open or draft pull requests.",
+    "expression": "AND(OR(PR(open) PR(draft)) State(COMPLETED))",
     "sorts": [
       {
         "field": "updated",

@@ -154,8 +154,9 @@ List<CachedItem<Session>> _applyFilter(
     final session = item.data;
     final metadata = item.metadata;
 
-    final initialState =
-        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
 
     if (filterTree == null) {
       return initialState.isIn;
