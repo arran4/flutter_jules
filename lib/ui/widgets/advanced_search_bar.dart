@@ -440,97 +440,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
-  Widget _buildBookmarksSection(BuildContext context) {
-    final bookmarkProvider = context.watch<FilterBookmarkProvider>();
-
-    if (bookmarkProvider.isLoading) {
-      return const Center(child: CircularProgressIndicator());
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Filter Presets',
-          style: TextStyle(
-            fontSize: 13,
-            fontWeight: FontWeight.w500,
-            color: Colors.grey,
-          ),
-        ),
-        const Divider(height: 16),
-        ...bookmarkProvider.bookmarks.map((bookmark) {
-          return InkWell(
-            onTap: () {
-              widget.onFilterTreeChanged(bookmark.tree);
-              widget.onSortsChanged(bookmark.sorts);
-              ScaffoldMessenger.of(context).showSnackBar(
-                SnackBar(
-                  content: Text('Applied preset: ${bookmark.name}'),
-                  duration: const Duration(seconds: 2),
-                ),
-              );
-            },
-            child: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 6),
-              child: Row(
-                children: [
-                  Icon(
-                    Icons.bookmark,
-                    size: 16,
-                    color: bookmarkProvider.isSystemBookmark(bookmark.name)
-                        ? Colors.blue
-                        : Colors.orange,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      bookmark.name,
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          );
-        }),
-        const Divider(height: 16),
-        Row(
-          mainAxisAlignment: MainAxisAlignment.end,
-          children: [
-            TextButton.icon(
-              onPressed: () => _saveCurrentFilters(context),
-              icon: const Icon(Icons.save, size: 16),
-              label: const Text('Save Current'),
-              style: TextButton.styleFrom(
-                textStyle: const TextStyle(fontSize: 12),
-                foregroundColor: Colors.grey[700],
-              ),
-            ),
-            TextButton.icon(
-              onPressed: () {
-                Navigator.of(context).push(
-                  MaterialPageRoute(
-                    builder: (context) => BookmarkManagerScreen(
-                      availableSuggestions: widget.availableSuggestions,
-                    ),
-                  ),
-                );
-              },
-              icon: const Icon(Icons.settings, size: 16),
-              label: const Text('Manage'),
-              style: TextButton.styleFrom(
-                textStyle: const TextStyle(fontSize: 12),
-                foregroundColor: Colors.grey[700],
-              ),
-            ),
-          ],
-        ),
-      ],
-    );
-  }
-
   Future<void> _saveCurrentFilters(BuildContext context) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
@@ -724,18 +633,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         // Left side: Active Filters
                         Expanded(
                           flex: 2,
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
+                          child: ExpansionTile(
+                            title: const Text('Active Filters'),
+                            initiallyExpanded: true,
                             children: [
-                              const Text(
-                                'Active Filters',
-                                style: TextStyle(
-                                  fontSize: 13,
-                                  fontWeight: FontWeight.w500,
-                                  color: Colors.grey,
-                                ),
-                              ),
-                              const Divider(height: 16),
                               if (widget.filterTree != null)
                                 FilterElementWidget(
                                   element: widget.filterTree,
@@ -834,7 +735,113 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         // Right side: Presets
                         Expanded(
                           flex: 1,
-                          child: _buildBookmarksSection(context),
+                          child: ExpansionTile(
+                            title: const Text('Filter Presets'),
+                            initiallyExpanded: true,
+                            children: [
+                              Consumer<FilterBookmarkProvider>(
+                                builder: (context, bookmarkProvider, child) {
+                                  if (bookmarkProvider.isLoading) {
+                                    return const Center(
+                                        child: CircularProgressIndicator());
+                                  }
+                                  return Column(
+                                    children: [
+                                      ...bookmarkProvider.bookmarks
+                                          .map((bookmark) {
+                                        return InkWell(
+                                          onTap: () {
+                                            widget.onFilterTreeChanged(
+                                                bookmark.tree);
+                                            widget.onSortsChanged(
+                                                bookmark.sorts);
+                                            ScaffoldMessenger.of(context)
+                                                .showSnackBar(
+                                              SnackBar(
+                                                content: Text(
+                                                    'Applied preset: ${bookmark.name}'),
+                                                duration: const Duration(
+                                                    seconds: 2),
+                                              ),
+                                            );
+                                          },
+                                          child: Padding(
+                                            padding: const EdgeInsets.symmetric(
+                                                vertical: 6),
+                                            child: Row(
+                                              children: [
+                                                Icon(
+                                                  Icons.bookmark,
+                                                  size: 16,
+                                                  color: bookmarkProvider
+                                                          .isSystemBookmark(
+                                                              bookmark.name)
+                                                      ? Colors.blue
+                                                      : Colors.orange,
+                                                ),
+                                                const SizedBox(width: 8),
+                                                Expanded(
+                                                  child: Text(
+                                                    bookmark.name,
+                                                    style: const TextStyle(
+                                                        fontSize: 12),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        );
+                                      }),
+                                      const Divider(height: 16),
+                                      Row(
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.end,
+                                        children: [
+                                          TextButton.icon(
+                                            onPressed: () =>
+                                                _saveCurrentFilters(context),
+                                            icon:
+                                                const Icon(Icons.save, size: 16),
+                                            label: const Text('Save Current'),
+                                            style: TextButton.styleFrom(
+                                              textStyle: const TextStyle(
+                                                  fontSize: 12),
+                                              foregroundColor:
+                                                  Colors.grey[700],
+                                            ),
+                                          ),
+                                          TextButton.icon(
+                                            onPressed: () {
+                                              Navigator.of(context).push(
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      BookmarkManagerScreen(
+                                                    availableSuggestions: widget
+                                                        .availableSuggestions,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                            icon: const Icon(Icons.settings,
+                                                size: 16),
+                                            label: const Text('Manage'),
+                                            style: TextButton.styleFrom(
+                                              textStyle: const TextStyle(
+                                                  fontSize: 12),
+                                              foregroundColor:
+                                                  Colors.grey[700],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  );
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                       ],
                     ),
