@@ -55,6 +55,9 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   String get estimatedTimeRemaining {
+    if (_status == BulkJobStatus.completed) return "Done";
+    if (_status == BulkJobStatus.canceled) return "Canceled";
+    if (_status == BulkJobStatus.paused) return "Paused";
     if (_status != BulkJobStatus.running || _completed.isEmpty) {
       return "Calculating...";
     }
