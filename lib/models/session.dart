@@ -56,7 +56,7 @@ class Session {
   final String name;
   final String id;
   final String prompt;
-  final SourceContext sourceContext;
+  final SourceContext? sourceContext;
   final String? title;
   final bool? requirePlanApproval;
   final AutomationMode? automationMode;
@@ -71,12 +71,18 @@ class Session {
   final String? currentAction;
   final String? prStatus;
   final String? ciStatus;
+  final String? mergeableState;
+  final int? additions;
+  final int? deletions;
+  final int? changedFiles;
+  final String? diffUrl;
+  final String? patchUrl;
 
   Session({
     required this.name,
     required this.id,
     required this.prompt,
-    required this.sourceContext,
+    this.sourceContext,
     this.title,
     this.requirePlanApproval,
     this.automationMode,
@@ -91,6 +97,12 @@ class Session {
     this.currentAction,
     this.prStatus,
     this.ciStatus,
+    this.mergeableState,
+    this.additions,
+    this.deletions,
+    this.changedFiles,
+    this.diffUrl,
+    this.patchUrl,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -98,10 +110,11 @@ class Session {
       name: getStringPropOrThrow(json, 'name'),
       id: getStringPropOrThrow(json, 'id'),
       prompt: getStringPropOrThrow(json, 'prompt'),
-      sourceContext: getObjectFunctionPropOrThrow(
+      sourceContext: getObjectFunctionPropOrDefault(
         json,
         'sourceContext',
         SourceContext.fromJson,
+        null,
       ),
       title: getStringPropOrDefault(json, 'title', null),
       requirePlanApproval: getBooleanPropOrDefault(
@@ -149,6 +162,13 @@ class Session {
       currentAction: getStringPropOrDefault(json, 'currentAction', null),
       prStatus: getStringPropOrDefault(json, 'prStatus', null),
       ciStatus: getStringPropOrDefault(json, 'ciStatus', null),
+      mergeableState: getStringPropOrDefault(json, 'mergeableState', null),
+      additions: getNumberPropOrDefault<num?>(json, 'additions', null)?.toInt(),
+      deletions: getNumberPropOrDefault<num?>(json, 'deletions', null)?.toInt(),
+      changedFiles:
+          getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
+      diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
+      patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
     );
   }
 
@@ -157,8 +177,10 @@ class Session {
       'name': name,
       'id': id,
       'prompt': prompt,
-      'sourceContext': sourceContext.toJson(),
     };
+    if (sourceContext != null) {
+      map['sourceContext'] = sourceContext!.toJson();
+    }
     if (title != null) map['title'] = title;
     if (requirePlanApproval != null) {
       map['requirePlanApproval'] = requirePlanApproval;
@@ -183,6 +205,12 @@ class Session {
     if (currentAction != null) map['currentAction'] = currentAction;
     if (prStatus != null) map['prStatus'] = prStatus;
     if (ciStatus != null) map['ciStatus'] = ciStatus;
+    if (mergeableState != null) map['mergeableState'] = mergeableState;
+    if (additions != null) map['additions'] = additions;
+    if (deletions != null) map['deletions'] = deletions;
+    if (changedFiles != null) map['changedFiles'] = changedFiles;
+    if (diffUrl != null) map['diffUrl'] = diffUrl;
+    if (patchUrl != null) map['patchUrl'] = patchUrl;
     return map;
   }
 
@@ -191,6 +219,7 @@ class Session {
     String? id,
     String? prompt,
     SourceContext? sourceContext,
+    bool? sourceContextIsNull,
     String? title,
     bool? requirePlanApproval,
     AutomationMode? automationMode,
@@ -205,12 +234,20 @@ class Session {
     String? currentAction,
     String? prStatus,
     String? ciStatus,
+    String? mergeableState,
+    int? additions,
+    int? deletions,
+    int? changedFiles,
+    String? diffUrl,
+    String? patchUrl,
   }) {
     return Session(
       name: name ?? this.name,
       id: id ?? this.id,
       prompt: prompt ?? this.prompt,
-      sourceContext: sourceContext ?? this.sourceContext,
+      sourceContext: sourceContextIsNull == true
+          ? null
+          : sourceContext ?? this.sourceContext,
       title: title ?? this.title,
       requirePlanApproval: requirePlanApproval ?? this.requirePlanApproval,
       automationMode: automationMode ?? this.automationMode,
@@ -225,6 +262,12 @@ class Session {
       currentAction: currentAction ?? this.currentAction,
       prStatus: prStatus ?? this.prStatus,
       ciStatus: ciStatus ?? this.ciStatus,
+      mergeableState: mergeableState ?? this.mergeableState,
+      additions: additions ?? this.additions,
+      deletions: deletions ?? this.deletions,
+      changedFiles: changedFiles ?? this.changedFiles,
+      diffUrl: diffUrl ?? this.diffUrl,
+      patchUrl: patchUrl ?? this.patchUrl,
     );
   }
 }

@@ -21,6 +21,7 @@ import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
+import '../session_helpers.dart';
 
 import 'dart:convert';
 import '../../services/exceptions.dart';
@@ -829,8 +830,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
           break;
         case SortField.source:
-          cmp = a.data.sourceContext.source.compareTo(
-            b.data.sourceContext.source,
+          cmp = (a.data.sourceContext?.source ?? '').compareTo(
+            b.data.sourceContext?.source ?? '',
           );
           break;
         case SortField.status:
@@ -2412,6 +2413,38 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.add_circle_outline),
+              SizedBox(width: 8),
+              Text('Resubmit as new session'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(
+              Duration.zero,
+              () => resubmitSession(context, session, hideOriginal: false),
+            );
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit as new session and hide'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(
+              Duration.zero,
+              () => resubmitSession(context, session, hideOriginal: true),
+            );
+          },
+        ),
+        const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
             children: [
@@ -2542,11 +2575,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ],
       ],
     ).then((value) {
-      if (value == 'source' && session.sourceContext.source.isNotEmpty) {
-        _openSourceUrl(session.sourceContext.source);
+      if (value == 'source' && session.sourceContext?.source != null) {
+        _openSourceUrl(session.sourceContext!.source);
       }
     });
   }
 }
-
-// Removed ListItem classes as they are no longer needed

@@ -39,7 +39,7 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<String?> getPrStatus(
+  Future<Map<String, dynamic>?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
@@ -74,7 +74,7 @@ class GithubProvider extends ChangeNotifier {
           } else if (data['state'] == 'closed') {
             return 'Closed';
           } else {
-            return 'Open';
+            return data;
           }
         } else {
           debugPrint(
@@ -91,7 +91,43 @@ class GithubProvider extends ChangeNotifier {
 
     // Wait for job to complete
     await job.completer.future;
-    return job.result as String?;
+    return job.result as Map<String, dynamic>?;
+  }
+
+  Future<String?> getDiff(String owner, String repo, String prNumber) async {
+    if (_apiKey == null) return null;
+    final url =
+        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'token $_apiKey',
+        'Accept': 'application/vnd.github.v3.diff',
+      },
+    );
+    _updateRateLimits(response.headers);
+    if (response.statusCode == 200) {
+      return response.body;
+    }
+    return null;
+  }
+
+  Future<String?> getPatch(String owner, String repo, String prNumber) async {
+    if (_apiKey == null) return null;
+    final url =
+        Uri.parse('https://api.github.com/repos/$owner/$repo/pulls/$prNumber');
+    final response = await http.get(
+      url,
+      headers: {
+        'Authorization': 'token $_apiKey',
+        'Accept': 'application/vnd.github.v3.patch',
+      },
+    );
+    _updateRateLimits(response.headers);
+    if (response.statusCode == 200) {
+      return response.body;
+    }
+    return null;
   }
 
   Future<String?> getCIStatus(
