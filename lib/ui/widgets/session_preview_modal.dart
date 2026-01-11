@@ -129,18 +129,21 @@ class SessionPreviewModal extends StatelessWidget {
                           children: [
                             ListTile(
                               title: const Text("Source"),
-                              subtitle: Text(
-                                session.sourceContext?.source ?? 'N/A',
-                              ),
+                              subtitle: Text(session.sourceContext.source),
                             ),
-                            if (session.sourceContext?.githubRepoContext !=
+                            if (session.sourceContext.githubRepoContext !=
                                 null) ...[
-                              if (session.sourceContext!.githubRepoContext!
-                                  .startingBranch.isNotEmpty)
+                              if (session
+                                  .sourceContext
+                                  .githubRepoContext!
+                                  .startingBranch
+                                  .isNotEmpty)
                                 ListTile(
                                   title: const Text("Branch"),
                                   subtitle: Text(
-                                    session.sourceContext!.githubRepoContext!
+                                    session
+                                        .sourceContext
+                                        .githubRepoContext!
                                         .startingBranch,
                                   ),
                                 ),

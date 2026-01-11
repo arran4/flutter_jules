@@ -86,7 +86,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -150,7 +151,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         setState(() {
           _highlightedSourceIndex =
               (_highlightedSourceIndex - 1 + _filteredSources.length) %
-                  _filteredSources.length;
+              _filteredSources.length;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
@@ -256,11 +257,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       // Priority 1.5: Draft value
-      if (_selectedSource == null &&
-          widget.initialSession?.sourceContext != null) {
+      if (_selectedSource == null && widget.initialSession != null) {
         try {
           _selectedSource = sources.firstWhere(
-            (s) => s.name == widget.initialSession!.sourceContext!.source,
+            (s) => s.name == widget.initialSession!.sourceContext.source,
           );
         } catch (_) {}
       }
@@ -303,12 +303,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       // Validated selection
-      if (_selectedSource != null &&
-          widget.initialSession?.sourceContext != null) {
+      if (_selectedSource != null && widget.initialSession != null) {
         // Try to match branch from draft
-        if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
+        if (widget.initialSession!.sourceContext.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -384,8 +386,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           : null,
                       child: ListTile(
                         dense: true,
-                        leading:
-                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                        leading: isPrivate
+                            ? const Icon(Icons.lock, size: 16)
+                            : null,
                         title: Text(_getSourceDisplayLabel(source)),
                         onTap: () => _selectSource(source),
                       ),
@@ -600,21 +603,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       await prefs.setInt('new_session_last_mode', _selectedModeIndex);
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
     } else {
+      if (_selectedSource == null) return;
+
       // Single Mode
       // Save preferences
       final prefs = await SharedPreferences.getInstance();
       await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      if (_selectedSource != null) {
-        await prefs.setString(
-          'new_session_last_source',
-          _selectedSource!.name,
-        );
-        if (_selectedBranch != null) {
-          prefs.setString('new_session_last_branch', _selectedBranch!);
-        }
-      } else {
-        await prefs.remove('new_session_last_source');
-        await prefs.remove('new_session_last_branch');
+      await prefs.setString('new_session_last_source', _selectedSource!.name);
+      if (_selectedBranch != null) {
+        prefs.setString('new_session_last_branch', _selectedBranch!);
       }
       await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
@@ -623,14 +620,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           name: '', // Server assigns
           id: '', // Server assigns
           prompt: _promptController.text,
-          sourceContext: _selectedSource == null
-              ? null
-              : SourceContext(
-                  source: _selectedSource!.name,
-                  githubRepoContext: GitHubRepoContext(
-                    startingBranch: _selectedBranch ?? 'main',
-                  ),
-                ),
+          sourceContext: SourceContext(
+            source: _selectedSource!.name,
+            githubRepoContext: GitHubRepoContext(
+              startingBranch: _selectedBranch ?? 'main',
+            ),
+          ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
           images: images,
@@ -698,14 +693,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           name: widget.initialSession?.name ?? '',
           id: widget.initialSession?.id ?? '',
           prompt: _promptController.text,
-          sourceContext: _selectedSource == null
-              ? null
-              : SourceContext(
-                  source: _selectedSource!.name,
-                  githubRepoContext: GitHubRepoContext(
-                    startingBranch: _selectedBranch ?? 'main',
-                  ),
-                ),
+          sourceContext: SourceContext(
+            source: _selectedSource?.name ?? 'sources/default',
+            githubRepoContext: GitHubRepoContext(
+              startingBranch: _selectedBranch ?? 'main',
+            ),
+          ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
         ),
@@ -726,7 +719,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       name: '',
       id: '',
       prompt: '',
-      sourceContext: null,
+      sourceContext: SourceContext(source: ''),
     );
     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
@@ -933,10 +926,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 }
                                 _promptController.selection =
                                     TextSelection.fromPosition(
-                                  TextPosition(
-                                    offset: _promptController.text.length,
-                                  ),
-                                );
+                                      TextPosition(
+                                        offset: _promptController.text.length,
+                                      ),
+                                    );
                               },
                             )
                           : null,
@@ -1072,9 +1065,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   border: const OutlineInputBorder(),
                                   prefixIcon:
                                       (_selectedSource?.githubRepo?.isPrivate ==
-                                              true)
-                                          ? const Icon(Icons.lock, size: 16)
-                                          : const Icon(Icons.source, size: 16),
+                                          true)
+                                      ? const Icon(Icons.lock, size: 16)
+                                      : const Icon(Icons.source, size: 16),
                                   suffixIcon: IconButton(
                                     icon: const Icon(Icons.close, size: 16),
                                     onPressed: () {
@@ -1152,7 +1145,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     const SizedBox(width: 8),
                     FilledButton(
                       onPressed:
-                          (_promptController.text.isNotEmpty) ? _create : null,
+                          (_promptController.text.isNotEmpty &&
+                              (_selectedSource != null ||
+                                  _bulkSelections.length > 1))
+                          ? _create
+                          : null,
                       child: const Text('Send Now'),
                     ),
                   ],

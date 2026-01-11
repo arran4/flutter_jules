@@ -133,8 +133,8 @@
   },
   {
     "name": "CI: Failure",
-    "description": "Sessions with failed CI checks.",
-    "expression": "CI(Failure)",
+    "description": "Sessions with failed CI checks that are unread or have open/draft PRs.",
+    "expression": "AND(CI(Failure) OR(Unread() PR(Open) PR(Draft)))",
     "sorts": [
       {
         "field": "updated",
@@ -144,8 +144,8 @@
   },
   {
     "name": "CI: Success",
-    "description": "Sessions with successful CI checks.",
-    "expression": "CI(Success)",
+    "description": "Sessions with successful CI checks that are unread.",
+    "expression": "AND(CI(Success) Unread())",
     "sorts": [
       {
         "field": "updated",

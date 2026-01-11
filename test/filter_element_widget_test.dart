@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/models/filter_element.dart';
-import 'package:flutter_jules/models/time_filter.dart';
 import 'package:flutter_jules/ui/widgets/filter_element_widget.dart';
 
 void main() {
@@ -76,17 +75,6 @@ void main() {
         await pumpElement(tester, BranchElement('main', 'main'));
         expect(find.text('Branch: main'), findsOneWidget);
         expect(find.byIcon(Icons.account_tree), findsOneWidget);
-      },
-      FilterElementType.time: (tester) async {
-        // TimeFilterElement
-        final tf = TimeFilter(
-          type: TimeFilterType.newerThan,
-          value: 5,
-          unit: TimeFilterUnit.days,
-        );
-        await pumpElement(tester, TimeFilterElement(tf));
-        expect(find.byIcon(Icons.access_time), findsOneWidget);
-        expect(find.text('Time: newerThan 5 days'), findsOneWidget);
       },
       FilterElementType.and: (tester) async {
         // AndElement

@@ -126,13 +126,11 @@ Future<bool> resubmitSession(
       }
     }
   } else if (anySucceeded) {
-    if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("New session(s) created."),
-        ),
-      );
-    }
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text("New session(s) created."),
+      ),
+    );
   }
 
   return anySucceeded;

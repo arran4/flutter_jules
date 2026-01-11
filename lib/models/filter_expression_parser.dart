@@ -1,5 +1,4 @@
 import 'filter_element.dart';
-import 'time_filter.dart';
 
 class FilterExpressionParser {
   final String input;
@@ -93,8 +92,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (
-        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (pos < input.length &&
+        RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);
@@ -171,35 +170,6 @@ class FilterExpressionParser {
         return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
-      case 'TIME':
-        if (args.isEmpty) return null;
-        final parts = args[0].split(' ');
-        if (parts.length < 2) return null;
-
-        final type = TimeFilterType.values.byName(parts[0]);
-        final valueStr = parts[1];
-
-        // Try to parse as a specific date
-        final specificTime = DateTime.tryParse(valueStr);
-        if (specificTime != null) {
-          return TimeFilterElement(
-            TimeFilter(
-              type: type,
-              value: 0,
-              unit: TimeFilterUnit.days, // a default value
-              specificTime: specificTime,
-            ),
-          );
-        }
-
-        // Try to parse as relative time
-        if (parts.length < 3) return null;
-        final value = int.tryParse(parts[1]) ?? 0;
-        final unit = TimeFilterUnit.values.byName(parts[2]);
-
-        return TimeFilterElement(
-          TimeFilter(type: type, value: value, unit: unit),
-        );
       default:
         return null;
     }
