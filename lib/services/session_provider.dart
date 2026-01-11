@@ -777,7 +777,9 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      // print("Background Git status refresh failed: $e");
+      debugPrint(
+        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+      );
     }
   }
 }
