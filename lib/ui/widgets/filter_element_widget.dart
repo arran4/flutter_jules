@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
+import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {
@@ -22,10 +23,9 @@ class FilterElementWidget extends StatelessWidget {
     FilterElement target,
     FilterDropAction action,
     bool isCopy,
-  )?
-  onDrop;
+  )? onDrop;
   final Function(FilterElement target, FilterElement alternative)?
-  onAddAlternative;
+      onAddAlternative;
   final bool isNegated;
 
   const FilterElementWidget({
@@ -116,9 +116,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is PrStatusElement) {
       final label = element.label;
-      final displayLabel = label.toUpperCase().startsWith('PR:')
-          ? label
-          : 'PR: $label';
+      final displayLabel =
+          label.toUpperCase().startsWith('PR:') ? label : 'PR: $label';
       return _buildLeafElement(
         context,
         element,
@@ -129,9 +128,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is BranchElement) {
       final label = element.label;
-      final displayLabel = label.startsWith('Branch:')
-          ? label
-          : 'Branch: $label';
+      final displayLabel =
+          label.startsWith('Branch:') ? label : 'Branch: $label';
       return _buildLeafElement(
         context,
         element,
@@ -142,9 +140,8 @@ class FilterElementWidget extends StatelessWidget {
       );
     } else if (element is CiStatusElement) {
       final label = element.label;
-      final displayLabel = label.toUpperCase().startsWith('CI:')
-          ? label
-          : 'CI: $label';
+      final displayLabel =
+          label.toUpperCase().startsWith('CI:') ? label : 'CI: $label';
       return _buildLeafElement(
         context,
         element,
@@ -152,6 +149,22 @@ class FilterElementWidget extends StatelessWidget {
         Colors.blueGrey.shade100,
         Colors.blueGrey.shade800,
         Icons.check_circle_outline,
+      );
+    } else if (element is TimeFilterElement) {
+      final tf = element.timeFilter;
+      String label;
+      if (tf.specificTime != null) {
+        label = 'Time: ${tf.type.name} ${tf.specificTime}';
+      } else {
+        label = 'Time: ${tf.type.name} ${tf.value} ${tf.unit.name}';
+      }
+      return _buildLeafElement(
+        context,
+        element,
+        label,
+        Colors.brown.shade100,
+        Colors.brown.shade800,
+        Icons.access_time,
       );
     }
 
@@ -532,11 +545,11 @@ class FilterElementWidget extends StatelessWidget {
 
     final isCtrlPressed =
         ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlLeft,
-        ) ||
-        ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
-          LogicalKeyboardKey.controlRight,
-        );
+              LogicalKeyboardKey.controlLeft,
+            ) ||
+            ServicesBinding.instance.keyboard.logicalKeysPressed.contains(
+              LogicalKeyboardKey.controlRight,
+            );
 
     // Show Popup Menu
     final RenderBox renderBox = context.findRenderObject() as RenderBox;

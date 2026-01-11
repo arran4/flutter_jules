@@ -1,5 +1,6 @@
 import 'filter_element.dart';
 import 'search_filter.dart';
+import 'time_filter.dart';
 
 /// Builder class for intelligently constructing filter trees
 class FilterElementBuilder {
@@ -121,15 +122,12 @@ class FilterElementBuilder {
 
     if (root is AndElement || root is OrElement) {
       final isAnd = root is AndElement;
-      final children = root is AndElement
-          ? root.children
-          : (root as OrElement).children;
+      final children =
+          root is AndElement ? root.children : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren = children
-          .map((c) => simplify(c))
-          .whereType<FilterElement>()
-          .toList();
+      final simplifiedChildren =
+          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -312,9 +310,8 @@ class FilterElementBuilder {
   }) {
     if (root == null) return root;
 
-    final group = isAnd
-        ? AndElement([target, source])
-        : OrElement([target, source]);
+    final group =
+        isAnd ? AndElement([target, source]) : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
@@ -386,6 +383,9 @@ class FilterElementBuilder {
           break;
         case FilterType.text:
           element = TextElement(token.value.toString());
+          break;
+        case FilterType.time:
+          element = TimeFilterElement(token.value as TimeFilter);
           break;
       }
 

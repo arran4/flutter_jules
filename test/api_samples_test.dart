@@ -30,8 +30,8 @@ void main() {
       expect(session.name, "sessions/31415926535897932384");
       expect(session.id, "31415926535897932384");
       expect(session.title, "Boba App");
-      expect(session.sourceContext.source, "sources/github/bobalover/boba");
-      expect(session.sourceContext.githubRepoContext?.startingBranch, "main");
+      expect(session.sourceContext?.source, "sources/github/bobalover/boba");
+      expect(session.sourceContext?.githubRepoContext?.startingBranch, "main");
       expect(session.prompt, "Create a boba app!");
     });
 
@@ -46,9 +46,8 @@ void main() {
       // But Activity.fromJson exists.
 
       final activitiesList = json['activities'] as List;
-      final activities = activitiesList
-          .map((e) => Activity.fromJson(e))
-          .toList();
+      final activities =
+          activitiesList.map((e) => Activity.fromJson(e)).toList();
 
       expect(activities.length, 1);
       final activity = activities.first;

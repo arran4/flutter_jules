@@ -15,6 +15,19 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
   TimeFilterUnit _selectedUnit = TimeFilterUnit.days;
   DateTime? _selectedDateTime;
 
+  String _displayStringForTimeFilterType(TimeFilterType type) {
+    switch (type) {
+      case TimeFilterType.newerThan:
+        return 'Newer than';
+      case TimeFilterType.olderThan:
+        return 'Older than';
+    }
+  }
+
+  String _displayStringForTimeFilterUnit(TimeFilterUnit unit) {
+    return unit.toString().split('.').last;
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -32,7 +45,7 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
             items: TimeFilterType.values.map((TimeFilterType type) {
               return DropdownMenuItem<TimeFilterType>(
                 value: type,
-                child: Text(type.toString().split('.').last),
+                child: Text(_displayStringForTimeFilterType(type)),
               );
             }).toList(),
           ),
@@ -51,7 +64,7 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
             items: TimeFilterUnit.values.map((TimeFilterUnit unit) {
               return DropdownMenuItem<TimeFilterUnit>(
                 value: unit,
-                child: Text(unit.toString().split('.').last),
+                child: Text(_displayStringForTimeFilterUnit(unit)),
               );
             }).toList(),
           ),
@@ -63,7 +76,7 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
                 firstDate: DateTime(2000),
                 lastDate: DateTime(2101),
               );
-              if (selectedDate != null) {
+              if (selectedDate != null && context.mounted) {
                 final selectedTime = await showTimePicker(
                   context: context,
                   initialTime: TimeOfDay.fromDateTime(DateTime.now()),

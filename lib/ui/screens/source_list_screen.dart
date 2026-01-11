@@ -142,7 +142,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
     _lastUsed.clear();
 
     for (final session in sessions) {
-      final sourceName = session.sourceContext.source;
+      final sourceName = session.sourceContext?.source ?? '';
+      if (sourceName.isEmpty) continue;
       _usageCount[sourceName] = (_usageCount[sourceName] ?? 0) + 1;
 
       DateTime? sessionTime;
@@ -284,19 +285,19 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 },
                 itemBuilder: (BuildContext context) =>
                     <PopupMenuEntry<SortOption>>[
-                      const PopupMenuItem<SortOption>(
-                        value: SortOption.recent,
-                        child: Text('Most Recently Used'),
-                      ),
-                      const PopupMenuItem<SortOption>(
-                        value: SortOption.count,
-                        child: Text('Usage Count'),
-                      ),
-                      const PopupMenuItem<SortOption>(
-                        value: SortOption.alphabetical,
-                        child: Text('Alphabetical'),
-                      ),
-                    ],
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.recent,
+                    child: Text('Most Recently Used'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.count,
+                    child: Text('Usage Count'),
+                  ),
+                  const PopupMenuItem<SortOption>(
+                    value: SortOption.alphabetical,
+                    child: Text('Alphabetical'),
+                  ),
+                ],
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -334,200 +335,212 @@ class _SourceListScreenState extends State<SourceListScreen> {
           body: (sources.isEmpty && isLoading)
               ? const Center(child: Text("Loading repositories..."))
               : (sources.isEmpty && error != null)
-              ? Center(child: Text('Error: $error'))
-              : Column(
-                  children: [
-                    Padding(
-                      padding: const EdgeInsets.all(8.0),
-                      child: TextField(
-                        controller: _searchController,
-                        decoration: const InputDecoration(
-                          labelText: 'Search Repositories',
-                          border: OutlineInputBorder(),
-                          prefixIcon: Icon(Icons.search),
-                        ),
-                      ),
-                    ),
-                    if (lastFetchTime != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color:
-                                      DateTime.now()
-                                              .difference(lastFetchTime)
-                                              .inMinutes >
-                                          30
-                                      ? Colors.orange
-                                      : null,
-                                ),
+                  ? Center(child: Text('Error: $error'))
+                  : Column(
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.all(8.0),
+                          child: TextField(
+                            controller: _searchController,
+                            decoration: const InputDecoration(
+                              labelText: 'Search Repositories',
+                              border: OutlineInputBorder(),
+                              prefixIcon: Icon(Icons.search),
+                            ),
                           ),
                         ),
-                      ),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _refreshData,
-                        child: displaySources.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  SizedBox(
-                                    height:
-                                        MediaQuery.of(context).size.height *
-                                        0.7,
-                                    child: Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Text(
-                                          sources.isEmpty
-                                              ? 'No repositories found.'
-                                              : 'No matches found.',
+                        if (lastFetchTime != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DateTime.now()
+                                                  .difference(lastFetchTime)
+                                                  .inMinutes >
+                                              30
+                                          ? Colors.orange
+                                          : null,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _refreshData,
+                            child: displaySources.isEmpty
+                                ? ListView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    children: [
+                                      SizedBox(
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                                0.7,
+                                        child: Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(20.0),
+                                            child: Text(
+                                              sources.isEmpty
+                                                  ? 'No repositories found.'
+                                                  : 'No matches found.',
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : ListView.builder(
-                                physics:
-                                    const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
-                                controller: _scrollController,
-                                itemCount: displaySources.length,
-                                itemBuilder: (context, index) {
-                                  final item = displaySources[index];
-                                  final source = item.data;
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+                                    controller: _scrollController,
+                                    itemCount: displaySources.length,
+                                    itemBuilder: (context, index) {
+                                      final item = displaySources[index];
+                                      final source = item.data;
 
-                                  final count = _usageCount[source.name] ?? 0;
-                                  final lastUsedDate = _lastUsed[source.name];
+                                      final count =
+                                          _usageCount[source.name] ?? 0;
+                                      final lastUsedDate =
+                                          _lastUsed[source.name];
 
-                                  final repo = source.githubRepo;
-                                  final isPrivate = repo?.isPrivate ?? false;
-                                  final defaultBranch =
-                                      repo?.defaultBranch?.displayName ?? 'N/A';
-                                  final branchCount = repo?.branches?.length;
+                                      final repo = source.githubRepo;
+                                      final isPrivate =
+                                          repo?.isPrivate ?? false;
+                                      final defaultBranch =
+                                          repo?.defaultBranch?.displayName ??
+                                              'N/A';
+                                      final branchCount =
+                                          repo?.branches?.length;
 
-                                  return Card(
-                                    margin: const EdgeInsets.symmetric(
-                                      horizontal: 8,
-                                      vertical: 4,
-                                    ),
-                                    child: ListTile(
-                                      leading: Icon(
-                                        isPrivate ? Icons.lock : Icons.public,
-                                      ),
-                                      title: Row(
-                                        children: [
-                                          if (isPrivate)
-                                            const Padding(
-                                              padding: EdgeInsets.only(
-                                                right: 6.0,
-                                              ),
-                                              child: Icon(
-                                                Icons.lock,
-                                                size: 16,
-                                                color: Colors.grey,
-                                              ),
-                                            ),
-                                          Expanded(
-                                            child: Text(
-                                              repo?.repo ?? source.name,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
+                                      return Card(
+                                        margin: const EdgeInsets.symmetric(
+                                          horizontal: 8,
+                                          vertical: 4,
+                                        ),
+                                        child: ListTile(
+                                          leading: Icon(
+                                            isPrivate
+                                                ? Icons.lock
+                                                : Icons.public,
                                           ),
-                                        ],
-                                      ),
-                                      subtitle: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Row(
+                                          title: Row(
                                             children: [
-                                              if (count > 0)
-                                                Container(
-                                                  padding:
-                                                      const EdgeInsets.symmetric(
+                                              if (isPrivate)
+                                                const Padding(
+                                                  padding: EdgeInsets.only(
+                                                    right: 6.0,
+                                                  ),
+                                                  child: Icon(
+                                                    Icons.lock,
+                                                    size: 16,
+                                                    color: Colors.grey,
+                                                  ),
+                                                ),
+                                              Expanded(
+                                                child: Text(
+                                                  repo?.repo ?? source.name,
+                                                  overflow:
+                                                      TextOverflow.ellipsis,
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          subtitle: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
+                                              ),
+                                              const SizedBox(height: 4),
+                                              Row(
+                                                children: [
+                                                  if (count > 0)
+                                                    Container(
+                                                      padding: const EdgeInsets
+                                                          .symmetric(
                                                         horizontal: 6,
                                                         vertical: 2,
                                                       ),
-                                                  decoration: BoxDecoration(
-                                                    color: Theme.of(context)
-                                                        .colorScheme
-                                                        .surfaceContainerHighest,
-                                                    borderRadius:
-                                                        BorderRadius.circular(
+                                                      decoration: BoxDecoration(
+                                                        color: Theme.of(context)
+                                                            .colorScheme
+                                                            .surfaceContainerHighest,
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(
                                                           4,
                                                         ),
-                                                  ),
-                                                  child: Text(
-                                                    '$count sessions',
-                                                    style: Theme.of(
-                                                      context,
-                                                    ).textTheme.labelSmall,
-                                                  ),
-                                                ),
-                                              if (count > 0)
-                                                const SizedBox(width: 8),
-                                              if (lastUsedDate != null)
-                                                Text(
-                                                  'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
-                                                  style: Theme.of(
-                                                    context,
-                                                  ).textTheme.bodySmall,
-                                                ),
-                                              if (item.metadata.isNew)
-                                                Padding(
-                                                  padding:
-                                                      const EdgeInsets.only(
+                                                      ),
+                                                      child: Text(
+                                                        '$count sessions',
+                                                        style: Theme.of(
+                                                          context,
+                                                        ).textTheme.labelSmall,
+                                                      ),
+                                                    ),
+                                                  if (count > 0)
+                                                    const SizedBox(width: 8),
+                                                  if (lastUsedDate != null)
+                                                    Text(
+                                                      'Last used: ${DateFormat.yMMMd().format(lastUsedDate)}',
+                                                      style: Theme.of(
+                                                        context,
+                                                      ).textTheme.bodySmall,
+                                                    ),
+                                                  if (item.metadata.isNew)
+                                                    Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
                                                         left: 8.0,
                                                       ),
-                                                  child: Container(
-                                                    padding:
-                                                        const EdgeInsets.symmetric(
+                                                      child: Container(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
                                                           horizontal: 4,
                                                           vertical: 2,
                                                         ),
-                                                    color: Colors.green,
-                                                    child: const Text(
-                                                      'NEW',
-                                                      style: TextStyle(
-                                                        color: Colors.white,
-                                                        fontSize: 10,
+                                                        color: Colors.green,
+                                                        child: const Text(
+                                                          'NEW',
+                                                          style: TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 10,
+                                                          ),
+                                                        ),
                                                       ),
                                                     ),
-                                                  ),
-                                                ),
+                                                ],
+                                              ),
                                             ],
                                           ),
-                                        ],
-                                      ),
-                                      isThreeLine: true,
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                SessionListScreen(
+                                          isThreeLine: true,
+                                          onTap: () {
+                                            Navigator.push(
+                                              context,
+                                              MaterialPageRoute(
+                                                builder: (context) =>
+                                                    SessionListScreen(
                                                   sourceFilter: source.name,
                                                 ),
-                                          ),
-                                        );
-                                      },
-                                    ),
-                                  );
-                                },
-                              ),
-                      ),
+                                              ),
+                                            );
+                                          },
+                                        ),
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
         );
       },
     );
