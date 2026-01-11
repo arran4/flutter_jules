@@ -63,7 +63,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   int _selectedModeIndex = 0; // 0: Question, 1: Plan, 2: Start
 
   // Automation Option
-  bool _autoCreatePr = false;
+  bool _autoCreatePr = true;
 
   // Refresh State
   bool _isRefreshing = false;
@@ -174,7 +174,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (!mounted) return;
     setState(() {
       _selectedModeIndex = prefs.getInt('new_session_last_mode') ?? 0;
-      _autoCreatePr = prefs.getBool('new_session_last_auto_pr') ?? false;
+      _autoCreatePr = prefs.getBool('new_session_last_auto_pr') ?? true;
       // Sources and branches are handled in _initializeSelection after sources are loaded
     });
   }
