@@ -605,29 +605,34 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         );
       }
 
-      // Save prefs based on first or generic?
-      // Maybe just save mode.
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+      // Only save preferences if this is not a "new session from" another
+      if (widget.initialSession == null) {
+        // Save prefs based on first or generic?
+        // Maybe just save mode.
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+        await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
+      }
     } else {
       // Single Mode
-      // Save preferences
-      final prefs = await SharedPreferences.getInstance();
-      await prefs.setInt('new_session_last_mode', _selectedModeIndex);
-      if (_selectedSource != null) {
-        await prefs.setString(
-          'new_session_last_source',
-          _selectedSource!.name,
-        );
-        if (_selectedBranch != null) {
-          prefs.setString('new_session_last_branch', _selectedBranch!);
+      // Save preferences only if this is a fresh session
+      if (widget.initialSession == null) {
+        final prefs = await SharedPreferences.getInstance();
+        await prefs.setInt('new_session_last_mode', _selectedModeIndex);
+        if (_selectedSource != null) {
+          await prefs.setString(
+            'new_session_last_source',
+            _selectedSource!.name,
+          );
+          if (_selectedBranch != null) {
+            prefs.setString('new_session_last_branch', _selectedBranch!);
+          }
+        } else {
+          await prefs.remove('new_session_last_source');
+          await prefs.remove('new_session_last_branch');
         }
-      } else {
-        await prefs.remove('new_session_last_source');
-        await prefs.remove('new_session_last_branch');
+        await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
       }
-      await prefs.setBool('new_session_last_auto_pr', _autoCreatePr);
 
       sessionsToCreate.add(
         Session(
