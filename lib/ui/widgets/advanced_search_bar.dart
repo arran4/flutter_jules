@@ -484,10 +484,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   ),
                   const SizedBox(width: 8),
                   Expanded(
-                    child: Text(
-                      bookmark.name,
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Text(
+                          bookmark.name,
+                          style: const TextStyle(fontSize: 12),
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        if (bookmark.expression.isNotEmpty)
+                          Text(
+                            bookmark.expression,
+                            style: TextStyle(
+                              fontSize: 10,
+                              color: Colors.grey[500],
+                              fontFamily: 'monospace',
+                            ),
+                            maxLines: 1,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                      ],
                     ),
                   ),
                 ],
