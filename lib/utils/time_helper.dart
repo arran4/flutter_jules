@@ -21,40 +21,48 @@ String timeAgo(DateTime dateTime) {
 }
 
 bool matchesTimeFilter(Session session, TimeFilter timeFilter) {
-  if (session.updateTime == null) return false;
-  final sessionTime = DateTime.tryParse(session.updateTime!);
+  final timeStr = timeFilter.field == TimeFilterField.created
+      ? session.createTime
+      : session.updateTime;
+  if (timeStr == null) return false;
+  final sessionTime = DateTime.tryParse(timeStr);
   if (sessionTime == null) return false;
 
   final now = DateTime.now();
-  bool matches = false;
+
+  if (timeFilter.type == TimeFilterType.between) {
+    if (timeFilter.specificTime != null && timeFilter.specificTimeEnd != null) {
+      return sessionTime.isAfter(timeFilter.specificTime!) &&
+          sessionTime.isBefore(timeFilter.specificTimeEnd!);
+    }
+    return false;
+  }
 
   if (timeFilter.specificTime != null) {
     if (timeFilter.type == TimeFilterType.newerThan) {
-      matches = sessionTime.isAfter(timeFilter.specificTime!);
+      return sessionTime.isAfter(timeFilter.specificTime!);
     } else {
-      matches = sessionTime.isBefore(timeFilter.specificTime!);
-    }
-  } else {
-    Duration duration;
-    switch (timeFilter.unit) {
-      case TimeFilterUnit.hours:
-        duration = Duration(hours: timeFilter.value);
-        break;
-      case TimeFilterUnit.days:
-        duration = Duration(days: timeFilter.value);
-        break;
-      case TimeFilterUnit.months:
-        duration = Duration(days: timeFilter.value * 30); // Approximation
-        break;
-    }
-
-    final cutoff = now.subtract(duration);
-    if (timeFilter.type == TimeFilterType.newerThan) {
-      matches = sessionTime.isAfter(cutoff);
-    } else {
-      matches = sessionTime.isBefore(cutoff);
+      return sessionTime.isBefore(timeFilter.specificTime!);
     }
   }
 
-  return matches;
+  Duration duration;
+  switch (timeFilter.unit) {
+    case TimeFilterUnit.hours:
+      duration = Duration(hours: timeFilter.value);
+      break;
+    case TimeFilterUnit.days:
+      duration = Duration(days: timeFilter.value);
+      break;
+    case TimeFilterUnit.months:
+      duration = Duration(days: timeFilter.value * 30); // Approximation
+      break;
+  }
+
+  final cutoff = now.subtract(duration);
+  if (timeFilter.type == TimeFilterType.newerThan) {
+    return sessionTime.isAfter(cutoff);
+  } else {
+    return sessionTime.isBefore(cutoff);
+  }
 }

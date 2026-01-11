@@ -173,67 +173,97 @@ class FilterExpressionParser {
         return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
+      case 'CREATEDBEFORE':
+      case 'CREATED_BEFORE':
+        return _createTimeFilter(args, TimeFilterType.olderThan, TimeFilterField.created);
+      case 'CREATEDAFTER':
+      case 'CREATED_AFTER':
+        return _createTimeFilter(args, TimeFilterType.newerThan, TimeFilterField.created);
+      case 'CREATEDON':
+      case 'CREATED_ON':
+        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.created, isSingleDay: true);
+      case 'CREATEDBETWEEN':
+      case 'CREATED_BETWEEN':
+        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.created);
+      case 'UPDATEDBEFORE':
+      case 'UPDATED_BEFORE':
       case 'BEFORE':
-        if (args.isEmpty) return null;
-        final date = TimeParser.parse(args[0]);
-        if (date == null) return null;
-        return TimeFilterElement(
-          TimeFilter(type: TimeFilterType.olderThan, specificTime: date),
-        );
+        return _createTimeFilter(args, TimeFilterType.olderThan, TimeFilterField.updated);
+      case 'UPDATEDAFTER':
+      case 'UPDATED_AFTER':
       case 'AFTER':
-        if (args.isEmpty) return null;
-        final date = TimeParser.parse(args[0]);
-        if (date == null) return null;
-        return TimeFilterElement(
-          TimeFilter(type: TimeFilterType.newerThan, specificTime: date),
-        );
+        return _createTimeFilter(args, TimeFilterType.newerThan, TimeFilterField.updated);
+      case 'UPDATEDON':
+      case 'UPDATED_ON':
+        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.updated, isSingleDay: true);
+      case 'UPDATEDBETWEEN':
+      case 'UPDATED_BETWEEN':
       case 'BETWEEN':
-        if (args.isEmpty) return null;
-        final parts = args[0].split(',');
-        if (parts.length < 2) return null;
-        final start = TimeParser.parse(parts[0].trim());
-        final end = TimeParser.parse(parts[1].trim());
-        if (start == null || end == null) return null;
-        return TimeFilterElement(
-          TimeFilter(
-            type: TimeFilterType.between,
-            specificTime: start,
-            specificTimeEnd: end,
-          ),
-        );
+        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.updated);
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');
-        if (parts.length < 2) return null;
+        if (parts.length < 3) return null;
 
-        final typeName = parts[0];
-        // Handle mapped names from toExpression if needed, or assume raw enum names
-        final type = TimeFilterType.values.byName(typeName);
-        final valueStr = parts[1];
-
-        // Try to parse as a specific date
-        final specificTime = DateTime.tryParse(valueStr);
-        if (specificTime != null) {
-          return TimeFilterElement(
-            TimeFilter(
-              type: type,
-              value: 0,
-              unit: TimeFilterUnit.days, // a default value
-              specificTime: specificTime,
-            ),
-          );
+        TimeFilterField field;
+        int currentPart = 0;
+        try {
+          field = TimeFilterField.values.byName(parts[currentPart]);
+          currentPart++;
+        } catch (_) {
+          field = TimeFilterField.updated;
         }
 
-        // Try to parse as relative time
-        if (parts.length < 3) return null;
-        final value = int.tryParse(parts[1]) ?? 0;
-        final unit = TimeFilterUnit.values.byName(parts[2]);
+        final type = TimeFilterType.values.byName(parts[currentPart++]);
+        final value = int.tryParse(parts[currentPart++]) ?? 0;
+
+        if (parts.length < currentPart + 1) return null;
+        final unit = TimeFilterUnit.values.byName(parts[currentPart++]);
 
         return TimeFilterElement(
-          TimeFilter(type: type, value: value, unit: unit),
+          TimeFilter(type: type, value: value, unit: unit, field: field),
         );
       default:
         return null;
+    }
+  }
+
+  TimeFilterElement? _createTimeFilter(List<String> args, TimeFilterType type, TimeFilterField field, {bool isSingleDay = false}) {
+    if (args.isEmpty) return null;
+    if (type == TimeFilterType.between) {
+      if (isSingleDay) {
+        final date = TimeParser.parse(args[0]);
+        if (date == null) return null;
+        final start = DateTime(date.year, date.month, date.day);
+        final end = start.add(const Duration(days: 1));
+        return TimeFilterElement(
+          TimeFilter(
+            type: type,
+            specificTime: start,
+            specificTimeEnd: end,
+            field: field,
+          ),
+        );
+      }
+      final parts = args[0].split(',');
+      if (parts.length < 2) return null;
+      final start = TimeParser.parse(parts[0].trim());
+      final end = TimeParser.parse(parts[1].trim());
+      if (start == null || end == null) return null;
+      return TimeFilterElement(
+        TimeFilter(
+          type: type,
+          specificTime: start,
+          specificTimeEnd: end,
+          field: field,
+        ),
+      );
+    } else {
+      final date = TimeParser.parse(args[0]);
+      if (date == null) return null;
+      return TimeFilterElement(
+        TimeFilter(type: type, specificTime: date, field: field),
+      );
     }
   }
 }

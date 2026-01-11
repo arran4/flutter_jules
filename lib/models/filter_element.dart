@@ -205,10 +205,27 @@ class TimeFilterElement extends FilterElement {
 
   @override
   String toExpression() {
-    if (timeFilter.specificTime != null) {
-      return 'Time(${timeFilter.type.name} ${timeFilter.specificTime!.toIso8601String()})';
+    final fieldStr = timeFilter.field.name.toUpperCase();
+    String typeStr;
+    switch (timeFilter.type) {
+      case TimeFilterType.newerThan:
+        typeStr = 'AFTER';
+        break;
+      case TimeFilterType.olderThan:
+        typeStr = 'BEFORE';
+        break;
+      case TimeFilterType.between:
+        typeStr = 'BETWEEN';
+        break;
     }
-    return 'Time(${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
+
+    if (timeFilter.specificTime != null) {
+      if (timeFilter.type == TimeFilterType.between) {
+        return '${fieldStr}BETWEEN(${timeFilter.specificTime!.toIso8601String()}, ${timeFilter.specificTimeEnd!.toIso8601String()})';
+      }
+      return '$fieldStr$typeStr(${timeFilter.specificTime!.toIso8601String()})';
+    }
+    return 'Time(${timeFilter.field.name} ${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
   }
 
   @override
