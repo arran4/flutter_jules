@@ -748,6 +748,22 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSessionTags(Session session, List<String> tags) async {
+    final index = _items.indexWhere((i) => i.data.id == session.id);
+    if (index != -1) {
+      final item = _items[index];
+      final updatedSession = item.data.copyWith(tags: tags);
+      final newItem = CachedItem(updatedSession, item.metadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.updateSession(
+            (await _githubProvider!.getToken())!, updatedSession);
+      }
+    }
+  }
+
   String? _getPrUrl(Session session) {
     if (session.outputs != null) {
       for (var o in session.outputs!) {

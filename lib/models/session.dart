@@ -78,6 +78,7 @@ class Session {
   final int? changedFiles;
   final String? diffUrl;
   final String? patchUrl;
+  final List<String>? tags;
   final Note? note;
 
   Session({
@@ -105,6 +106,7 @@ class Session {
     this.changedFiles,
     this.diffUrl,
     this.patchUrl,
+    this.tags,
     this.note,
   });
 
@@ -175,6 +177,7 @@ class Session {
       )?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
+      tags: getStringArrayPropOrDefault(json, 'tags', null),
       note: getObjectFunctionPropOrDefault(json, 'note', Note.fromJson, null),
     );
   }
@@ -214,6 +217,7 @@ class Session {
     if (changedFiles != null) map['changedFiles'] = changedFiles;
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
+    if (tags != null) map['tags'] = tags;
     if (note != null) map['note'] = note!.toJson();
     return map;
   }
@@ -244,6 +248,7 @@ class Session {
     int? changedFiles,
     String? diffUrl,
     String? patchUrl,
+    List<String>? tags,
     Note? note,
   }) {
     return Session(
@@ -273,6 +278,7 @@ class Session {
       changedFiles: changedFiles ?? this.changedFiles,
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
+      tags: tags ?? this.tags,
       note: note ?? this.note,
     );
   }

@@ -17,6 +17,7 @@ enum FilterElementType {
   ciStatus,
   branch,
   time,
+  tag,
   hasNotes,
 }
 
@@ -140,6 +141,8 @@ abstract class FilterElement {
         return BranchElement.fromJson(json);
       case 'time':
         return TimeFilterElement.fromJson(json);
+      case 'tag':
+        return TagElement.fromJson(json);
       case 'has_notes':
         return HasNotesElement.fromJson(json);
       default:
@@ -761,6 +764,51 @@ class BranchElement extends FilterElement {
   }
 }
 
+/// Tag filter element
+class TagElement extends FilterElement {
+  final String label;
+  final String value;
+
+  TagElement(this.label, this.value);
+
+  @override
+  FilterElementType get type => FilterElementType.tag;
+
+  @override
+  String get groupingType => 'tag';
+
+  @override
+  String toExpression() {
+    return 'Hashtag(${FilterElement._quote(value)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'tag',
+        'label': label,
+        'value': value,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final matches = context.session.tags
+            ?.any((t) => t.toLowerCase() == value.toLowerCase()) ??
+        false;
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+  factory TagElement.fromJson(Map<String, dynamic> json) {
+    return TagElement(json['label'] as String, json['value'] as String);
+  }
+}
+
 /// Has Notes filter element
 class HasNotesElement extends FilterElement {
   HasNotesElement();
@@ -787,8 +835,8 @@ class HasNotesElement extends FilterElement {
     }
     return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
-
   factory HasNotesElement.fromJson(Map<String, dynamic> json) {
     return HasNotesElement();
+
   }
 }

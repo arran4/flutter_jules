@@ -20,6 +20,7 @@ import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
+import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
 import '../widgets/note_dialog.dart';
 import 'dart:convert';
@@ -1114,6 +1115,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       Text('Force Approve Plan'),
                     ],
                   ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.label, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Manage Tags'),
+                    ],
+                  ),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) =>
+                          TagManagementDialog(session: _session),
+                    );
+                  },
                 ),
               ],
             ),
