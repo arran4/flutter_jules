@@ -20,10 +20,6 @@ class Note {
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'content': content,
-      'updatedDate': updatedDate,
-      'version': version,
-    };
+    return {'content': content, 'updatedDate': updatedDate, 'version': version};
   }
 }

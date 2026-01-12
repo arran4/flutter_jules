@@ -19,10 +19,10 @@ class JulesClient {
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
-        if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
-      };
+    'Content-Type': 'application/json',
+    if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
+  };
 
   Future<http.Response> _performRequest(
     String method,
