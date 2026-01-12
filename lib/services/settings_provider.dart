@@ -20,6 +20,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnCompletion = 'notify_on_completion';
   static const String keyNotifyOnWatch = 'notify_on_watch';
   static const String keyNotifyOnFailure = 'notify_on_failure';
+  static const String keyShowTrayIcon = 'show_tray_icon';
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
 
@@ -46,6 +47,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnCompletion = true;
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
+  bool _showTrayIcon = false;
 
   SharedPreferences? _prefs;
 
@@ -60,6 +62,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+  bool get showTrayIcon => _showTrayIcon;
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
@@ -106,6 +109,7 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
+    _showTrayIcon = _prefs!.getBool(keyShowTrayIcon) ?? false;
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -255,6 +259,12 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  Future<void> setShowTrayIcon(bool value) async {
+    _showTrayIcon = value;
+    notifyListeners();
+    await _prefs?.setBool(keyShowTrayIcon, value);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {

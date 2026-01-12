@@ -1,5 +1,8 @@
+import 'dart:io';
+
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:window_manager/window_manager.dart';
 import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
 import 'services/github_provider.dart';
@@ -13,13 +16,18 @@ import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
 import 'services/tags_provider.dart';
+import 'services/tray_service.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
+import 'ui/widgets/new_session_dialog.dart';
+
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   await NotificationService().init();
 
   runApp(
@@ -92,13 +100,92 @@ void main() async {
   );
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
   const MyApp({super.key});
+
+  @override
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> with WindowListener {
+  TrayService? _trayService;
+
+  @override
+  void initState() {
+    super.initState();
+    windowManager.addListener(this);
+    _initTrayService();
+    context.read<SettingsProvider>().addListener(_onSettingsChanged);
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    _trayService?.destroy();
+    context.read<SettingsProvider>().removeListener(_onSettingsChanged);
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    final settings = context.read<SettingsProvider>();
+    if (settings.showTrayIcon) {
+      _initTrayService();
+    } else {
+      _trayService?.destroy();
+      _trayService = null;
+    }
+  }
+
+  void _initTrayService() {
+    final settings = context.read<SettingsProvider>();
+    if (!settings.showTrayIcon || _trayService != null) {
+      return;
+    }
+
+    _trayService = TrayService(
+      onNewSession: _handleNewSession,
+      onRefresh: _handleRefresh,
+    )..init();
+
+    windowManager.setPreventClose(true);
+  }
+
+  void _handleNewSession() {
+    final navigator = navigatorKey.currentState;
+    if (navigator != null) {
+      showDialog(
+        context: navigator.context,
+        builder: (context) => const NewSessionDialog(),
+      );
+    }
+  }
+
+  void _handleRefresh() {
+    final refreshService = context.read<RefreshService>();
+    refreshService.triggerRefresh();
+  }
+
+  @override
+  Future<void> onWindowClose() async {
+    final settings = context.read<SettingsProvider>();
+    if (settings.showTrayIcon) {
+      await windowManager.hide();
+    } else {
+      await windowManager.destroy();
+    }
+  }
+
+  @override
+  void onWindowDestroy() {
+    _trayService?.destroy();
+    super.onWindowDestroy();
+  }
 
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
       title: 'Jules API Client',
+      navigatorKey: navigatorKey,
       debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       routes: {

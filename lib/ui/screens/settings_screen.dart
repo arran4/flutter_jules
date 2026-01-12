@@ -103,6 +103,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 },
               ),
               const Divider(),
+              _buildSectionHeader(context, 'System'),
+              SwitchListTile(
+                title: const Text('Show System Tray Icon'),
+                subtitle: const Text(
+                  'Allows the app to run in the background.',
+                ),
+                value: settings.showTrayIcon,
+                onChanged: (value) => settings.setShowTrayIcon(value),
+              ),
+              const Divider(),
               _buildSectionHeader(context, 'Developer'),
               SwitchListTile(
                 title: const Text('Developer Mode'),
