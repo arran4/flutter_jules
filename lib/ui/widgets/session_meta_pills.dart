@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../models.dart';
 import 'note_dialog.dart';
 
@@ -106,7 +108,9 @@ class SessionMetaPills extends StatelessWidget {
 
         // PR Status (for Open/Draft/Merged/Closed)
         if (session.prStatus != null)
-          ..._buildPrStatusChips(context, session.prStatus!),
+          ..._buildPrStatusChips(context, session.prStatus!)
+        else if (session.diffUrl != null)
+          _buildPublishPrChip(context),
 
         // CI Status
         if (session.ciStatus != null)
@@ -217,6 +221,27 @@ class SessionMetaPills extends StatelessWidget {
             ),
           ),
       ],
+    );
+  }
+
+  Widget _buildPublishPrChip(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        if (session.url != null) {
+          launchUrl(Uri.parse(session.url!));
+        }
+      },
+      child: Chip(
+        label: const Text(
+          "Goto Jules and click Publish PR",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.purple,
+        avatar: const Icon(Icons.publish, size: 16, color: Colors.white),
+        side: BorderSide.none,
+        padding: compact ? const EdgeInsets.all(0) : null,
+        visualDensity: compact ? VisualDensity.compact : null,
+      ),
     );
   }
 
