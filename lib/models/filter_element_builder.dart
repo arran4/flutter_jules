@@ -122,15 +122,12 @@ class FilterElementBuilder {
 
     if (root is AndElement || root is OrElement) {
       final isAnd = root is AndElement;
-      final children = root is AndElement
-          ? root.children
-          : (root as OrElement).children;
+      final children =
+          root is AndElement ? root.children : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren = children
-          .map((c) => simplify(c))
-          .whereType<FilterElement>()
-          .toList();
+      final simplifiedChildren =
+          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -313,9 +310,8 @@ class FilterElementBuilder {
   }) {
     if (root == null) return root;
 
-    final group = isAnd
-        ? AndElement([target, source])
-        : OrElement([target, source]);
+    final group =
+        isAnd ? AndElement([target, source]) : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.
@@ -390,6 +386,9 @@ class FilterElementBuilder {
           break;
         case FilterType.time:
           element = TimeFilterElement(token.value as TimeFilter);
+          break;
+        case FilterType.tag:
+          element = TagElement(token.label, token.value.toString());
           break;
       }
 
@@ -485,6 +484,16 @@ class FilterElementBuilder {
         FilterToken(
           id: 'ciStatus:${element.value}',
           type: FilterType.ciStatus,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
+    } else if (element is TagElement) {
+      tokens.add(
+        FilterToken(
+          id: 'tag:${element.value}',
+          type: FilterType.tag,
           label: element.label,
           value: element.value,
           mode: mode,
