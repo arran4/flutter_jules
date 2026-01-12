@@ -13,10 +13,16 @@ import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
 import 'services/tags_provider.dart';
+import 'package:flutter/services.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
+import 'ui/widgets/help_dialog.dart';
+
+class ShowHelpIntent extends Intent {
+  const ShowHelpIntent();
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -97,9 +103,23 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Jules API Client',
-      debugShowCheckedModeBanner: false,
+    return Shortcuts(
+      shortcuts: <LogicalKeySet, Intent>{
+        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
+            LogicalKeyboardKey.slash): const ShowHelpIntent(),
+      },
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          ShowHelpIntent: CallbackAction<ShowHelpIntent>(
+            onInvoke: (ShowHelpIntent intent) => showDialog(
+              context: context,
+              builder: (context) => const HelpDialog(),
+            ),
+          ),
+        },
+        child: MaterialApp(
+          title: 'Jules API Client',
+          debugShowCheckedModeBanner: false,
       theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
       routes: {
         '/settings': (context) => const SettingsScreen(),
@@ -118,6 +138,7 @@ class MyApp extends StatelessWidget {
           return const SessionListScreen();
         },
       ),
+    ),
     );
   }
 }
