@@ -119,19 +119,15 @@ Future<bool> resubmitSession(
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Original session hidden."),
-          ),
+          const SnackBar(content: Text("Original session hidden.")),
         );
       }
     }
   } else if (anySucceeded) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("New session(s) created."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("New session(s) created.")));
     }
   }
 
@@ -152,9 +148,7 @@ Future<void> handleNewSessionResultInBackground({
     for (final session in result.sessions) {
       messageQueueProvider.addCreateSessionRequest(session, isDraft: true);
     }
-    showMessage(
-      result.sessions.length > 1 ? "Drafts saved" : "Draft saved",
-    );
+    showMessage(result.sessions.length > 1 ? "Drafts saved" : "Draft saved");
     return;
   }
 
@@ -174,8 +168,10 @@ Future<void> handleNewSessionResultInBackground({
           break;
         case ListRefreshPolicy.dirty:
         case ListRefreshPolicy.watched:
-          sessionProvider.refreshDirtySessions(client,
-              authToken: authProvider.token!);
+          sessionProvider.refreshDirtySessions(
+            client,
+            authToken: authProvider.token!,
+          );
           break;
         case ListRefreshPolicy.quick:
           sessionProvider.fetchSessions(
@@ -195,8 +191,10 @@ Future<void> handleNewSessionResultInBackground({
           break;
       }
     } catch (e) {
-      messageQueueProvider.addCreateSessionRequest(sessionToCreate,
-          reason: 'creation_failed');
+      messageQueueProvider.addCreateSessionRequest(
+        sessionToCreate,
+        reason: 'creation_failed',
+      );
     }
   }
 

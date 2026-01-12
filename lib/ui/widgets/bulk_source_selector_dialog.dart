@@ -120,8 +120,9 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                     value: isSelected,
                     onChanged: (_) => _toggleSelection(source),
                     title: Text(_getSourceDisplayLabel(source)),
-                    secondary:
-                        isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                    secondary: isPrivate
+                        ? const Icon(Icons.lock, size: 16)
+                        : null,
                   );
                 },
               ),

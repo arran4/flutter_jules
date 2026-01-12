@@ -12,9 +12,13 @@ import 'package:flutter_jules/models/session.dart';
 import 'package:flutter_jules/models/enums.dart';
 
 class MockSettingsProvider extends Mock implements SettingsProvider {}
+
 class MockSessionProvider extends Mock implements SessionProvider {}
+
 class MockSourceProvider extends Mock implements SourceProvider {}
+
 class MockAuthProvider extends Mock implements AuthProvider {}
+
 class MockNotificationService extends Mock implements NotificationService {}
 
 void main() {
@@ -105,10 +109,7 @@ void main() {
       name: 'session1',
       state: SessionState.IN_PROGRESS,
     );
-    final newSession = Session(
-      name: 'session1',
-      state: SessionState.COMPLETED,
-    );
+    final newSession = Session(name: 'session1', state: SessionState.COMPLETED);
 
     when(mockSettingsProvider.notifyOnCompletion).thenReturn(true);
     when(mockSettingsProvider.notifyOnAttention).thenReturn(false);
@@ -120,28 +121,31 @@ void main() {
     final oldSessions = [oldSession];
     final newSessions = [newSession];
 
-    when(mockSessionProvider.items).thenReturn(newSessions.map((e) => CachedItem(e)).toList());
+    when(
+      mockSessionProvider.items,
+    ).thenReturn(newSessions.map((e) => CachedItem(e)).toList());
 
     // ignore: invalid_use_of_protected_member
     refreshService.dispose(); // Dispose the old service and its timers
 
     refreshService = RefreshService(
-        mockSettingsProvider,
-        mockSessionProvider,
-        mockSourceProvider,
-        mockAuthProvider,
-        mockNotificationService,
+      mockSettingsProvider,
+      mockSessionProvider,
+      mockSourceProvider,
+      mockAuthProvider,
+      mockNotificationService,
     );
 
     // Manually trigger the comparison
     // ignore: protected_member_use
     (refreshService as dynamic)._compareSessions(oldSessions, newSessions);
 
-
-    verify(mockNotificationService.showNotification(
-      'Task completed',
-      'Untitled Task',
-      payload: 'session1',
-    )).called(1);
+    verify(
+      mockNotificationService.showNotification(
+        'Task completed',
+        'Untitled Task',
+        payload: 'session1',
+      ),
+    ).called(1);
   });
 }
