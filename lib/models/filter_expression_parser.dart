@@ -121,8 +121,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (
-        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (pos < input.length &&
+        RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);
@@ -174,6 +174,7 @@ class FilterExpressionParser {
         final arg = args[0].toUpperCase();
         if (arg == 'PR') return HasPrElement();
         if (arg == 'NOSOURCE') return NoSourceElement();
+        if (arg == 'NOTES') return HasNotesElement();
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }

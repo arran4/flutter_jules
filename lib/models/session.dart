@@ -2,6 +2,7 @@ import 'package:dartobjectutils/dartobjectutils.dart';
 import 'enums.dart';
 import 'source.dart';
 import 'media.dart';
+import 'note.dart';
 
 class PullRequest {
   final String url;
@@ -78,6 +79,7 @@ class Session {
   final String? diffUrl;
   final String? patchUrl;
   final List<String>? tags;
+  final Note? note;
 
   Session({
     required this.name,
@@ -105,6 +107,7 @@ class Session {
     this.diffUrl,
     this.patchUrl,
     this.tags,
+    this.note,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -167,20 +170,20 @@ class Session {
       mergeableState: getStringPropOrDefault(json, 'mergeableState', null),
       additions: getNumberPropOrDefault<num?>(json, 'additions', null)?.toInt(),
       deletions: getNumberPropOrDefault<num?>(json, 'deletions', null)?.toInt(),
-      changedFiles:
-          getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
+      changedFiles: getNumberPropOrDefault<num?>(
+        json,
+        'changedFiles',
+        null,
+      )?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
       tags: getStringArrayPropOrDefault(json, 'tags', null),
+      note: getObjectFunctionPropOrDefault(json, 'note', Note.fromJson, null),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{
-      'name': name,
-      'id': id,
-      'prompt': prompt,
-    };
+    final map = <String, dynamic>{'name': name, 'id': id, 'prompt': prompt};
     if (sourceContext != null) {
       map['sourceContext'] = sourceContext!.toJson();
     }
@@ -215,6 +218,7 @@ class Session {
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
     if (tags != null) map['tags'] = tags;
+    if (note != null) map['note'] = note!.toJson();
     return map;
   }
 
@@ -245,6 +249,7 @@ class Session {
     String? diffUrl,
     String? patchUrl,
     List<String>? tags,
+    Note? note,
   }) {
     return Session(
       name: name ?? this.name,
@@ -274,6 +279,7 @@ class Session {
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
       tags: tags ?? this.tags,
+      note: note ?? this.note,
     );
   }
 }

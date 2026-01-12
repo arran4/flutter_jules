@@ -1,3 +1,7 @@
+<p align="center">
+  <img src="assets/icon/app_icon.png" width="256" alt="App Icon">
+</p>
+
 # Flutter Jules Client
 
 A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.

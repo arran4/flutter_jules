@@ -25,9 +25,7 @@ void main() async {
   runApp(
     MultiProvider(
       providers: [
-        Provider<NotificationService>(
-          create: (_) => NotificationService(),
-        ),
+        Provider<NotificationService>(create: (_) => NotificationService()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => GithubProvider()),
@@ -37,8 +35,11 @@ void main() async {
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider2<CacheService, GithubProvider,
-            SessionProvider>(
+        ChangeNotifierProxyProvider2<
+          CacheService,
+          GithubProvider,
+          SessionProvider
+        >(
           create: (_) => SessionProvider(),
           update: (_, cache, github, session) => session!
             ..setCacheService(cache)
@@ -48,14 +49,22 @@ void main() async {
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
         ),
-        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
-            MessageQueueProvider>(
+        ChangeNotifierProxyProvider2<
+          CacheService,
+          AuthProvider,
+          MessageQueueProvider
+        >(
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider4<SettingsProvider, SessionProvider,
-            SourceProvider, NotificationService, RefreshService>(
+        ChangeNotifierProxyProvider4<
+          SettingsProvider,
+          SessionProvider,
+          SourceProvider,
+          NotificationService,
+          RefreshService
+        >(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),
@@ -63,12 +72,22 @@ void main() async {
             context.read<AuthProvider>(),
             context.read<NotificationService>(),
           ),
-          update: (_, settings, sessionProvider, sourceProvider,
-                  notificationService, service) =>
-              service!,
+          update:
+              (
+                _,
+                settings,
+                sessionProvider,
+                sourceProvider,
+                notificationService,
+                service,
+              ) => service!,
         ),
-        ChangeNotifierProxyProvider3<SessionProvider, AuthProvider,
-            GithubProvider, BulkActionExecutor>(
+        ChangeNotifierProxyProvider3<
+          SessionProvider,
+          AuthProvider,
+          GithubProvider,
+          BulkActionExecutor
+        >(
           create: (context) => BulkActionExecutor(
             sessionProvider: context.read<SessionProvider>(),
             julesClient: context.read<AuthProvider>().client,

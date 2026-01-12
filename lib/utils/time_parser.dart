@@ -4,8 +4,9 @@ class TimeParser {
     final now = DateTime.now();
 
     // Duration-based phrases (e.g., "last 24 hours")
-    final durationMatch =
-        RegExp(r'last (\d+) (hours|days|weeks|months|years)').firstMatch(input);
+    final durationMatch = RegExp(
+      r'last (\d+) (hours|days|weeks|months|years)',
+    ).firstMatch(input);
     if (durationMatch != null) {
       final value = int.parse(durationMatch.group(1)!);
       final unit = durationMatch.group(2)!;
@@ -51,7 +52,7 @@ class TimeParser {
       'thursday': 4,
       'friday': 5,
       'saturday': 6,
-      'sunday': 7
+      'sunday': 7,
     };
     for (var day in dayOfWeekMap.keys) {
       if (input.contains(day)) {
@@ -84,7 +85,7 @@ class TimeParser {
       'september': 9,
       'october': 10,
       'november': 11,
-      'december': 12
+      'december': 12,
     };
 
     for (var month in monthMap.keys) {

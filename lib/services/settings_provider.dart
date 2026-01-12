@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
 
@@ -20,6 +21,10 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnWatch = 'notify_on_watch';
   static const String keyNotifyOnFailure = 'notify_on_failure';
   static const String _bulkActionConfigKey = 'bulk_action_config';
+  static const String _lastFilterKey = 'last_filter';
+
+  // Filter Memory
+  FilterElement? _lastFilter;
 
   // Bulk Action Memory
   List<BulkActionStep> _lastBulkActions = [];
@@ -55,6 +60,9 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+
+  // Filter Getters
+  FilterElement? get lastFilter => _lastFilter;
 
   // Bulk Action Getters
   List<BulkActionStep> get lastBulkActions => _lastBulkActions;
@@ -100,6 +108,17 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
     _loadSchedules();
     _loadBulkActionConfig();
+
+    // Load last filter
+    final lastFilterJson = _prefs!.getString(_lastFilterKey);
+    if (lastFilterJson != null) {
+      try {
+        _lastFilter = FilterElement.fromJson(jsonDecode(lastFilterJson));
+      } catch (e) {
+        // Could log this error
+      }
+    }
+
     _isInitialized = true;
 
     notifyListeners();
@@ -121,8 +140,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules =
-            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
+        _schedules = decodedList
+            .map((json) => RefreshSchedule.fromJson(json))
+            .toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }
@@ -236,6 +256,16 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  Future<void> setLastFilter(FilterElement? filter) async {
+    _lastFilter = filter;
+    if (filter == null) {
+      await _prefs?.remove(_lastFilterKey);
+    } else {
+      await _prefs?.setString(_lastFilterKey, jsonEncode(filter.toJson()));
+    }
+    notifyListeners();
   }
 
   void _loadBulkActionConfig() {

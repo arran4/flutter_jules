@@ -7,6 +7,8 @@ import 'cache_service.dart';
 import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
+  final GlobalKey<ScaffoldMessengerState> scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<CachedItem<Session>> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -117,13 +119,15 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed = (oldSession!.updateTime != session.updateTime) ||
+            final changed =
+                (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated:
-                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+              lastUpdated: changed
+                  ? DateTime.now()
+                  : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -141,8 +145,9 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl =
-                  oldSession != null ? _getPrUrl(oldSession) : null;
+              final oldPrUrl = oldSession != null
+                  ? _getPrUrl(oldSession)
+                  : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
@@ -226,7 +231,8 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed = (oldItem.data.updateTime != session.updateTime) ||
+      final changed =
+          (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -279,7 +285,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-                (oldItem.data.state != updatedSession.state);
+            (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -467,8 +473,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -675,21 +682,24 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    if (pathSegments.length < 4 ||
-        pathSegments[pathSegments.length - 2] != 'pull') {
-      throw Exception("Invalid PR URL format");
+    if (pullIndex == -1 || pullIndex < 2) {
+      throw Exception(
+        "Invalid PR URL format: 'pull' segment not found or misplaced.",
+      );
     }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
     // Fetch PR and CI statuses from GitHub in parallel
@@ -768,10 +778,14 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length < 4) return false;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    if (pullIndex == -1 || pullIndex < 2) {
+      return false;
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
 
@@ -789,8 +803,15 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final owner = pathSegments[0];
-      final repo = pathSegments[1];
+      final pullIndex = pathSegments.lastIndexOf('pull');
+
+      if (pullIndex == -1 || pullIndex < 2) {
+        throw Exception(
+          "Invalid PR URL format: 'pull' segment not found or misplaced.",
+        );
+      }
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
       // Fetch statuses in parallel
