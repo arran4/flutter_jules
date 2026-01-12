@@ -2450,6 +2450,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               ),
                             ],
                           ),
+                floatingActionButton: FloatingActionButton(
+                  onPressed: _createSession,
+                  tooltip: 'New Session',
+                  child: const Icon(Icons.add),
+                ),
               ),
             ),
           ),
