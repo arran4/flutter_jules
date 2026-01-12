@@ -7,6 +7,8 @@ import 'cache_service.dart';
 import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
+  final GlobalKey<ScaffoldMessengerState> scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<CachedItem<Session>> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -682,14 +684,15 @@ class SessionProvider extends ChangeNotifier {
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    if (pathSegments.length < 4 ||
-        pathSegments[pathSegments.length - 2] != 'pull') {
-      throw Exception("Invalid PR URL format");
+    if (pullIndex == -1 || pullIndex < 2) {
+      throw Exception(
+          "Invalid PR URL format: 'pull' segment not found or misplaced.");
     }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
     // Fetch PR and CI statuses from GitHub in parallel
@@ -752,10 +755,14 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length < 4) return false;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    if (pullIndex == -1 || pullIndex < 2) {
+      return false;
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
 
@@ -773,8 +780,14 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final owner = pathSegments[0];
-      final repo = pathSegments[1];
+      final pullIndex = pathSegments.lastIndexOf('pull');
+
+      if (pullIndex == -1 || pullIndex < 2) {
+        throw Exception(
+            "Invalid PR URL format: 'pull' segment not found or misplaced.");
+      }
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
       // Fetch statuses in parallel
