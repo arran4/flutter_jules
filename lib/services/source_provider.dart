@@ -153,4 +153,65 @@ class SourceProvider extends ChangeNotifier {
       await fetchSources(client, force: true, authToken: authToken);
     }
   }
+
+  /// Refreshes data for a single source.
+  /// Currently this re-enriches the source with GitHub details.
+  Future<void> refreshSource(
+    Source source,
+    GithubProvider githubProvider,
+    String? authToken,
+  ) async {
+    if (source.githubRepo == null) return;
+
+    final details = await githubProvider.getRepoDetails(
+      source.githubRepo!.owner,
+      source.githubRepo!.repo,
+    );
+
+    if (details != null) {
+      final enrichedRepo = GitHubRepo(
+        owner: source.githubRepo!.owner,
+        repo: source.githubRepo!.repo,
+        isPrivate: source.githubRepo!.isPrivate,
+        defaultBranch: source.githubRepo!.defaultBranch,
+        branches: source.githubRepo!.branches,
+        repoName: details['repoName'],
+        repoId: details['repoId'],
+        isPrivateGithub: details['isPrivateGithub'],
+        description: details['description'],
+        primaryLanguage: details['primaryLanguage'],
+        license: details['license'],
+        openIssuesCount: details['openIssuesCount'],
+        isFork: details['isFork'],
+        forkParent: details['forkParent'],
+      );
+
+      final newSource = Source(
+        name: source.name,
+        id: source.id,
+        githubRepo: enrichedRepo,
+      );
+
+      final index = _items.indexWhere((i) => i.data.name == source.name);
+      if (index != -1) {
+        final oldItem = _items[index];
+        final newItem = CachedItem(
+          newSource,
+          oldItem.metadata.copyWith(lastRetrieved: DateTime.now()),
+        );
+        _items[index] = newItem;
+        notifyListeners();
+
+        if (_cacheService != null && authToken != null) {
+          // We can't save just one source easily if `saveSources` overwrites all.
+          // But `saveSources` takes a list. If we assume the list is complete, we can save it.
+          // Since _items is the complete list, we can save it.
+          await _cacheService!.saveSources(
+            authToken,
+            _items.map((i) => i.data).toList(),
+          );
+        }
+      }
+    }
+  }
 }

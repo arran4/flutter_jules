@@ -8,9 +8,14 @@ import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/source_provider.dart';
 import '../../services/session_provider.dart';
+import '../../services/filter_bookmark_provider.dart';
 import '../../models.dart';
+import '../../models/filter_element.dart';
+import '../../models/filter_expression_parser.dart';
 import '../../services/cache_service.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/source_stats_dialog.dart';
+import '../widgets/new_session_dialog.dart';
 
 enum SortOption { recent, count, alphabetical }
 
@@ -192,6 +197,27 @@ class _SourceListScreenState extends State<SourceListScreen> {
           duration: const Duration(seconds: 2),
         ),
       );
+    }
+  }
+
+  Future<void> _refreshSingleSource(Source source) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
+
+    try {
+      await sourceProvider.refreshSource(source, githubProvider, auth.token);
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Source data refreshed')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to refresh source: $e')),
+        );
+      }
     }
   }
 
@@ -419,6 +445,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                       vertical: 4,
                                     ),
                                     child: ListTile(
+                                      // Non-clickable per requirements
+                                      onTap: null,
                                       leading: Icon(
                                         isPrivate ? Icons.lock : Icons.public,
                                       ),
@@ -535,17 +563,152 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                           ),
                                         ],
                                       ),
-                                      onTap: () {
-                                        Navigator.push(
-                                          context,
-                                          MaterialPageRoute(
-                                            builder: (context) =>
-                                                SessionListScreen(
+                                      trailing: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        children: [
+                                          IconButton(
+                                            icon: const Icon(Icons.refresh),
+                                            tooltip: 'Refresh Source Data',
+                                            onPressed: () => _refreshSingleSource(source),
+                                          ),
+                                          IconButton(
+                                            icon: const Icon(Icons.add_box_outlined),
+                                            tooltip: 'New Session',
+                                            onPressed: () {
+                                              showDialog(
+                                                context: context,
+                                                builder: (context) => NewSessionDialog(
                                                   sourceFilter: source.name,
                                                 ),
+                                              );
+                                            },
                                           ),
-                                        );
-                                      },
+                                          IconButton(
+                                            icon: const Icon(Icons.filter_list),
+                                            tooltip: 'View Sessions',
+                                            onPressed: () {
+                                               Navigator.push(
+                                                context,
+                                                MaterialPageRoute(
+                                                  builder: (context) =>
+                                                      SessionListScreen(
+                                                    sourceFilter: source.name,
+                                                  ),
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                          PopupMenuButton<String>(
+                                            tooltip: 'More Actions',
+                                            onSelected: (value) async {
+                                               final auth = Provider.of<AuthProvider>(context, listen: false);
+                                               final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+
+                                               if (value == 'refresh_all') {
+                                                  try {
+                                                    await sessionProvider.refreshSessionsForSource(
+                                                      auth.client,
+                                                      source.name,
+                                                      authToken: auth.token!,
+                                                    );
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        const SnackBar(content: Text('Sessions refreshed for this source')),
+                                                      );
+                                                    }
+                                                  } catch (e) {
+                                                    if (mounted) {
+                                                      ScaffoldMessenger.of(context).showSnackBar(
+                                                        SnackBar(content: Text('Error refreshing sessions: $e')),
+                                                      );
+                                                    }
+                                                  }
+                                               } else if (value == 'stats') {
+                                                  // Filter sessions for stats
+                                                  final sessions = sessionProvider.items
+                                                    .map((i) => i.data)
+                                                    .where((s) => s.sourceContext?.source == source.name)
+                                                    .toList();
+
+                                                  showDialog(
+                                                    context: context,
+                                                    builder: (_) => SourceStatsDialog(source: source, sessions: sessions),
+                                                  );
+                                               }
+                                            },
+                                            itemBuilder: (context) {
+                                              return [
+                                                const PopupMenuItem(
+                                                  value: 'refresh_all',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.sync),
+                                                      SizedBox(width: 8),
+                                                      Text('Refresh all sessions'),
+                                                    ],
+                                                  ),
+                                                ),
+                                                const PopupMenuItem(
+                                                  value: 'stats',
+                                                  child: Row(
+                                                    children: [
+                                                      Icon(Icons.bar_chart),
+                                                      SizedBox(width: 8),
+                                                      Text('View Statistics'),
+                                                    ],
+                                                  ),
+                                                ),
+                                                // Bookmarks submenu handled as separate item group if possible, or just flat items
+                                                const PopupMenuDivider(),
+                                                const PopupMenuItem(
+                                                  enabled: false,
+                                                  child: Text('BOOKMARKS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Colors.grey)),
+                                                ),
+                                                ...Provider.of<FilterBookmarkProvider>(context, listen: false).bookmarks.map((bookmark) {
+                                                  return PopupMenuItem(
+                                                    value: 'bookmark_${bookmark.name}',
+                                                    onTap: () {
+                                                      // Parse bookmark expression
+                                                      final bookmarkFilter = FilterExpressionParser.parse(bookmark.expression);
+                                                      final sourceFilter = SourceElement(source.name, source.name);
+
+                                                      // Combine: AND(Bookmark, Source)
+                                                      FilterElement combined;
+                                                      if (bookmarkFilter != null) {
+                                                        combined = AndElement([bookmarkFilter, sourceFilter]);
+                                                      } else {
+                                                        combined = sourceFilter;
+                                                      }
+
+                                                      // Navigate
+                                                      Future.delayed(Duration.zero, () {
+                                                        if (mounted) {
+                                                           Navigator.push(
+                                                            context,
+                                                            MaterialPageRoute(
+                                                              builder: (context) =>
+                                                                  SessionListScreen(
+                                                                initialFilter: combined,
+                                                              ),
+                                                            ),
+                                                          );
+                                                        }
+                                                      });
+                                                    },
+                                                    child: Row(
+                                                      children: [
+                                                        const Icon(Icons.bookmark_border, size: 20),
+                                                        const SizedBox(width: 8),
+                                                        Text(bookmark.name, overflow: TextOverflow.ellipsis),
+                                                      ],
+                                                    ),
+                                                  );
+                                                }),
+                                              ];
+                                            },
+                                          ),
+                                        ],
+                                      ),
                                     ),
                                   );
                                 },

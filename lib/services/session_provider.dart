@@ -223,6 +223,37 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> refreshSessionsForSource(
+    JulesClient client,
+    String sourceName, {
+    required String authToken,
+  }) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      // Find all sessions for this source
+      final targetSessions = _items
+          .where((item) => item.data.sourceContext?.source == sourceName)
+          .toList();
+
+      await Future.wait(
+        targetSessions.map((item) async {
+          try {
+            await refreshSession(client, item.data.name, authToken: authToken);
+          } catch (e) {
+            // Ignore individual failures
+            // print("Failed to refresh session ${item.data.name}: $e");
+          }
+        }),
+      );
+    } finally {
+      _isLoading = false;
+      notifyListeners();
+    }
+  }
+
   // Manual update from SessionDetailScreen
   Future<void> updateSession(Session session, {String? authToken}) async {
     // Determine metadata
