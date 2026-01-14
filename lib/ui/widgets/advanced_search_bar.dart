@@ -54,6 +54,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
+  final bool _showFilterPresets = true;
 
   @override
   void initState() {
@@ -943,7 +944,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         ),
         onTap: () => Future.delayed(
           const Duration(milliseconds: 50),
-          () => _saveCurrentFilters(context),
+          () {
+            if (context.mounted) {
+              _saveCurrentFilters(context);
+            }
+          },
         ),
       ),
     );
@@ -955,13 +960,17 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         ),
         onTap: () => Future.delayed(
           const Duration(milliseconds: 50),
-          () => Navigator.of(context).push(
-            MaterialPageRoute(
-              builder: (context) => BookmarkManagerScreen(
-                availableSuggestions: widget.availableSuggestions,
-              ),
-            ),
-          ),
+          () {
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => BookmarkManagerScreen(
+                    availableSuggestions: widget.availableSuggestions,
+                  ),
+                ),
+              );
+            }
+          },
         ),
       ),
     );
@@ -969,7 +978,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     return items;
   }
 
-  PopupMenuItem<FilterBookmark> _buildBookmarkMenuItem(FilterBookmark bookmark) {
+  PopupMenuItem<FilterBookmark> _buildBookmarkMenuItem(
+      FilterBookmark bookmark) {
     return PopupMenuItem<FilterBookmark>(
       value: bookmark,
       child: Tooltip(
@@ -1109,4 +1119,24 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       );
     }
   }
+}
+
+class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
+  const PopupMenuHeader({
+    super.key,
+    required super.child,
+  }) : super(enabled: false, height: 32);
+
+  @override
+  Widget? get child => MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+          child: super.child!,
+        ),
+      );
 }

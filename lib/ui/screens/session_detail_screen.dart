@@ -1317,7 +1317,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     );
                   },
                 ),
-                 PopupMenuItem(
+                PopupMenuItem(
                   onTap: _toggleNoteVisibility,
                   child: Row(
                     children: [

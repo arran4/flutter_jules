@@ -30,7 +30,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyEnterKeyAction = 'enter_key_action';
   static const String keyShiftEnterKeyAction = 'shift_enter_key_action';
   static const String keyCtrlEnterKeyAction = 'ctrl_enter_key_action';
-  static const String keyCtrlShiftEnterKeyAction = 'ctrl_shift_enter_key_action';
+  static const String keyCtrlShiftEnterKeyAction =
+      'ctrl_shift_enter_key_action';
   static const String keyEscKeyAction = 'esc_key_action';
 
   // Filter Memory

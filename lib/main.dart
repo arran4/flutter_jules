@@ -13,6 +13,7 @@ import 'services/cache_service.dart';
 import 'services/refresh_service.dart';
 import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
+import 'services/notification_provider.dart';
 import 'services/tags_provider.dart';
 import 'package:flutter/services.dart';
 import 'ui/screens/session_list_screen.dart';
@@ -150,7 +151,7 @@ class MyApp extends StatelessWidget {
               if (!auth.isAuthenticated) {
                 return const LoginScreen();
               }
-              return NotificationOverlay(child: const SessionListScreen());
+              return const NotificationOverlay(child: SessionListScreen());
             },
           ),
         ),

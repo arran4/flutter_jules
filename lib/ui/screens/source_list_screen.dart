@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
-import 'package:flutter_jules/models/filter_expression_parser.dart';
 import 'package:intl/intl.dart';
-import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
@@ -12,9 +10,6 @@ import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../../services/cache_service.dart';
 import '../widgets/model_viewer.dart';
-import '../widgets/new_session_dialog.dart';
-import '../../services/filter_bookmark_provider.dart';
-import '../widgets/source_stats_dialog.dart';
 import '../widgets/source_tile.dart';
 
 enum SortOption { recent, count, alphabetical }

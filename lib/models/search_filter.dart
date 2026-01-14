@@ -96,4 +96,9 @@ class SortOption {
         return "Status";
     }
   }
+
+  String toExpression() {
+    final dir = direction == SortDirection.ascending ? 'asc' : 'desc';
+    return '${field.name} $dir';
+  }
 }

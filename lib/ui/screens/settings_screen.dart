@@ -709,7 +709,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-
   String _formatMessageSubmitAction(MessageSubmitAction action) {
     switch (action) {
       case MessageSubmitAction.addNewLine:

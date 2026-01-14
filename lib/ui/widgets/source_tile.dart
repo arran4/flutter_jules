@@ -12,7 +12,7 @@ import '../screens/session_list_screen.dart';
 import 'new_session_dialog.dart';
 import 'source_stats_dialog.dart';
 import 'package:flutter_jules/models/filter_expression_parser.dart';
-
+import '../../services/cache_service.dart';
 
 class SourceTile extends StatelessWidget {
   final CachedItem<Source> item;
@@ -93,8 +93,7 @@ class SourceTile extends StatelessWidget {
                     repo!.primaryLanguage!,
                     Icons.code,
                   ),
-                if (repo?.openIssuesCount != null &&
-                    repo!.openIssuesCount! > 0)
+                if (repo?.openIssuesCount != null && repo!.openIssuesCount! > 0)
                   _buildInfoPill(
                     context,
                     '${repo.openIssuesCount} open issues',
@@ -124,9 +123,8 @@ class SourceTile extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(context)
-                          .colorScheme
-                          .surfaceContainerHighest,
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
                       borderRadius: BorderRadius.circular(
                         4,
                       ),
@@ -223,7 +221,8 @@ class SourceTile extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text('Refreshed ${source.githubRepo?.repo ?? source.name}'),
+            content:
+                Text('Refreshed ${source.githubRepo?.repo ?? source.name}'),
             duration: const Duration(seconds: 2),
           ),
         );

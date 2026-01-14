@@ -500,8 +500,8 @@ class _ActivityItemState extends State<ActivityItem> {
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.open_in_new),
                               label: const Text('Create PR'),
-                              onPressed: () =>
-                                  launchUrl(Uri.parse(_getPrUrl(artifact.changeSet!)!)),
+                              onPressed: () => launchUrl(
+                                  Uri.parse(_getPrUrl(artifact.changeSet!)!)),
                               style: ElevatedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),
@@ -522,7 +522,7 @@ class _ActivityItemState extends State<ActivityItem> {
                         width: double.infinity,
                         padding: const EdgeInsets.all(8),
                         decoration: BoxDecoration(
-                          color: Colors.black.withOpacity(0.05),
+                          color: Colors.black.withValues(alpha: 0.05),
                           borderRadius: BorderRadius.circular(4),
                         ),
                         child: SelectableText(
@@ -534,13 +534,13 @@ class _ActivityItemState extends State<ActivityItem> {
                     ],
                     const Text(
                       "Patch:",
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold, fontSize: 12),
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      color: Colors.black.withOpacity(0.05),
+                      color: Colors.black.withValues(alpha: 0.05),
                       child: Text(
                         artifact.changeSet!.gitPatch!.unidiffPatch,
                         style: const TextStyle(

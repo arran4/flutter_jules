@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
-import '../ui/widgets/github_pat_dialog.dart';
 import 'notification_provider.dart';
 
 import 'jules_client.dart';
