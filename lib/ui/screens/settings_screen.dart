@@ -61,6 +61,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setFabVisibility,
               ),
               const Divider(),
+              _buildSectionHeader(context, 'Source List'),
+              SwitchListTile(
+                title: const Text('Hide archived and read-only sources'),
+                subtitle: const Text(
+                  'Hide sources that are marked as archived or read-only.',
+                ),
+                value: settings.hideArchivedAndReadOnly,
+                onChanged: (value) =>
+                    settings.setHideArchivedAndReadOnly(value),
+              ),
               _buildSectionHeader(context, 'Keybindings'),
               _buildKeybindingDropdown<MessageSubmitAction>(
                 context,

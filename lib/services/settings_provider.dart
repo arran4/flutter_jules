@@ -25,6 +25,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyFabVisibility = 'fab_visibility';
+  static const String keyHideArchivedAndReadOnly =
+      'hide_archived_and_read_only';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -58,6 +60,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
+  bool _hideArchivedAndReadOnly = true;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -81,6 +84,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
   FabVisibility get fabVisibility => _fabVisibility;
+  bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -139,6 +143,8 @@ class SettingsProvider extends ChangeNotifier {
       FabVisibility.values,
       FabVisibility.floating,
     );
+    _hideArchivedAndReadOnly =
+        _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -330,6 +336,11 @@ class SettingsProvider extends ChangeNotifier {
     await _prefs?.setInt(keyFabVisibility, visibility.index);
   }
 
+  Future<void> setHideArchivedAndReadOnly(bool value) async {
+    _hideArchivedAndReadOnly = value;
+    notifyListeners();
+    await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
+  }
   // Keybinding Setters
   Future<void> setEnterKeyAction(MessageSubmitAction action) async {
     _enterKeyAction = action;

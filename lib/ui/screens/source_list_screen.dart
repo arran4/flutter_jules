@@ -48,21 +48,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
   }
 
   void _onSearchChanged() {
-    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sources = sourceProvider.items;
-
-    final filtered = filterAndSort<CachedItem<Source>>(
-      items: sources,
-      query: _searchController.text,
-      accessors: [
-        (item) => item.data.githubRepo?.repo ?? '',
-        (item) => item.data.name,
-        (item) => item.data.githubRepo?.owner ?? '',
-      ],
-    );
-
     setState(() {
-      _filteredSources = _sortSources(filtered);
+      // Just trigger a rebuild, the filtering logic is in the build method
     });
   }
 
@@ -128,7 +115,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
     // Load usage stats from SessionProvider
     _processSessions();
-    _onSearchChanged(); // Update filter
+    setState(() {}); // Trigger a rebuild to apply the initial sort
   }
 
   void _processSessions() {
@@ -183,7 +170,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     );
 
     _processSessions();
-    _onSearchChanged();
+    setState(() {});
 
     if (mounted) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -232,21 +219,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(
-      builder: (context, sourceProvider, child) {
-        final sources = sourceProvider.items;
+    return Consumer2<SourceProvider, SettingsProvider>(
+      builder: (context, sourceProvider, settingsProvider, child) {
+        var sources = sourceProvider.items;
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources = sources
+              .where((s) => !s.data.isArchived && !s.data.isReadOnly)
+              .toList();
+        }
         final isLoading = sourceProvider.isLoading;
         final error = sourceProvider.error;
         final lastFetchTime = sourceProvider.lastFetchTime;
-
-        // If sources updated (e.g. background fetch finished), update our filtered list
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted &&
-              sourceProvider.items.length != (_filteredSources.length) &&
-              _searchController.text.isEmpty) {
-            // Trigger re-filter if data changed and we aren't actively searching
-          }
-        });
 
         var filtered = filterAndSort<CachedItem<Source>>(
           items: sources,
