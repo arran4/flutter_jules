@@ -7,6 +7,7 @@ import 'services/github_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
 import 'services/filter_bookmark_provider.dart';
+import 'services/bulk_action_preset_provider.dart';
 import 'services/message_queue_provider.dart';
 import 'services/settings_provider.dart';
 import 'services/cache_service.dart';
@@ -42,6 +43,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => GithubProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
         ProxyProvider<DevModeProvider, CacheService>(
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
