@@ -36,12 +36,14 @@ class NewSessionResult {
   final List<Session> sessions;
   final bool isDraft;
   final bool isDelete;
+  final bool openNewDialog;
 
   // Constructor for backward compatibility logic (single session)
   NewSessionResult(
     Session session, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   }) : sessions = [session];
 
   // Constructor for multiple sessions
@@ -49,6 +51,7 @@ class NewSessionResult {
     this.sessions, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   });
 
   // Helper to get the first session for backward compatibility
@@ -525,7 +528,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _create({bool openNewDialog = false}) async {
     // Handle Image
     final imageUrl = _imageUrlController.text.trim();
     List<Media>? images;
@@ -653,7 +656,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (mounted) {
       Navigator.pop(
         context,
-        NewSessionResult.multiple(sessionsToCreate, isDraft: false),
+        NewSessionResult.multiple(sessionsToCreate,
+            isDraft: false, openNewDialog: openNewDialog),
       );
     }
   }
@@ -1181,9 +1185,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: true)
+                          : null,
+                      child: const Text('Send & New'),
+                    ),
+                    const SizedBox(width: 8),
                     FilledButton(
-                      onPressed:
-                          (_promptController.text.isNotEmpty) ? _create : null,
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: false)
+                          : null,
                       child: const Text('Send Now'),
                     ),
                   ],
