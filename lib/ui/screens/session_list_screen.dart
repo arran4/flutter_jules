@@ -1472,9 +1472,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        if (value == 'new_session') {
-                          _createSession();
-                        } else if (value == 'full_refresh') {
+                        if (value == 'full_refresh') {
                           _fetchSessions(force: true, shallow: false);
                         } else if (value == 'bulk_actions') {
                           _openBulkActionDialog();
@@ -1526,17 +1524,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           listen: false,
                         ).isOffline;
                         return [
-                          const PopupMenuItem(
-                            value: 'new_session',
-                            child: Row(
-                              children: [
-                                Icon(Icons.add),
-                                SizedBox(width: 8),
-                                Text('New Session'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
                           const PopupMenuItem(
                             value: 'full_refresh',
                             child: Row(
@@ -1634,6 +1621,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       },
                     ),
                   ],
+                ),
+                floatingActionButton: FloatingActionButton(
+                  onPressed: _createSession,
+                  tooltip: 'New Session (Ctrl+N)',
+                  child: const Icon(Icons.add),
                 ),
                 body: (cachedItems.isEmpty && isLoading)
                     ? const Center(child: Text("Loading sessions..."))
