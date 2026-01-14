@@ -200,28 +200,47 @@ class FilterExpressionParser {
       case 'UPDATED_BETWEEN':
       case 'BETWEEN':
         return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.updated);
+      case 'CREATEDIN':
+      case 'CREATED_IN':
+        return _createTimeFilter(args, TimeFilterType.inRange, TimeFilterField.created);
+      case 'UPDATEDIN':
+      case 'UPDATED_IN':
+        return _createTimeFilter(args, TimeFilterType.inRange, TimeFilterField.updated);
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');
-        if (parts.length < 3) return null;
 
-        TimeFilterField field;
+        TimeFilterField field = TimeFilterField.updated;
         int currentPart = 0;
         try {
           field = TimeFilterField.values.byName(parts[currentPart]);
           currentPart++;
         } catch (_) {
-          field = TimeFilterField.updated;
+          // It's the old format, which doesn't have a field
         }
 
+        if (parts.length < currentPart + 2) return null;
+
         final type = TimeFilterType.values.byName(parts[currentPart++]);
-        final value = int.tryParse(parts[currentPart++]) ?? 0;
+        final remaining = parts.sublist(currentPart).join(' ');
 
-        if (parts.length < currentPart + 1) return null;
-        final unit = TimeFilterUnit.values.byName(parts[currentPart++]);
+        // New format: range string (e.g., "last 5 days")
+        if (remaining.startsWith('last')) {
+          return TimeFilterElement(
+            TimeFilter(type: type, range: remaining, field: field),
+          );
+        }
 
+        // Old format: value + unit (e.g., "5 days") or specific date
+        final date = TimeParser.parse(remaining);
+        if (date != null) {
+          // This is a specific date from an old filter
+          return TimeFilterElement(
+            TimeFilter(type: type, specificTime: date, field: field),
+          );
+        }
         return TimeFilterElement(
-          TimeFilter(type: type, value: value, unit: unit, field: field),
+          TimeFilter(type: type, range: 'last $remaining', field: field),
         );
       default:
         return null;
@@ -230,6 +249,22 @@ class FilterExpressionParser {
 
   TimeFilterElement? _createTimeFilter(List<String> args, TimeFilterType type, TimeFilterField field, {bool isSingleDay = false}) {
     if (args.isEmpty) return null;
+
+    if (type == TimeFilterType.inRange) {
+      final rangeStr = args[0];
+      final range = TimeParser.parseRange(rangeStr);
+      if (range == null) return null;
+      return TimeFilterElement(
+        TimeFilter(
+          type: type,
+          specificTime: range.start,
+          specificTimeEnd: range.end,
+          range: rangeStr,
+          field: field,
+        ),
+      );
+    }
+
     if (type == TimeFilterType.between) {
       if (isSingleDay) {
         final date = TimeParser.parse(args[0]);

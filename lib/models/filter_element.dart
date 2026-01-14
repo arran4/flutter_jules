@@ -219,13 +219,30 @@ class TimeFilterElement extends FilterElement {
         break;
     }
 
+    if (timeFilter.range != null) {
+      if (timeFilter.type == TimeFilterType.inRange) {
+        return '${fieldStr}IN(${FilterElement._quote(timeFilter.range!)})';
+      } else {
+        return '$fieldStr$typeStr(${FilterElement._quote(timeFilter.range!)})';
+      }
+    }
+
     if (timeFilter.specificTime != null) {
       if (timeFilter.type == TimeFilterType.between) {
+        // Check if it's a single day
+        if (timeFilter.specificTimeEnd != null &&
+            timeFilter.specificTimeEnd!.difference(timeFilter.specificTime!) ==
+                const Duration(days: 1) &&
+            timeFilter.specificTime!.hour == 0 &&
+            timeFilter.specificTime!.minute == 0) {
+          return '${fieldStr}ON(${timeFilter.specificTime!.toIso8601String().split('T')[0]})';
+        }
         return '${fieldStr}BETWEEN(${timeFilter.specificTime!.toIso8601String()}, ${timeFilter.specificTimeEnd!.toIso8601String()})';
       }
       return '$fieldStr$typeStr(${timeFilter.specificTime!.toIso8601String()})';
     }
-    return 'Time(${timeFilter.field.name} ${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
+
+    throw Exception('Invalid TimeFilter: missing specificTime and range');
   }
 
   @override

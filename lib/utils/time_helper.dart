@@ -28,41 +28,36 @@ bool matchesTimeFilter(Session session, TimeFilter timeFilter) {
   final sessionTime = DateTime.tryParse(timeStr);
   if (sessionTime == null) return false;
 
-  final now = DateTime.now();
-
-  if (timeFilter.type == TimeFilterType.between) {
-    if (timeFilter.specificTime != null && timeFilter.specificTimeEnd != null) {
-      return sessionTime.isAfter(timeFilter.specificTime!) &&
-          sessionTime.isBefore(timeFilter.specificTimeEnd!);
-    }
-    return false;
-  }
-
   if (timeFilter.specificTime != null) {
-    if (timeFilter.type == TimeFilterType.newerThan) {
-      return sessionTime.isAfter(timeFilter.specificTime!);
-    } else {
-      return sessionTime.isBefore(timeFilter.specificTime!);
+    switch (timeFilter.type) {
+      case TimeFilterType.newerThan:
+        return sessionTime.isAfter(timeFilter.specificTime!);
+      case TimeFilterType.olderThan:
+        return sessionTime.isBefore(timeFilter.specificTime!);
+      case TimeFilterType.between:
+      case TimeFilterType.inRange:
+        return timeFilter.specificTimeEnd != null &&
+            sessionTime.isAfter(timeFilter.specificTime!) &&
+            sessionTime.isBefore(timeFilter.specificTimeEnd!);
     }
   }
 
-  Duration duration;
-  switch (timeFilter.unit) {
-    case TimeFilterUnit.hours:
-      duration = Duration(hours: timeFilter.value);
-      break;
-    case TimeFilterUnit.days:
-      duration = Duration(days: timeFilter.value);
-      break;
-    case TimeFilterUnit.months:
-      duration = Duration(days: timeFilter.value * 30); // Approximation
-      break;
+  if (timeFilter.range != null) {
+    if (timeFilter.type == TimeFilterType.between ||
+        timeFilter.type == TimeFilterType.inRange) {
+      final range = TimeParser.parseRange(timeFilter.range!);
+      if (range == null) return false;
+      return sessionTime.isAfter(range.start) &&
+          sessionTime.isBefore(range.end);
+    }
+    final cutoff = TimeParser.parse(timeFilter.range!);
+    if (cutoff == null) return false;
+    if (timeFilter.type == TimeFilterType.newerThan) {
+      return sessionTime.isAfter(cutoff);
+    } else if (timeFilter.type == TimeFilterType.olderThan) {
+      return sessionTime.isBefore(cutoff);
+    }
   }
 
-  final cutoff = now.subtract(duration);
-  if (timeFilter.type == TimeFilterType.newerThan) {
-    return sessionTime.isAfter(cutoff);
-  } else {
-    return sessionTime.isBefore(cutoff);
-  }
+  return false;
 }
