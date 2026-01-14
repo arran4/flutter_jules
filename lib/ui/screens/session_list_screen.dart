@@ -34,8 +34,9 @@ import '../../services/notification_service.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
+  final FilterElement? initialFilter;
 
-  const SessionListScreen({super.key, this.sourceFilter});
+  const SessionListScreen({super.key, this.sourceFilter, this.initialFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -99,7 +100,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
 
     _focusNode.requestFocus();
-    if (widget.sourceFilter != null) {
+    if (widget.initialFilter != null) {
+      _filterTree = widget.initialFilter;
+    } else if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
     }
