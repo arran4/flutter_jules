@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
@@ -19,12 +21,22 @@ class SessionProvider extends ChangeNotifier {
   CacheService? _cacheService;
   GithubProvider? _githubProvider;
   NotificationProvider? _notificationProvider;
+  final StreamController<String> _progressStreamController =
+      StreamController<String>.broadcast();
+
+  Stream<String> get progressStream => _progressStreamController.stream;
 
   List<CachedItem<Session>> get items => _items;
   bool get isLoading => _isLoading;
   String? get error => _error;
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
+
+  @override
+  void dispose() {
+    _progressStreamController.close();
+    super.dispose();
+  }
 
   void setCacheService(CacheService service) {
     _cacheService = service;
@@ -69,14 +81,20 @@ class SessionProvider extends ChangeNotifier {
 
     _isLoading = true;
     _error = null;
+    _progressStreamController.add('Fetching sessions...');
     notifyListeners();
 
     try {
       List<Session> newSessions = [];
       String? pageToken;
+      int pageCount = 0;
 
       // Load sessions
       do {
+        pageCount++;
+        if (pageCount > 1) {
+          _progressStreamController.add('Fetching page $pageCount...');
+        }
         final response = await client.listSessions(
           pageSize: pageSize,
           pageToken: pageToken,
@@ -102,6 +120,7 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
+        _progressStreamController.add('Merging ${newSessions.length} sessions...');
         for (var session in newSessions) {
           final index = _items.indexWhere((i) => i.data.id == session.id);
           final oldItem = index != -1 ? _items[index] : null;
@@ -171,6 +190,7 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
+                _progressStreamController.add('Refreshing Git status for ${session.title ?? session.id}');
                 _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
@@ -200,7 +220,9 @@ class SessionProvider extends ChangeNotifier {
 
       _lastFetchTime = DateTime.now();
       _error = null;
+      _progressStreamController.add('Refresh complete.');
     } catch (e) {
+      _progressStreamController.add('Error: ${e.toString()}');
       if (shallow && _items.isNotEmpty) {
         final msg = "Shallow refresh failed ($e), switching to full refresh";
         // print(msg);
@@ -222,6 +244,7 @@ class SessionProvider extends ChangeNotifier {
       // Ensure we don't double-reset if recursive call handled it
       if (_isLoading) {
         _isLoading = false;
+        _progressStreamController.add('Done.');
         notifyListeners();
       }
     }
@@ -271,9 +294,11 @@ class SessionProvider extends ChangeNotifier {
     String? authToken,
   }) async {
     try {
+      _progressStreamController.add('Refreshing session $sessionName...');
       final updatedSession = await client.getSession(sessionName);
 
       List<Activity>? activities;
+      _progressStreamController.add('Fetching activities for $sessionName...');
       try {
         activities = await client.listActivities(sessionName);
       } catch (e) {
@@ -330,12 +355,15 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
+          _progressStreamController.add('Refreshing Git status for ${updatedSession.title ?? updatedSession.id}');
           _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
 
+      _progressStreamController.add('Session refreshed.');
       notifyListeners();
     } catch (e) {
+      _progressStreamController.add('Error: ${e.toString()}');
       // print("Failed to refresh individual session: $e");
       rethrow;
     }
