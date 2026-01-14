@@ -51,6 +51,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setRefreshOnCreate,
               ),
               const Divider(),
+              _buildSectionHeader(context, 'Appearance'),
+              _buildFabDropdown(
+                context,
+                title: 'New Session Button',
+                value: settings.fabVisibility,
+                onChanged: settings.setFabVisibility,
+              ),
+              const Divider(),
               _buildAutomaticRefreshSection(context, settings),
               const Divider(),
               _buildSectionHeader(context, 'Notifications'),
@@ -515,6 +523,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Quick Refresh';
       case ListRefreshPolicy.full:
         return 'Full Refresh';
+    }
+  }
+
+  Widget _buildFabDropdown(
+    BuildContext context, {
+    required String title,
+    required FabVisibility value,
+    required Function(FabVisibility) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<FabVisibility>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: FabVisibility.values.map((policy) {
+          return DropdownMenuItem(
+            value: policy,
+            child: Text(_formatFabVisibility(policy)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatFabVisibility(FabVisibility policy) {
+    switch (policy) {
+      case FabVisibility.appBar:
+        return 'AppBar';
+      case FabVisibility.floating:
+        return 'Floating';
+      case FabVisibility.off:
+        return 'Off';
     }
   }
 }

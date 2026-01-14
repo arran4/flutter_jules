@@ -1273,6 +1273,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
         final queueProvider = Provider.of<MessageQueueProvider>(context);
+        final settings = Provider.of<SettingsProvider>(context);
 
         // Inject draft sessions
         // Inject draft and pending sessions
@@ -1414,6 +1415,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
               focusNode: _focusNode,
               autofocus: true,
               child: Scaffold(
+                floatingActionButton:
+                    settings.fabVisibility == FabVisibility.floating
+                        ? FloatingActionButton(
+                            onPressed: _createSession,
+                            tooltip: 'New Session',
+                            child: const Icon(Icons.add),
+                          )
+                        : null,
                 appBar: AppBar(
                   title: const Text('Sessions'),
                   bottom: isLoading
@@ -1526,19 +1535,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           listen: false,
                         ).isOffline;
                         return [
+                           if (settings.fabVisibility == FabVisibility.appBar)
+                             const PopupMenuItem(
+                               value: 'new_session',
+                               child: Row(
+                                 children: [
+                                   Icon(Icons.add),
+                                   SizedBox(width: 8),
+                                   Text('New Session'),
+                                 ],
+                               ),
+                             ),
+                           if (settings.fabVisibility == FabVisibility.appBar)
+                             const PopupMenuDivider(),
                           const PopupMenuItem(
-                            value: 'new_session',
-                            child: Row(
-                              children: [
-                                Icon(Icons.add),
-                                SizedBox(width: 8),
-                                Text('New Session'),
-                              ],
-                            ),
-                          ),
-                          const PopupMenuDivider(),
-                          const PopupMenuItem(
-                            value: 'full_refresh',
+                             value: 'full_refresh',
                             child: Row(
                               children: [
                                 Icon(Icons.refresh),
@@ -1635,14 +1646,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                   ],
                 ),
-                body: (cachedItems.isEmpty && isLoading)
-                    ? const Center(child: Text("Loading sessions..."))
-                    : (cachedItems.isEmpty && error != null)
-                        ? Center(child: Text('Error: $error'))
-                        : Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
+                body: Consumer<SettingsProvider>(
+                  builder: (context, settings, _) {
+                    return (cachedItems.isEmpty && isLoading)
+                        ? const Center(child: Text("Loading sessions..."))
+                        : (cachedItems.isEmpty && error != null)
+                            ? Center(child: Text('Error: $error'))
+                            : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
                                 child: AdvancedSearchBar(
                                   filterTree: _filterTree,
                                   onFilterTreeChanged: (tree) {
