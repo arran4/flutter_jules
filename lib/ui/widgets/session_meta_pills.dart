@@ -5,6 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
 import 'note_dialog.dart';
 
+class _PillDefinition {
+  final bool Function(Session) shouldShow;
+  final List<Widget> Function(BuildContext, SessionMetaPills) build;
+
+  _PillDefinition({required this.shouldShow, required this.build});
+}
+
 class SessionMetaPills extends StatelessWidget {
   final Session session;
   final bool compact;
@@ -19,208 +26,261 @@ class SessionMetaPills extends StatelessWidget {
     this.onAddSort,
   });
 
+  List<_PillDefinition> get _pillDefinitions => [
+        // STATE Pill
+        _PillDefinition(
+          shouldShow: (s) => s.state != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: session.state!.displayName,
+              backgroundColor: _getColorForState(session.state!),
+              avatar: session.state == SessionState.COMPLETED
+                  ? const Icon(Icons.check, size: 16, color: Colors.green)
+                  : null,
+              filterToken: FilterToken(
+                id: 'status:${session.state!.name}',
+                type: FilterType.status,
+                label: session.state!.displayName,
+                value: session.state!,
+              ),
+              sortField: SortField.status,
+            ),
+          ],
+        ),
+        // DATE Pill (Created)
+        _PillDefinition(
+          shouldShow: (s) => s.createTime != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              avatar: const Icon(Icons.calendar_today, size: 16),
+              label: DateFormat.yMMMd().add_jm().format(
+                    DateTime.parse(session.createTime!).toLocal(),
+                  ),
+              sortField: SortField.created,
+            ),
+          ],
+        ),
+        // DATE Pill (Updated)
+        _PillDefinition(
+          shouldShow: (s) =>
+              s.updateTime != null && s.createTime != s.updateTime,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              avatar: const Icon(Icons.update, size: 16),
+              label:
+                  "Updated ${DateFormat.yMMMd().add_jm().format(DateTime.parse(session.updateTime!).toLocal())}",
+              sortField: SortField.updated,
+            ),
+          ],
+        ),
+        // Automation Mode
+        _PillDefinition(
+          shouldShow: (s) =>
+              s.automationMode != null &&
+              s.automationMode != AutomationMode.AUTOMATION_MODE_UNSPECIFIED,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              avatar: const Icon(Icons.smart_toy, size: 16),
+              label:
+                  "Auto: ${session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
+              backgroundColor: Colors.blue.shade50,
+            ),
+          ],
+        ),
+        // Approval
+        _PillDefinition(
+          shouldShow: (s) => s.requirePlanApproval != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: session.requirePlanApproval!
+                  ? "Approval Required"
+                  : "No Approval Required",
+              avatar: Icon(
+                session.requirePlanApproval!
+                    ? Icons.check_circle_outline
+                    : Icons.do_not_disturb_on_outlined,
+                size: 16,
+              ),
+              backgroundColor: session.requirePlanApproval!
+                  ? Colors.orange.shade50
+                  : Colors.green.shade50,
+              filterToken: FilterToken(
+                id: 'flag:approval',
+                type: FilterType.flag,
+                label: session.requirePlanApproval!
+                    ? 'Approval Required'
+                    : 'No Approval',
+                value: session.requirePlanApproval!
+                    ? 'approval_required'
+                    : 'no_approval',
+              ),
+            ),
+          ],
+        ),
+        // PR Status
+        _PillDefinition(
+          shouldShow: (s) => s.prStatus != null,
+          build: (context, widget) =>
+              widget._buildPrStatusChips(context, session.prStatus!),
+        ),
+        // Publish PR Chip
+        _PillDefinition(
+          shouldShow: (s) => s.prStatus == null && s.diffUrl != null,
+          build: (context, widget) => [widget._buildPublishPrChip(context)],
+        ),
+        // CI Status
+        _PillDefinition(
+          shouldShow: (s) => s.ciStatus != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: 'CI: ${session.ciStatus}',
+              avatar: Icon(
+                session.ciStatus == 'Success'
+                    ? Icons.check_circle
+                    : (session.ciStatus == 'Failure'
+                        ? Icons.cancel
+                        : Icons.pending),
+                size: 16,
+              ),
+              backgroundColor: session.ciStatus == 'Success'
+                  ? Colors.green.shade50
+                  : (session.ciStatus == 'Failure'
+                      ? Colors.red.shade50
+                      : Colors.amber.shade50),
+              filterToken: FilterToken(
+                id: 'ciStatus:${session.ciStatus}',
+                type: FilterType.ciStatus,
+                label: 'CI: ${session.ciStatus}',
+                value: session.ciStatus!,
+              ),
+            ),
+          ],
+        ),
+        // Source
+        _PillDefinition(
+          shouldShow: (s) => s.sourceContext != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: session.sourceContext!.source,
+              avatar: const Icon(Icons.source, size: 16),
+              filterToken: FilterToken(
+                id: 'source:${session.sourceContext!.source}',
+                type: FilterType.source,
+                label: session.sourceContext!.source,
+                value: session.sourceContext!.source,
+              ),
+              sortField: SortField.source,
+            ),
+          ],
+        ),
+        // Branch
+        _PillDefinition(
+          shouldShow: (s) =>
+              s.sourceContext?.githubRepoContext?.startingBranch != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: session.sourceContext!.githubRepoContext!.startingBranch,
+              avatar: const Icon(Icons.call_split, size: 16),
+              filterToken: FilterToken(
+                id: 'branch:${session.sourceContext!.githubRepoContext!.startingBranch}',
+                type: FilterType.branch,
+                label:
+                    session.sourceContext!.githubRepoContext!.startingBranch,
+                value:
+                    session.sourceContext!.githubRepoContext!.startingBranch,
+              ),
+            ),
+          ],
+        ),
+        // Mergeable State
+        _PillDefinition(
+          shouldShow: (s) =>
+              s.mergeableState != null && s.mergeableState != 'unknown',
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: 'Mergeable: ${session.mergeableState}',
+              backgroundColor: _getColorForMergeableState(
+                session.mergeableState!,
+              ),
+            ),
+          ],
+        ),
+        // File Changes
+        _PillDefinition(
+          shouldShow: (s) =>
+              s.additions != null &&
+              s.deletions != null &&
+              s.changedFiles != null,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label:
+                  '+${session.additions} -${session.deletions} (${session.changedFiles} files)',
+              avatar: const Icon(Icons.edit_document, size: 16),
+              backgroundColor: Colors.grey.shade200,
+            ),
+          ],
+        ),
+        // Tags
+        _PillDefinition(
+          shouldShow: (s) => s.tags != null && s.tags!.isNotEmpty,
+          build: (context, widget) => session.tags!
+              .map(
+                (tag) => widget._buildChip(
+                  context,
+                  label: '#$tag',
+                  avatar: const Icon(Icons.tag, size: 16),
+                  backgroundColor: Colors.indigo.shade50,
+                  filterToken: FilterToken(
+                    id: 'tag:$tag',
+                    type: FilterType.tag,
+                    label: '#$tag',
+                    value: tag,
+                  ),
+                ),
+              )
+              .toList(),
+        ),
+        // Note
+        _PillDefinition(
+          shouldShow: (s) => s.note?.content.isNotEmpty ?? false,
+          build: (context, widget) => [
+            widget._buildChip(
+              context,
+              label: 'Note',
+              avatar: const Icon(Icons.note, size: 16),
+              tooltip: session.note!.content,
+              filterToken: const FilterToken(
+                id: 'flag:has_notes',
+                type: FilterType.flag,
+                label: 'Has Notes',
+                value: 'has_notes',
+              ),
+            ),
+          ],
+        ),
+      ];
+
   @override
   Widget build(BuildContext context) {
+    final List<Widget> children = _pillDefinitions
+        .where((def) => def.shouldShow(session))
+        .expand((def) => def.build(context, this))
+        .toList();
+
     return Wrap(
       spacing: compact ? 4.0 : 8.0,
       runSpacing: compact ? 2.0 : 4.0,
-      children: [
-        // STATE Pill
-        if (session.state != null)
-          _buildChip(
-            context,
-            label: session.state!.displayName,
-            backgroundColor: _getColorForState(session.state!),
-            avatar: session.state == SessionState.COMPLETED
-                ? const Icon(Icons.check, size: 16, color: Colors.green)
-                : null,
-            filterToken: FilterToken(
-              id: 'status:${session.state!.name}',
-              type: FilterType.status,
-              label: session.state!.displayName,
-              value: session.state!,
-            ),
-            sortField: SortField.status,
-          ),
-
-        // DATE Pill (Created)
-        if (session.createTime != null)
-          _buildChip(
-            context,
-            avatar: const Icon(Icons.calendar_today, size: 16),
-            label: DateFormat.yMMMd().add_jm().format(
-                  DateTime.parse(session.createTime!).toLocal(),
-                ),
-            sortField: SortField.created,
-          ),
-
-        // DATE Pill (Updated) - Only if significantly different from created?
-        // Let's just show it if updated exists and is not same instant (roughly)
-        if (session.updateTime != null &&
-            session.createTime != session.updateTime)
-          _buildChip(
-            context,
-            avatar: const Icon(Icons.update, size: 16),
-            label:
-                "Updated ${DateFormat.yMMMd().add_jm().format(DateTime.parse(session.updateTime!).toLocal())}",
-            sortField: SortField.updated,
-          ),
-
-        // Automation Mode
-        if (session.automationMode != null &&
-            session.automationMode !=
-                AutomationMode.AUTOMATION_MODE_UNSPECIFIED)
-          _buildChip(
-            context,
-            avatar: const Icon(Icons.smart_toy, size: 16),
-            label:
-                "Auto: ${session.automationMode.toString().split('.').last.replaceAll('AUTOMATION_MODE_', '')}",
-            backgroundColor: Colors.blue.shade50,
-          ),
-
-        // Approval
-        if (session.requirePlanApproval != null)
-          _buildChip(
-            context,
-            label: session.requirePlanApproval!
-                ? "Approval Required"
-                : "No Approval Required",
-            avatar: Icon(
-              session.requirePlanApproval!
-                  ? Icons.check_circle_outline
-                  : Icons.do_not_disturb_on_outlined,
-              size: 16,
-            ),
-            backgroundColor: session.requirePlanApproval!
-                ? Colors.orange.shade50
-                : Colors.green.shade50,
-            filterToken: FilterToken(
-              id: 'flag:approval',
-              type: FilterType.flag,
-              label: session.requirePlanApproval!
-                  ? 'Approval Required'
-                  : 'No Approval',
-              value: session.requirePlanApproval!
-                  ? 'approval_required'
-                  : 'no_approval',
-            ),
-          ),
-
-        // PR Status (for Open/Draft/Merged/Closed)
-        if (session.prStatus != null)
-          ..._buildPrStatusChips(context, session.prStatus!)
-        else if (session.diffUrl != null)
-          _buildPublishPrChip(context),
-
-        // CI Status
-        if (session.ciStatus != null)
-          _buildChip(
-            context,
-            label: 'CI: ${session.ciStatus}',
-            avatar: Icon(
-              session.ciStatus == 'Success'
-                  ? Icons.check_circle
-                  : (session.ciStatus == 'Failure'
-                      ? Icons.cancel
-                      : Icons.pending),
-              size: 16,
-            ),
-            backgroundColor: session.ciStatus == 'Success'
-                ? Colors.green.shade50
-                : (session.ciStatus == 'Failure'
-                    ? Colors.red.shade50
-                    : Colors.amber.shade50),
-            filterToken: FilterToken(
-              id: 'ciStatus:${session.ciStatus}',
-              type: FilterType.ciStatus,
-              label: 'CI: ${session.ciStatus}',
-              value: session.ciStatus!,
-            ),
-          ),
-
-        // Source
-        // Source
-        if (session.sourceContext != null)
-          _buildChip(
-            context,
-            label: session.sourceContext!.source,
-            avatar: const Icon(Icons.source, size: 16),
-            filterToken: FilterToken(
-              id: 'source:${session.sourceContext!.source}',
-              type: FilterType.source,
-              label: session.sourceContext!.source,
-              value: session.sourceContext!.source,
-            ),
-            sortField: SortField.source,
-          ),
-
-        // Branch
-        if (session.sourceContext?.githubRepoContext?.startingBranch != null)
-          _buildChip(
-            context,
-            label: session.sourceContext!.githubRepoContext!.startingBranch,
-            avatar: const Icon(Icons.call_split, size: 16),
-            filterToken: FilterToken(
-              id: 'branch:${session.sourceContext!.githubRepoContext!.startingBranch}',
-              type: FilterType.branch,
-              label: session.sourceContext!.githubRepoContext!.startingBranch,
-              value: session.sourceContext!.githubRepoContext!.startingBranch,
-            ),
-          ),
-
-        // Mergeable State
-        if (session.mergeableState != null &&
-            session.mergeableState != 'unknown')
-          _buildChip(
-            context,
-            label: 'Mergeable: ${session.mergeableState}',
-            backgroundColor: _getColorForMergeableState(
-              session.mergeableState!,
-            ),
-          ),
-
-        // File Changes
-        if (session.additions != null &&
-            session.deletions != null &&
-            session.changedFiles != null)
-          _buildChip(
-            context,
-            label:
-                '+${session.additions} -${session.deletions} (${session.changedFiles} files)',
-            avatar: const Icon(Icons.edit_document, size: 16),
-            backgroundColor: Colors.grey.shade200,
-          ),
-
-        // Tags
-        if (session.tags != null && session.tags!.isNotEmpty)
-          ...session.tags!.map(
-            (tag) => _buildChip(
-              context,
-              label: '#$tag',
-              avatar: const Icon(Icons.tag, size: 16),
-              backgroundColor: Colors.indigo.shade50,
-              filterToken: FilterToken(
-                id: 'tag:$tag',
-                type: FilterType.tag,
-                label: '#$tag',
-                value: tag,
-              ),
-            ),
-          ),
-        if (session.note?.content.isNotEmpty ?? false)
-          _buildChip(
-            context,
-            label: 'Note',
-            avatar: const Icon(Icons.note, size: 16),
-            tooltip: session.note!.content,
-            filterToken: const FilterToken(
-              id: 'flag:has_notes',
-              type: FilterType.flag,
-              label: 'Has Notes',
-              value: 'has_notes',
-            ),
-          ),
-      ],
+      children: children,
     );
   }
 
