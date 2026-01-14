@@ -11,6 +11,7 @@ import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
@@ -220,7 +221,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       if (mounted) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+        final settingsProvider =
+            Provider.of<SettingsProvider>(context, listen: false);
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
+        }
         _initializeSelection(sources);
         if (force) {
           setState(() {
@@ -345,8 +353,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
+    if (settingsProvider.hideArchivedAndReadOnly) {
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
+    }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
       final labelB = _getSourceDisplayLabel(b);
@@ -757,9 +772,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(
-      builder: (context, sourceProvider, _) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+    return Consumer2<SourceProvider, SettingsProvider>(
+      builder: (context, sourceProvider, settingsProvider, _) {
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
+        }
 
         // Sort sources
         sources.sort((a, b) {
