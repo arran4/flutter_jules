@@ -1,5 +1,6 @@
 import '../models/session.dart';
 import '../models/time_filter.dart';
+import 'time_parser.dart';
 
 String timeAgo(DateTime dateTime) {
   final now = DateTime.now();

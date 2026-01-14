@@ -1,7 +1,7 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:flutter_jules/services/jules_client.dart';
+
 import 'package:flutter_jules/models/cache_metadata.dart';
 import 'package:flutter_jules/services/refresh_service.dart';
 import 'package:flutter_jules/services/settings_provider.dart';

@@ -223,6 +223,9 @@ class TimeFilterElement extends FilterElement {
       case TimeFilterType.between:
         typeStr = 'BETWEEN';
         break;
+      case TimeFilterType.inRange:
+        typeStr = 'IN';
+        break;
     }
 
     if (timeFilter.range != null) {

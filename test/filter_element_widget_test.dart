@@ -81,8 +81,7 @@ void main() {
         // TimeFilterElement
         final tf = TimeFilter(
           type: TimeFilterType.newerThan,
-          value: 5,
-          unit: TimeFilterUnit.days,
+          range: '5 days',
         );
         await pumpElement(tester, TimeFilterElement(tf));
         expect(find.byIcon(Icons.access_time), findsOneWidget);

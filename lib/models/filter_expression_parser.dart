@@ -203,37 +203,49 @@ class FilterExpressionParser {
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
       case 'CREATEDBEFORE':
       case 'CREATED_BEFORE':
-        return _createTimeFilter(args, TimeFilterType.olderThan, TimeFilterField.created);
+        return _createTimeFilter(
+            args, TimeFilterType.olderThan, TimeFilterField.created);
       case 'CREATEDAFTER':
       case 'CREATED_AFTER':
-        return _createTimeFilter(args, TimeFilterType.newerThan, TimeFilterField.created);
+        return _createTimeFilter(
+            args, TimeFilterType.newerThan, TimeFilterField.created);
       case 'CREATEDON':
       case 'CREATED_ON':
-        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.created, isSingleDay: true);
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.created,
+            isSingleDay: true);
       case 'CREATEDBETWEEN':
       case 'CREATED_BETWEEN':
-        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.created);
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.created);
       case 'UPDATEDBEFORE':
       case 'UPDATED_BEFORE':
       case 'BEFORE':
-        return _createTimeFilter(args, TimeFilterType.olderThan, TimeFilterField.updated);
+        return _createTimeFilter(
+            args, TimeFilterType.olderThan, TimeFilterField.updated);
       case 'UPDATEDAFTER':
       case 'UPDATED_AFTER':
       case 'AFTER':
-        return _createTimeFilter(args, TimeFilterType.newerThan, TimeFilterField.updated);
+        return _createTimeFilter(
+            args, TimeFilterType.newerThan, TimeFilterField.updated);
       case 'UPDATEDON':
       case 'UPDATED_ON':
-        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.updated, isSingleDay: true);
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.updated,
+            isSingleDay: true);
       case 'UPDATEDBETWEEN':
       case 'UPDATED_BETWEEN':
       case 'BETWEEN':
-        return _createTimeFilter(args, TimeFilterType.between, TimeFilterField.updated);
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.updated);
       case 'CREATEDIN':
       case 'CREATED_IN':
-        return _createTimeFilter(args, TimeFilterType.inRange, TimeFilterField.created);
+        return _createTimeFilter(
+            args, TimeFilterType.inRange, TimeFilterField.created);
       case 'UPDATEDIN':
       case 'UPDATED_IN':
-        return _createTimeFilter(args, TimeFilterType.inRange, TimeFilterField.updated);
+        return _createTimeFilter(
+            args, TimeFilterType.inRange, TimeFilterField.updated);
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');
@@ -277,7 +289,9 @@ class FilterExpressionParser {
     }
   }
 
-  TimeFilterElement? _createTimeFilter(List<String> args, TimeFilterType type, TimeFilterField field, {bool isSingleDay = false}) {
+  TimeFilterElement? _createTimeFilter(
+      List<String> args, TimeFilterType type, TimeFilterField field,
+      {bool isSingleDay = false}) {
     if (args.isEmpty) return null;
 
     if (type == TimeFilterType.inRange) {

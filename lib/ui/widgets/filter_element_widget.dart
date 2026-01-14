@@ -155,7 +155,7 @@ class FilterElementWidget extends StatelessWidget {
       if (tf.specificTime != null) {
         label = 'Time: ${tf.type.name} ${tf.specificTime}';
       } else {
-        label = 'Time: ${tf.type.name} ${tf.value} ${tf.unit.name}';
+        label = 'Time: ${tf.type.name} ${tf.range ?? ''}';
       }
       return _buildLeafElement(
         context,

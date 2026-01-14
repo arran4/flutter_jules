@@ -1,39 +1,9 @@
 class TimeParser {
   static DateTime? parse(String input) {
-    input = input.toLowerCase().trim();
-    final now = DateTime.now();
-
-    // Duration-based phrases (e.g., "last 24 hours")
-    final durationMatch =
-        RegExp(r'last (\d+) (hour|day|week|month|year)s?').firstMatch(input);
-    if (durationMatch != null) {
-      final value = int.parse(durationMatch.group(1)!);
-      final unit = durationMatch.group(2)!;
-      switch (unit) {
-        case 'hour':
-          return now.subtract(Duration(hours: value));
-        case 'day':
-          return now.subtract(Duration(days: value));
-        case 'week':
-          return now.subtract(Duration(days: value * 7));
-        case 'month':
-          return DateTime(now.year, now.month - value, now.day);
-        case 'year':
-          return DateTime(now.year - value, now.month, now.day);
-      }
+    final range = parseRange(input);
+    if (range != null) {
+      return range.start;
     }
-
-    // Relative time phrases
-    if (input.contains('yesterday')) {
-      return DateTime(now.year, now.month, now.day - 1);
-    }
-    if (input.contains('today')) {
-      return DateTime(now.year, now.month, now.day);
-    }
-    if (input.contains('tomorrow')) {
-      return DateTime(now.year, now.month, now.day + 1);
-    }
-
     return _parseDateTime(input);
   }
 
