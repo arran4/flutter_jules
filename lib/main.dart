@@ -15,6 +15,7 @@ import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
 import 'services/tags_provider.dart';
 import 'package:flutter/services.dart';
+import 'services/global_shortcut_focus_manager.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -105,7 +106,7 @@ void main() async {
               tagsProvider ?? TagsProvider(sessionProvider),
         ),
       ],
-      child: const MyApp(),
+      child: const GlobalShortcutFocusManager(child: MyApp()),
     ),
   );
 }
@@ -115,40 +116,51 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-            LogicalKeyboardKey.slash): const ShowHelpIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ShowHelpIntent: CallbackAction<ShowHelpIntent>(
-            onInvoke: (ShowHelpIntent intent) => showDialog(
-              context: context,
-              builder: (context) => const HelpDialog(),
-            ),
-          ),
+    final focusManager = GlobalShortcutFocusManager.of(context);
+
+    return Focus(
+      focusNode: focusManager.focusNode,
+      autofocus: true,
+      child: Shortcuts(
+        shortcuts: <LogicalKeySet, Intent>{
+          LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
+              LogicalKeyboardKey.slash): const ShowHelpIntent(),
         },
-        child: MaterialApp(
-          title: "Arran's Flutter based jules client",
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-          routes: {
-            '/settings': (context) => const SettingsScreen(),
-            '/sources_raw': (context) => const SourceListScreen(),
+        child: Actions(
+          actions: <Type, Action<Intent>>{
+            ShowHelpIntent: CallbackAction<ShowHelpIntent>(
+              onInvoke: (ShowHelpIntent intent) => showDialog(
+                context: context,
+                builder: (context) => const HelpDialog(),
+              ),
+            ),
           },
-          home: Consumer<AuthProvider>(
-            builder: (context, auth, _) {
-              if (auth.isLoading) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!auth.isAuthenticated) {
-                return const LoginScreen();
-              }
-              return const SessionListScreen();
+          child: GestureDetector(
+            onTap: () {
+              focusManager.requestFocus();
             },
+            child: MaterialApp(
+              title: "Arran's Flutter based jules client",
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+              routes: {
+                '/settings': (context) => const SettingsScreen(),
+                '/sources_raw': (context) => const SourceListScreen(),
+              },
+              home: Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  if (auth.isLoading) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (!auth.isAuthenticated) {
+                    return const LoginScreen();
+                  }
+                  return const SessionListScreen();
+                },
+              ),
+            ),
           ),
         ),
       ),
