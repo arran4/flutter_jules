@@ -115,43 +115,55 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-            LogicalKeyboardKey.slash): const ShowHelpIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ShowHelpIntent: CallbackAction<ShowHelpIntent>(
-            onInvoke: (ShowHelpIntent intent) => showDialog(
-              context: context,
-              builder: (context) => const HelpDialog(),
+    return Consumer<SettingsProvider>(
+      builder: (context, settingsProvider, child) {
+        return Shortcuts(
+          shortcuts: <LogicalKeySet, Intent>{
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
+                LogicalKeyboardKey.slash): const ShowHelpIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              ShowHelpIntent: CallbackAction<ShowHelpIntent>(
+                onInvoke: (ShowHelpIntent intent) => showDialog(
+                  context: context,
+                  builder: (context) => const HelpDialog(),
+                ),
+              ),
+            },
+            child: MaterialApp(
+              title: "Arran's Flutter based jules client",
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(
+                  primarySwatch: Colors.blue,
+                  useMaterial3: true,
+                  brightness: Brightness.light),
+              darkTheme: ThemeData(
+                  primarySwatch: Colors.blue,
+                  useMaterial3: true,
+                  brightness: Brightness.dark),
+              themeMode: settingsProvider.themeMode,
+              routes: {
+                '/settings': (context) => const SettingsScreen(),
+                '/sources_raw': (context) => const SourceListScreen(),
+              },
+              home: Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  if (auth.isLoading) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (!auth.isAuthenticated) {
+                    return const LoginScreen();
+                  }
+                  return const SessionListScreen();
+                },
+              ),
             ),
           ),
-        },
-        child: MaterialApp(
-          title: "Arran's Flutter based jules client",
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-          routes: {
-            '/settings': (context) => const SettingsScreen(),
-            '/sources_raw': (context) => const SourceListScreen(),
-          },
-          home: Consumer<AuthProvider>(
-            builder: (context, auth, _) {
-              if (auth.isLoading) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!auth.isAuthenticated) {
-                return const LoginScreen();
-              }
-              return const SessionListScreen();
-            },
-          ),
-        ),
-      ),
+        );
+      },
     );
   }
 }

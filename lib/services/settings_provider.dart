@@ -25,6 +25,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyFabVisibility = 'fab_visibility';
+  static const String keyThemeMode = 'theme_mode';
 
   // Filter Memory
   FilterElement? _lastFilter;
@@ -50,9 +51,11 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
+  ThemeMode _themeMode = ThemeMode.system;
 
   SharedPreferences? _prefs;
 
+  ThemeMode get themeMode => _themeMode;
   SessionRefreshPolicy get refreshOnOpen => _refreshOnOpen;
   SessionRefreshPolicy get refreshOnMessage => _refreshOnMessage;
   ListRefreshPolicy get refreshOnReturn => _refreshOnReturn;
@@ -116,6 +119,13 @@ class SettingsProvider extends ChangeNotifier {
       FabVisibility.values,
       FabVisibility.floating,
     );
+
+    _themeMode = _loadEnum(
+      keyThemeMode,
+      ThemeMode.values,
+      ThemeMode.system,
+    );
+
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -277,6 +287,12 @@ class SettingsProvider extends ChangeNotifier {
     _fabVisibility = visibility;
     notifyListeners();
     await _prefs?.setInt(keyFabVisibility, visibility.index);
+  }
+
+  Future<void> setThemeMode(ThemeMode mode) async {
+    _themeMode = mode;
+    notifyListeners();
+    await _prefs?.setInt(keyThemeMode, mode.index);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {

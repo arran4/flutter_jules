@@ -53,6 +53,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Divider(),
               _buildSectionHeader(context, 'Appearance'),
+              _buildThemeDropdown(context, settings),
               _buildFabDropdown(
                 context,
                 title: 'New Session Button',
@@ -638,6 +639,37 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Floating';
       case FabVisibility.off:
         return 'Off';
+    }
+  }
+
+  Widget _buildThemeDropdown(BuildContext context, SettingsProvider settings) {
+    return ListTile(
+      title: const Text('Theme'),
+      trailing: DropdownButton<ThemeMode>(
+        value: settings.themeMode,
+        onChanged: (newValue) {
+          if (newValue != null) {
+            settings.setThemeMode(newValue);
+          }
+        },
+        items: ThemeMode.values.map((mode) {
+          return DropdownMenuItem(
+            value: mode,
+            child: Text(_formatThemeMode(mode)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatThemeMode(ThemeMode mode) {
+    switch (mode) {
+      case ThemeMode.system:
+        return 'System';
+      case ThemeMode.light:
+        return 'Light';
+      case ThemeMode.dark:
+        return 'Dark';
     }
   }
 }
