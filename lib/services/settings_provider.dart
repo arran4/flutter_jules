@@ -25,6 +25,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyFabVisibility = 'fab_visibility';
+  static const String keyHideArchivedAndReadOnly =
+      'hide_archived_and_read_only';
 
   // Filter Memory
   FilterElement? _lastFilter;
@@ -50,6 +52,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
+  bool _hideArchivedAndReadOnly = true;
 
   SharedPreferences? _prefs;
 
@@ -65,6 +68,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
   FabVisibility get fabVisibility => _fabVisibility;
+  bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
@@ -116,6 +120,8 @@ class SettingsProvider extends ChangeNotifier {
       FabVisibility.values,
       FabVisibility.floating,
     );
+    _hideArchivedAndReadOnly =
+        _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -277,6 +283,12 @@ class SettingsProvider extends ChangeNotifier {
     _fabVisibility = visibility;
     notifyListeners();
     await _prefs?.setInt(keyFabVisibility, visibility.index);
+  }
+
+  Future<void> setHideArchivedAndReadOnly(bool value) async {
+    _hideArchivedAndReadOnly = value;
+    notifyListeners();
+    await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {

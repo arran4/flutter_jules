@@ -101,6 +101,8 @@ class SourceProvider extends ChangeNotifier {
                   name: source.name,
                   id: source.id,
                   githubRepo: enrichedRepo,
+                  isArchived: source.isArchived,
+                  isReadOnly: source.isReadOnly,
                 ),
               );
             } else {
@@ -205,6 +207,8 @@ class SourceProvider extends ChangeNotifier {
           name: sourceToRefresh.name,
           id: sourceToRefresh.id,
           githubRepo: enrichedRepo,
+          isArchived: sourceToRefresh.isArchived,
+          isReadOnly: sourceToRefresh.isReadOnly,
         );
 
         final oldItem = _items[index];
