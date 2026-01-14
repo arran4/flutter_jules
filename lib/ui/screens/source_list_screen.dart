@@ -3,7 +3,6 @@ import 'package:provider/provider.dart';
 import 'package:flutter_jules/models/filter_expression_parser.dart';
 import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
-import '../../utils/search_helper.dart';
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
@@ -11,12 +10,12 @@ import '../../services/source_provider.dart';
 import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../../services/cache_service.dart';
+import '../widgets/advanced_search_bar.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/new_session_dialog.dart';
 import '../../services/filter_bookmark_provider.dart';
+import '../../services/message_queue_provider.dart';
 import '../widgets/source_stats_dialog.dart';
-
-enum SortOption { recent, count, alphabetical }
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -26,19 +25,24 @@ class SourceListScreen extends StatefulWidget {
 }
 
 class _SourceListScreenState extends State<SourceListScreen> {
-  List<CachedItem<Source>> _filteredSources = [];
-  final TextEditingController _searchController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+
+  // Filter and sort state
+  FilterElement? _filterTree;
+  String _searchText = '';
+  List<SortOption> _activeSorts = [
+    const SortOption(SortField.updated, SortDirection.descending),
+    const SortOption(SortField.count, SortDirection.descending),
+    const SortOption(SortField.name, SortDirection.ascending)
+  ];
+  List<FilterToken> _availableSuggestions = [];
 
   final Map<String, int> _usageCount = {};
   final Map<String, DateTime> _lastUsed = {};
-  SortOption _currentSort = SortOption.recent;
 
   @override
   void initState() {
     super.initState();
-    _searchController.addListener(_onSearchChanged);
-
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -46,66 +50,45 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   @override
   void dispose() {
-    _searchController.dispose();
     _scrollController.dispose();
     super.dispose();
   }
 
   void _onSearchChanged() {
-    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sources = sourceProvider.items;
-
-    final filtered = filterAndSort<CachedItem<Source>>(
-      items: sources,
-      query: _searchController.text,
-      accessors: [
-        (item) => item.data.githubRepo?.repo ?? '',
-        (item) => item.data.name,
-        (item) => item.data.githubRepo?.owner ?? '',
-      ],
-    );
-
-    setState(() {
-      _filteredSources = _sortSources(filtered);
-    });
+    setState(() {});
   }
 
   List<CachedItem<Source>> _sortSources(List<CachedItem<Source>> sources) {
     final sorted = List<CachedItem<Source>>.from(sources);
     sorted.sort((a, b) {
-      final nameA = a.data.name;
-      final nameB = b.data.name;
-
-      switch (_currentSort) {
-        case SortOption.recent:
-          final lastUsedA = _lastUsed[nameA];
-          final lastUsedB = _lastUsed[nameB];
-          if (lastUsedA == null && lastUsedB == null) {
-            final countA = _usageCount[nameA] ?? 0;
-            final countB = _usageCount[nameB] ?? 0;
-            if (countA != countB) return countB.compareTo(countA);
-            return _compareAlphabetical(a, b);
-          }
-          if (lastUsedA == null) return 1;
-          if (lastUsedB == null) return -1;
-          final cmp = lastUsedB.compareTo(lastUsedA);
-          if (cmp != 0) return cmp;
-          break;
-        case SortOption.count:
-          final countA = _usageCount[nameA] ?? 0;
-          final countB = _usageCount[nameB] ?? 0;
-          final cmp = countB.compareTo(countA);
-          if (cmp != 0) return cmp;
-
-          final lastUsedA = _lastUsed[nameA];
-          final lastUsedB = _lastUsed[nameB];
-          if (lastUsedA != null && lastUsedB != null) {
-            final timeCmp = lastUsedB.compareTo(lastUsedA);
-            if (timeCmp != 0) return timeCmp;
-          }
-          break;
-        case SortOption.alphabetical:
-          break;
+      for (final sort in _activeSorts) {
+        int cmp = 0;
+        switch (sort.field) {
+          case SortField.name:
+            cmp = _compareAlphabetical(a, b);
+            break;
+          case SortField.updated: // For 'recent'
+            final lastUsedA = _lastUsed[a.data.name];
+            final lastUsedB = _lastUsed[b.data.name];
+            if (lastUsedA != null && lastUsedB != null) {
+              cmp = lastUsedA.compareTo(lastUsedB);
+            } else if (lastUsedA != null) {
+              cmp = 1;
+            } else if (lastUsedB != null) {
+              cmp = -1;
+            }
+            break;
+          case SortField.count:
+            final countA = _usageCount[a.data.name] ?? 0;
+            final countB = _usageCount[b.data.name] ?? 0;
+            cmp = countA.compareTo(countB);
+            break;
+          default:
+            break;
+        }
+        if (cmp != 0) {
+          return sort.direction == SortDirection.ascending ? cmp : -cmp;
+        }
       }
       return _compareAlphabetical(a, b);
     });
@@ -124,15 +107,56 @@ class _SourceListScreenState extends State<SourceListScreen> {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
-    // Fetch sources if empty, but usually SessionListScreen triggered it.
-    // Just ensure we have data or are loading.
     if (sourceProvider.items.isEmpty && !sourceProvider.isLoading) {
       await sourceProvider.fetchSources(auth.client, authToken: auth.token);
     }
 
-    // Load usage stats from SessionProvider
+    _updateSuggestions(sourceProvider.items.map((i) => i.data).toList());
     _processSessions();
-    _onSearchChanged(); // Update filter
+    _onSearchChanged();
+  }
+
+  void _updateSuggestions(List<Source> sources) {
+    final Set<FilterToken> suggestions = {};
+    final Set<String> languages = {};
+
+    for (final source in sources) {
+      if (source.githubRepo?.primaryLanguage != null &&
+          source.githubRepo!.primaryLanguage!.isNotEmpty) {
+        languages.add(source.githubRepo!.primaryLanguage!);
+      }
+    }
+
+    suggestions.addAll([
+      const FilterToken(
+          id: 'flag:is:private',
+          type: FilterType.flag,
+          label: 'Private',
+          value: 'is:private'),
+      const FilterToken(
+          id: 'flag:is:fork',
+          type: FilterType.flag,
+          label: 'Fork',
+          value: 'is:fork'),
+      const FilterToken(
+          id: 'flag:is:archived',
+          type: FilterType.flag,
+          label: 'Archived',
+          value: 'is:archived'),
+    ]);
+
+    for (final lang in languages) {
+      suggestions.add(FilterToken(
+          id: 'flag:lang:$lang',
+          type: FilterType.flag,
+          label: 'Lang: $lang',
+          value: 'lang:${lang.toLowerCase()}'));
+    }
+
+    setState(() {
+      _availableSuggestions = suggestions.toList()
+        ..sort((a, b) => a.label.compareTo(b.label));
+    });
   }
 
   void _processSessions() {
@@ -243,26 +267,61 @@ class _SourceListScreenState extends State<SourceListScreen> {
         final error = sourceProvider.error;
         final lastFetchTime = sourceProvider.lastFetchTime;
 
-        // If sources updated (e.g. background fetch finished), update our filtered list
-        WidgetsBinding.instance.addPostFrameCallback((_) {
-          if (mounted &&
-              sourceProvider.items.length != (_filteredSources.length) &&
-              _searchController.text.isEmpty) {
-            // Trigger re-filter if data changed and we aren't actively searching
+        final filteredSources = sources.where((item) {
+          final source = item.data;
+          final metadata = item.metadata;
+
+          if (_searchText.isNotEmpty) {
+            final query = _searchText.toLowerCase();
+            if (!(source.name.toLowerCase().contains(query) ||
+                (source.githubRepo?.repo.toLowerCase().contains(query) ??
+                    false) ||
+                (source.githubRepo?.owner.toLowerCase().contains(query) ??
+                    false) ||
+                (source.githubRepo?.description?.toLowerCase().contains(query) ??
+                    false))) {
+              return false;
+            }
           }
-        });
 
-        var filtered = filterAndSort<CachedItem<Source>>(
-          items: sources,
-          query: _searchController.text,
-          accessors: [
-            (item) => item.data.githubRepo?.repo ?? '',
-            (item) => item.data.name,
-            (item) => item.data.githubRepo?.owner ?? '',
-          ],
-        );
+          if (_filterTree == null) return true;
 
-        final displaySources = _sortSources(filtered);
+          final labels = <String>{};
+          if (source.githubRepo?.isPrivate ?? false) labels.add('is:private');
+          if (source.githubRepo?.isFork ?? false) labels.add('is:fork');
+          if (source.githubRepo?.isArchived ?? false) labels.add('is:archived');
+          if (source.githubRepo?.primaryLanguage != null) {
+            labels.add(
+                'lang:${source.githubRepo!.primaryLanguage!.toLowerCase()}');
+          }
+
+          final synthMetadata = CacheMetadata(
+            firstSeen: metadata.firstSeen,
+            lastRetrieved: metadata.lastRetrieved,
+            isNew: metadata.isNew,
+            isUpdated: metadata.isUpdated,
+            labels: labels,
+          );
+
+          final synthSession = Session(
+            id: source.id,
+            name: source.name,
+            title: source.githubRepo?.repo ?? source.name,
+            prompt: source.githubRepo?.description ?? '',
+            sourceContext: SourceContext(source: source.name),
+          );
+
+          final context = FilterContext(
+            session: synthSession,
+            metadata: synthMetadata,
+            queueProvider:
+                Provider.of<MessageQueueProvider>(context, listen: false),
+          );
+
+          return _filterTree!.evaluate(context).isIn;
+        }).toList();
+
+        final displaySources = _sortSources(filteredSources);
 
         return Scaffold(
           appBar: AppBar(
@@ -278,32 +337,6 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
                 onPressed: _refreshData,
-              ),
-              PopupMenuButton<SortOption>(
-                initialValue: _currentSort,
-                icon: const Icon(Icons.sort),
-                tooltip: 'Sort by',
-                onSelected: (SortOption item) {
-                  setState(() {
-                    _currentSort = item;
-                    _onSearchChanged();
-                  });
-                },
-                itemBuilder: (BuildContext context) =>
-                    <PopupMenuEntry<SortOption>>[
-                  const PopupMenuItem<SortOption>(
-                    value: SortOption.recent,
-                    child: Text('Most Recently Used'),
-                  ),
-                  const PopupMenuItem<SortOption>(
-                    value: SortOption.count,
-                    child: Text('Usage Count'),
-                  ),
-                  const PopupMenuItem<SortOption>(
-                    value: SortOption.alphabetical,
-                    child: Text('Alphabetical'),
-                  ),
-                ],
               ),
               PopupMenuButton<String>(
                 onSelected: (value) {
@@ -344,16 +377,26 @@ class _SourceListScreenState extends State<SourceListScreen> {
                   ? Center(child: Text('Error: $error'))
                   : Column(
                       children: [
-                        Padding(
-                          padding: const EdgeInsets.all(8.0),
-                          child: TextField(
-                            controller: _searchController,
-                            decoration: const InputDecoration(
-                              labelText: 'Search Repositories',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.search),
-                            ),
-                          ),
+                        AdvancedSearchBar(
+                          filterTree: _filterTree,
+                          onFilterTreeChanged: (tree) {
+                            setState(() {
+                              _filterTree = tree;
+                            });
+                          },
+                          searchText: _searchText,
+                          onSearchChanged: (text) {
+                            setState(() {
+                              _searchText = text;
+                            });
+                          },
+                          availableSuggestions: _availableSuggestions,
+                          activeSorts: _activeSorts,
+                          onSortsChanged: (sorts) {
+                            setState(() {
+                              _activeSorts = sorts;
+                            });
+                          },
                         ),
                         if (lastFetchTime != null)
                           Padding(
