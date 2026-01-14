@@ -1492,6 +1492,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         );
                       },
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.source),
+                      tooltip: 'Manage Sources',
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/sources_raw');
+                      },
+                    ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'new_session') {
