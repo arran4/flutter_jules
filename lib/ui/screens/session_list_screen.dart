@@ -1548,19 +1548,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           listen: false,
                         ).isOffline;
                         return [
-                          if (settings.fabVisibility == FabVisibility.appBar)
-                            const PopupMenuItem(
-                              value: 'new_session',
-                              child: Row(
-                                children: [
-                                  Icon(Icons.add),
-                                  SizedBox(width: 8),
-                                  Text('New Session'),
-                                ],
-                              ),
+                          const PopupMenuItem(
+                            value: 'new_session',
+                            child: Row(
+                              children: [
+                                Icon(Icons.add),
+                                SizedBox(width: 8),
+                                Text('New Session'),
+                              ],
                             ),
-                          if (settings.fabVisibility == FabVisibility.appBar)
-                            const PopupMenuDivider(),
+                          ),
+                          const PopupMenuDivider(),
                           const PopupMenuItem(
                             value: 'full_refresh',
                             child: Row(

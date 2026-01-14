@@ -751,11 +751,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
-            IconButton(
-              icon: const Icon(Icons.add_circle_outline),
-              tooltip: 'New Session',
-              onPressed: _createNewSessionFromCurrent,
-            ),
             if (_session.outputs != null &&
                 _session.outputs!.any((o) => o.pullRequest != null))
               IconButton(
@@ -906,6 +901,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 }
               },
               itemBuilder: (context) => [
+                PopupMenuItem(
+                  onTap: _createNewSessionFromCurrent,
+                  child: const Row(
+                    children: [
+                      Icon(Icons.add_circle_outline),
+                      SizedBox(width: 8),
+                      Text('New Session'),
+                    ],
+                  ),
+                ),
+                const PopupMenuDivider(),
                 if (_session.outputs != null &&
                     _session.outputs!.any((o) => o.pullRequest != null))
                   const PopupMenuItem(
