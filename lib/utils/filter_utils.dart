@@ -17,8 +17,7 @@ class FilterUtils {
   }) {
     if (searchText.isNotEmpty) {
       final query = searchText.toLowerCase();
-      final matches =
-          (session.title?.toLowerCase().contains(query) ?? false) ||
+      final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
           (session.name.toLowerCase().contains(query)) ||
           (session.id.toLowerCase().contains(query)) ||
           (session.state.toString().toLowerCase().contains(query));
@@ -29,24 +28,18 @@ class FilterUtils {
 
     // Filter Tokens Logic
     // Group by Type
-    final statusFilters = activeFilters
-        .where((f) => f.type == FilterType.status)
-        .toList();
-    final sourceFilters = activeFilters
-        .where((f) => f.type == FilterType.source)
-        .toList();
-    final flagFilters = activeFilters
-        .where((f) => f.type == FilterType.flag)
-        .toList();
-    final textFilters = activeFilters
-        .where((f) => f.type == FilterType.text)
-        .toList();
-    final ciStatusFilters = activeFilters
-        .where((f) => f.type == FilterType.ciStatus)
-        .toList();
-    final timeFilters = activeFilters
-        .where((f) => f.type == FilterType.time)
-        .toList();
+    final statusFilters =
+        activeFilters.where((f) => f.type == FilterType.status).toList();
+    final sourceFilters =
+        activeFilters.where((f) => f.type == FilterType.source).toList();
+    final flagFilters =
+        activeFilters.where((f) => f.type == FilterType.flag).toList();
+    final textFilters =
+        activeFilters.where((f) => f.type == FilterType.text).toList();
+    final ciStatusFilters =
+        activeFilters.where((f) => f.type == FilterType.ciStatus).toList();
+    final timeFilters =
+        activeFilters.where((f) => f.type == FilterType.time).toList();
 
     // 1. Status: OR logic for Include, AND logic for Exclude
     if (statusFilters.isNotEmpty) {

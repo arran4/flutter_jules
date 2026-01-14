@@ -11,6 +11,17 @@
     ]
   },
   {
+    "name": "Pending",
+    "description": "Sessions queued for creation or with pending messages.",
+    "expression": "Pending()",
+    "sorts": [
+      {
+        "field": "created",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
     "expression": "OR(New() Updated() State(AWAITING_PLAN_APPROVAL))",

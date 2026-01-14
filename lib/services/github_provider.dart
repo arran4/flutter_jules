@@ -40,6 +40,8 @@ class GithubProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<String?> getToken() async => _apiKey;
+
   Future<GitHubPrResponse?> getPrStatus(
     String owner,
     String repo,

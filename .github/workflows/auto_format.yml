@@ -1,8 +1,8 @@
 name: Auto-format Dart Code
 
 on:
-  push:
-    branches: [ "main" ]
+  pull_request:
+    types: [opened, synchronize]
 
 permissions:
   contents: write
@@ -27,7 +27,7 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           commit-message: "Auto-format Dart code"
-          branch: "auto-format"
+          branch: "auto-format-${{ github.head_ref }}"
           delete-branch: true
-          title: "Auto-format Dart code"
-          body: "The Dart code has been automatically formatted."
+          title: "Auto-format for #${{ github.event.pull_request.number }}"
+          body: "This PR automatically formats the Dart code for #${{ github.event.pull_request.number }}."

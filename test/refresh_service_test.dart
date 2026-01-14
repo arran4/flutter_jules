@@ -1,12 +1,15 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_jules/services/jules_client.dart';
+import 'package:flutter_jules/models/cache_metadata.dart';
 import 'package:flutter_jules/services/refresh_service.dart';
 import 'package:flutter_jules/services/settings_provider.dart';
 import 'package:flutter_jules/services/session_provider.dart';
 import 'package:flutter_jules/services/source_provider.dart';
 import 'package:flutter_jules/services/auth_provider.dart';
 import 'package:flutter_jules/services/notification_service.dart';
+import 'package:flutter_jules/services/cache_service.dart';
 import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/session.dart';
 import 'package:flutter_jules/models/enums.dart';
@@ -23,6 +26,20 @@ class MockAuthProvider extends Mock implements AuthProvider {}
 
 class MockNotificationService extends Mock implements NotificationService {}
 
+import 'package:flutter_jules/services/message_queue_provider.dart';
+import 'package:flutter_jules/services/activity_provider.dart';
+import 'package:mockito/annotations.dart';
+import 'refresh_service_test.mocks.dart';
+
+@GenerateNiceMocks([
+  MockSpec<SettingsProvider>(),
+  MockSpec<SessionProvider>(),
+  MockSpec<SourceProvider>(),
+  MockSpec<AuthProvider>(),
+  MockSpec<NotificationService>(),
+  MockSpec<ActivityProvider>(),
+  MockSpec<MessageQueueProvider>(),
+])
 void main() {
   late RefreshService refreshService;
   late MockSettingsProvider mockSettingsProvider;
@@ -30,6 +47,8 @@ void main() {
   late MockSourceProvider mockSourceProvider;
   late MockAuthProvider mockAuthProvider;
   late MockNotificationService mockNotificationService;
+  late MockActivityProvider mockActivityProvider;
+  late MockMessageQueueProvider mockMessageQueueProvider;
 
   setUp(() {
     mockSettingsProvider = MockSettingsProvider();
@@ -37,6 +56,8 @@ void main() {
     mockSourceProvider = MockSourceProvider();
     mockAuthProvider = MockAuthProvider();
     mockNotificationService = MockNotificationService();
+    mockActivityProvider = MockActivityProvider();
+    mockMessageQueueProvider = MockMessageQueueProvider();
 
     when(mockSettingsProvider.schedules).thenReturn([]);
     when(mockSessionProvider.items).thenReturn([]);
@@ -47,6 +68,8 @@ void main() {
       mockSourceProvider,
       mockAuthProvider,
       mockNotificationService,
+      mockMessageQueueProvider,
+      mockActivityProvider,
     );
   });
 
@@ -68,6 +91,8 @@ void main() {
         mockSourceProvider,
         mockAuthProvider,
         mockNotificationService,
+        mockMessageQueueProvider,
+        mockActivityProvider,
       );
 
       // Should not have been called yet
@@ -97,7 +122,7 @@ void main() {
       name: 'Test Schedule',
       intervalInMinutes: 1,
       isEnabled: false,
-      refreshPolicy: ListRefreshPolicy.quick,
+      refreshPolicy: ListRefreshPolicy.quick, // Added required arg
     );
     when(mockSettingsProvider.schedules).thenReturn([schedule]);
 
@@ -109,6 +134,8 @@ void main() {
         mockSourceProvider,
         mockAuthProvider,
         mockNotificationService,
+        mockMessageQueueProvider,
+        mockActivityProvider,
       );
 
       // Advance the timer by the interval
@@ -126,7 +153,8 @@ void main() {
 
   test('compares sessions and sends notifications', () {
     final oldSession = Session(
-      id: 'session1',
+      id: '1',
+      prompt: 'test',
       name: 'session1',
       prompt: 'Test Prompt',
       state: SessionState.IN_PROGRESS,
@@ -135,7 +163,8 @@ void main() {
         id: 'session1',
         name: 'session1',
         prompt: 'Test Prompt',
-        state: SessionState.COMPLETED);
+      state: SessionState.COMPLETED,
+    );
 
     when(mockSettingsProvider.notifyOnCompletion).thenReturn(true);
     when(mockSettingsProvider.notifyOnAttention).thenReturn(false);
@@ -149,12 +178,8 @@ void main() {
 
     when(
       mockSessionProvider.items,
-    ).thenReturn(newSessions
-        .map((e) => CachedItem(
-            e,
-            CacheMetadata(
-                firstSeen: DateTime.now(), lastRetrieved: DateTime.now())))
-        .toList());
+    ).thenReturn(
+        newSessions.map((e) => CachedItem(firstSeen: DateTime.now(), lastRetrieved: DateTime.now())).toList());
 
     // ignore: invalid_use_of_protected_member
     refreshService.dispose(); // Dispose the old service and its timers
@@ -165,11 +190,13 @@ void main() {
       mockSourceProvider,
       mockAuthProvider,
       mockNotificationService,
+      mockMessageQueueProvider,
+      mockActivityProvider,
     );
 
     // Manually trigger the comparison
     // ignore: protected_member_use
-    (refreshService as dynamic)._compareSessions(oldSessions, newSessions);
+    refreshService.compareSessions(oldSessions, newSessions);
 
     verify(
       mockNotificationService.showNotification(

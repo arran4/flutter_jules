@@ -140,9 +140,8 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules = decodedList
-            .map((json) => RefreshSchedule.fromJson(json))
-            .toList();
+        _schedules =
+            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }
@@ -177,6 +176,12 @@ class SettingsProvider extends ChangeNotifier {
         name: 'Quick Refresh',
         intervalInMinutes: 15,
         refreshPolicy: ListRefreshPolicy.quick,
+      ),
+      RefreshSchedule(
+        name: 'Send Pending Messages',
+        intervalInMinutes: 5,
+        taskType: RefreshTaskType.sendPendingMessages,
+        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
       ),
     ];
   }
