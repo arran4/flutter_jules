@@ -20,6 +20,7 @@ import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
+import 'ui/widgets/notification_overlay.dart';
 
 class ShowHelpIntent extends Intent {
   const ShowHelpIntent();
@@ -33,6 +34,7 @@ void main() async {
     MultiProvider(
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
+        ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
@@ -43,12 +45,13 @@ void main() async {
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider2<CacheService, GithubProvider,
-            SessionProvider>(
+        ChangeNotifierProxyProvider3<CacheService, GithubProvider,
+            NotificationProvider, SessionProvider>(
           create: (_) => SessionProvider(),
-          update: (_, cache, github, session) => session!
+          update: (_, cache, github, notifications, session) => session!
             ..setCacheService(cache)
-            ..setGithubProvider(github),
+            ..setGithubProvider(github)
+            ..setNotificationProvider(notifications),
         ),
         ChangeNotifierProxyProvider<CacheService, SourceProvider>(
           create: (_) => SourceProvider(),
@@ -147,7 +150,7 @@ class MyApp extends StatelessWidget {
               if (!auth.isAuthenticated) {
                 return const LoginScreen();
               }
-              return const SessionListScreen();
+              return NotificationOverlay(child: const SessionListScreen());
             },
           ),
         ),
