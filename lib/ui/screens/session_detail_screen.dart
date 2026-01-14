@@ -767,6 +767,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       .pullRequest!;
                   launchUrl(Uri.parse(pr.url));
                 },
+              )
+            else if (_session.state == SessionState.COMPLETED &&
+                _session.url != null)
+              IconButton(
+                icon: const Icon(Icons.open_in_new, color: Colors.green),
+                tooltip: 'Open in Jules',
+                onPressed: () {
+                  launchUrl(Uri.parse(_session.url!));
+                },
               ),
             IconButton(
               icon: const Icon(Icons.data_object),
@@ -1202,6 +1211,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
+    final bool showJulesNotice =
+        !hasPr && _session.state == SessionState.COMPLETED;
+
     // Group Activities
     final List<ActivityListItem> groupedItems = [];
     ActivityGroupWrapper? currentGroup;
@@ -1314,8 +1326,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount:
-          finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
+      itemCount: finalItems.length +
+          (hasPr ? 2 : 0) +
+          (showJulesNotice ? 2 : 0) +
+          1, // +1 for Last Updated Status
       itemBuilder: (context, index) {
         if (index == 0) {
           // Visual Bottom: Last Updated Status
@@ -1348,9 +1362,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
             return _buildPrNotice(context);
           }
+        } else if (showJulesNotice) {
+          if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
+            return _buildJulesNotice(context);
+          }
         }
 
-        final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
+        int listIndex = adjIndex;
+        if (hasPr || showJulesNotice) {
+          listIndex = adjIndex - 1;
+        }
 
         if (listIndex < 0 || listIndex >= finalItems.length) {
           return const SizedBox.shrink();
@@ -1803,6 +1824,65 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             }
             return item;
           }).toList(),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildJulesNotice(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        color: Colors.green.shade50,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Colors.green.shade100),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            title: const Text(
+              "Session Complete",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            leading:
+                const Icon(Icons.check_circle_outline, color: Colors.green),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 16.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Open Jules to publish a PR for this session.",
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text("Open Jules"),
+                        onPressed: () {
+                          if (_session.url != null) {
+                            launchUrl(Uri.parse(_session.url!));
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
