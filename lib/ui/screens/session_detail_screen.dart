@@ -1090,10 +1090,26 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              itemBuilder: (context) => [
-                if (_session.outputs != null &&
-                    _session.outputs!.any((o) => o.pullRequest != null))
-                  const PopupMenuItem(
+              itemBuilder: (context) {
+                final settings =
+                    Provider.of<SettingsProvider>(context, listen: false);
+                return [
+                  if (settings.fabVisibility == FabVisibility.appBar)
+                    PopupMenuItem(
+                      onTap: _createNewSessionFromCurrent,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add_circle_outline),
+                          SizedBox(width: 8),
+                          Text('New Session'),
+                        ],
+                      ),
+                    ),
+                  if (settings.fabVisibility == FabVisibility.appBar)
+                    const PopupMenuDivider(),
+                  if (_session.outputs != null &&
+                      _session.outputs!.any((o) => o.pullRequest != null))
+                    const PopupMenuItem(
                     value: 'pr_back',
                     child: Row(
                       children: [
