@@ -22,7 +22,6 @@ import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
-import '../widgets/note_dialog.dart';
 import 'dart:convert';
 import 'package:collection/collection.dart';
 import '../../services/exceptions.dart';
@@ -50,11 +49,136 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   bool _isRefreshDisabled = false; // Track refresh button disabled state
 
+  // Note State
+  bool _isNoteVisible = false;
+  bool _isNoteEditing = false;
+  final TextEditingController _noteController = TextEditingController();
+
   // Concurrency Control
   Future<void> _apiLock = Future.value();
   int _busyCount = 0;
 
   final FocusNode _messageFocusNode = FocusNode();
+
+  Future<void> _updateNote(String content) async {
+    if (!mounted) return;
+
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final newNote = Note(
+      content: content,
+      updatedDate: DateTime.now().toIso8601String(),
+      version: (_session.note?.version ?? 0) + 1,
+    );
+
+    // Update local state first for responsiveness
+    final updatedSession = _session.copyWith(note: newNote);
+    setState(() {
+      _session = updatedSession;
+    });
+
+    // Then update the provider (which will save to cache)
+    await sessionProvider.updateSession(
+      updatedSession,
+      authToken: authProvider.token,
+    );
+  }
+
+  Widget _buildNotesSection() {
+    if (!_isNoteVisible) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "Notes",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  if (_isNoteEditing)
+                    TextButton.icon(
+                      icon: const Icon(Icons.done, size: 16),
+                      label: const Text('Done'),
+                      onPressed: () {
+                        _updateNote(_noteController.text);
+                        setState(() {
+                          _isNoteEditing = false;
+                        });
+                      },
+                    )
+                  else
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text('Edit'),
+                      onPressed: () {
+                        setState(() {
+                          _isNoteEditing = true;
+                        });
+                      },
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _isNoteVisible = false;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_isNoteEditing)
+                TextField(
+                  controller: _noteController,
+                  autofocus: true,
+                  maxLines: null, // Allows for multiline input
+                  keyboardType: TextInputType.multiline,
+                  decoration: const InputDecoration(
+                    hintText: 'Add your notes here...',
+                    border: InputBorder.none,
+                  ),
+                )
+              else if (_session.note?.content.isNotEmpty ?? false)
+                MarkdownBody(data: _session.note!.content)
+              else
+                const Text(
+                  'No notes added yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              if (!_isNoteEditing && _session.note != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<T> _locked<T>(Future<T> Function() op) {
     setState(() => _busyCount++);
@@ -84,6 +208,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _noteController.text = widget.session.note?.content ?? '';
     _messageFocusNode.onKeyEvent = (node, event) {
       if (event is! KeyDownEvent) {
         return KeyEventResult.ignored;
@@ -181,6 +306,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _noteController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
   }
@@ -663,6 +789,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  void _toggleNoteVisibility() {
+    setState(() {
+      _isNoteVisible = !_isNoteVisible;
+      if (_isNoteVisible && (_session.note?.content.isEmpty ?? true)) {
+        _isNoteEditing = true;
+      }
+    });
+  }
+
   Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
@@ -745,31 +880,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-  Future<void> _editNote() async {
-    final newNote = await showDialog<Note>(
-      context: context,
-      builder: (context) => NoteDialog(note: _session.note),
-    );
-
-    if (newNote != null) {
-      if (!mounted) return;
-      final sessionProvider = Provider.of<SessionProvider>(
-        context,
-        listen: false,
-      );
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      // Update local state first for responsiveness
-      setState(() {
-        _session = _session.copyWith(note: newNote);
-      });
-      // Then update the provider (which will save to cache)
-      sessionProvider.updateSession(
-        _session, // already updated
-        authToken: authProvider.token,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -805,6 +915,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
+            IconButton(
+              icon: Icon(
+                (_session.note?.content.isEmpty ?? true)
+                    ? Icons.note_add_outlined
+                    : _isNoteVisible
+                        ? Icons.speaker_notes_off_outlined
+                        : Icons.speaker_notes_outlined,
+              ),
+              tooltip: (_session.note?.content.isEmpty ?? true)
+                  ? 'Add Note'
+                  : _isNoteVisible
+                      ? 'Hide Note'
+                      : 'View Note',
+              onPressed: _toggleNoteVisibility,
+            ),
             IconButton(
               icon: const Icon(Icons.add_circle_outline),
               tooltip: 'New Session',
@@ -1191,6 +1316,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           TagManagementDialog(session: _session),
                     );
                   },
+                ),
+                 PopupMenuItem(
+                  onTap: _toggleNoteVisibility,
+                  child: Row(
+                    children: [
+                      Icon(
+                        (_session.note?.content.isEmpty ?? true)
+                            ? Icons.note_add_outlined
+                            : _isNoteVisible
+                                ? Icons.speaker_notes_off_outlined
+                                : Icons.speaker_notes_outlined,
+                        color: Colors.grey,
+                      ),
+                      const SizedBox(width: 8),
+                      Text(
+                        (_session.note?.content.isEmpty ?? true)
+                            ? 'Add Note'
+                            : _isNoteVisible
+                                ? 'Hide Note'
+                                : 'View Note',
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
@@ -2010,55 +2158,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Notes",
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const Spacer(),
-                                TextButton.icon(
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Edit'),
-                                  onPressed: _editNote,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (_session.note?.content.isNotEmpty ?? false)
-                              MarkdownBody(data: _session.note!.content)
-                            else
-                              const Text(
-                                'No notes added yet.',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            if (_session.note != null) ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
+                    _buildNotesSection(),
                   ],
                 ),
               ),
