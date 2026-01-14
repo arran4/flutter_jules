@@ -132,6 +132,7 @@ class MessageQueueProvider extends ChangeNotifier {
     String content, {
     String? reason,
     bool isDraft = false,
+    String? requestId,
   }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -140,6 +141,7 @@ class MessageQueueProvider extends ChangeNotifier {
       createdAt: DateTime.now(),
       queueReason: reason,
       isDraft: isDraft,
+      requestId: requestId,
     );
     _queue.add(message);
     _saveQueue();
@@ -151,6 +153,7 @@ class MessageQueueProvider extends ChangeNotifier {
     Session session, {
     String? reason,
     bool isDraft = false,
+    String? requestId,
   }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -161,6 +164,7 @@ class MessageQueueProvider extends ChangeNotifier {
       metadata: session.toJson(),
       queueReason: reason,
       isDraft: isDraft,
+      requestId: requestId ?? DateTime.now().microsecondsSinceEpoch.toString(),
     );
     _queue.add(message);
     _saveQueue();
@@ -197,7 +201,17 @@ class MessageQueueProvider extends ChangeNotifier {
   }
 
   void deleteMessage(String id) {
+    final toDelete = _queue.where((m) => m.id == id).toList();
+    if (toDelete.isEmpty) return;
+
+    final msg = toDelete.first;
     _queue.removeWhere((m) => m.id == id);
+
+    // If it's a session creation, also remove dependent messages
+    if (msg.type == QueuedMessageType.sessionCreation && msg.requestId != null) {
+      _queue.removeWhere((m) => m.requestId == msg.requestId);
+    }
+
     _saveQueue();
     notifyListeners();
   }
@@ -243,72 +257,72 @@ class MessageQueueProvider extends ChangeNotifier {
     Function(String)? onMessageSent,
     Function(Session)? onSessionCreated,
     Function(String, Object)? onError,
+    int limit = 0, // 0 for unlimited
   }) async {
     if (_isOffline) return;
 
-    List<QueuedMessage> remaining = List.from(
-      _queue.where((m) => !m.isDraft),
-    ); // Skip drafts
-    List<QueuedMessage> toRemove = [];
+    var toProcess = _queue.where((m) => !m.isDraft).toList();
+    toProcess.sort((a, b) => a.createdAt.compareTo(b.createdAt));
 
-    // Sort by creation time to send in order
-    remaining.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    if (limit > 0 && toProcess.length > limit) {
+      toProcess = toProcess.take(limit).toList();
+    }
 
-    for (final msg in remaining) {
+    for (final msg in toProcess) {
       try {
-        if (msg.type == QueuedMessageType.sessionCreation ||
-            msg.sessionId == 'new_session') {
+        if (msg.type == QueuedMessageType.sessionCreation) {
           Session sessionToCreate;
           if (msg.metadata != null) {
             sessionToCreate = Session.fromJson(msg.metadata!);
           } else {
-            // Fallback: Create minimal session from content
             sessionToCreate = Session(
-              id: '',
-              name: '',
-              prompt: msg.content,
-              sourceContext: SourceContext(source: ''),
-            );
+                id: '',
+                name: '',
+                prompt: msg.content,
+                sourceContext: SourceContext(source: ''));
           }
 
           final createdSession = await client.createSession(sessionToCreate);
-          if (onSessionCreated != null) {
-            onSessionCreated(createdSession);
+          onSessionCreated?.call(createdSession);
+
+          // Important: Find all related messages by requestId and update their sessionId
+          if (msg.requestId != null) {
+            for (var i = 0; i < _queue.length; i++) {
+              if (_queue[i].requestId == msg.requestId) {
+                _queue[i] =
+                    _queue[i].copyWith(sessionId: createdSession.name);
+              }
+            }
           }
+          // Remove the session creation message itself
+          _queue.removeWhere((m) => m.id == msg.id);
         } else {
-          await client.sendMessage(msg.sessionId, msg.content);
-        }
-        toRemove.add(msg);
-        if (onMessageSent != null) onMessageSent(msg.id);
-      } catch (e) {
-        bool recovered = false;
-        // Recovery logic is likely not needed if we handle new_session above, but keeping for safety
-        // ... (Actually the above logic replaces the catch block recovery for 404 on new_session)
-
-        if (!recovered) {
-          if (onError != null) onError(msg.id, e);
-
-          // Record error on the message
-          final index = _queue.indexWhere((m) => m.id == msg.id);
-          if (index != -1) {
-            final currentErrors = List<String>.from(
-              _queue[index].processingErrors,
-            );
-            currentErrors.add(e.toString());
-            _queue[index] = _queue[index].copyWith(
-              processingErrors: currentErrors,
-            );
-            await _saveQueue();
-            notifyListeners();
+          // If a message for a new session is here, but the creation request isn't,
+          // it's an orphan. We should probably mark it as an error.
+          if (msg.sessionId == 'new_session') {
+            throw JulesException(
+                "Orphaned message for a new session. No creation request found.");
           }
-
-          // Stop on first error to preserve order
-          break;
+          await client.sendMessage(msg.sessionId, msg.content);
+          _queue.removeWhere((m) => m.id == msg.id);
+          onMessageSent?.call(msg.id);
         }
+      } catch (e) {
+        if (onError != null) onError(msg.id, e);
+
+        final index = _queue.indexWhere((m) => m.id == msg.id);
+        if (index != -1) {
+          final currentErrors =
+              List<String>.from(_queue[index].processingErrors);
+          currentErrors.add(e.toString());
+          _queue[index] =
+              _queue[index].copyWith(processingErrors: currentErrors);
+        }
+        // Stop on first error to preserve order
+        break;
       }
     }
 
-    _queue.removeWhere((m) => toRemove.contains(m));
     await _saveQueue();
     notifyListeners();
   }
