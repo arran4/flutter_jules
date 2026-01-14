@@ -4,22 +4,21 @@ class TimeParser {
     final now = DateTime.now();
 
     // Duration-based phrases (e.g., "last 24 hours")
-    final durationMatch = RegExp(
-      r'last (\d+) (hours|days|weeks|months|years)',
-    ).firstMatch(input);
+    final durationMatch =
+        RegExp(r'last (\d+) (hour|day|week|month|year)s?').firstMatch(input);
     if (durationMatch != null) {
       final value = int.parse(durationMatch.group(1)!);
       final unit = durationMatch.group(2)!;
       switch (unit) {
-        case 'hours':
+        case 'hour':
           return now.subtract(Duration(hours: value));
-        case 'days':
+        case 'day':
           return now.subtract(Duration(days: value));
-        case 'weeks':
+        case 'week':
           return now.subtract(Duration(days: value * 7));
-        case 'months':
+        case 'month':
           return DateTime(now.year, now.month - value, now.day);
-        case 'years':
+        case 'year':
           return DateTime(now.year - value, now.month, now.day);
       }
     }
@@ -34,14 +33,67 @@ class TimeParser {
     if (input.contains('tomorrow')) {
       return DateTime(now.year, now.month, now.day + 1);
     }
+
+    return _parseDateTime(input);
+  }
+
+  static ({DateTime start, DateTime end})? parseRange(String input) {
+    input = input.toLowerCase().trim();
+    final now = DateTime.now();
+
+    // Duration-based phrases (e.g., "last 24 hours")
+    final durationMatch =
+        RegExp(r'last (\d+) (hour|day|week|month|year)s?').firstMatch(input);
+    if (durationMatch != null) {
+      final value = int.parse(durationMatch.group(1)!);
+      final unit = durationMatch.group(2)!;
+      DateTime start;
+      switch (unit) {
+        case 'hour':
+          start = now.subtract(Duration(hours: value));
+          break;
+        case 'day':
+          start = now.subtract(Duration(days: value));
+          break;
+        case 'week':
+          start = now.subtract(Duration(days: value * 7));
+          break;
+        case 'month':
+          start = DateTime(now.year, now.month - value, now.day);
+          break;
+        case 'year':
+          start = DateTime(now.year - value, now.month, now.day);
+          break;
+        default:
+          return null;
+      }
+      return (start: start, end: now);
+    }
+
+    // Relative time phrases
+    if (input.contains('yesterday')) {
+      final start = DateTime(now.year, now.month, now.day - 1);
+      return (start: start, end: start.add(const Duration(days: 1)));
+    }
+    if (input.contains('today')) {
+      final start = DateTime(now.year, now.month, now.day);
+      return (start: start, end: start.add(const Duration(days: 1)));
+    }
+    if (input.contains('tomorrow')) {
+      final start = DateTime(now.year, now.month, now.day + 1);
+      return (start: start, end: start.add(const Duration(days: 1)));
+    }
     if (input.contains('last week')) {
-      return now.subtract(const Duration(days: 7));
+      final start = now.subtract(const Duration(days: 7));
+      return (start: start, end: now);
     }
     if (input.contains('last month')) {
-      return DateTime(now.year, now.month - 1, now.day);
+      final start = DateTime(now.year, now.month - 1, now.day);
+      return (start: start, end: now);
     }
     if (input.contains('last year')) {
-      return DateTime(now.year - 1, now.month, now.day);
+      final start = DateTime(now.year - 1, now.month, now.day);
+      return (start: start, end: now);
     }
 
     // Day of the week (e.g., "since wednesday")
@@ -58,18 +110,12 @@ class TimeParser {
       if (input.contains(day)) {
         var dayOfWeek = dayOfWeekMap[day]!;
         var daysAgo = now.weekday - dayOfWeek;
-        if (daysAgo < 0) {
+        if (daysAgo <= 0) {
           daysAgo += 7;
         }
-        return now.subtract(Duration(days: daysAgo));
+        final start = now.subtract(Duration(days: daysAgo));
+        return (start: start, end: start.add(const Duration(days: 1)));
       }
-    }
-
-    // Absolute date and time formats
-    try {
-      return DateTime.parse(input);
-    } catch (e) {
-      // Ignore parsing errors and try other formats
     }
 
     // Month names (e.g., "since march")
@@ -87,17 +133,27 @@ class TimeParser {
       'november': 11,
       'december': 12,
     };
-
     for (var month in monthMap.keys) {
       if (input.contains(month)) {
         var monthOfYear = monthMap[month]!;
+        var year = now.year;
         if (monthOfYear > now.month) {
-          return DateTime(now.year - 1, monthOfYear);
+          year = now.year - 1;
         }
-        return DateTime(now.year, monthOfYear);
+        final start = DateTime(year, monthOfYear);
+        return (start: start, end: DateTime(year, monthOfYear + 1));
       }
     }
 
+    return null;
+  }
+
+  static DateTime? _parseDateTime(String input) {
+    try {
+      return DateTime.parse(input);
+    } catch (e) {
+      // Ignore parsing errors and try other formats
+    }
     return null;
   }
 }
