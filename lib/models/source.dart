@@ -91,6 +91,7 @@ class GitHubRepo {
   final int? openIssuesCount;
   final bool? isFork;
   final String? forkParent; // e.g. "owner/repo"
+  final String? htmlUrl;
 
   GitHubRepo({
     required this.owner,
@@ -107,6 +108,7 @@ class GitHubRepo {
     this.openIssuesCount,
     this.isFork,
     this.forkParent,
+    this.htmlUrl,
   });
 
   factory GitHubRepo.fromJson(Map<String, dynamic> json) {
@@ -140,6 +142,7 @@ class GitHubRepo {
       )?.toInt(),
       isFork: json['isFork'] as bool?,
       forkParent: getStringPropOrDefault(json, 'forkParent', null),
+      htmlUrl: getStringPropOrDefault(json, 'html_url', null),
     );
   }
 
@@ -165,6 +168,7 @@ class GitHubRepo {
     if (openIssuesCount != null) map['openIssuesCount'] = openIssuesCount;
     if (isFork != null) map['isFork'] = isFork;
     if (forkParent != null) map['forkParent'] = forkParent;
+    if (htmlUrl != null) map['html_url'] = htmlUrl;
 
     return map;
   }

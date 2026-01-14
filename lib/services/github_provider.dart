@@ -263,6 +263,7 @@ class GithubProvider extends ChangeNotifier {
             'openIssuesCount': data['open_issues_count'],
             'isFork': data['fork'],
             'forkParent': parent != null ? parent['full_name'] : null,
+            'html_url': data['html_url'],
           };
         } else {
           debugPrint(
@@ -387,8 +388,10 @@ class GithubJob {
 
 class GitHubPrResponse {
   final Map<String, dynamic> _data;
+  final Map<String, dynamic> _links;
 
-  GitHubPrResponse(this._data);
+  GitHubPrResponse(this._data)
+      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
@@ -403,6 +406,17 @@ class GitHubPrResponse {
       getNumberPropOrDefault<num?>(_data, 'changed_files', null)?.toInt();
   String? get diffUrl => getStringPropOrDefault(_data, 'diff_url', null);
   String? get patchUrl => getStringPropOrDefault(_data, 'patch_url', null);
+  String? get htmlUrl =>
+      (_links['html'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get statusesUrl =>
+      (_links['statuses'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get commentsUrl =>
+      (_links['comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get reviewCommentsUrl =>
+      (_links['review_comments'] as Map<String, dynamic>?)?['href']
+          as String?;
+  String? get headSha =>
+      (_data['head'] as Map<String, dynamic>?)?['sha'] as String?;
 
   String get displayStatus {
     if (isMerged == true) return 'Merged';

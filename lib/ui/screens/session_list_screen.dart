@@ -557,10 +557,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _openSourceUrl(String sourceName) {
-    // Expected format: sources/github/{owner}/{repo}
-    if (sourceName.startsWith("sources/github/")) {
-      final parts = sourceName.split('/');
+  void _openSourceUrl(Source source) {
+    if (source.githubRepo?.htmlUrl != null) {
+      launchUrl(Uri.parse(source.githubRepo!.htmlUrl!));
+      return;
+    }
+    // Fallback for older data or different source types
+    if (source.name.startsWith("sources/github/")) {
+      final parts = source.name.split('/');
       if (parts.length >= 4) {
         final owner = parts[2];
         final repo = parts[3];
@@ -572,7 +576,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     // Fallback or generic handling
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Cannot open URL for source: $sourceName')),
+      SnackBar(content: Text('Cannot open URL for source: ${source.name}')),
     );
   }
 
@@ -2909,7 +2913,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
       ],
     ).then((value) {
       if (value == 'source' && session.sourceContext?.source != null) {
-        _openSourceUrl(session.sourceContext!.source);
+        final sourceProvider =
+            Provider.of<SourceProvider>(context, listen: false);
+        final source = sourceProvider.items
+            .firstWhere((s) => s.data.name == session.sourceContext!.source)
+            .data;
+        _openSourceUrl(source);
       }
     });
   }
