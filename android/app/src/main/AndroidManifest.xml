@@ -1,6 +1,6 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application
-        android:label="flutter_jules"
+        android:label="Arran's Flutter based jules client"
         android:name="${applicationName}"
         android:icon="@mipmap/launcher_icon">
         <activity

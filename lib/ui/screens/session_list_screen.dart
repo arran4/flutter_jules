@@ -34,8 +34,9 @@ import '../../services/notification_service.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
+  final FilterElement? initialFilter;
 
-  const SessionListScreen({super.key, this.sourceFilter});
+  const SessionListScreen({super.key, this.sourceFilter, this.initialFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -99,7 +100,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
 
     _focusNode.requestFocus();
-    if (widget.sourceFilter != null) {
+    if (widget.initialFilter != null) {
+      _filterTree = widget.initialFilter;
+    } else if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
     }
@@ -413,6 +416,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
       // We could check if any are queued and report.
       // This check is a bit loose, but good enough for UI feedback
       // Ideally performCreate would return status.
+    }
+
+    // If requested, open a new dialog immediately
+    if (result.openNewDialog) {
+      // Use a short delay to allow the UI to settle before opening a new dialog
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _createSession();
+        }
+      });
     }
   }
 
@@ -2083,10 +2096,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               ),
                                                             ),
 
+                                                          if (metadata.labels
+                                                              .contains(
+                                                                  'PENDING_CREATION'))
+                                                            _buildPill(
+                                                              context,
+                                                              session: session,
+                                                              metadata:
+                                                                  metadata,
+                                                              label: 'PENDING',
+                                                              backgroundColor:
+                                                                  Colors.blue,
+                                                              textColor:
+                                                                  Colors.white,
+                                                              filterToken:
+                                                                  const FilterToken(
+                                                                id: 'flag:pending',
+                                                                type: FilterType
+                                                                    .flag,
+                                                                label:
+                                                                    'Pending',
+                                                                value:
+                                                                    'pending',
+                                                              ),
+                                                            ),
+
                                                           // Render custom labels
-                                                          for (final label
-                                                              in metadata
-                                                                  .labels)
+                                                          for (final label in metadata
+                                                              .labels
+                                                              .where((l) =>
+                                                                  l !=
+                                                                      'PENDING_CREATION' &&
+                                                                  l !=
+                                                                      'DRAFT_CREATION'))
                                                             _buildPill(
                                                               context,
                                                               session: session,
