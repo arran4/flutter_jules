@@ -85,14 +85,67 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   void initState() {
     super.initState();
     _messageFocusNode.onKeyEvent = (node, event) {
-      if (event is KeyDownEvent &&
-          event.logicalKey == LogicalKeyboardKey.enter &&
-          HardwareKeyboard.instance.isControlPressed) {
-        if (_messageController.text.isNotEmpty) {
-          _sendMessage(_messageController.text);
-          return KeyEventResult.handled;
+      if (event is! KeyDownEvent) {
+        return KeyEventResult.ignored;
+      }
+
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+
+      // --- Handle Escape Key ---
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        final action = settings.escKeyAction;
+        switch (action) {
+          case EscKeyAction.savesDraftAndGoesBack:
+            if (_messageController.text.trim().isNotEmpty) {
+              Provider.of<MessageQueueProvider>(context, listen: false)
+                  .saveDraft(_session.id, _messageController.text);
+            }
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          case EscKeyAction.goesBack:
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          case EscKeyAction.doesNothing:
+            return KeyEventResult.handled;
         }
       }
+
+      // --- Handle Enter Key ---
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        MessageSubmitAction action;
+        if (isControlPressed && isShiftPressed) {
+          action = settings.ctrlShiftEnterKeyAction;
+        } else if (isControlPressed) {
+          action = settings.ctrlEnterKeyAction;
+        } else if (isShiftPressed) {
+          action = settings.shiftEnterKeyAction;
+        } else {
+          action = settings.enterKeyAction;
+        }
+
+        // Common logic based on the action's enum index, since they all share the same structure.
+        switch (action) {
+          case MessageSubmitAction.addNewLine:
+            return KeyEventResult.ignored;
+          case MessageSubmitAction.submitsMessage:
+            if (_messageController.text.isNotEmpty) {
+              _sendMessage(_messageController.text);
+            }
+            return KeyEventResult.handled;
+          case MessageSubmitAction.submitsMessageAndGoesBack:
+            if (_messageController.text.isNotEmpty) {
+              _sendMessage(_messageController.text);
+              // Don't await, let it send in the background while we navigate away.
+              Navigator.pop(context);
+            }
+            return KeyEventResult.handled;
+          case MessageSubmitAction.doesNothing:
+            return KeyEventResult.handled;
+        }
+      }
+
       return KeyEventResult.ignored;
     };
     _session = widget.session;
@@ -2097,7 +2150,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 controller: _messageController,
                 focusNode: _messageFocusNode,
                 decoration: const InputDecoration(
-                  hintText: "Send message... (Ctrl+Enter to send)",
+                  hintText: "Send message...",
                 ),
                 minLines: 1,
                 enabled: !_isSending, // Disable input while sending
