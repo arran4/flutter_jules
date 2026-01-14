@@ -240,6 +240,7 @@ class MessageQueueProvider extends ChangeNotifier {
 
   Future<void> sendQueue(
     JulesClient client, {
+    int? limit,
     Function(String)? onMessageSent,
     Function(Session)? onSessionCreated,
     Function(String, Object)? onError,
@@ -253,8 +254,12 @@ class MessageQueueProvider extends ChangeNotifier {
 
     // Sort by creation time to send in order
     remaining.sort((a, b) => a.createdAt.compareTo(b.createdAt));
+    int sentCount = 0;
 
     for (final msg in remaining) {
+      if (limit != null && sentCount >= limit) {
+        break;
+      }
       try {
         if (msg.type == QueuedMessageType.sessionCreation ||
             msg.sessionId == 'new_session') {
@@ -279,6 +284,7 @@ class MessageQueueProvider extends ChangeNotifier {
           await client.sendMessage(msg.sessionId, msg.content);
         }
         toRemove.add(msg);
+        sentCount++;
         if (onMessageSent != null) onMessageSent(msg.id);
       } catch (e) {
         bool recovered = false;

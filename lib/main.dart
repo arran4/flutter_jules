@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'services/activity_provider.dart';
 import 'services/auth_provider.dart';
 import 'services/dev_mode_provider.dart';
 import 'services/github_provider.dart';
@@ -26,6 +27,7 @@ void main() async {
     MultiProvider(
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
+        ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => GithubProvider()),
@@ -52,14 +54,22 @@ void main() async {
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
-        ChangeNotifierProxyProvider4<SettingsProvider, SessionProvider,
-            SourceProvider, NotificationService, RefreshService>(
+        ChangeNotifierProxyProvider6<
+            SettingsProvider,
+            SessionProvider,
+            SourceProvider,
+            NotificationService,
+            MessageQueueProvider,
+            ActivityProvider,
+            RefreshService>(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),
             context.read<SourceProvider>(),
             context.read<AuthProvider>(),
             context.read<NotificationService>(),
+            context.read<MessageQueueProvider>(),
+            context.read<ActivityProvider>(),
           ),
           update: (
             _,
@@ -67,6 +77,8 @@ void main() async {
             sessionProvider,
             sourceProvider,
             notificationService,
+            messageQueueProvider,
+            activityProvider,
             service,
           ) =>
               service!,
