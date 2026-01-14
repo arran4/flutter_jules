@@ -104,7 +104,7 @@ class TimeParser {
       'thursday': 4,
       'friday': 5,
       'saturday': 6,
-      'sunday': 7
+      'sunday': 7,
     };
     for (var day in dayOfWeekMap.keys) {
       if (input.contains(day)) {
@@ -131,7 +131,7 @@ class TimeParser {
       'september': 9,
       'october': 10,
       'november': 11,
-      'december': 12
+      'december': 12,
     };
     for (var month in monthMap.keys) {
       if (input.contains(month)) {

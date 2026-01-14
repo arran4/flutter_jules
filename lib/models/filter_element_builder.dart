@@ -387,6 +387,9 @@ class FilterElementBuilder {
         case FilterType.time:
           element = TimeFilterElement(token.value as TimeFilter);
           break;
+        case FilterType.tag:
+          element = TagElement(token.label, token.value.toString());
+          break;
       }
 
       // Handle exclude mode with NOT wrapper
@@ -481,6 +484,16 @@ class FilterElementBuilder {
         FilterToken(
           id: 'ciStatus:${element.value}',
           type: FilterType.ciStatus,
+          label: element.label,
+          value: element.value,
+          mode: mode,
+        ),
+      );
+    } else if (element is TagElement) {
+      tokens.add(
+        FilterToken(
+          id: 'tag:${element.value}',
+          type: FilterType.tag,
           label: element.label,
           value: element.value,
           mode: mode,

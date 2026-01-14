@@ -88,6 +88,12 @@ void main() {
         expect(find.byIcon(Icons.access_time), findsOneWidget);
         expect(find.text('Time: newerThan 5 days'), findsOneWidget);
       },
+      FilterElementType.noSource: (tester) async {
+        // NoSourceElement
+        await pumpElement(tester, NoSourceElement());
+        expect(find.byIcon(Icons.cloud_off), findsOneWidget);
+        expect(find.text('Has No Source'), findsOneWidget);
+      },
       FilterElementType.and: (tester) async {
         // AndElement
         await pumpElement(
@@ -114,6 +120,18 @@ void main() {
         expect(find.text('NOT'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.block), findsOneWidget);
+      },
+      FilterElementType.tag: (tester) async {
+        // TagElement
+        await pumpElement(tester, TagElement('MyTag', 'mytag'));
+        expect(find.text('#MyTag'), findsOneWidget);
+        expect(find.byIcon(Icons.tag), findsOneWidget);
+      },
+      FilterElementType.hasNotes: (tester) async {
+        // HasNotesElement
+        await pumpElement(tester, HasNotesElement());
+        expect(find.text('Has Notes'), findsOneWidget);
+        expect(find.byIcon(Icons.note), findsOneWidget);
       },
     };
 

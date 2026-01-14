@@ -12,6 +12,7 @@ class SourceProvider extends ChangeNotifier {
   String? _error;
   CacheService? _cacheService;
   DateTime? _lastFetchTime;
+  final Set<String> _refreshingSources = {};
 
   List<CachedItem<Source>> get items => _items;
   bool get isLoading => _isLoading;
@@ -151,6 +152,83 @@ class SourceProvider extends ChangeNotifier {
       // but 'force' arg in our fetchSources logic currently acts as "always fetch").
       // We will call fetchSources with force=true to get latest list which hopefully contains the new source.
       await fetchSources(client, force: true, authToken: authToken);
+    }
+  }
+
+  Future<void> refreshSource(
+    Source sourceToRefresh, {
+    String? authToken,
+    GithubProvider? githubProvider,
+  }) async {
+    if (_refreshingSources.contains(sourceToRefresh.name)) {
+      return;
+    }
+
+    if (githubProvider == null ||
+        githubProvider.apiKey == null ||
+        sourceToRefresh.githubRepo == null) {
+      return;
+    }
+
+    final index =
+        _items.indexWhere((item) => item.data.name == sourceToRefresh.name);
+    if (index == -1) {
+      return; // Source not found in the list
+    }
+
+    try {
+      _refreshingSources.add(sourceToRefresh.name);
+      final details = await githubProvider.getRepoDetails(
+        sourceToRefresh.githubRepo!.owner,
+        sourceToRefresh.githubRepo!.repo,
+      );
+
+      if (details != null) {
+        final enrichedRepo = GitHubRepo(
+          owner: sourceToRefresh.githubRepo!.owner,
+          repo: sourceToRefresh.githubRepo!.repo,
+          isPrivate: sourceToRefresh.githubRepo!.isPrivate,
+          defaultBranch: sourceToRefresh.githubRepo!.defaultBranch,
+          branches: sourceToRefresh.githubRepo!.branches,
+          repoName: details['repoName'],
+          repoId: details['repoId'],
+          isPrivateGithub: details['isPrivateGithub'],
+          description: details['description'],
+          primaryLanguage: details['primaryLanguage'],
+          license: details['license'],
+          openIssuesCount: details['openIssuesCount'],
+          isFork: details['isFork'],
+          forkParent: details['forkParent'],
+        );
+
+        final updatedSource = Source(
+          name: sourceToRefresh.name,
+          id: sourceToRefresh.id,
+          githubRepo: enrichedRepo,
+        );
+
+        final oldItem = _items[index];
+        final newItem = CachedItem(
+          updatedSource,
+          oldItem.metadata.copyWith(
+              lastRetrieved: DateTime.now(), lastUpdated: DateTime.now()),
+        );
+
+        _items[index] = newItem;
+
+        if (_cacheService != null && authToken != null) {
+          final allSources = _items.map((item) => item.data).toList();
+          await _cacheService!.saveSources(authToken, allSources);
+        }
+
+        notifyListeners();
+      }
+    } catch (e) {
+      _error = 'Failed to refresh source ${sourceToRefresh.name}: $e';
+      notifyListeners();
+      rethrow;
+    } finally {
+      _refreshingSources.remove(sourceToRefresh.name);
     }
   }
 }

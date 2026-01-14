@@ -20,7 +20,9 @@ import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
+import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
+import '../widgets/note_dialog.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 
@@ -689,6 +691,31 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  Future<void> _editNote() async {
+    final newNote = await showDialog<Note>(
+      context: context,
+      builder: (context) => NoteDialog(note: _session.note),
+    );
+
+    if (newNote != null) {
+      if (!mounted) return;
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      // Update local state first for responsiveness
+      setState(() {
+        _session = _session.copyWith(note: newNote);
+      });
+      // Then update the provider (which will save to cache)
+      sessionProvider.updateSession(
+        _session, // already updated
+        authToken: authProvider.token,
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -934,8 +961,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     ],
                   ),
                   onTap: () async {
-                    await resubmitSession(context, _session,
-                        hideOriginal: false);
+                    await resubmitSession(
+                      context,
+                      _session,
+                      hideOriginal: false,
+                    );
                   },
                 ),
                 PopupMenuItem(
@@ -947,11 +977,58 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     ],
                   ),
                   onTap: () async {
-                    final success = await resubmitSession(context, _session,
-                        hideOriginal: true);
-                    if (success && context.mounted) {
-                      Navigator.pop(context);
+                    // This needs to be done without BuildContext, so we grab providers first
+                    final sessionProvider = Provider.of<SessionProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final authProvider = Provider.of<AuthProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final messageQueueProvider =
+                        Provider.of<MessageQueueProvider>(
+                      context,
+                      listen: false,
+                    );
+                    final settingsProvider = Provider.of<SettingsProvider>(
+                      context,
+                      listen: false,
+                    );
+
+                    // Allow user to configure new session
+                    final NewSessionResult? result =
+                        await showDialog<NewSessionResult>(
+                      context: context,
+                      builder: (context) =>
+                          NewSessionDialog(initialSession: _session),
+                    );
+
+                    if (result == null) return;
+
+                    // Immediately pop and do the work in the background
+                    if (context.mounted) Navigator.pop(context);
+
+                    // Show messages via the session list's scaffold
+                    final scaffoldMessenger = ScaffoldMessenger.of(
+                      sessionProvider.scaffoldKey.currentContext!,
+                    );
+                    void showMessage(String msg) {
+                      scaffoldMessenger.showSnackBar(
+                        SnackBar(content: Text(msg)),
+                      );
                     }
+
+                    handleNewSessionResultInBackground(
+                      result: result,
+                      originalSession: _session,
+                      hideOriginal: true,
+                      sessionProvider: sessionProvider,
+                      authProvider: authProvider,
+                      messageQueueProvider: messageQueueProvider,
+                      settingsProvider: settingsProvider,
+                      showMessage: showMessage,
+                    );
                   },
                 ),
                 const PopupMenuDivider(),
@@ -1037,6 +1114,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       Text('Force Approve Plan'),
                     ],
                   ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.label, color: Colors.grey),
+                      SizedBox(width: 8),
+                      Text('Manage Tags'),
+                    ],
+                  ),
+                  onTap: () {
+                    showDialog(
+                      context: context,
+                      builder: (context) =>
+                          TagManagementDialog(session: _session),
+                    );
+                  },
                 ),
               ],
             ),
@@ -1853,6 +1947,56 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             ),
                           ),
                         ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+                    Card(
+                      elevation: 0,
+                      shape: RoundedRectangleBorder(
+                        side: BorderSide(color: Theme.of(context).dividerColor),
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Padding(
+                        padding: const EdgeInsets.all(12.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Row(
+                              children: [
+                                Text(
+                                  "Notes",
+                                  style: Theme.of(
+                                    context,
+                                  ).textTheme.titleMedium,
+                                ),
+                                const Spacer(),
+                                TextButton.icon(
+                                  icon: const Icon(Icons.edit, size: 16),
+                                  label: const Text('Edit'),
+                                  onPressed: _editNote,
+                                ),
+                              ],
+                            ),
+                            const SizedBox(height: 8),
+                            if (_session.note?.content.isNotEmpty ?? false)
+                              MarkdownBody(data: _session.note!.content)
+                            else
+                              const Text(
+                                'No notes added yet.',
+                                style: TextStyle(color: Colors.grey),
+                              ),
+                            if (_session.note != null) ...[
+                              const SizedBox(height: 8),
+                              Align(
+                                alignment: Alignment.centerRight,
+                                child: Text(
+                                  'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
+                                  style: Theme.of(context).textTheme.bodySmall,
+                                ),
+                              ),
+                            ],
+                          ],
+                        ),
                       ),
                     ),
                   ],

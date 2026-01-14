@@ -119,21 +119,93 @@ Future<bool> resubmitSession(
 
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text("Original session hidden."),
-          ),
+          const SnackBar(content: Text("Original session hidden.")),
         );
       }
     }
   } else if (anySucceeded) {
     if (context.mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text("New session(s) created."),
-        ),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("New session(s) created.")));
     }
   }
 
   return anySucceeded;
+}
+
+Future<void> handleNewSessionResultInBackground({
+  required NewSessionResult result,
+  required Session originalSession,
+  required bool hideOriginal,
+  required SessionProvider sessionProvider,
+  required AuthProvider authProvider,
+  required MessageQueueProvider messageQueueProvider,
+  required SettingsProvider settingsProvider,
+  required Function(String) showMessage,
+}) async {
+  if (result.isDraft) {
+    for (final session in result.sessions) {
+      messageQueueProvider.addCreateSessionRequest(session, isDraft: true);
+    }
+    showMessage(result.sessions.length > 1 ? "Drafts saved" : "Draft saved");
+    return;
+  }
+
+  final sessionsToCreate = result.sessions;
+  bool anySucceeded = false;
+
+  Future<void> performCreate(Session sessionToCreate) async {
+    try {
+      final client = authProvider.client;
+      await client.createSession(sessionToCreate);
+      anySucceeded = true;
+
+      // Refresh logic
+      final settings = settingsProvider;
+      switch (settings.refreshOnCreate) {
+        case ListRefreshPolicy.none:
+          break;
+        case ListRefreshPolicy.dirty:
+        case ListRefreshPolicy.watched:
+          sessionProvider.refreshDirtySessions(
+            client,
+            authToken: authProvider.token!,
+          );
+          break;
+        case ListRefreshPolicy.quick:
+          sessionProvider.fetchSessions(
+            client,
+            force: true,
+            shallow: true,
+            authToken: authProvider.token,
+          );
+          break;
+        case ListRefreshPolicy.full:
+          sessionProvider.fetchSessions(
+            client,
+            force: true,
+            shallow: false,
+            authToken: authProvider.token,
+          );
+          break;
+      }
+    } catch (e) {
+      messageQueueProvider.addCreateSessionRequest(
+        sessionToCreate,
+        reason: 'creation_failed',
+      );
+    }
+  }
+
+  for (final s in sessionsToCreate) {
+    await performCreate(s);
+  }
+
+  if (hideOriginal && anySucceeded) {
+    await sessionProvider.toggleHidden(originalSession.id, authProvider.token!);
+    showMessage("Original session hidden.");
+  } else if (anySucceeded) {
+    showMessage("New session(s) created.");
+  }
 }

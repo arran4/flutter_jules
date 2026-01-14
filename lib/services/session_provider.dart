@@ -7,6 +7,8 @@ import 'cache_service.dart';
 import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
+  final GlobalKey<ScaffoldMessengerState> scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<CachedItem<Session>> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -682,14 +684,16 @@ class SessionProvider extends ChangeNotifier {
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    if (pathSegments.length < 4 ||
-        pathSegments[pathSegments.length - 2] != 'pull') {
-      throw Exception("Invalid PR URL format");
+    if (pullIndex == -1 || pullIndex < 2) {
+      throw Exception(
+        "Invalid PR URL format: 'pull' segment not found or misplaced.",
+      );
     }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
     // Fetch PR and CI statuses from GitHub in parallel
@@ -738,6 +742,22 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSessionTags(Session session, List<String> tags) async {
+    final index = _items.indexWhere((i) => i.data.id == session.id);
+    if (index != -1) {
+      final item = _items[index];
+      final updatedSession = item.data.copyWith(tags: tags);
+      final newItem = CachedItem(updatedSession, item.metadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.updateSession(
+            (await _githubProvider!.getToken())!, updatedSession);
+      }
+    }
+  }
+
   String? _getPrUrl(Session session) {
     if (session.outputs != null) {
       for (var o in session.outputs!) {
@@ -752,10 +772,14 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length < 4) return false;
+    final pullIndex = pathSegments.lastIndexOf('pull');
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    if (pullIndex == -1 || pullIndex < 2) {
+      return false;
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
 
@@ -773,8 +797,15 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final owner = pathSegments[0];
-      final repo = pathSegments[1];
+      final pullIndex = pathSegments.lastIndexOf('pull');
+
+      if (pullIndex == -1 || pullIndex < 2) {
+        throw Exception(
+          "Invalid PR URL format: 'pull' segment not found or misplaced.",
+        );
+      }
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
       // Fetch statuses in parallel
@@ -829,6 +860,37 @@ class SessionProvider extends ChangeNotifier {
       debugPrint(
         "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
       );
+    }
+  }
+
+  Future<void> refreshSessionsForSource(
+    JulesClient client,
+    String sourceName, {
+    required String authToken,
+  }) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final sourceSessions = _items
+          .where((item) => item.data.sourceContext?.source == sourceName)
+          .toList();
+
+      if (sourceSessions.isEmpty) {
+        return;
+      }
+
+      await Future.wait(
+        sourceSessions.map((item) =>
+            refreshSession(client, item.data.name, authToken: authToken)),
+      );
+    } catch (e) {
+      debugPrint("Failed to refresh sessions for source $sourceName: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

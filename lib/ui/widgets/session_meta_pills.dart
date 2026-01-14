@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:url_launcher/url_launcher.dart';
+
 import '../../models.dart';
 
 class SessionMetaPills extends StatelessWidget {
@@ -105,7 +107,9 @@ class SessionMetaPills extends StatelessWidget {
 
         // PR Status (for Open/Draft/Merged/Closed)
         if (session.prStatus != null)
-          ..._buildPrStatusChips(context, session.prStatus!),
+          ..._buildPrStatusChips(context, session.prStatus!)
+        else if (session.diffUrl != null)
+          _buildPublishPrChip(context),
 
         // CI Status
         if (session.ciStatus != null)
@@ -169,8 +173,9 @@ class SessionMetaPills extends StatelessWidget {
           _buildChip(
             context,
             label: 'Mergeable: ${session.mergeableState}',
-            backgroundColor:
-                _getColorForMergeableState(session.mergeableState!),
+            backgroundColor: _getColorForMergeableState(
+              session.mergeableState!,
+            ),
           ),
 
         // File Changes
@@ -184,7 +189,58 @@ class SessionMetaPills extends StatelessWidget {
             avatar: const Icon(Icons.edit_document, size: 16),
             backgroundColor: Colors.grey.shade200,
           ),
+
+        // Tags
+        if (session.tags != null && session.tags!.isNotEmpty)
+          ...session.tags!.map(
+            (tag) => _buildChip(
+              context,
+              label: '#$tag',
+              avatar: const Icon(Icons.tag, size: 16),
+              backgroundColor: Colors.indigo.shade50,
+              filterToken: FilterToken(
+                id: 'tag:$tag',
+                type: FilterType.tag,
+                label: '#$tag',
+                value: tag,
+              ),
+            ),
+          ),
+        if (session.note?.content.isNotEmpty ?? false)
+          _buildChip(
+            context,
+            label: 'Note',
+            avatar: const Icon(Icons.note, size: 16),
+            tooltip: session.note!.content,
+            filterToken: const FilterToken(
+              id: 'flag:has_notes',
+              type: FilterType.flag,
+              label: 'Has Notes',
+              value: 'has_notes',
+            ),
+          ),
       ],
+    );
+  }
+
+  Widget _buildPublishPrChip(BuildContext context) {
+    return InkWell(
+      onTap: () {
+        if (session.url != null) {
+          launchUrl(Uri.parse(session.url!));
+        }
+      },
+      child: Chip(
+        label: const Text(
+          "Goto Jules and click Publish PR",
+          style: TextStyle(color: Colors.white),
+        ),
+        backgroundColor: Colors.purple,
+        avatar: const Icon(Icons.publish, size: 16, color: Colors.white),
+        side: BorderSide.none,
+        padding: compact ? const EdgeInsets.all(0) : null,
+        visualDensity: compact ? VisualDensity.compact : null,
+      ),
     );
   }
 
@@ -262,6 +318,7 @@ class SessionMetaPills extends StatelessWidget {
     Widget? avatar,
     FilterToken? filterToken,
     SortField? sortField,
+    String? tooltip,
   }) {
     Widget chip = Chip(
       label: Text(label, style: compact ? const TextStyle(fontSize: 10) : null),
@@ -271,6 +328,10 @@ class SessionMetaPills extends StatelessWidget {
       padding: compact ? const EdgeInsets.all(0) : null,
       visualDensity: compact ? VisualDensity.compact : null,
     );
+
+    if (tooltip != null) {
+      chip = Tooltip(message: tooltip, child: chip);
+    }
 
     if (filterToken != null) {
       chip = Draggable<FilterToken>(

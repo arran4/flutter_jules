@@ -1,0 +1,49 @@
+name: PR Checks
+
+on:
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  pull-requests: write
+
+jobs:
+  lint-and-format:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          channel: 'stable'
+
+      - name: Analyze project source
+        id: analyze
+        run: dart analyze --fatal-infos > analyze_results.txt || true
+
+      - name: Check formatting
+        id: format
+        run: dart format --output=none --set-exit-if-changed . > format_results.txt || true
+
+      - name: Post comment
+        if: steps.analyze.outcome == 'failure' || steps.format.outcome == 'failure'
+        uses: actions/github-script@v6
+        with:
+          github-token: ${{secrets.GITHUB_TOKEN}}
+          script: |
+            const analyze_results = require('fs').readFileSync('analyze_results.txt', 'utf8');
+            const format_results = require('fs').readFileSync('format_results.txt', 'utf8');
+            let comment = '';
+            if (steps.analyze.outcome == 'failure') {
+              comment += `## 😱 Dart Analyze Failed\n\n\`\`\`\n${analyze_results}\n\`\`\`\n\n`;
+            }
+            if (steps.format.outcome == 'failure') {
+              comment += `## 😱 Dart Format Failed\n\nThe following files are not formatted correctly:\n\n\`\`\`\n${format_results}\n\`\`\`\n\n`;
+            }
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: comment
+            })

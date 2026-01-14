@@ -27,7 +27,10 @@ void main() {
     });
 
     test('Should parse Has(NoSource)', () {
-      expect(FilterExpressionParser.parse('Has(NoSource)'), isA<NoSourceElement>());
+      expect(
+        FilterExpressionParser.parse('Has(NoSource)'),
+        isA<NoSourceElement>(),
+      );
     });
 
     test('Should strip technical prefixes in State()', () {
@@ -87,8 +90,10 @@ void main() {
       final before = FilterExpressionParser.parse('before(yesterday)')
           as TimeFilterElement;
       expect(before.value.type, TimeFilterType.olderThan);
-      expect(before.value.specificTime?.day,
-          DateTime.now().subtract(const Duration(days: 1)).day);
+      expect(
+        before.value.specificTime?.day,
+        DateTime.now().subtract(const Duration(days: 1)).day,
+      );
 
       final after = FilterExpressionParser.parse('after(2023-10-27)')
           as TimeFilterElement;
@@ -105,8 +110,10 @@ void main() {
       final afterDuration = FilterExpressionParser.parse('after(last 24 hours)')
           as TimeFilterElement;
       expect(afterDuration.value.type, TimeFilterType.newerThan);
-      expect(afterDuration.value.specificTime?.hour,
-          DateTime.now().subtract(const Duration(hours: 24)).hour);
+      expect(
+        afterDuration.value.specificTime?.hour,
+        DateTime.now().subtract(const Duration(hours: 24)).hour,
+      );
     });
   });
 }

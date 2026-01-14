@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
 import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
@@ -57,28 +58,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
               SwitchListTile(
                 title: const Text('Task Needs Attention'),
                 subtitle: const Text(
-                    'Receive a notification when a task requires your input.'),
+                  'Receive a notification when a task requires your input.',
+                ),
                 value: settings.notifyOnAttention,
                 onChanged: (value) => settings.setNotifyOnAttention(value),
               ),
               SwitchListTile(
                 title: const Text('Task Completes'),
                 subtitle: const Text(
-                    'Receive a notification when a task is completed.'),
+                  'Receive a notification when a task is completed.',
+                ),
                 value: settings.notifyOnCompletion,
                 onChanged: (value) => settings.setNotifyOnCompletion(value),
               ),
               SwitchListTile(
                 title: const Text('Watched Task Updates'),
                 subtitle: const Text(
-                    'Receive a notification for any update on a task you are watching.'),
+                  'Receive a notification for any update on a task you are watching.',
+                ),
                 value: settings.notifyOnWatch,
                 onChanged: (value) => settings.setNotifyOnWatch(value),
               ),
               SwitchListTile(
                 title: const Text('Task Fails'),
-                subtitle:
-                    const Text('Receive a notification when a task fails.'),
+                subtitle: const Text(
+                  'Receive a notification when a task fails.',
+                ),
                 value: settings.notifyOnFailure,
                 onChanged: (value) => settings.setNotifyOnFailure(value),
               ),
@@ -97,6 +102,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (double value) {
                   settings.setSessionPageSize(value.toInt());
                 },
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Diagnostics'),
+              ListTile(
+                title: const Text('View Activity Log'),
+                leading: const Icon(Icons.history),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ActivityLogScreen(),
+                  ),
+                ),
               ),
               const Divider(),
               _buildSectionHeader(context, 'Developer'),
@@ -123,10 +140,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       ? 'API Key'
                       : 'Google Access Token',
                 ),
-                trailing: const Icon(
-                  Icons.check_circle,
-                  color: Colors.green,
-                ),
+                trailing: const Icon(Icons.check_circle, color: Colors.green),
               ),
               ListTile(
                 title: const Text('Update API Key'),
@@ -249,7 +263,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListTile(
               title: Text(schedule.name),
               subtitle: Text(
-                'Every ${schedule.intervalInMinutes} mins, ${_formatListPolicy(schedule.refreshPolicy)}',
+                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}',
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -290,6 +304,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       text: schedule?.intervalInMinutes.toString() ?? '',
     );
     var refreshPolicy = schedule?.refreshPolicy ?? ListRefreshPolicy.quick;
+    var taskType = schedule?.taskType ?? RefreshTaskType.refresh;
+    var sendMessagesMode =
+        schedule?.sendMessagesMode ?? SendMessagesMode.sendOne;
 
     showDialog(
       context: context,
@@ -312,23 +329,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     keyboardType: TextInputType.number,
                   ),
-                  DropdownButtonFormField<ListRefreshPolicy>(
+                  DropdownButtonFormField<RefreshTaskType>(
                     // ignore: deprecated_member_use
-                    value: refreshPolicy,
+                    value: taskType,
                     onChanged: (value) {
                       if (value != null) {
                         setState(() {
-                          refreshPolicy = value;
+                          taskType = value;
                         });
                       }
                     },
-                    items: ListRefreshPolicy.values.map((policy) {
+                    items: RefreshTaskType.values.map((task) {
                       return DropdownMenuItem(
-                        value: policy,
-                        child: Text(_formatListPolicy(policy)),
+                        value: task,
+                        child: Text(task.toString().split('.').last),
                       );
                     }).toList(),
                   ),
+                  if (taskType == RefreshTaskType.refresh)
+                    DropdownButtonFormField<ListRefreshPolicy>(
+                      // ignore: deprecated_member_use
+                      value: refreshPolicy,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            refreshPolicy = value;
+                          });
+                        }
+                      },
+                      items: ListRefreshPolicy.values.map((policy) {
+                        return DropdownMenuItem(
+                          value: policy,
+                          child: Text(_formatListPolicy(policy)),
+                        );
+                      }).toList(),
+                    ),
+                  if (taskType == RefreshTaskType.sendPendingMessages)
+                    DropdownButtonFormField<SendMessagesMode>(
+                      // ignore: deprecated_member_use
+                      value: sendMessagesMode,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            sendMessagesMode = value;
+                          });
+                        }
+                      },
+                      items: SendMessagesMode.values.map((mode) {
+                        return DropdownMenuItem(
+                          value: mode,
+                          child: Text(_formatSendMessagesMode(mode)),
+                        );
+                      }).toList(),
+                    ),
                 ],
               );
             },
@@ -356,7 +409,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   id: schedule?.id,
                   name: nameController.text,
                   intervalInMinutes: interval,
-                  refreshPolicy: refreshPolicy,
+                  taskType: taskType,
+                  refreshPolicy: taskType == RefreshTaskType.refresh
+                      ? refreshPolicy
+                      : null,
+                  sendMessagesMode:
+                      taskType == RefreshTaskType.sendPendingMessages
+                          ? sendMessagesMode
+                          : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 
@@ -502,7 +562,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _formatListPolicy(ListRefreshPolicy policy) {
+  String _formatListPolicy(ListRefreshPolicy? policy) {
     switch (policy) {
       case ListRefreshPolicy.none:
         return 'None';
@@ -514,6 +574,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Quick Refresh';
       case ListRefreshPolicy.full:
         return 'Full Refresh';
+      default:
+        return '';
+    }
+  }
+
+  String _formatTask(RefreshSchedule schedule) {
+    switch (schedule.taskType) {
+      case RefreshTaskType.refresh:
+        return _formatListPolicy(schedule.refreshPolicy);
+      case RefreshTaskType.sendPendingMessages:
+        return 'Send Pending Messages (${_formatSendMessagesMode(schedule.sendMessagesMode)})';
+    }
+  }
+
+  String _formatSendMessagesMode(SendMessagesMode? mode) {
+    switch (mode) {
+      case SendMessagesMode.sendOne:
+        return 'Send One';
+      case SendMessagesMode.sendAllUntilFailure:
+        return 'Send All Until Failure';
+      default:
+        return '';
     }
   }
 }

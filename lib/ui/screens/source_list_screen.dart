@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_jules/models/filter_expression_parser.dart';
 import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
@@ -11,6 +12,9 @@ import '../../services/session_provider.dart';
 import '../../models.dart';
 import '../../services/cache_service.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/new_session_dialog.dart';
+import '../../services/filter_bookmark_provider.dart';
+import '../widgets/source_stats_dialog.dart';
 
 enum SortOption { recent, count, alphabetical }
 
@@ -167,8 +171,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
   Future<void> _refreshData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // This will trigger both source and session refreshes
@@ -467,9 +473,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                     maxLines: 2,
                                                     overflow:
                                                         TextOverflow.ellipsis,
-                                                    style: Theme.of(context)
-                                                        .textTheme
-                                                        .bodySmall,
+                                                    style: Theme.of(
+                                                      context,
+                                                    ).textTheme.bodySmall,
                                                   ),
                                                 ),
                                               Text(
@@ -548,17 +554,182 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                               ),
                                             ],
                                           ),
-                                          onTap: () {
-                                            Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (context) =>
-                                                    SessionListScreen(
-                                                  sourceFilter: source.name,
-                                                ),
+                                          trailing: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              IconButton(
+                                                icon: const Icon(Icons.refresh),
+                                                tooltip: 'Refresh source',
+                                                onPressed: () async {
+                                                  final sourceProvider =
+                                                      Provider.of<
+                                                              SourceProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  final githubProvider =
+                                                      Provider.of<
+                                                              GithubProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  final auth =
+                                                      Provider.of<AuthProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  try {
+                                                    await sourceProvider
+                                                        .refreshSource(
+                                                      source,
+                                                      authToken: auth.token,
+                                                      githubProvider:
+                                                          githubProvider,
+                                                    );
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                              'Refreshed ${source.githubRepo?.repo ?? source.name}'),
+                                                          duration:
+                                                              const Duration(
+                                                                  seconds: 2),
+                                                        ),
+                                                      );
+                                                    }
+                                                  } catch (e) {
+                                                    if (context.mounted) {
+                                                      ScaffoldMessenger.of(
+                                                              context)
+                                                          .showSnackBar(
+                                                        SnackBar(
+                                                          content: Text(
+                                                              'Failed to refresh ${source.githubRepo?.repo ?? source.name}: $e'),
+                                                          backgroundColor:
+                                                              Colors.red,
+                                                        ),
+                                                      );
+                                                    }
+                                                  }
+                                                },
                                               ),
-                                            );
-                                          },
+                                              IconButton(
+                                                icon: const Icon(Icons.add),
+                                                tooltip: 'New session',
+                                                onPressed: () =>
+                                                    _handleNewSession(
+                                                        source.name),
+                                              ),
+                                              IconButton(
+                                                icon: const Icon(
+                                                    Icons.filter_list),
+                                                tooltip:
+                                                    'Filter by this source',
+                                                onPressed: () {
+                                                  Navigator.push(
+                                                    context,
+                                                    MaterialPageRoute(
+                                                      builder: (context) =>
+                                                          SessionListScreen(
+                                                        sourceFilter:
+                                                            source.name,
+                                                      ),
+                                                    ),
+                                                  );
+                                                },
+                                              ),
+                                              PopupMenuButton<String>(
+                                                onSelected: (value) async {
+                                                  if (value ==
+                                                      'refresh_sessions') {
+                                                    final sessionProvider =
+                                                        Provider.of<
+                                                                SessionProvider>(
+                                                            context,
+                                                            listen: false);
+                                                    final auth = Provider.of<
+                                                            AuthProvider>(
+                                                        context,
+                                                        listen: false);
+                                                    try {
+                                                      await sessionProvider
+                                                          .refreshSessionsForSource(
+                                                        auth.client,
+                                                        source.name,
+                                                        authToken: auth.token!,
+                                                      );
+                                                      if (context.mounted) {
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                                'Refreshed sessions for ${source.githubRepo?.repo ?? source.name}'),
+                                                            duration:
+                                                                const Duration(
+                                                                    seconds: 2),
+                                                          ),
+                                                        );
+                                                      }
+                                                    } catch (e) {
+                                                      if (context.mounted) {
+                                                        ScaffoldMessenger.of(
+                                                                context)
+                                                            .showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                                'Failed to refresh sessions for ${source.githubRepo?.repo ?? source.name}: $e'),
+                                                            backgroundColor:
+                                                                Colors.red,
+                                                          ),
+                                                        );
+                                                      }
+                                                    }
+                                                  } else if (value == 'stats') {
+                                                    _showStatsDialog(source);
+                                                  } else if (value.startsWith(
+                                                      'bookmark_')) {
+                                                    final bookmarkId =
+                                                        value.substring(
+                                                            'bookmark_'.length);
+                                                    _handleBookmark(bookmarkId,
+                                                        source.name);
+                                                  }
+                                                },
+                                                itemBuilder: (context) {
+                                                  final bookmarkProvider = Provider
+                                                      .of<FilterBookmarkProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  final bookmarks =
+                                                      bookmarkProvider
+                                                          .bookmarks;
+
+                                                  return [
+                                                    const PopupMenuItem(
+                                                      value: 'refresh_sessions',
+                                                      child: Text(
+                                                          'Refresh Sessions'),
+                                                    ),
+                                                    const PopupMenuItem(
+                                                      value: 'stats',
+                                                      child: Text('Show Stats'),
+                                                    ),
+                                                    if (bookmarks.isNotEmpty)
+                                                      const PopupMenuDivider(),
+                                                    ...bookmarks.map(
+                                                      (bookmark) =>
+                                                          PopupMenuItem(
+                                                        value:
+                                                            'bookmark_${bookmark.name}',
+                                                        child:
+                                                            Text(bookmark.name),
+                                                      ),
+                                                    ),
+                                                  ];
+                                                },
+                                              ),
+                                            ],
+                                          ),
                                         ),
                                       );
                                     },
@@ -582,8 +753,11 @@ class _SourceListScreenState extends State<SourceListScreen> {
       ),
       child: Row(
         children: [
-          Icon(icon,
-              size: 12, color: Theme.of(context).colorScheme.onSurfaceVariant),
+          Icon(
+            icon,
+            size: 12,
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
           const SizedBox(width: 4),
           Text(
             text,
@@ -596,11 +770,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     );
   }
 
-  Widget _buildStatusPill(
-    BuildContext context,
-    String text,
-    Color color,
-  ) {
+  Widget _buildStatusPill(BuildContext context, String text, Color color) {
     return Container(
       margin: const EdgeInsets.only(right: 6.0),
       padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
@@ -610,9 +780,59 @@ class _SourceListScreenState extends State<SourceListScreen> {
       ),
       child: Text(
         text,
-        style: Theme.of(context).textTheme.labelSmall?.copyWith(
-              color: Colors.white,
-            ),
+        style: Theme.of(
+          context,
+        ).textTheme.labelSmall?.copyWith(color: Colors.white),
+      ),
+    );
+  }
+
+  void _handleNewSession(String sourceName) {
+    showDialog(
+      context: context,
+      builder: (context) => NewSessionDialog(sourceFilter: sourceName),
+    );
+  }
+
+  void _showStatsDialog(Source source) {
+    showDialog(
+      context: context,
+      builder: (context) => SourceStatsDialog(source: source),
+    );
+  }
+
+  void _handleBookmark(String bookmarkId, String sourceName) {
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+    final bookmark = bookmarkProvider.bookmarks.firstWhere(
+      (b) => b.name == bookmarkId,
+      orElse: () => FilterBookmark(
+        name: '',
+        expression: '',
+        description: '',
+        sorts: [],
+      ),
+    );
+
+    if (bookmark.name.isEmpty) return;
+
+    // Create a combined filter
+    final sourceElement = SourceElement(sourceName, sourceName);
+    final bookmarkElement = FilterExpressionParser.parse(bookmark.expression);
+
+    FilterElement combinedFilter;
+    if (bookmarkElement != null) {
+      combinedFilter = AndElement([sourceElement, bookmarkElement]);
+    } else {
+      combinedFilter = sourceElement;
+    }
+
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (context) => SessionListScreen(
+          initialFilter: combinedFilter,
+        ),
       ),
     );
   }

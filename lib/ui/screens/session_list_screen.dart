@@ -24,6 +24,8 @@ import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
+import '../widgets/tag_management_dialog.dart';
+import '../widgets/note_dialog.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -32,8 +34,9 @@ import '../../services/notification_service.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
+  final FilterElement? initialFilter;
 
-  const SessionListScreen({super.key, this.sourceFilter});
+  const SessionListScreen({super.key, this.sourceFilter, this.initialFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -97,12 +100,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
 
     _focusNode.requestFocus();
-    if (widget.sourceFilter != null) {
+    if (widget.initialFilter != null) {
+      _filterTree = widget.initialFilter;
+    } else if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      // Load last used filter if no explicit filter is set
+      if (widget.sourceFilter == null) {
+        final settings = Provider.of<SettingsProvider>(context, listen: false);
+        if (settings.lastFilter != _filterTree) {
+          setState(() {
+            _filterTree = settings.lastFilter;
+          });
+        }
+      }
+
       final auth = Provider.of<AuthProvider>(context, listen: false);
       if (auth.token != null) {
         // Trigger generic load
@@ -401,6 +416,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
       // We could check if any are queued and report.
       // This check is a bit loose, but good enough for UI feedback
       // Ideally performCreate would return status.
+    }
+
+    // If requested, open a new dialog immediately
+    if (result.openNewDialog) {
+      // Use a short delay to allow the UI to settle before opening a new dialog
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _createSession();
+        }
+      });
     }
   }
 
@@ -792,6 +817,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
         value: 'draft',
       ),
     );
+    suggestions.add(
+      const FilterToken(
+        id: 'flag:has_notes',
+        type: FilterType.flag,
+        label: 'Has Notes',
+        value: 'has_notes',
+      ),
+    );
 
     _availableSuggestions = suggestions.toList();
     // Sort suggestions? Maybe by type then label
@@ -924,12 +957,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.ciStatus:
         element = CiStatusElement(token.label, token.value.toString());
         break;
+      case FilterType.text:
+        element = LabelElement(token.label, token.value.toString());
+        break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
           element = HasPrElement();
         } else {
           element = LabelElement(token.label, token.value.toString());
         }
+        break;
+      case FilterType.tag:
+        element = TagElement(token.label, token.value.toString());
         break;
       default:
         return null;
@@ -1446,7 +1485,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        if (value == 'full_refresh') {
+                        if (value == 'new_session') {
+                          _createSession();
+                        } else if (value == 'full_refresh') {
                           _fetchSessions(force: true, shallow: false);
                         } else if (value == 'bulk_actions') {
                           _openBulkActionDialog();
@@ -1498,6 +1539,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           listen: false,
                         ).isOffline;
                         return [
+                          const PopupMenuItem(
+                            value: 'new_session',
+                            child: Row(
+                              children: [
+                                Icon(Icons.add),
+                                SizedBox(width: 8),
+                                Text('New Session'),
+                              ],
+                            ),
+                          ),
+                          const PopupMenuDivider(),
                           const PopupMenuItem(
                             value: 'full_refresh',
                             child: Row(
@@ -1610,6 +1662,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     setState(() {
                                       _filterTree = tree;
                                     });
+                                    // Also save to settings
+                                    final settings =
+                                        Provider.of<SettingsProvider>(
+                                      context,
+                                      listen: false,
+                                    );
+                                    settings.setLastFilter(tree);
                                   },
                                   searchText: _searchText,
                                   onSearchChanged: (text) {
@@ -2024,10 +2083,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               ),
                                                             ),
 
+                                                          if (metadata.labels
+                                                              .contains(
+                                                                  'PENDING_CREATION'))
+                                                            _buildPill(
+                                                              context,
+                                                              session: session,
+                                                              metadata:
+                                                                  metadata,
+                                                              label: 'PENDING',
+                                                              backgroundColor:
+                                                                  Colors.blue,
+                                                              textColor:
+                                                                  Colors.white,
+                                                              filterToken:
+                                                                  const FilterToken(
+                                                                id: 'flag:pending',
+                                                                type: FilterType
+                                                                    .flag,
+                                                                label:
+                                                                    'Pending',
+                                                                value:
+                                                                    'pending',
+                                                              ),
+                                                            ),
+
                                                           // Render custom labels
-                                                          for (final label
-                                                              in metadata
-                                                                  .labels)
+                                                          for (final label in metadata
+                                                              .labels
+                                                              .where((l) =>
+                                                                  l !=
+                                                                      'PENDING_CREATION' &&
+                                                                  l !=
+                                                                      'DRAFT_CREATION'))
                                                             _buildPill(
                                                               context,
                                                               session: session,
@@ -2051,24 +2139,42 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             ),
 
                                                           Expanded(
-                                                            child: LayoutBuilder(
-                                                              builder: (context, constraints) {
+                                                            child:
+                                                                LayoutBuilder(
+                                                              builder: (context,
+                                                                  constraints) {
                                                                 // Simple responsive logic for max lines
-                                                                int maxLines = 1;
-                                                                if (constraints.maxWidth > 800) {
+                                                                int maxLines =
+                                                                    1;
+                                                                if (constraints
+                                                                        .maxWidth >
+                                                                    800) {
                                                                   maxLines = 3;
-                                                                } else if (constraints.maxWidth > 400) {
+                                                                } else if (constraints
+                                                                        .maxWidth >
+                                                                    400) {
                                                                   maxLines = 2;
                                                                 }
 
                                                                 return PopupText(
-                                                                  session.title ?? session.prompt,
-                                                                  maxLines: maxLines,
-                                                                  style: TextStyle(
+                                                                  (session.title ??
+                                                                          session
+                                                                              .prompt)
+                                                                      .replaceAll(
+                                                                    '\n',
+                                                                    ' ',
+                                                                  ),
+                                                                  maxLines:
+                                                                      maxLines,
+                                                                  style:
+                                                                      TextStyle(
                                                                     fontWeight: (metadata.isUnread)
-                                                                        ? FontWeight.bold
-                                                                        : FontWeight.normal,
-                                                                    fontSize: 16,
+                                                                        ? FontWeight
+                                                                            .bold
+                                                                        : FontWeight
+                                                                            .normal,
+                                                                    fontSize:
+                                                                        16,
                                                                   ),
                                                                 );
                                                               },
@@ -2386,10 +2492,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               ),
                             ],
                           ),
-                floatingActionButton: FloatingActionButton(
-                  onPressed: _createSession,
-                  child: const Icon(Icons.add),
-                ),
               ),
             ),
           ),
@@ -2539,6 +2641,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.note_add),
+              SizedBox(width: 8),
+              Text('Edit Note'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) _editNote(session);
+            });
+          },
+        ),
         const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
@@ -2549,14 +2665,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ],
           ),
           onTap: () {
-            Future.delayed(
-              Duration.zero,
-              () {
-                if (context.mounted) {
-                  resubmitSession(context, session, hideOriginal: false);
-                }
-              },
-            );
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: false);
+              }
+            });
           },
         ),
         PopupMenuItem(
@@ -2568,14 +2681,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ],
           ),
           onTap: () {
-            Future.delayed(
-              Duration.zero,
-              () {
-                if (context.mounted) {
-                  resubmitSession(context, session, hideOriginal: true);
-                }
-              },
-            );
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: true);
+              }
+            });
           },
         ),
         const PopupMenuDivider(),
@@ -2708,11 +2818,51 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.label, color: Colors.grey),
+              SizedBox(width: 8),
+              Text('Manage Tags'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => TagManagementDialog(session: session),
+                );
+              }
+            });
+          },
+        ),
       ],
     ).then((value) {
       if (value == 'source' && session.sourceContext?.source != null) {
         _openSourceUrl(session.sourceContext!.source);
       }
     });
+  }
+
+  Future<void> _editNote(Session session) async {
+    final newNote = await showDialog<Note>(
+      context: context,
+      builder: (context) => NoteDialog(note: session.note),
+    );
+
+    if (newNote != null) {
+      if (!mounted) return;
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      sessionProvider.updateSession(
+        session.copyWith(note: newNote),
+        authToken: authProvider.token,
+      );
+    }
   }
 }
