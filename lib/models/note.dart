@@ -15,7 +15,7 @@ class Note {
     return Note(
       content: getStringPropOrThrow(json, 'content'),
       updatedDate: getStringPropOrThrow(json, 'updatedDate'),
-      version: getNumberPropOrThrow(json, 'version').toInt(),
+      version: getNumberPropOrDefault(json, 'version', 0) as int,
     );
   }
 

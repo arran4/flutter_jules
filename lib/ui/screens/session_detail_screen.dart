@@ -693,7 +693,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _editNote() async {
-    final newNote = await showDialog<Note>(
+    final newNote = await showDialog<String>(
       context: context,
       builder: (context) => NoteDialog(note: _session.note),
     );

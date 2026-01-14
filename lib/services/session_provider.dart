@@ -757,9 +757,11 @@ class SessionProvider extends ChangeNotifier {
       _items[index] = newItem;
       notifyListeners();
 
-      if (_cacheService != null) {
-        await _cacheService!.updateSession(
-            (await _githubProvider!.getToken())!, updatedSession);
+      if (_cacheService != null && _githubProvider != null) {
+        final token = await _githubProvider!.token;
+        if (token != null) {
+          await _cacheService!.updateSession(token, updatedSession);
+        }
       }
     }
   }

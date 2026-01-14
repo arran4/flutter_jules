@@ -799,11 +799,7 @@ class TagElement extends FilterElement {
     }
     return matches ? FilterState.explicitIn : FilterState.explicitOut;
   }
-    if (context.metadata.isHidden) {
-      return matches ? FilterState.implicitOut : FilterState.explicitOut;
-    }
-    return matches ? FilterState.explicitIn : FilterState.explicitOut;
-  }
+
   factory TagElement.fromJson(Map<String, dynamic> json) {
     return TagElement(json['label'] as String, json['value'] as String);
   }
@@ -837,6 +833,5 @@ class HasNotesElement extends FilterElement {
   }
   factory HasNotesElement.fromJson(Map<String, dynamic> json) {
     return HasNotesElement();
-
   }
 }

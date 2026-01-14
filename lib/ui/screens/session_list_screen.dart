@@ -920,7 +920,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   void _addFilterToken(FilterToken token) {
     final element = _tokenToElement(token);
     if (element == null) return;
-
     setState(() {
       _filterTree = FilterElementBuilder.addFilter(_filterTree, element);
     });
@@ -958,7 +957,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.tag:
         element = TagElement(token.label, token.value.toString());
         break;
-      default:
+      case FilterType.branch:
+      case FilterType.time:
+        // TODO: Handle or explicitly ignore
         return null;
     }
     if (token.mode == FilterMode.exclude) {
@@ -2734,7 +2735,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _editNote(Session session) async {
-    final newNote = await showDialog<Note>(
+    final newNote = await showDialog<String>(
       context: context,
       builder: (context) => NoteDialog(note: session.note),
     );

@@ -206,14 +206,21 @@ class FilterExpressionParser {
         final date = TimeParser.parse(args[0]);
         if (date == null) return null;
         return TimeFilterElement(
-          TimeFilter(type: TimeFilterType.olderThan, specificTime: date),
+          TimeFilter(
+              type: TimeFilterType.olderThan,
+              specificTime: date,
+              field: TimeFilterField
+                  .created), // Assuming created, adjust if needed
         );
       case 'AFTER':
         if (args.isEmpty) return null;
         final date = TimeParser.parse(args[0]);
         if (date == null) return null;
         return TimeFilterElement(
-          TimeFilter(type: TimeFilterType.newerThan, specificTime: date),
+          TimeFilter(
+              type: TimeFilterType.newerThan,
+              specificTime: date,
+              field: TimeFilterField.created),
         );
       case 'BETWEEN':
         if (args.isEmpty) return null;
@@ -227,6 +234,7 @@ class FilterExpressionParser {
             type: TimeFilterType.between,
             specificTime: start,
             specificTimeEnd: end,
+            field: TimeFilterField.created,
           ),
         );
       case 'TIME':
@@ -258,7 +266,11 @@ class FilterExpressionParser {
         final unit = TimeFilterUnit.values.byName(parts[2]);
 
         return TimeFilterElement(
-          TimeFilter(type: type, value: value, unit: unit),
+          TimeFilter(
+              type: type,
+              value: value,
+              unit: unit,
+              field: TimeFilterField.created),
         );
       case 'HASHTAG':
         return args.isNotEmpty ? TagElement(args[0], args[0]) : null;
