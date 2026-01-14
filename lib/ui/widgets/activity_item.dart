@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
 import 'model_viewer.dart';
 
@@ -17,6 +18,16 @@ class ActivityItem extends StatefulWidget {
 
 class _ActivityItemState extends State<ActivityItem> {
   bool _isExpanded = true;
+
+  String? _getPrUrl(ChangeSet changeSet) {
+    final sourceParts = changeSet.source.split('/');
+    if (sourceParts.length >= 4 && sourceParts[1] == 'github') {
+      final owner = sourceParts[2];
+      final repo = sourceParts[3];
+      return 'https://github.com/$owner/$repo/pulls';
+    }
+    return null;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -473,14 +484,63 @@ class _ActivityItemState extends State<ActivityItem> {
                 ],
                 if (artifact.changeSet != null) ...[
                   if (artifact.changeSet!.gitPatch != null) ...[
-                    Text(
-                      "Change in ${artifact.changeSet!.source}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "Change in ${artifact.changeSet!.source}",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_getPrUrl(artifact.changeSet!) != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.open_in_new),
+                              label: const Text('Create PR'),
+                              onPressed: () =>
+                                  launchUrl(Uri.parse(_getPrUrl(artifact.changeSet!)!)),
+                              style: ElevatedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (artifact.changeSet!.gitPatch!.suggestedCommitMessage
+                        .isNotEmpty) ...[
+                      const Text(
+                        "Commit Message:",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withOpacity(0.05),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: SelectableText(
+                          artifact.changeSet!.gitPatch!.suggestedCommitMessage,
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    const Text(
+                      "Patch:",
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Container(
                       padding: const EdgeInsets.all(8),
-                      color: Colors.black.withValues(alpha: 0.05),
+                      color: Colors.black.withOpacity(0.05),
                       child: Text(
                         artifact.changeSet!.gitPatch!.unidiffPatch,
                         style: const TextStyle(
