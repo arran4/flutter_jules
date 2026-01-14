@@ -414,6 +414,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
       // This check is a bit loose, but good enough for UI feedback
       // Ideally performCreate would return status.
     }
+
+    // If requested, open a new dialog immediately
+    if (result.openNewDialog) {
+      // Use a short delay to allow the UI to settle before opening a new dialog
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _createSession();
+        }
+      });
+    }
   }
 
   Future<void> _quickReply(Session session) async {
