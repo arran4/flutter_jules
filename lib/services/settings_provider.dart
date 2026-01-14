@@ -9,6 +9,8 @@ enum SessionRefreshPolicy { none, shallow, full }
 
 enum ListRefreshPolicy { none, dirty, watched, quick, full }
 
+enum FabVisibility { appBar, floating, off }
+
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';
@@ -22,6 +24,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnFailure = 'notify_on_failure';
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
+  static const String keyFabVisibility = 'fab_visibility';
 
   // Filter Memory
   FilterElement? _lastFilter;
@@ -46,6 +49,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnCompletion = true;
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
+  FabVisibility _fabVisibility = FabVisibility.floating;
 
   SharedPreferences? _prefs;
 
@@ -60,6 +64,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+  FabVisibility get fabVisibility => _fabVisibility;
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
@@ -106,6 +111,11 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
+    _fabVisibility = _loadEnum(
+      keyFabVisibility,
+      FabVisibility.values,
+      FabVisibility.floating,
+    );
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -261,6 +271,12 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  Future<void> setFabVisibility(FabVisibility visibility) async {
+    _fabVisibility = visibility;
+    notifyListeners();
+    await _prefs?.setInt(keyFabVisibility, visibility.index);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {
