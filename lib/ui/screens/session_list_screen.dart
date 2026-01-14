@@ -2083,10 +2083,31 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               ),
                                                             ),
 
+                                                          if (metadata.labels.contains('PENDING_CREATION'))
+                                                            _buildPill(
+                                                              context,
+                                                              session: session,
+                                                              metadata:
+                                                                  metadata,
+                                                              label: 'PENDING',
+                                                              backgroundColor:
+                                                                  Colors.blue,
+                                                              textColor:
+                                                                  Colors.white,
+                                                              filterToken:
+                                                                  const FilterToken(
+                                                                id: 'flag:pending',
+                                                                type: FilterType
+                                                                    .flag,
+                                                                label: 'Pending',
+                                                                value: 'pending',
+                                                              ),
+                                                            ),
+
                                                           // Render custom labels
                                                           for (final label
                                                               in metadata
-                                                                  .labels)
+                                                                  .labels.where((l) => l != 'PENDING_CREATION' && l != 'DRAFT_CREATION'))
                                                             _buildPill(
                                                               context,
                                                               session: session,
