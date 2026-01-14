@@ -748,7 +748,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> updateSessionTags(Session session, List<String> tags) async {
+  Future<void> updateSessionTags(
+      Session session, List<String> tags, String authToken) async {
     final index = _items.indexWhere((i) => i.data.id == session.id);
     if (index != -1) {
       final item = _items[index];
@@ -758,8 +759,7 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
 
       if (_cacheService != null) {
-        await _cacheService!.updateSession(
-            (await _githubProvider!.getToken())!, updatedSession);
+        await _cacheService!.updateSession(authToken, updatedSession);
       }
     }
   }

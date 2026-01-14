@@ -10,6 +10,9 @@ import 'package:flutter_jules/services/notification_service.dart';
 import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/session.dart';
 import 'package:flutter_jules/models/enums.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_jules/services/jules_client.dart';
+import 'package:flutter_jules/services/cache_service.dart';
 
 class MockSettingsProvider extends Mock implements SettingsProvider {}
 
@@ -21,6 +24,8 @@ class MockAuthProvider extends Mock implements AuthProvider {}
 
 class MockNotificationService extends Mock implements NotificationService {}
 
+class MockJulesClient extends Mock implements JulesClient {}
+
 void main() {
   late RefreshService refreshService;
   late MockSettingsProvider mockSettingsProvider;
@@ -28,6 +33,7 @@ void main() {
   late MockSourceProvider mockSourceProvider;
   late MockAuthProvider mockAuthProvider;
   late MockNotificationService mockNotificationService;
+  late MockJulesClient mockJulesClient;
 
   setUp(() {
     mockSettingsProvider = MockSettingsProvider();
@@ -35,9 +41,11 @@ void main() {
     mockSourceProvider = MockSourceProvider();
     mockAuthProvider = MockAuthProvider();
     mockNotificationService = MockNotificationService();
+    mockJulesClient = MockJulesClient();
 
     when(mockSettingsProvider.schedules).thenReturn([]);
     when(mockSessionProvider.items).thenReturn([]);
+    when(mockAuthProvider.client).thenReturn(mockJulesClient);
 
     refreshService = RefreshService(
       mockSettingsProvider,
@@ -50,11 +58,11 @@ void main() {
 
   test('initializes timers for enabled schedules', () async {
     final schedule = RefreshSchedule(
-      id: '1',
-      intervalInMinutes: 1,
-      isEnabled: true,
-      refreshPolicy: ListRefreshPolicy.quick,
-    );
+        id: '1',
+        intervalInMinutes: 1,
+        isEnabled: true,
+        refreshPolicy: ListRefreshPolicy.quick,
+        name: 'test');
     when(mockSettingsProvider.schedules).thenReturn([schedule]);
 
     fakeAsync((async) {
@@ -74,16 +82,17 @@ void main() {
       async.elapse(const Duration(minutes: 1));
 
       // Should have been called now
-      verify(mockSessionProvider.fetchSessions(any)).called(1);
+      verify(mockSessionProvider.fetchSessions(mockJulesClient)).called(1);
     });
   });
 
   test('does not initialize timers for disabled schedules', () async {
     final schedule = RefreshSchedule(
-      id: '1',
-      intervalInMinutes: 1,
-      isEnabled: false,
-    );
+        id: '1',
+        intervalInMinutes: 1,
+        isEnabled: false,
+        name: 'test',
+        refreshPolicy: ListRefreshPolicy.quick);
     when(mockSettingsProvider.schedules).thenReturn([schedule]);
 
     fakeAsync((async) {
@@ -106,10 +115,16 @@ void main() {
 
   test('compares sessions and sends notifications', () {
     final oldSession = Session(
+      id: 'session1',
       name: 'session1',
       state: SessionState.IN_PROGRESS,
+      prompt: 'test',
     );
-    final newSession = Session(name: 'session1', state: SessionState.COMPLETED);
+    final newSession = Session(
+        id: 'session1',
+        name: 'session1',
+        state: SessionState.COMPLETED,
+        prompt: 'test');
 
     when(mockSettingsProvider.notifyOnCompletion).thenReturn(true);
     when(mockSettingsProvider.notifyOnAttention).thenReturn(false);
@@ -118,12 +133,16 @@ void main() {
 
     // This is a bit of a hack to test a private method
     // In a real app, you might want to refactor this to be more testable
-    final oldSessions = [oldSession];
-    final newSessions = [newSession];
+    final oldSessions = [
+      CachedItem(oldSession, CacheMetadata.empty())
+    ];
+    final newSessions = [
+      CachedItem(newSession, CacheMetadata.empty())
+    ];
 
     when(
       mockSessionProvider.items,
-    ).thenReturn(newSessions.map((e) => CachedItem(e)).toList());
+    ).thenReturn(newSessions);
 
     // ignore: invalid_use_of_protected_member
     refreshService.dispose(); // Dispose the old service and its timers

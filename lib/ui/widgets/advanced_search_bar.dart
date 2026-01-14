@@ -406,6 +406,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       case FilterType.time:
         newElement = TimeFilterElement(token.value);
         break;
+      case FilterType.tag:
+        newElement = TagElement(token.label, token.value.toString());
+        break;
     }
 
     // Handle exclude mode
@@ -453,6 +456,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         return Icons.text_fields;
       case FilterType.time:
         return Icons.access_time;
+      case FilterType.tag:
+        return Icons.tag;
     }
   }
 

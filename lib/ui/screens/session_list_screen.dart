@@ -958,7 +958,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.tag:
         element = TagElement(token.label, token.value.toString());
         break;
-      default:
+      case FilterType.branch:
+      case FilterType.time:
         return null;
     }
     if (token.mode == FilterMode.exclude) {
@@ -2734,18 +2735,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _editNote(Session session) async {
-    final newNote = await showDialog<Note>(
+    final newNoteContent = await showDialog<String>(
       context: context,
-      builder: (context) => NoteDialog(note: session.note),
+      builder: (context) => NoteDialog(note: session.note?.content),
     );
 
-    if (newNote != null) {
+    if (newNoteContent != null) {
       if (!mounted) return;
       final sessionProvider = Provider.of<SessionProvider>(
         context,
         listen: false,
       );
       final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+      final newNote = Note(
+        content: newNoteContent,
+        updatedDate: DateTime.now().toIso8601String(),
+        version: (session.note?.version ?? 0) + 1,
+      );
+
       sessionProvider.updateSession(
         session.copyWith(note: newNote),
         authToken: authProvider.token,
