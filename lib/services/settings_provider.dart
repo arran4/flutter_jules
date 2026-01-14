@@ -177,6 +177,12 @@ class SettingsProvider extends ChangeNotifier {
         intervalInMinutes: 15,
         refreshPolicy: ListRefreshPolicy.quick,
       ),
+      RefreshSchedule(
+        name: 'Send Pending Messages',
+        intervalInMinutes: 5,
+        taskType: RefreshTaskType.sendPendingMessages,
+        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
+      ),
     ];
   }
 
