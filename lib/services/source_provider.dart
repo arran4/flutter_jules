@@ -29,6 +29,7 @@ class SourceProvider extends ChangeNotifier {
     String? authToken,
     GithubProvider? githubProvider,
     SessionProvider? sessionProvider,
+    Function(int)? onProgress,
   }) async {
     // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
@@ -63,8 +64,12 @@ class SourceProvider extends ChangeNotifier {
 
       List<Source> allSources = [];
       String? pageToken;
-
+      int page = 0;
       do {
+        page++;
+        if (onProgress != null) {
+          onProgress(page);
+        }
         final response = await client.listSources(pageToken: pageToken);
         allSources.addAll(response.sources);
         pageToken = response.nextPageToken;
