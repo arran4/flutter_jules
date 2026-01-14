@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
+import '../ui/widgets/github_pat_dialog.dart';
+import 'notification_provider.dart';
 
 import 'jules_client.dart';
 import 'cache_service.dart';
@@ -16,6 +18,7 @@ class SessionProvider extends ChangeNotifier {
   DateTime? _lastFetchTime;
   CacheService? _cacheService;
   GithubProvider? _githubProvider;
+  NotificationProvider? _notificationProvider;
 
   List<CachedItem<Session>> get items => _items;
   bool get isLoading => _isLoading;
@@ -29,6 +32,10 @@ class SessionProvider extends ChangeNotifier {
 
   void setGithubProvider(GithubProvider service) {
     _githubProvider = service;
+  }
+
+  void setNotificationProvider(NotificationProvider service) {
+    _notificationProvider = service;
   }
 
   Future<void> fetchSessions(
@@ -857,9 +864,31 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint(
-        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
-      );
+      if (e is GithubApiException) {
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          _notificationProvider?.addNotification(
+            NotificationMessage(
+              id: 'github-auth-error',
+              title: 'GitHub Authentication Error',
+              message:
+                  'Failed to fetch data from GitHub. Your PAT may be invalid or expired.',
+              type: NotificationType.error,
+              actionLabel: 'Update PAT',
+              actionType: NotificationActionType.showGithubPatDialog,
+            ),
+          );
+        } else {
+          // Other API errors (like 404 Not Found)
+          debugPrint(
+            "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+          );
+        }
+      } else {
+        // Other general errors
+        debugPrint(
+          "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+        );
+      }
     }
   }
 

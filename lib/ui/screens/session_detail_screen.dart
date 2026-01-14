@@ -24,6 +24,7 @@ import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
 import '../widgets/note_dialog.dart';
 import 'dart:convert';
+import 'package:collection/collection.dart';
 import '../../services/exceptions.dart';
 
 class SessionDetailScreen extends StatefulWidget {
@@ -762,10 +763,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 icon: const Icon(Icons.merge_type, color: Colors.purple),
                 tooltip: 'Open Pull Request',
                 onPressed: () {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  launchUrl(Uri.parse(pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    launchUrl(Uri.parse(pr.url));
+                  }
                 },
               ),
             IconButton(
@@ -844,16 +847,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ).markAsUnread(_session.id, auth.token!);
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'pr_back') {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  launchUrl(Uri.parse(pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    launchUrl(Uri.parse(pr.url));
+                  }
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'copy_pr_url') {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  await Clipboard.setData(ClipboardData(text: pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    await Clipboard.setData(ClipboardData(text: pr.url));
+                  }
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('PR URL copied')),
