@@ -89,6 +89,53 @@ class GithubProvider extends ChangeNotifier {
     return job.result as GitHubPrResponse?;
   }
 
+  Future<GitHubPrResponse?> getPrStatus(
+    String owner,
+    String repo,
+    String prNumber,
+  ) async {
+    if (_apiKey == null) {
+      return null;
+    }
+
+    final job = GithubJob(
+      id: 'pr_status_${owner}_${repo}_$prNumber',
+      description: 'Check PR Status: $owner/$repo #$prNumber',
+      action: () async {
+        final url = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+        );
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+
+        _updateRateLimits(response.headers);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return GitHubPrResponse(data);
+        } else {
+          debugPrint(
+            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+          );
+          return null;
+        }
+      },
+    );
+
+    _queue.add(job);
+    _processQueue();
+    notifyListeners();
+
+    // Wait for job to complete
+    await job.completer.future;
+    return job.result as GitHubPrResponse?;
+  }
+
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
     if (_apiKey == null) return null;
     final url = Uri.parse(
