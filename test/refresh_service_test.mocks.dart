@@ -7,24 +7,25 @@ import 'dart:async' as _i5;
 import 'dart:ui' as _i10;
 
 import 'package:flutter/material.dart' as _i1;
-import 'package:flutter_jules/models.dart' as _i9;
-import 'package:flutter_jules/models/activity_log.dart' as _i18;
-import 'package:flutter_jules/models/bulk_action.dart' as _i8;
+import 'package:flutter_jules/models.dart' as _i8;
+import 'package:flutter_jules/models/activity_log.dart' as _i19;
+import 'package:flutter_jules/models/bulk_action.dart' as _i9;
 import 'package:flutter_jules/models/refresh_schedule.dart' as _i7;
-import 'package:flutter_jules/services/activity_provider.dart' as _i17;
-import 'package:flutter_jules/services/auth_provider.dart' as _i15;
+import 'package:flutter_jules/services/activity_provider.dart' as _i18;
+import 'package:flutter_jules/services/auth_provider.dart' as _i16;
 import 'package:flutter_jules/services/cache_service.dart' as _i12;
 import 'package:flutter_jules/services/github_provider.dart' as _i13;
 import 'package:flutter_jules/services/jules_client.dart' as _i3;
-import 'package:flutter_jules/services/message_queue_provider.dart' as _i19;
-import 'package:flutter_jules/services/notification_service.dart' as _i16;
+import 'package:flutter_jules/services/message_queue_provider.dart' as _i20;
+import 'package:flutter_jules/services/notification_provider.dart' as _i14;
+import 'package:flutter_jules/services/notification_service.dart' as _i17;
 import 'package:flutter_jules/services/session_provider.dart' as _i11;
 import 'package:flutter_jules/services/settings_provider.dart' as _i6;
-import 'package:flutter_jules/services/source_provider.dart' as _i14;
+import 'package:flutter_jules/services/source_provider.dart' as _i15;
 import 'package:flutter_local_notifications/flutter_local_notifications.dart'
     as _i4;
 import 'package:mockito/mockito.dart' as _i2;
-import 'package:mockito/src/dummies.dart' as _i20;
+import 'package:mockito/src/dummies.dart' as _i21;
 
 // ignore_for_file: type=lint
 // ignore_for_file: avoid_redundant_argument_values
@@ -166,11 +167,53 @@ class MockSettingsProvider extends _i2.Mock implements _i6.SettingsProvider {
       ) as bool);
 
   @override
-  List<_i8.BulkActionStep> get lastBulkActions => (super.noSuchMethod(
+  _i6.FabVisibility get fabVisibility => (super.noSuchMethod(
+        Invocation.getter(#fabVisibility),
+        returnValue: _i6.FabVisibility.appBar,
+        returnValueForMissingStub: _i6.FabVisibility.appBar,
+      ) as _i6.FabVisibility);
+
+  @override
+  _i8.MessageSubmitAction get enterKeyAction => (super.noSuchMethod(
+        Invocation.getter(#enterKeyAction),
+        returnValue: _i8.MessageSubmitAction.addNewLine,
+        returnValueForMissingStub: _i8.MessageSubmitAction.addNewLine,
+      ) as _i8.MessageSubmitAction);
+
+  @override
+  _i8.MessageSubmitAction get shiftEnterKeyAction => (super.noSuchMethod(
+        Invocation.getter(#shiftEnterKeyAction),
+        returnValue: _i8.MessageSubmitAction.addNewLine,
+        returnValueForMissingStub: _i8.MessageSubmitAction.addNewLine,
+      ) as _i8.MessageSubmitAction);
+
+  @override
+  _i8.MessageSubmitAction get ctrlEnterKeyAction => (super.noSuchMethod(
+        Invocation.getter(#ctrlEnterKeyAction),
+        returnValue: _i8.MessageSubmitAction.addNewLine,
+        returnValueForMissingStub: _i8.MessageSubmitAction.addNewLine,
+      ) as _i8.MessageSubmitAction);
+
+  @override
+  _i8.MessageSubmitAction get ctrlShiftEnterKeyAction => (super.noSuchMethod(
+        Invocation.getter(#ctrlShiftEnterKeyAction),
+        returnValue: _i8.MessageSubmitAction.addNewLine,
+        returnValueForMissingStub: _i8.MessageSubmitAction.addNewLine,
+      ) as _i8.MessageSubmitAction);
+
+  @override
+  _i8.EscKeyAction get escKeyAction => (super.noSuchMethod(
+        Invocation.getter(#escKeyAction),
+        returnValue: _i8.EscKeyAction.savesDraftAndGoesBack,
+        returnValueForMissingStub: _i8.EscKeyAction.savesDraftAndGoesBack,
+      ) as _i8.EscKeyAction);
+
+  @override
+  List<_i9.BulkActionStep> get lastBulkActions => (super.noSuchMethod(
         Invocation.getter(#lastBulkActions),
-        returnValue: <_i8.BulkActionStep>[],
-        returnValueForMissingStub: <_i8.BulkActionStep>[],
-      ) as List<_i8.BulkActionStep>);
+        returnValue: <_i9.BulkActionStep>[],
+        returnValueForMissingStub: <_i9.BulkActionStep>[],
+      ) as List<_i9.BulkActionStep>);
 
   @override
   int get lastBulkParallelQueries => (super.noSuchMethod(
@@ -351,7 +394,74 @@ class MockSettingsProvider extends _i2.Mock implements _i6.SettingsProvider {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> setLastFilter(_i9.FilterElement? filter) =>
+  _i5.Future<void> setFabVisibility(_i6.FabVisibility? visibility) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setFabVisibility,
+          [visibility],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setEnterKeyAction(_i8.MessageSubmitAction? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setEnterKeyAction,
+          [action],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setShiftEnterKeyAction(_i8.MessageSubmitAction? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setShiftEnterKeyAction,
+          [action],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setCtrlEnterKeyAction(_i8.MessageSubmitAction? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setCtrlEnterKeyAction,
+          [action],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setCtrlShiftEnterKeyAction(
+          _i8.MessageSubmitAction? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setCtrlShiftEnterKeyAction,
+          [action],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setEscKeyAction(_i8.EscKeyAction? action) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #setEscKeyAction,
+          [action],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
+  _i5.Future<void> setLastFilter(_i8.FilterElement? filter) =>
       (super.noSuchMethod(
         Invocation.method(
           #setLastFilter,
@@ -363,7 +473,7 @@ class MockSettingsProvider extends _i2.Mock implements _i6.SettingsProvider {
 
   @override
   _i5.Future<void> saveBulkActionConfig({
-    required List<_i8.BulkActionStep>? actions,
+    required List<_i9.BulkActionStep>? actions,
     required int? parallelQueries,
     required int? waitBetweenSeconds,
     required int? limit,
@@ -445,11 +555,11 @@ class MockSessionProvider extends _i2.Mock implements _i11.SessionProvider {
       ) as _i1.GlobalKey<_i1.ScaffoldMessengerState>);
 
   @override
-  List<_i12.CachedItem<_i9.Session>> get items => (super.noSuchMethod(
+  List<_i12.CachedItem<_i8.Session>> get items => (super.noSuchMethod(
         Invocation.getter(#items),
-        returnValue: <_i12.CachedItem<_i9.Session>>[],
-        returnValueForMissingStub: <_i12.CachedItem<_i9.Session>>[],
-      ) as List<_i12.CachedItem<_i9.Session>>);
+        returnValue: <_i12.CachedItem<_i8.Session>>[],
+        returnValueForMissingStub: <_i12.CachedItem<_i8.Session>>[],
+      ) as List<_i12.CachedItem<_i8.Session>>);
 
   @override
   bool get isLoading => (super.noSuchMethod(
@@ -484,6 +594,16 @@ class MockSessionProvider extends _i2.Mock implements _i11.SessionProvider {
       );
 
   @override
+  void setNotificationProvider(_i14.NotificationProvider? service) =>
+      super.noSuchMethod(
+        Invocation.method(
+          #setNotificationProvider,
+          [service],
+        ),
+        returnValueForMissingStub: null,
+      );
+
+  @override
   _i5.Future<void> fetchSessions(
     _i3.JulesClient? client, {
     bool? force = false,
@@ -510,7 +630,7 @@ class MockSessionProvider extends _i2.Mock implements _i11.SessionProvider {
 
   @override
   _i5.Future<void> updateSession(
-    _i9.Session? session, {
+    _i8.Session? session, {
     String? authToken,
   }) =>
       (super.noSuchMethod(
@@ -731,7 +851,7 @@ class MockSessionProvider extends _i2.Mock implements _i11.SessionProvider {
 
   @override
   _i5.Future<void> updateSessionTags(
-    _i9.Session? session,
+    _i8.Session? session,
     List<String>? tags,
   ) =>
       (super.noSuchMethod(
@@ -805,13 +925,13 @@ class MockSessionProvider extends _i2.Mock implements _i11.SessionProvider {
 /// A class which mocks [SourceProvider].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockSourceProvider extends _i2.Mock implements _i14.SourceProvider {
+class MockSourceProvider extends _i2.Mock implements _i15.SourceProvider {
   @override
-  List<_i12.CachedItem<_i9.Source>> get items => (super.noSuchMethod(
+  List<_i12.CachedItem<_i8.Source>> get items => (super.noSuchMethod(
         Invocation.getter(#items),
-        returnValue: <_i12.CachedItem<_i9.Source>>[],
-        returnValueForMissingStub: <_i12.CachedItem<_i9.Source>>[],
-      ) as List<_i12.CachedItem<_i9.Source>>);
+        returnValue: <_i12.CachedItem<_i8.Source>>[],
+        returnValueForMissingStub: <_i12.CachedItem<_i8.Source>>[],
+      ) as List<_i12.CachedItem<_i8.Source>>);
 
   @override
   bool get isLoading => (super.noSuchMethod(
@@ -843,6 +963,7 @@ class MockSourceProvider extends _i2.Mock implements _i14.SourceProvider {
     String? authToken,
     _i13.GithubProvider? githubProvider,
     _i11.SessionProvider? sessionProvider,
+    dynamic Function(int)? onProgress,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -853,6 +974,7 @@ class MockSourceProvider extends _i2.Mock implements _i14.SourceProvider {
             #authToken: authToken,
             #githubProvider: githubProvider,
             #sessionProvider: sessionProvider,
+            #onProgress: onProgress,
           },
         ),
         returnValue: _i5.Future<void>.value(),
@@ -880,7 +1002,7 @@ class MockSourceProvider extends _i2.Mock implements _i14.SourceProvider {
 
   @override
   _i5.Future<void> refreshSource(
-    _i9.Source? sourceToRefresh, {
+    _i8.Source? sourceToRefresh, {
     String? authToken,
     _i13.GithubProvider? githubProvider,
   }) =>
@@ -937,13 +1059,13 @@ class MockSourceProvider extends _i2.Mock implements _i14.SourceProvider {
 /// A class which mocks [AuthProvider].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockAuthProvider extends _i2.Mock implements _i15.AuthProvider {
+class MockAuthProvider extends _i2.Mock implements _i16.AuthProvider {
   @override
-  _i15.TokenType get tokenType => (super.noSuchMethod(
+  _i16.TokenType get tokenType => (super.noSuchMethod(
         Invocation.getter(#tokenType),
-        returnValue: _i15.TokenType.apiKey,
-        returnValueForMissingStub: _i15.TokenType.apiKey,
-      ) as _i15.TokenType);
+        returnValue: _i16.TokenType.apiKey,
+        returnValueForMissingStub: _i16.TokenType.apiKey,
+      ) as _i16.TokenType);
 
   @override
   bool get isLoading => (super.noSuchMethod(
@@ -982,7 +1104,7 @@ class MockAuthProvider extends _i2.Mock implements _i15.AuthProvider {
   @override
   _i5.Future<void> setToken(
     String? token,
-    _i15.TokenType? type,
+    _i16.TokenType? type,
   ) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1057,7 +1179,7 @@ class MockAuthProvider extends _i2.Mock implements _i15.AuthProvider {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockNotificationService extends _i2.Mock
-    implements _i16.NotificationService {
+    implements _i17.NotificationService {
   @override
   _i4.FlutterLocalNotificationsPlugin get flutterLocalNotificationsPlugin =>
       (super.noSuchMethod(
@@ -1137,13 +1259,13 @@ class MockNotificationService extends _i2.Mock
 /// A class which mocks [ActivityProvider].
 ///
 /// See the documentation for Mockito's code generation for more information.
-class MockActivityProvider extends _i2.Mock implements _i17.ActivityProvider {
+class MockActivityProvider extends _i2.Mock implements _i18.ActivityProvider {
   @override
-  List<_i18.ActivityLog> get logs => (super.noSuchMethod(
+  List<_i19.ActivityLog> get logs => (super.noSuchMethod(
         Invocation.getter(#logs),
-        returnValue: <_i18.ActivityLog>[],
-        returnValueForMissingStub: <_i18.ActivityLog>[],
-      ) as List<_i18.ActivityLog>);
+        returnValue: <_i19.ActivityLog>[],
+        returnValueForMissingStub: <_i19.ActivityLog>[],
+      ) as List<_i19.ActivityLog>);
 
   @override
   bool get hasListeners => (super.noSuchMethod(
@@ -1202,13 +1324,13 @@ class MockActivityProvider extends _i2.Mock implements _i17.ActivityProvider {
 ///
 /// See the documentation for Mockito's code generation for more information.
 class MockMessageQueueProvider extends _i2.Mock
-    implements _i19.MessageQueueProvider {
+    implements _i20.MessageQueueProvider {
   @override
-  List<_i9.QueuedMessage> get queue => (super.noSuchMethod(
+  List<_i8.QueuedMessage> get queue => (super.noSuchMethod(
         Invocation.getter(#queue),
-        returnValue: <_i9.QueuedMessage>[],
-        returnValueForMissingStub: <_i9.QueuedMessage>[],
-      ) as List<_i9.QueuedMessage>);
+        returnValue: <_i8.QueuedMessage>[],
+        returnValueForMissingStub: <_i8.QueuedMessage>[],
+      ) as List<_i8.QueuedMessage>);
 
   @override
   bool get isOffline => (super.noSuchMethod(
@@ -1287,7 +1409,7 @@ class MockMessageQueueProvider extends _i2.Mock
             #requestId: requestId,
           },
         ),
-        returnValue: _i20.dummyValue<String>(
+        returnValue: _i21.dummyValue<String>(
           this,
           Invocation.method(
             #addMessage,
@@ -1302,7 +1424,7 @@ class MockMessageQueueProvider extends _i2.Mock
             },
           ),
         ),
-        returnValueForMissingStub: _i20.dummyValue<String>(
+        returnValueForMissingStub: _i21.dummyValue<String>(
           this,
           Invocation.method(
             #addMessage,
@@ -1321,7 +1443,7 @@ class MockMessageQueueProvider extends _i2.Mock
 
   @override
   String addCreateSessionRequest(
-    _i9.Session? session, {
+    _i8.Session? session, {
     String? reason,
     bool? isDraft = false,
     String? requestId,
@@ -1336,7 +1458,7 @@ class MockMessageQueueProvider extends _i2.Mock
             #requestId: requestId,
           },
         ),
-        returnValue: _i20.dummyValue<String>(
+        returnValue: _i21.dummyValue<String>(
           this,
           Invocation.method(
             #addCreateSessionRequest,
@@ -1348,7 +1470,7 @@ class MockMessageQueueProvider extends _i2.Mock
             },
           ),
         ),
-        returnValueForMissingStub: _i20.dummyValue<String>(
+        returnValueForMissingStub: _i21.dummyValue<String>(
           this,
           Invocation.method(
             #addCreateSessionRequest,
@@ -1381,7 +1503,7 @@ class MockMessageQueueProvider extends _i2.Mock
   @override
   void updateCreateSessionRequest(
     String? id,
-    _i9.Session? session, {
+    _i8.Session? session, {
     bool? isDraft,
     String? reason,
   }) =>
@@ -1426,14 +1548,14 @@ class MockMessageQueueProvider extends _i2.Mock
       );
 
   @override
-  List<_i9.QueuedMessage> getDrafts(String? sessionId) => (super.noSuchMethod(
+  List<_i8.QueuedMessage> getDrafts(String? sessionId) => (super.noSuchMethod(
         Invocation.method(
           #getDrafts,
           [sessionId],
         ),
-        returnValue: <_i9.QueuedMessage>[],
-        returnValueForMissingStub: <_i9.QueuedMessage>[],
-      ) as List<_i9.QueuedMessage>);
+        returnValue: <_i8.QueuedMessage>[],
+        returnValueForMissingStub: <_i8.QueuedMessage>[],
+      ) as List<_i8.QueuedMessage>);
 
   @override
   _i5.Future<bool> goOnline(_i3.JulesClient? client) => (super.noSuchMethod(
@@ -1449,7 +1571,7 @@ class MockMessageQueueProvider extends _i2.Mock
   _i5.Future<void> sendQueue(
     _i3.JulesClient? client, {
     dynamic Function(String)? onMessageSent,
-    dynamic Function(_i9.Session)? onSessionCreated,
+    dynamic Function(_i8.Session)? onSessionCreated,
     dynamic Function(
       String,
       Object,
@@ -1477,7 +1599,7 @@ class MockMessageQueueProvider extends _i2.Mock
           #importLegacyQueue,
           [filePath],
         ),
-        returnValue: _i5.Future<String>.value(_i20.dummyValue<String>(
+        returnValue: _i5.Future<String>.value(_i21.dummyValue<String>(
           this,
           Invocation.method(
             #importLegacyQueue,
@@ -1485,7 +1607,7 @@ class MockMessageQueueProvider extends _i2.Mock
           ),
         )),
         returnValueForMissingStub:
-            _i5.Future<String>.value(_i20.dummyValue<String>(
+            _i5.Future<String>.value(_i21.dummyValue<String>(
           this,
           Invocation.method(
             #importLegacyQueue,

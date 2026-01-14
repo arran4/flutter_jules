@@ -16,7 +16,7 @@ import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
-import '../widgets/bulk_action_dialog.dart';
+import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
@@ -56,6 +56,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<SortOption> _activeSorts = [
     const SortOption(SortField.updated, SortDirection.descending),
   ];
+  String? _refreshStatus;
+  StreamSubscription<String>? _progressSubscription;
 
   List<CachedItem<Session>> _displayItems = [];
 
@@ -67,6 +69,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void initState() {
     super.initState();
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    _progressSubscription = sessionProvider.progressStream.listen((status) {
+      if (mounted) {
+        setState(() {
+          _refreshStatus = status;
+        });
+        if (status == 'Done.') {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                _refreshStatus = null;
+              });
+            }
+          });
+        }
+      }
+    });
     _notificationService = context.read<NotificationService>();
     _notificationSubscription =
         _notificationService.onNotificationResponseStream.listen((response) {
@@ -134,6 +153,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void dispose() {
     _notificationSubscription?.cancel();
+    _progressSubscription?.cancel();
     _focusNode.dispose();
     super.dispose();
   }
@@ -200,7 +220,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   void _openBulkActionDialog() {
     showDialog(
       context: context,
-      builder: (context) => BulkActionDialog(
+      builder: (context) => BulkActionEntryDialog(
         currentFilterTree: _filterTree,
         currentSorts: _activeSorts,
         availableSuggestions: _availableSuggestions,
@@ -1492,6 +1512,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         );
                       },
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.source),
+                      tooltip: 'Manage Sources',
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/sources_raw');
+                      },
+                    ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
                         if (value == 'new_session') {
@@ -1706,11 +1733,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                       ),
                                       child: Align(
                                         alignment: Alignment.centerLeft,
-                                        child: Text(
-                                          'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
-                                          style: Theme.of(context)
-                                              .textTheme
-                                              .bodySmall
+                                        child: (_refreshStatus != null)
+                                            ? Text(
+                                                _refreshStatus!,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall,
+                                              )
+                                            : Text(
+                                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
                                               ?.copyWith(
                                                 color: DateTime.now()
                                                             .difference(

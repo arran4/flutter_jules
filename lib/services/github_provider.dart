@@ -5,6 +5,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 
+class GithubApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  GithubApiException(this.statusCode, this.message);
+
+  @override
+  String toString() => 'GithubApiException: $statusCode $message';
+}
+
 class GithubProvider extends ChangeNotifier {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   static const String _githubApiKey = 'github_api_key';
@@ -72,10 +82,7 @@ class GithubProvider extends ChangeNotifier {
           final data = jsonDecode(response.body);
           return GitHubPrResponse(data);
         } else {
-          debugPrint(
-            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
-          );
-          return null;
+          throw GithubApiException(response.statusCode, response.body);
         }
       },
     );
@@ -152,11 +159,7 @@ class GithubProvider extends ChangeNotifier {
         _updateRateLimits(prResponse.headers);
 
         if (prResponse.statusCode != 200) {
-          debugPrint(
-            'Failed to get PR for CI status ($owner/$repo #$prNumber): ${prResponse.statusCode} ${prResponse.body}',
-          );
-          // If we can't get the PR, we can't get the status.
-          return 'Unknown';
+          throw GithubApiException(prResponse.statusCode, prResponse.body);
         }
 
         final prData = jsonDecode(prResponse.body);
@@ -265,10 +268,7 @@ class GithubProvider extends ChangeNotifier {
             'forkParent': parent != null ? parent['full_name'] : null,
           };
         } else {
-          debugPrint(
-            'Failed to get repo details for $owner/$repo: ${response.statusCode} ${response.body}',
-          );
-          return null;
+          throw GithubApiException(response.statusCode, response.body);
         }
       },
     );
