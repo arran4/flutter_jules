@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
+import '../../models.dart';
 import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
@@ -69,6 +70,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.hideArchivedAndReadOnly,
                 onChanged: (value) =>
                     settings.setHideArchivedAndReadOnly(value),
+              ),
+              _buildSectionHeader(context, 'Keybindings'),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Enter',
+                value: settings.enterKeyAction,
+                onChanged: settings.setEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Shift+Enter',
+                value: settings.shiftEnterKeyAction,
+                onChanged: settings.setShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Enter',
+                value: settings.ctrlEnterKeyAction,
+                onChanged: settings.setCtrlEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Shift+Enter',
+                value: settings.ctrlShiftEnterKeyAction,
+                onChanged: settings.setCtrlShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<EscKeyAction>(
+                context,
+                title: 'Escape',
+                value: settings.escKeyAction,
+                onChanged: settings.setEscKeyAction,
+                values: EscKeyAction.values,
+                formatter: _formatEscKeyAction,
               ),
               const Divider(),
               _buildAutomaticRefreshSection(context, settings),
@@ -649,6 +691,55 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Floating';
       case FabVisibility.off:
         return 'Off';
+    }
+  }
+
+  Widget _buildKeybindingDropdown<T extends Enum>(
+    BuildContext context, {
+    required String title,
+    required T value,
+    required List<T> values,
+    required Function(T) onChanged,
+    required String Function(T) formatter,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<T>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: values.map((v) {
+          return DropdownMenuItem(
+            value: v,
+            child: Text(formatter(v)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatMessageSubmitAction(MessageSubmitAction action) {
+    switch (action) {
+      case MessageSubmitAction.addNewLine:
+        return 'Adds a new line';
+      case MessageSubmitAction.submitsMessage:
+        return 'Submits message';
+      case MessageSubmitAction.submitsMessageAndGoesBack:
+        return 'Submits message and goes back';
+      case MessageSubmitAction.doesNothing:
+        return 'Does nothing';
+    }
+  }
+
+  String _formatEscKeyAction(EscKeyAction action) {
+    switch (action) {
+      case EscKeyAction.savesDraftAndGoesBack:
+        return 'Saves draft and goes back';
+      case EscKeyAction.goesBack:
+        return 'Goes back';
+      case EscKeyAction.doesNothing:
+        return 'Does nothing';
     }
   }
 }

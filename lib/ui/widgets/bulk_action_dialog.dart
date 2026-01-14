@@ -138,11 +138,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = (screenSize.width * 0.8).clamp(800.0, 1800.0);
+    final dialogHeight = (screenSize.height * 0.8).clamp(600.0, 1200.0);
+
     return AlertDialog(
       title: const Text('Bulk Actions'),
       content: SizedBox(
-        width: 900,
-        height: 700,
+        width: dialogWidth,
+        height: dialogHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [

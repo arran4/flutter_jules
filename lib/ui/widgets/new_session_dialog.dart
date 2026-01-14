@@ -217,6 +217,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           force: force,
           githubProvider: githubProvider,
           sessionProvider: sessionProvider,
+          onProgress: (page) {
+            if (mounted) {
+              setState(() {
+                _refreshStatus = 'Loading page $page...';
+              });
+            }
+          },
         );
       }
 
