@@ -16,7 +16,7 @@ import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
-import '../widgets/bulk_action_dialog.dart';
+import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
@@ -200,7 +200,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   void _openBulkActionDialog() {
     showDialog(
       context: context,
-      builder: (context) => BulkActionDialog(
+      builder: (context) => BulkActionEntryDialog(
         currentFilterTree: _filterTree,
         currentSorts: _activeSorts,
         availableSuggestions: _availableSuggestions,
