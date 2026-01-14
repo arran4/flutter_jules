@@ -37,7 +37,10 @@ class SourceProvider extends ChangeNotifier {
         _items = await _cacheService!.loadSources(authToken);
         notifyListeners();
         if (_items.isNotEmpty) {
-          // If we have items and not forcing, we can stop.
+          // If we have items from cache, start enriching them in the background
+          if (githubProvider != null && githubProvider.apiKey != null) {
+            enrichSourcesWithGithubData(githubProvider, authToken: authToken);
+          }
           return;
         }
       }
@@ -75,47 +78,9 @@ class SourceProvider extends ChangeNotifier {
         pageToken = response.nextPageToken;
       } while (pageToken != null && pageToken.isNotEmpty);
 
-      // Enrich with GitHub data if provider is available
+      // Now that sources are fetched, enqueue the enrichment
       if (githubProvider != null && githubProvider.apiKey != null) {
-        List<Source> enrichedSources = [];
-        for (final source in allSources) {
-          if (source.githubRepo != null) {
-            final details = await githubProvider.getRepoDetails(
-              source.githubRepo!.owner,
-              source.githubRepo!.repo,
-            );
-            if (details != null) {
-              final enrichedRepo = GitHubRepo(
-                owner: source.githubRepo!.owner,
-                repo: source.githubRepo!.repo,
-                isPrivate: source.githubRepo!.isPrivate,
-                defaultBranch: source.githubRepo!.defaultBranch,
-                branches: source.githubRepo!.branches,
-                repoName: details['repoName'],
-                repoId: details['repoId'],
-                isPrivateGithub: details['isPrivateGithub'],
-                description: details['description'],
-                primaryLanguage: details['primaryLanguage'],
-                license: details['license'],
-                openIssuesCount: details['openIssuesCount'],
-                isFork: details['isFork'],
-                forkParent: details['forkParent'],
-              );
-              enrichedSources.add(
-                Source(
-                  name: source.name,
-                  id: source.id,
-                  githubRepo: enrichedRepo,
-                ),
-              );
-            } else {
-              enrichedSources.add(source); // Add original if enrichment fails
-            }
-          } else {
-            enrichedSources.add(source);
-          }
-        }
-        allSources = enrichedSources;
+        enrichSourcesWithGithubData(githubProvider, authToken: authToken);
       }
 
       if (_cacheService != null && authToken != null) {
@@ -139,6 +104,77 @@ class SourceProvider extends ChangeNotifier {
     } finally {
       _isLoading = false;
       notifyListeners();
+    }
+  }
+
+  void enrichSourcesWithGithubData(GithubProvider githubProvider,
+      {String? authToken}) {
+    final List<Future> allJobs = [];
+    for (var i = 0; i < _items.length; i++) {
+      final item = _items[i];
+      final source = item.data;
+
+      if (source.githubRepo != null) {
+        final itemIndex = i; // To avoid closure issues
+        final job = githubProvider.createGetRepoDetailsJob(
+          source.githubRepo!.owner,
+          source.githubRepo!.repo,
+        );
+
+        if (job != null) {
+          final jobFuture = job.completer.future.then((_) {
+            final details = job.result as Map<String, dynamic>?;
+
+            if (details != null) {
+              // Ensure the item still exists at this index
+              if (itemIndex >= _items.length ||
+                  _items[itemIndex].data.name != source.name) {
+                return;
+              }
+              final currentItem = _items[itemIndex];
+              final sourceToUpdate = currentItem.data;
+
+              final enrichedRepo = GitHubRepo(
+                owner: sourceToUpdate.githubRepo!.owner,
+                repo: sourceToUpdate.githubRepo!.repo,
+                isPrivate: sourceToUpdate.githubRepo!.isPrivate,
+                defaultBranch: sourceToUpdate.githubRepo!.defaultBranch,
+                branches: sourceToUpdate.githubRepo!.branches,
+                repoName: details['repoName'],
+                repoId: details['repoId'],
+                isPrivateGithub: details['isPrivateGithub'],
+                description: details['description'],
+                primaryLanguage: details['primaryLanguage'],
+                license: details['license'],
+                openIssuesCount: details['openIssuesCount'],
+                isFork: details['isFork'],
+                forkParent: details['forkParent'],
+              );
+
+              final updatedSource = Source(
+                  name: sourceToUpdate.name,
+                  id: sourceToUpdate.id,
+                  githubRepo: enrichedRepo);
+
+              _items[itemIndex] = currentItem.copyWith(
+                  data: updatedSource,
+                  metadata: currentItem.metadata
+                      .copyWith(lastUpdated: DateTime.now()));
+              notifyListeners();
+            }
+          });
+          allJobs.add(jobFuture);
+          githubProvider.enqueue(job);
+        }
+      }
+    }
+    if (allJobs.isNotEmpty) {
+      unawaited(Future.wait(allJobs).then((_) {
+        if (_cacheService != null && authToken != null) {
+          final allSourcesForCache = _items.map((i) => i.data).toList();
+          _cacheService!.saveSources(authToken, allSourcesForCache);
+        }
+      }));
     }
   }
 

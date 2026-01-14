@@ -232,11 +232,21 @@ class GithubProvider extends ChangeNotifier {
     String owner,
     String repo,
   ) async {
+    final job = createGetRepoDetailsJob(owner, repo);
+    if (job == null) return null;
+
+    enqueue(job);
+
+    // Wait for job to complete
+    await job.completer.future;
+    return job.result as Map<String, dynamic>?;
+  }
+
+  GithubJob? createGetRepoDetailsJob(String owner, String repo) {
     if (_apiKey == null) {
       return null;
     }
-
-    final job = GithubJob(
+    return GithubJob(
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
@@ -272,14 +282,16 @@ class GithubProvider extends ChangeNotifier {
         }
       },
     );
+  }
 
+  void enqueue(GithubJob job) {
+    // Avoid adding duplicate jobs
+    if (_queue.any((j) => j.id == job.id)) {
+      return;
+    }
     _queue.add(job);
     _processQueue();
     notifyListeners();
-
-    // Wait for job to complete
-    await job.completer.future;
-    return job.result as Map<String, dynamic>?;
   }
 
   void _updateRateLimits(Map<String, String> headers) {
