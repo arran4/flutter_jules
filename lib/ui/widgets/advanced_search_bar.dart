@@ -53,7 +53,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   OverlayEntry? _overlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
-  bool _showFilterPresets = false;
+  bool _activeFiltersExpanded = true;
+  final bool _showFilterPresets = true;
 
   @override
   void initState() {
@@ -595,20 +596,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                     const SizedBox(width: 8),
 
-                    IconButton(
-                      icon: Icon(
-                        _showFilterPresets
-                            ? Icons.filter_list_off
-                            : Icons.filter_list,
-                      ),
-                      onPressed: () {
-                        setState(() {
-                          _showFilterPresets = !_showFilterPresets;
-                        });
+                    PopupMenuButton<FilterBookmark>(
+                      icon: const Icon(Icons.bookmarks),
+                      tooltip: 'Filter Presets',
+                      onSelected: (bookmark) {
+                        widget.onFilterTreeChanged(bookmark.tree);
+                        widget.onSortsChanged(bookmark.sorts);
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Applied preset: ${bookmark.name}'),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
                       },
-                      tooltip: _showFilterPresets
-                          ? 'Hide Filter Presets'
-                          : 'Show Filter Presets',
+                      itemBuilder: (context) => _buildPresetMenuItems(context),
                     ),
                     IconButton(
                       icon: const Icon(Icons.access_time),
@@ -891,6 +892,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     ],
                   ),
                 ),
+
+                // Active Filters section
+                if (widget.filterTree != null || widget.activeSorts.isNotEmpty)
+                  _buildActiveFiltersSection(),
               ],
             ),
           ),
@@ -898,4 +903,240 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       },
     );
   }
+
+  List<PopupMenuEntry<FilterBookmark>> _buildPresetMenuItems(
+      BuildContext context) {
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+    final List<PopupMenuEntry<FilterBookmark>> items = [];
+
+    // User bookmarks
+    final userBookmarks = bookmarkProvider.bookmarks
+        .where((b) => !bookmarkProvider.isSystemBookmark(b.name))
+        .toList();
+    if (userBookmarks.isNotEmpty) {
+      items.add(const PopupMenuHeader(child: Text('My Presets')));
+      for (final bookmark in userBookmarks) {
+        items.add(_buildBookmarkMenuItem(bookmark));
+      }
+    }
+
+    // System bookmarks
+    final systemBookmarks = bookmarkProvider.bookmarks
+        .where((b) => bookmarkProvider.isSystemBookmark(b.name))
+        .toList();
+    if (systemBookmarks.isNotEmpty) {
+      if (items.isNotEmpty) items.add(const PopupMenuDivider());
+      items.add(const PopupMenuHeader(child: Text('System Presets')));
+      for (final bookmark in systemBookmarks) {
+        items.add(_buildBookmarkMenuItem(bookmark));
+      }
+    }
+
+    // Actions
+    if (items.isNotEmpty) items.add(const PopupMenuDivider());
+
+    items.add(
+      PopupMenuItem(
+        child: const ListTile(
+          leading: Icon(Icons.save),
+          title: Text('Save Current Filters'),
+        ),
+        onTap: () => Future.delayed(
+          const Duration(milliseconds: 50),
+          () {
+            if (context.mounted) {
+              _saveCurrentFilters(context);
+            }
+          },
+        ),
+      ),
+    );
+    items.add(
+      PopupMenuItem(
+        child: const ListTile(
+          leading: Icon(Icons.settings),
+          title: Text('Manage Presets'),
+        ),
+        onTap: () => Future.delayed(
+          const Duration(milliseconds: 50),
+          () {
+            if (context.mounted) {
+              Navigator.of(context).push(
+                MaterialPageRoute(
+                  builder: (context) => BookmarkManagerScreen(
+                    availableSuggestions: widget.availableSuggestions,
+                  ),
+                ),
+              );
+            }
+          },
+        ),
+      ),
+    );
+
+    return items;
+  }
+
+  PopupMenuItem<FilterBookmark> _buildBookmarkMenuItem(
+      FilterBookmark bookmark) {
+    return PopupMenuItem<FilterBookmark>(
+      value: bookmark,
+      child: Tooltip(
+        message:
+            '${bookmark.description ?? ''}\n\nFilter: ${bookmark.expression}\nSort: ${bookmark.sorts.map((s) => s.toExpression()).join(', ')}',
+        child: Text(bookmark.name),
+      ),
+    );
+  }
+
+  Widget _buildActiveFiltersSection() {
+    if (_activeFiltersExpanded) {
+      return Column(
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.end,
+            children: [
+              TextButton.icon(
+                icon: const Icon(Icons.unfold_less, size: 16),
+                label: const Text('Collapse'),
+                onPressed: () => setState(() => _activeFiltersExpanded = false),
+              ),
+            ],
+          ),
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: [
+              if (widget.filterTree != null)
+                FilterElementWidget(
+                  element: widget.filterTree,
+                  onAddAlternative: (target, alternative) {
+                    final newTree = FilterElementBuilder.groupFilters(
+                      widget.filterTree,
+                      target,
+                      alternative,
+                      isAnd: false,
+                    );
+                    final simplified = FilterElementBuilder.simplify(newTree);
+                    widget.onFilterTreeChanged(simplified);
+                  },
+                  onDrop: (source, target, action, isCtrlPressed) {
+                    var newTree = widget.filterTree;
+                    final sourceCopy = FilterElement.fromJson(source.toJson());
+                    final isCopy = isCtrlPressed;
+
+                    switch (action) {
+                      case FilterDropAction.groupOr:
+                        newTree = FilterElementBuilder.groupFilters(
+                            newTree, target, sourceCopy,
+                            isAnd: false);
+                        break;
+                      case FilterDropAction.groupAnd:
+                        newTree = FilterElementBuilder.groupFilters(
+                            newTree, target, sourceCopy,
+                            isAnd: true);
+                        break;
+                      case FilterDropAction.addToGroup:
+                        newTree = FilterElementBuilder.addFilterToComposite(
+                            newTree, target, sourceCopy);
+                        break;
+                      case FilterDropAction.groupAboveAnd:
+                        newTree = FilterElementBuilder.groupFilters(
+                            newTree, target, sourceCopy,
+                            isAnd: true);
+                        break;
+                      case FilterDropAction.groupAboveOr:
+                        newTree = FilterElementBuilder.groupFilters(
+                            newTree, target, sourceCopy,
+                            isAnd: false);
+                        break;
+                    }
+
+                    if (!isCopy && newTree != null) {
+                      newTree =
+                          FilterElementBuilder.removeFilter(newTree, source);
+                    }
+
+                    final simplified = FilterElementBuilder.simplify(newTree);
+                    widget.onFilterTreeChanged(simplified);
+                  },
+                  onRemove: (element) {
+                    final newTree = FilterElementBuilder.removeFilter(
+                        widget.filterTree, element);
+                    final simplified = FilterElementBuilder.simplify(newTree);
+                    widget.onFilterTreeChanged(simplified);
+                  },
+                  onToggleNot: (element) {
+                    final newTree = FilterElementBuilder.toggleNot(
+                        widget.filterTree!, element);
+                    widget.onFilterTreeChanged(newTree);
+                  },
+                  onTap: null,
+                ),
+              SortPillsWidget(
+                activeSorts: widget.activeSorts,
+                onSortsChanged: widget.onSortsChanged,
+              ),
+            ],
+          ),
+        ],
+      );
+    } else {
+      // Collapsed view
+      final filterExpression = widget.filterTree?.toExpression() ?? '';
+      final sortExpression =
+          widget.activeSorts.map((s) => s.toExpression()).join(', ');
+      final fullExpression =
+          '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
+              .trim();
+
+      return InkWell(
+        onTap: () => setState(() => _activeFiltersExpanded = true),
+        child: Container(
+          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.filter_alt, size: 16, color: Colors.grey),
+              const SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  fullExpression,
+                  style: const TextStyle(
+                      fontFamily: 'monospace', color: Colors.black87),
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+              const Spacer(),
+              const Icon(Icons.unfold_more, size: 16),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+}
+
+class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
+  const PopupMenuHeader({
+    super.key,
+    required super.child,
+  }) : super(enabled: false, height: 32);
+
+  @override
+  Widget? get child => MouseRegion(
+        cursor: SystemMouseCursors.basic,
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+          child: super.child!,
+        ),
+      );
 }
