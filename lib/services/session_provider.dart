@@ -684,11 +684,14 @@ class SessionProvider extends ChangeNotifier {
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
-    final pullIndex = pathSegments.lastIndexOf('pull');
+    var pullIndex = pathSegments.lastIndexOf('pull');
+    if (pullIndex == -1) {
+      pullIndex = pathSegments.lastIndexOf('pulls');
+    }
 
     if (pullIndex == -1 || pullIndex < 2) {
       throw Exception(
-        "Invalid PR URL format: 'pull' segment not found or misplaced.",
+        "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
       );
     }
 
@@ -772,7 +775,10 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    final pullIndex = pathSegments.lastIndexOf('pull');
+    var pullIndex = pathSegments.lastIndexOf('pull');
+    if (pullIndex == -1) {
+      pullIndex = pathSegments.lastIndexOf('pulls');
+    }
 
     if (pullIndex == -1 || pullIndex < 2) {
       return false;
@@ -797,11 +803,14 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final pullIndex = pathSegments.lastIndexOf('pull');
+      var pullIndex = pathSegments.lastIndexOf('pull');
+      if (pullIndex == -1) {
+        pullIndex = pathSegments.lastIndexOf('pulls');
+      }
 
       if (pullIndex == -1 || pullIndex < 2) {
         throw Exception(
-          "Invalid PR URL format: 'pull' segment not found or misplaced.",
+          "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
         );
       }
       final owner = pathSegments[pullIndex - 2];
