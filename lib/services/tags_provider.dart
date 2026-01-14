@@ -21,7 +21,7 @@ class TagsProvider with ChangeNotifier {
   List<String> get allTags => _allTags;
 
   void _updateTags() {
-    final allSessions = _sessionProvider.items.map((e) => e.item);
+    final allSessions = _sessionProvider.items.map((e) => e.data);
     final tagSet = <String>{};
     for (final session in allSessions) {
       if (session.tags != null) {

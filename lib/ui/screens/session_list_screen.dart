@@ -26,9 +26,9 @@ import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../widgets/note_dialog.dart';
+import '../../models/note.dart';
 
 import 'dart:async';
-import 'dart:convert';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
 
@@ -1644,7 +1644,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   context,
                                   listen: false,
                                 );
-                                settings.setLastFilter(tree);
+                                if (tree != null) {
+                                  settings.setLastFilter(tree);
+                                }
                               },
                               searchText: _searchText,
                               onSearchChanged: (text) {

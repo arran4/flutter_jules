@@ -10,6 +10,8 @@ import 'package:flutter_jules/services/notification_service.dart';
 import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/session.dart';
 import 'package:flutter_jules/models/enums.dart';
+import 'package:fake_async/fake_async.dart';
+import 'package:flutter_jules/services/jules_client.dart';
 
 class MockSettingsProvider extends Mock implements SettingsProvider {}
 
@@ -51,6 +53,7 @@ void main() {
   test('initializes timers for enabled schedules', () async {
     final schedule = RefreshSchedule(
       id: '1',
+      name: 'Test Schedule',
       intervalInMinutes: 1,
       isEnabled: true,
       refreshPolicy: ListRefreshPolicy.quick,
@@ -74,16 +77,17 @@ void main() {
       async.elapse(const Duration(minutes: 1));
 
       // Should have been called now
-      verify(mockSessionProvider.fetchSessions(any)).called(1);
+      verify(mockSessionProvider.fetchSessions(JulesClient())).called(1);
     });
   });
 
   test('does not initialize timers for disabled schedules', () async {
     final schedule = RefreshSchedule(
-      id: '1',
-      intervalInMinutes: 1,
-      isEnabled: false,
-    );
+        id: '1',
+        name: 'Test Schedule',
+        intervalInMinutes: 1,
+        isEnabled: false,
+        refreshPolicy: ListRefreshPolicy.quick);
     when(mockSettingsProvider.schedules).thenReturn([schedule]);
 
     fakeAsync((async) {
@@ -100,16 +104,22 @@ void main() {
       async.elapse(const Duration(minutes: 1));
 
       // Should not have been called
-      verifyNever(mockSessionProvider.fetchSessions(any));
+      verifyNever(mockSessionProvider.fetchSessions(JulesClient()));
     });
   });
 
   test('compares sessions and sends notifications', () {
     final oldSession = Session(
+      id: 'session1',
       name: 'session1',
+      prompt: 'Test Prompt',
       state: SessionState.IN_PROGRESS,
     );
-    final newSession = Session(name: 'session1', state: SessionState.COMPLETED);
+    final newSession = Session(
+        id: 'session1',
+        name: 'session1',
+        prompt: 'Test Prompt',
+        state: SessionState.COMPLETED);
 
     when(mockSettingsProvider.notifyOnCompletion).thenReturn(true);
     when(mockSettingsProvider.notifyOnAttention).thenReturn(false);
@@ -123,7 +133,10 @@ void main() {
 
     when(
       mockSessionProvider.items,
-    ).thenReturn(newSessions.map((e) => CachedItem(e)).toList());
+    ).thenReturn(newSessions
+        .map((e) => CachedItem(e,
+            CacheMetadata(firstSeen: DateTime.now(), lastRetrieved: DateTime.now())))
+        .toList());
 
     // ignore: invalid_use_of_protected_member
     refreshService.dispose(); // Dispose the old service and its timers

@@ -391,6 +391,9 @@ class FilterElementBuilder {
         case FilterType.time:
           element = TimeFilterElement(token.value as TimeFilter);
           break;
+        case FilterType.tag:
+          element = TagElement(token.label, token.value.toString());
+          break;
       }
 
       // Handle exclude mode with NOT wrapper

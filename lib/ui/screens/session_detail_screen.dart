@@ -23,6 +23,7 @@ import '../widgets/session_meta_pills.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
 import '../widgets/note_dialog.dart';
+import '../../models/note.dart';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 

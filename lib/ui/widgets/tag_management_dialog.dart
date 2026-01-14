@@ -3,6 +3,7 @@ import 'package:provider/provider.dart';
 import 'package:collection/collection.dart';
 
 import '../../models/session.dart';
+import '../../services/auth_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/tags_provider.dart';
 
@@ -155,7 +156,9 @@ class TagManagementDialogState extends State<TagManagementDialog> {
   void _saveTags() {
     final sessionProvider =
         Provider.of<SessionProvider>(context, listen: false);
-    sessionProvider.updateSessionTags(widget.session, _currentTags);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    sessionProvider.updateSessionTags(
+        widget.session, _currentTags, authProvider.token!);
     Navigator.of(context).pop();
   }
 }
