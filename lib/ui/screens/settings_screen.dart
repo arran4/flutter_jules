@@ -330,6 +330,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     keyboardType: TextInputType.number,
                   ),
                   DropdownButtonFormField<RefreshTaskType>(
+                    // ignore: deprecated_member_use
                     value: taskType,
                     onChanged: (value) {
                       if (value != null) {
@@ -365,6 +366,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                   if (taskType == RefreshTaskType.sendPendingMessages)
                     DropdownButtonFormField<SendMessagesMode>(
+                      // ignore: deprecated_member_use
                       value: sendMessagesMode,
                       onChanged: (value) {
                         if (value != null) {
@@ -408,8 +410,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   name: nameController.text,
                   intervalInMinutes: interval,
                   taskType: taskType,
-                  refreshPolicy:
-                      taskType == RefreshTaskType.refresh ? refreshPolicy : null,
+                  refreshPolicy: taskType == RefreshTaskType.refresh
+                      ? refreshPolicy
+                      : null,
                   sendMessagesMode:
                       taskType == RefreshTaskType.sendPendingMessages
                           ? sendMessagesMode

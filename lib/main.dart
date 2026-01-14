@@ -132,25 +132,26 @@ class MyApp extends StatelessWidget {
         child: MaterialApp(
           title: "Arran's Flutter based jules client",
           debugShowCheckedModeBanner: false,
-      theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-      routes: {
-        '/settings': (context) => const SettingsScreen(),
-        '/sources_raw': (context) => const SourceListScreen(),
-      },
-      home: Consumer<AuthProvider>(
-        builder: (context, auth, _) {
-          if (auth.isLoading) {
-            return const Scaffold(
-              body: Center(child: CircularProgressIndicator()),
-            );
-          }
-          if (!auth.isAuthenticated) {
-            return const LoginScreen();
-          }
-          return const SessionListScreen();
-        },
+          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+          routes: {
+            '/settings': (context) => const SettingsScreen(),
+            '/sources_raw': (context) => const SourceListScreen(),
+          },
+          home: Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              if (auth.isLoading) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (!auth.isAuthenticated) {
+                return const LoginScreen();
+              }
+              return const SessionListScreen();
+            },
+          ),
+        ),
       ),
-    ),
     );
   }
 }

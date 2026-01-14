@@ -208,7 +208,8 @@ class MessageQueueProvider extends ChangeNotifier {
     _queue.removeWhere((m) => m.id == id);
 
     // If it's a session creation, also remove dependent messages
-    if (msg.type == QueuedMessageType.sessionCreation && msg.requestId != null) {
+    if (msg.type == QueuedMessageType.sessionCreation &&
+        msg.requestId != null) {
       _queue.removeWhere((m) => m.requestId == msg.requestId);
     }
 
@@ -254,7 +255,6 @@ class MessageQueueProvider extends ChangeNotifier {
 
   Future<void> sendQueue(
     JulesClient client, {
-    int? limit,
     Function(String)? onMessageSent,
     Function(Session)? onSessionCreated,
     Function(String, Object)? onError,
@@ -272,7 +272,7 @@ class MessageQueueProvider extends ChangeNotifier {
     }
 
     for (final msg in toProcess) {
-      if (limit != null && sentCount >= limit) {
+      if (limit > 0 && sentCount >= limit) {
         break;
       }
       try {
@@ -295,8 +295,7 @@ class MessageQueueProvider extends ChangeNotifier {
           if (msg.requestId != null) {
             for (var i = 0; i < _queue.length; i++) {
               if (_queue[i].requestId == msg.requestId) {
-                _queue[i] =
-                    _queue[i].copyWith(sessionId: createdSession.name);
+                _queue[i] = _queue[i].copyWith(sessionId: createdSession.name);
               }
             }
           }
@@ -306,14 +305,14 @@ class MessageQueueProvider extends ChangeNotifier {
           // If a message for a new session is here, but the creation request isn't,
           // it's an orphan. We should probably mark it as an error.
           if (msg.sessionId == 'new_session') {
-            throw JulesException(
+            throw Exception(
                 "Orphaned message for a new session. No creation request found.");
           }
           await client.sendMessage(msg.sessionId, msg.content);
           _queue.removeWhere((m) => m.id == msg.id);
           onMessageSent?.call(msg.id);
         }
-        toRemove.add(msg);
+
         sentCount++;
         if (onMessageSent != null) onMessageSent(msg.id);
       } catch (e) {

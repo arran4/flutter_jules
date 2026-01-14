@@ -3,7 +3,6 @@ import 'package:intl/intl.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../models.dart';
-import 'note_dialog.dart';
 
 class SessionMetaPills extends StatelessWidget {
   final Session session;

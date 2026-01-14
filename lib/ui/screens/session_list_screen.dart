@@ -2083,7 +2083,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               ),
                                                             ),
 
-                                                          if (metadata.labels.contains('PENDING_CREATION'))
+                                                          if (metadata.labels
+                                                              .contains(
+                                                                  'PENDING_CREATION'))
                                                             _buildPill(
                                                               context,
                                                               session: session,
@@ -2099,15 +2101,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                 id: 'flag:pending',
                                                                 type: FilterType
                                                                     .flag,
-                                                                label: 'Pending',
-                                                                value: 'pending',
+                                                                label:
+                                                                    'Pending',
+                                                                value:
+                                                                    'pending',
                                                               ),
                                                             ),
 
                                                           // Render custom labels
-                                                          for (final label
-                                                              in metadata
-                                                                  .labels.where((l) => l != 'PENDING_CREATION' && l != 'DRAFT_CREATION'))
+                                                          for (final label in metadata
+                                                              .labels
+                                                              .where((l) =>
+                                                                  l !=
+                                                                      'PENDING_CREATION' &&
+                                                                  l !=
+                                                                      'DRAFT_CREATION'))
                                                             _buildPill(
                                                               context,
                                                               session: session,

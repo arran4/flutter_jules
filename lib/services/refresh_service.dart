@@ -97,7 +97,7 @@ class RefreshService extends ChangeNotifier {
         return;
     }
     final newSessions = _sessionProvider.items.map((e) => e.data).toList();
-    _compareSessions(oldSessions, newSessions);
+    compareSessions(oldSessions, newSessions);
   }
 
   void _executeSendPendingMessages(
@@ -134,7 +134,8 @@ class RefreshService extends ChangeNotifier {
     }
   }
 
-  void _compareSessions(List<Session> oldSessions, List<Session> newSessions) {
+  @visibleForTesting
+  void compareSessions(List<Session> oldSessions, List<Session> newSessions) {
     final oldSessionMap = {for (var s in oldSessions) s.name: s};
 
     for (final newSession in newSessions) {

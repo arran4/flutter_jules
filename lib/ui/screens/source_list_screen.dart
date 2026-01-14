@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
+import 'package:flutter_jules/models/filter_expression_parser.dart';
 import 'package:intl/intl.dart';
 import 'session_list_screen.dart';
 import '../../utils/search_helper.dart';
@@ -561,11 +562,13 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                 tooltip: 'Refresh source',
                                                 onPressed: () async {
                                                   final sourceProvider =
-                                                      Provider.of<SourceProvider>(
+                                                      Provider.of<
+                                                              SourceProvider>(
                                                           context,
                                                           listen: false);
                                                   final githubProvider =
-                                                      Provider.of<GithubProvider>(
+                                                      Provider.of<
+                                                              GithubProvider>(
                                                           context,
                                                           listen: false);
                                                   final auth =
@@ -580,7 +583,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                       githubProvider:
                                                           githubProvider,
                                                     );
-                                                    if (mounted) {
+                                                    if (context.mounted) {
                                                       ScaffoldMessenger.of(
                                                               context)
                                                           .showSnackBar(
@@ -594,7 +597,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                       );
                                                     }
                                                   } catch (e) {
-                                                    if (mounted) {
+                                                    if (context.mounted) {
                                                       ScaffoldMessenger.of(
                                                               context)
                                                           .showSnackBar(
@@ -613,18 +616,22 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                 icon: const Icon(Icons.add),
                                                 tooltip: 'New session',
                                                 onPressed: () =>
-                                                    _handleNewSession(source.name),
+                                                    _handleNewSession(
+                                                        source.name),
                                               ),
                                               IconButton(
-                                                icon: const Icon(Icons.filter_list),
-                                                tooltip: 'Filter by this source',
+                                                icon: const Icon(
+                                                    Icons.filter_list),
+                                                tooltip:
+                                                    'Filter by this source',
                                                 onPressed: () {
                                                   Navigator.push(
                                                     context,
                                                     MaterialPageRoute(
                                                       builder: (context) =>
                                                           SessionListScreen(
-                                                        sourceFilter: source.name,
+                                                        sourceFilter:
+                                                            source.name,
                                                       ),
                                                     ),
                                                   );
@@ -632,15 +639,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                               ),
                                               PopupMenuButton<String>(
                                                 onSelected: (value) async {
-                                                  if (value == 'refresh_sessions') {
+                                                  if (value ==
+                                                      'refresh_sessions') {
                                                     final sessionProvider =
-                                                        Provider.of<SessionProvider>(
+                                                        Provider.of<
+                                                                SessionProvider>(
                                                             context,
                                                             listen: false);
-                                                    final auth =
-                                                        Provider.of<AuthProvider>(
-                                                            context,
-                                                            listen: false);
+                                                    final auth = Provider.of<
+                                                            AuthProvider>(
+                                                        context,
+                                                        listen: false);
                                                     try {
                                                       await sessionProvider
                                                           .refreshSessionsForSource(
@@ -648,7 +657,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                         source.name,
                                                         authToken: auth.token!,
                                                       );
-                                                      if (mounted) {
+                                                      if (context.mounted) {
                                                         ScaffoldMessenger.of(
                                                                 context)
                                                             .showSnackBar(
@@ -662,7 +671,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                         );
                                                       }
                                                     } catch (e) {
-                                                      if (mounted) {
+                                                      if (context.mounted) {
                                                         ScaffoldMessenger.of(
                                                                 context)
                                                             .showSnackBar(
@@ -677,26 +686,29 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                     }
                                                   } else if (value == 'stats') {
                                                     _showStatsDialog(source);
-                                                  } else if (value
-                                                      .startsWith('bookmark_')) {
-                                                    final bookmarkId = value
-                                                        .substring('bookmark_'.length);
-                                                    _handleBookmark(
-                                                        bookmarkId, source.name);
+                                                  } else if (value.startsWith(
+                                                      'bookmark_')) {
+                                                    final bookmarkId =
+                                                        value.substring(
+                                                            'bookmark_'.length);
+                                                    _handleBookmark(bookmarkId,
+                                                        source.name);
                                                   }
                                                 },
                                                 itemBuilder: (context) {
-                                                  final bookmarkProvider = Provider.of<
-                                                          FilterBookmarkProvider>(
-                                                      context,
-                                                      listen: false);
+                                                  final bookmarkProvider = Provider
+                                                      .of<FilterBookmarkProvider>(
+                                                          context,
+                                                          listen: false);
                                                   final bookmarks =
-                                                      bookmarkProvider.bookmarks;
+                                                      bookmarkProvider
+                                                          .bookmarks;
 
                                                   return [
                                                     const PopupMenuItem(
                                                       value: 'refresh_sessions',
-                                                      child: Text('Refresh Sessions'),
+                                                      child: Text(
+                                                          'Refresh Sessions'),
                                                     ),
                                                     const PopupMenuItem(
                                                       value: 'stats',
@@ -705,9 +717,12 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                                     if (bookmarks.isNotEmpty)
                                                       const PopupMenuDivider(),
                                                     ...bookmarks.map(
-                                                      (bookmark) => PopupMenuItem(
-                                                        value: 'bookmark_${bookmark.id}',
-                                                        child: Text(bookmark.name),
+                                                      (bookmark) =>
+                                                          PopupMenuItem(
+                                                        value:
+                                                            'bookmark_${bookmark.name}',
+                                                        child:
+                                                            Text(bookmark.name),
                                                       ),
                                                     ),
                                                   ];
@@ -790,9 +805,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
     final bookmarkProvider =
         Provider.of<FilterBookmarkProvider>(context, listen: false);
     final bookmark = bookmarkProvider.bookmarks.firstWhere(
-      (b) => b.id == bookmarkId,
+      (b) => b.name == bookmarkId,
       orElse: () => FilterBookmark(
-        id: '',
         name: '',
         expression: '',
         description: '',
@@ -800,7 +814,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
       ),
     );
 
-    if (bookmark.id.isEmpty) return;
+    if (bookmark.name.isEmpty) return;
 
     // Create a combined filter
     final sourceElement = SourceElement(sourceName, sourceName);

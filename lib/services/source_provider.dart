@@ -210,8 +210,8 @@ class SourceProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final newItem = CachedItem(
           updatedSource,
-          oldItem.metadata
-              .copyWith(lastRetrieved: DateTime.now(), isUpdated: true),
+          oldItem.metadata.copyWith(
+              lastRetrieved: DateTime.now(), lastUpdated: DateTime.now()),
         );
 
         _items[index] = newItem;

@@ -121,6 +121,18 @@ void main() {
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.block), findsOneWidget);
       },
+      FilterElementType.tag: (tester) async {
+        // TagElement
+        await pumpElement(tester, TagElement('MyTag', 'mytag'));
+        expect(find.text('#MyTag'), findsOneWidget);
+        expect(find.byIcon(Icons.tag), findsOneWidget);
+      },
+      FilterElementType.hasNotes: (tester) async {
+        // HasNotesElement
+        await pumpElement(tester, HasNotesElement());
+        expect(find.text('Has Notes'), findsOneWidget);
+        expect(find.byIcon(Icons.note), findsOneWidget);
+      },
     };
 
     // 1. SAFETY NET TEST: Ensures no FilterElementType is left behind.
