@@ -50,7 +50,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   final TextEditingController _expressionController = TextEditingController();
   late final FocusNode _focusNode;
   final LayerLink _layerLink = LayerLink();
+  final LayerLink _presetLayerLink = LayerLink();
   OverlayEntry? _overlayEntry;
+  OverlayEntry? _presetOverlayEntry;
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
@@ -87,6 +89,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   @override
   void dispose() {
     _removeOverlay();
+    _removePresetOverlay();
     _textController.dispose();
     _expressionController.dispose();
     _focusNode.dispose();
@@ -595,20 +598,13 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                     const SizedBox(width: 8),
 
-                    PopupMenuButton<FilterBookmark>(
-                      icon: const Icon(Icons.bookmarks),
-                      tooltip: 'Filter Presets',
-                      onSelected: (bookmark) {
-                        widget.onFilterTreeChanged(bookmark.tree);
-                        widget.onSortsChanged(bookmark.sorts);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: Text('Applied preset: ${bookmark.name}'),
-                            duration: const Duration(seconds: 2),
-                          ),
-                        );
-                      },
-                      itemBuilder: (context) => _buildPresetMenuItems(context),
+                    CompositedTransformTarget(
+                      link: _presetLayerLink,
+                      child: IconButton(
+                        icon: const Icon(Icons.bookmarks),
+                        tooltip: 'Filter Presets',
+                        onPressed: _togglePresetMenu,
+                      ),
                     ),
                     IconButton(
                       icon: const Icon(Icons.access_time),
@@ -641,89 +637,308 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     );
   }
 
-  List<PopupMenuEntry<FilterBookmark>> _buildPresetMenuItems(
-      BuildContext context) {
-    final bookmarkProvider =
-        Provider.of<FilterBookmarkProvider>(context, listen: false);
-    final List<PopupMenuEntry<FilterBookmark>> items = [];
-
-    // User bookmarks
-    final userBookmarks = bookmarkProvider.bookmarks
-        .where((b) => !bookmarkProvider.isSystemBookmark(b.name))
-        .toList();
-    if (userBookmarks.isNotEmpty) {
-      items.add(const PopupMenuHeader(child: Text('My Presets')));
-      for (final bookmark in userBookmarks) {
-        items.add(_buildBookmarkMenuItem(bookmark));
-      }
+  void _togglePresetMenu() {
+    if (_presetOverlayEntry != null) {
+      _removePresetOverlay();
+    } else {
+      _showPresetOverlay();
     }
-
-    // System bookmarks
-    final systemBookmarks = bookmarkProvider.bookmarks
-        .where((b) => bookmarkProvider.isSystemBookmark(b.name))
-        .toList();
-    if (systemBookmarks.isNotEmpty) {
-      if (items.isNotEmpty) items.add(const PopupMenuDivider());
-      items.add(const PopupMenuHeader(child: Text('System Presets')));
-      for (final bookmark in systemBookmarks) {
-        items.add(_buildBookmarkMenuItem(bookmark));
-      }
-    }
-
-    // Actions
-    if (items.isNotEmpty) items.add(const PopupMenuDivider());
-
-    items.add(
-      PopupMenuItem(
-        child: const ListTile(
-          leading: Icon(Icons.save),
-          title: Text('Save Current Filters'),
-        ),
-        onTap: () => Future.delayed(
-          const Duration(milliseconds: 50),
-          () {
-            if (context.mounted) {
-              _saveCurrentFilters(context);
-            }
-          },
-        ),
-      ),
-    );
-    items.add(
-      PopupMenuItem(
-        child: const ListTile(
-          leading: Icon(Icons.settings),
-          title: Text('Manage Presets'),
-        ),
-        onTap: () => Future.delayed(
-          const Duration(milliseconds: 50),
-          () {
-            if (context.mounted) {
-              Navigator.of(context).push(
-                MaterialPageRoute(
-                  builder: (context) => BookmarkManagerScreen(
-                    availableSuggestions: widget.availableSuggestions,
-                  ),
-                ),
-              );
-            }
-          },
-        ),
-      ),
-    );
-
-    return items;
   }
 
-  PopupMenuItem<FilterBookmark> _buildBookmarkMenuItem(
-      FilterBookmark bookmark) {
-    return PopupMenuItem<FilterBookmark>(
-      value: bookmark,
-      child: Tooltip(
-        message:
-            '${bookmark.description ?? ''}\n\nFilter: ${bookmark.expression}\nSort: ${bookmark.sorts.map((s) => s.toExpression()).join(', ')}',
-        child: Text(bookmark.name),
+  void _removePresetOverlay() {
+    _presetOverlayEntry?.remove();
+    _presetOverlayEntry = null;
+  }
+
+  void _showPresetOverlay() {
+    _removeOverlay(); // Close search autocomplete if open
+
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+
+    _presetOverlayEntry = OverlayEntry(
+      builder: (context) => Stack(
+        children: [
+          // Invisible dismiss layer
+          Positioned.fill(
+            child: GestureDetector(
+              behavior: HitTestBehavior.translucent,
+              onTap: _removePresetOverlay,
+              child: Container(color: Colors.transparent),
+            ),
+          ),
+          Positioned(
+            width: 350,
+            child: CompositedTransformFollower(
+              link: _presetLayerLink,
+              showWhenUnlinked: false,
+              offset: const Offset(-300, 40), // Align right-ish
+              child: Material(
+                elevation: 8,
+                borderRadius: BorderRadius.circular(12),
+                color: Colors.white,
+                child: Container(
+                  constraints: const BoxConstraints(maxHeight: 500),
+                  decoration: BoxDecoration(
+                    borderRadius: BorderRadius.circular(12),
+                    border: Border.all(color: Colors.grey.shade200),
+                  ),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      // Header
+                      Padding(
+                        padding: const EdgeInsets.all(16.0),
+                        child: Row(
+                          children: [
+                            const Icon(Icons.bookmarks, size: 20),
+                            const SizedBox(width: 8),
+                            const Text(
+                              'Filter Presets',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            const Spacer(),
+                            IconButton(
+                              icon: const Icon(Icons.close, size: 18),
+                              onPressed: _removePresetOverlay,
+                              padding: EdgeInsets.zero,
+                              constraints: const BoxConstraints(),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const Divider(height: 1),
+
+                      // List
+                      Flexible(
+                        child: SingleChildScrollView(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              // My Presets
+                              _buildPresetSection(
+                                context,
+                                'My Presets',
+                                bookmarkProvider.bookmarks
+                                    .where((b) => !bookmarkProvider
+                                        .isSystemBookmark(b.name))
+                                    .toList(),
+                                isSystem: false,
+                              ),
+
+                              // System Presets
+                              _buildPresetSection(
+                                context,
+                                'System Presets',
+                                bookmarkProvider.bookmarks
+                                    .where((b) => bookmarkProvider
+                                        .isSystemBookmark(b.name))
+                                    .toList(),
+                                isSystem: true,
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      const Divider(height: 1),
+
+                      // Footer Actions
+                      Padding(
+                        padding: const EdgeInsets.all(8.0),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                          children: [
+                            TextButton.icon(
+                              onPressed: () {
+                                _removePresetOverlay();
+                                _saveCurrentFilters(context);
+                              },
+                              icon: const Icon(Icons.save, size: 16),
+                              label: const Text('Save Current'),
+                            ),
+                            TextButton.icon(
+                              onPressed: () {
+                                _removePresetOverlay();
+                                Future.delayed(
+                                    const Duration(milliseconds: 100), () {
+                                  if (context.mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BookmarkManagerScreen(
+                                          availableSuggestions:
+                                              widget.availableSuggestions,
+                                        ),
+                                      ),
+                                    );
+                                  }
+                                });
+                              },
+                              icon: const Icon(Icons.settings, size: 16),
+                              label: const Text('Manage'),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          ),
+        ],
       ),
+    );
+
+    Overlay.of(context).insert(_presetOverlayEntry!);
+  }
+
+  Widget _buildPresetSection(
+      BuildContext context, String title, List<FilterBookmark> bookmarks,
+      {required bool isSystem}) {
+    if (bookmarks.isEmpty) return const SizedBox.shrink();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+          child: Text(
+            title.toUpperCase(),
+            style: TextStyle(
+              fontSize: 11,
+              fontWeight: FontWeight.bold,
+              color: Colors.grey.shade600,
+              letterSpacing: 0.5,
+            ),
+          ),
+        ),
+        ...bookmarks.map((bookmark) {
+          final sortsText = bookmark.sorts.map((s) => s.label).join(', ');
+
+          return InkWell(
+            onTap: () {
+              widget.onFilterTreeChanged(bookmark.tree);
+              widget.onSortsChanged(bookmark.sorts);
+              _removePresetOverlay();
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  content: Text('Applied preset: ${bookmark.name}'),
+                  duration: const Duration(seconds: 2),
+                ),
+              );
+            },
+            child: Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              child: Row(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Padding(
+                    padding: const EdgeInsets.only(top: 2),
+                    child: Icon(
+                      Icons.bookmark,
+                      size: 18,
+                      color: isSystem
+                          ? Colors.blue.shade400
+                          : Colors.orange.shade400,
+                    ),
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          bookmark.name,
+                          style: const TextStyle(
+                            fontWeight: FontWeight.w600,
+                            fontSize: 14,
+                          ),
+                        ),
+                        if (bookmark.description != null &&
+                            bookmark.description!.isNotEmpty) ...[
+                          const SizedBox(height: 2),
+                          Text(
+                            bookmark.description!,
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade600,
+                              fontStyle: FontStyle.italic,
+                            ),
+                            maxLines: 2,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ],
+                        const SizedBox(height: 4),
+                        Container(
+                          padding: const EdgeInsets.all(6),
+                          decoration: BoxDecoration(
+                            color: Colors.grey.shade50,
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.grey.shade200),
+                          ),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Row(
+                                children: [
+                                  Icon(Icons.filter_alt_outlined,
+                                      size: 12, color: Colors.grey.shade500),
+                                  const SizedBox(width: 4),
+                                  Expanded(
+                                    child: Text(
+                                      bookmark.expression.isEmpty
+                                          ? 'No filters'
+                                          : bookmark.expression,
+                                      style: TextStyle(
+                                        fontSize: 11,
+                                        fontFamily: 'monospace',
+                                        color: Colors.grey.shade700,
+                                      ),
+                                      maxLines: 1,
+                                      overflow: TextOverflow.ellipsis,
+                                    ),
+                                  ),
+                                ],
+                              ),
+                              if (sortsText.isNotEmpty) ...[
+                                const SizedBox(height: 2),
+                                Row(
+                                  children: [
+                                    Icon(Icons.sort,
+                                        size: 12, color: Colors.grey.shade500),
+                                    const SizedBox(width: 4),
+                                    Expanded(
+                                      child: Text(
+                                        sortsText,
+                                        style: TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.grey.shade700,
+                                        ),
+                                        maxLines: 1,
+                                        overflow: TextOverflow.ellipsis,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ],
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          );
+        }),
+      ],
     );
   }
 
