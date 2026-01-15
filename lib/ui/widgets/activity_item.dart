@@ -588,19 +588,83 @@ class _ActivityItemState extends State<ActivityItem> {
                               padding: const EdgeInsets.only(top: 4, left: 22),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children:
-                                    (activity.unmappedProps['processingErrors']
-                                            as List)
-                                        .map<Widget>(
-                                          (e) => Text(
-                                            "• $e",
-                                            style: const TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 11,
-                                            ),
+                                children: [
+                                  if ((activity.unmappedProps['processingErrors']
+                                          as List)
+                                      .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(
+                                          Icons.assignment,
+                                          size: 14,
+                                        ),
+                                        label: const Text(
+                                          "See Log",
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          visualDensity: VisualDensity.compact,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
                                           ),
-                                        )
-                                        .toList(),
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text("Error Log"),
+                                              content: SingleChildScrollView(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: (activity
+                                                          .unmappedProps['processingErrors']
+                                                          as List)
+                                                      .map<Widget>((e) {
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              bottom: 8.0),
+                                                      child: SelectableText(
+                                                        "• $e",
+                                                        style: const TextStyle(
+                                                          color: Colors.red,
+                                                          fontFamily:
+                                                              'monospace',
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: const Text("Close"),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  // Show latest error inline as preview
+                                  Text(
+                                    "Last Error: ${(activity.unmappedProps['processingErrors'] as List).last}",
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
                         ],
