@@ -5,6 +5,16 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 
+class GithubApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  GithubApiException(this.statusCode, this.message);
+
+  @override
+  String toString() => 'GithubApiException: $statusCode $message';
+}
+
 class GithubProvider extends ChangeNotifier {
   final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
   static const String _githubApiKey = 'github_api_key';
@@ -152,11 +162,7 @@ class GithubProvider extends ChangeNotifier {
         _updateRateLimits(prResponse.headers);
 
         if (prResponse.statusCode != 200) {
-          debugPrint(
-            'Failed to get PR for CI status ($owner/$repo #$prNumber): ${prResponse.statusCode} ${prResponse.body}',
-          );
-          // If we can't get the PR, we can't get the status.
-          return 'Unknown';
+          throw GithubApiException(prResponse.statusCode, prResponse.body);
         }
 
         final prData = jsonDecode(prResponse.body);
@@ -232,8 +238,14 @@ class GithubProvider extends ChangeNotifier {
     if (_apiKey == null) {
       return null;
     }
+    final job = createRepoDetailsJob(owner, repo);
+    enqueue(job);
+    await job.completer.future;
+    return job.result as Map<String, dynamic>?;
+  }
 
-    final job = GithubJob(
+  GithubJob createRepoDetailsJob(String owner, String repo) {
+    return GithubJob(
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
@@ -263,23 +275,23 @@ class GithubProvider extends ChangeNotifier {
             'openIssuesCount': data['open_issues_count'],
             'isFork': data['fork'],
             'forkParent': parent != null ? parent['full_name'] : null,
+            'html_url': data['html_url'],
           };
         } else {
-          debugPrint(
-            'Failed to get repo details for $owner/$repo: ${response.statusCode} ${response.body}',
-          );
-          return null;
+          throw GithubApiException(response.statusCode, response.body);
         }
       },
     );
+  }
 
+  void enqueue(GithubJob job) {
+    // Avoid adding duplicate jobs
+    if (_queue.any((j) => j.id == job.id)) {
+      return;
+    }
     _queue.add(job);
     _processQueue();
     notifyListeners();
-
-    // Wait for job to complete
-    await job.completer.future;
-    return job.result as Map<String, dynamic>?;
   }
 
   void _updateRateLimits(Map<String, String> headers) {
@@ -387,8 +399,10 @@ class GithubJob {
 
 class GitHubPrResponse {
   final Map<String, dynamic> _data;
+  final Map<String, dynamic> _links;
 
-  GitHubPrResponse(this._data);
+  GitHubPrResponse(this._data)
+      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
@@ -403,6 +417,16 @@ class GitHubPrResponse {
       getNumberPropOrDefault<num?>(_data, 'changed_files', null)?.toInt();
   String? get diffUrl => getStringPropOrDefault(_data, 'diff_url', null);
   String? get patchUrl => getStringPropOrDefault(_data, 'patch_url', null);
+  String? get htmlUrl =>
+      (_links['html'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get statusesUrl =>
+      (_links['statuses'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get commentsUrl =>
+      (_links['comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get reviewCommentsUrl =>
+      (_links['review_comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get headSha =>
+      (_data['head'] as Map<String, dynamic>?)?['sha'] as String?;
 
   String get displayStatus {
     if (isMerged == true) return 'Merged';

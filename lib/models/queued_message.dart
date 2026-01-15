@@ -12,6 +12,7 @@ class QueuedMessage {
   final String? queueReason;
   final List<String> processingErrors;
   final bool isDraft;
+  final String? requestId;
 
   QueuedMessage({
     required this.id,
@@ -23,6 +24,7 @@ class QueuedMessage {
     this.queueReason,
     this.processingErrors = const [],
     this.isDraft = false,
+    this.requestId,
   });
 
   factory QueuedMessage.fromJson(Map<String, dynamic> json) {
@@ -44,6 +46,7 @@ class QueuedMessage {
               .toList() ??
           [],
       isDraft: getBooleanPropOrDefault(json, 'isDraft', false),
+      requestId: getStringPropOrDefault(json, 'requestId', null),
     );
   }
 
@@ -56,22 +59,24 @@ class QueuedMessage {
       'type': type.toString().split('.').last,
       if (metadata != null) 'metadata': metadata,
       if (queueReason != null) 'queueReason': queueReason,
-      if (queueReason != null) 'queueReason': queueReason,
       'processingErrors': processingErrors,
       'isDraft': isDraft,
+      if (requestId != null) 'requestId': requestId,
     };
   }
 
   QueuedMessage copyWith({
     String? content,
+    String? sessionId,
     Map<String, dynamic>? metadata,
     String? queueReason,
     List<String>? processingErrors,
     bool? isDraft,
+    String? requestId,
   }) {
     return QueuedMessage(
       id: id,
-      sessionId: sessionId,
+      sessionId: sessionId ?? this.sessionId,
       content: content ?? this.content,
       createdAt: createdAt,
       type: type,
@@ -79,6 +84,7 @@ class QueuedMessage {
       queueReason: queueReason ?? this.queueReason,
       processingErrors: processingErrors ?? this.processingErrors,
       isDraft: isDraft ?? this.isDraft,
+      requestId: requestId ?? this.requestId,
     );
   }
 }

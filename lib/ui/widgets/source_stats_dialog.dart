@@ -10,7 +10,8 @@ class SourceStatsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final allSessions = sessionProvider.items;
 
     final sourceSessions = allSessions

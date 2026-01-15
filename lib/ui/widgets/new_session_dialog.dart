@@ -11,6 +11,7 @@ import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
@@ -36,12 +37,14 @@ class NewSessionResult {
   final List<Session> sessions;
   final bool isDraft;
   final bool isDelete;
+  final bool openNewDialog;
 
   // Constructor for backward compatibility logic (single session)
   NewSessionResult(
     Session session, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   }) : sessions = [session];
 
   // Constructor for multiple sessions
@@ -49,6 +52,7 @@ class NewSessionResult {
     this.sessions, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   });
 
   // Helper to get the first session for backward compatibility
@@ -213,11 +217,24 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           force: force,
           githubProvider: githubProvider,
           sessionProvider: sessionProvider,
+          onProgress: (page) {
+            if (mounted) {
+              setState(() {
+                _refreshStatus = 'Loading page $page...';
+              });
+            }
+          },
         );
       }
 
       if (mounted) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+        final settingsProvider =
+            Provider.of<SettingsProvider>(context, listen: false);
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+        }
         _initializeSelection(sources);
         if (force) {
           setState(() {
@@ -342,8 +359,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
+    if (settingsProvider.hideArchivedAndReadOnly) {
+      allSources =
+          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+    }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
       final labelB = _getSourceDisplayLabel(b);
@@ -525,7 +548,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _create({bool openNewDialog = false}) async {
     // Handle Image
     final imageUrl = _imageUrlController.text.trim();
     List<Media>? images;
@@ -653,7 +676,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (mounted) {
       Navigator.pop(
         context,
-        NewSessionResult.multiple(sessionsToCreate, isDraft: false),
+        NewSessionResult.multiple(sessionsToCreate,
+            isDraft: false, openNewDialog: openNewDialog),
       );
     }
   }
@@ -753,9 +777,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(
-      builder: (context, sourceProvider, _) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+    return Consumer2<SourceProvider, SettingsProvider>(
+      builder: (context, sourceProvider, settingsProvider, _) {
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+        }
 
         // Sort sources
         sources.sort((a, b) {
@@ -1181,9 +1209,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: true)
+                          : null,
+                      child: const Text('Send & New'),
+                    ),
+                    const SizedBox(width: 8),
                     FilledButton(
-                      onPressed:
-                          (_promptController.text.isNotEmpty) ? _create : null,
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: false)
+                          : null,
                       child: const Text('Send Now'),
                     ),
                   ],

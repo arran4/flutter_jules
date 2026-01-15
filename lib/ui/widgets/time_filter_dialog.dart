@@ -11,9 +11,10 @@ class TimeFilterDialog extends StatefulWidget {
 
 class _TimeFilterDialogState extends State<TimeFilterDialog> {
   TimeFilterType _selectedType = TimeFilterType.newerThan;
-  final TextEditingController _valueController = TextEditingController();
-  TimeFilterUnit _selectedUnit = TimeFilterUnit.days;
+  final TextEditingController _rangeController =
+      TextEditingController(); // Replaces valueController
   DateTime? _selectedDateTime;
+  DateTime? _selectedDateTimeEnd; // Added end date
 
   String _displayStringForTimeFilterType(TimeFilterType type) {
     switch (type) {
@@ -23,84 +24,109 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         return 'Older than';
       case TimeFilterType.between:
         return 'Between';
+      case TimeFilterType.inRange:
+        return 'In Range';
     }
-  }
-
-  String _displayStringForTimeFilterUnit(TimeFilterUnit unit) {
-    return unit.toString().split('.').last;
   }
 
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Filter by Time'),
-      content: Column(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          DropdownButton<TimeFilterType>(
-            value: _selectedType,
-            onChanged: (TimeFilterType? newValue) {
-              setState(() {
-                _selectedType = newValue!;
-              });
-            },
-            items: TimeFilterType.values.map((TimeFilterType type) {
-              return DropdownMenuItem<TimeFilterType>(
-                value: type,
-                child: Text(_displayStringForTimeFilterType(type)),
-              );
-            }).toList(),
-          ),
-          TextField(
-            controller: _valueController,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(labelText: 'Value'),
-          ),
-          DropdownButton<TimeFilterUnit>(
-            value: _selectedUnit,
-            onChanged: (TimeFilterUnit? newValue) {
-              setState(() {
-                _selectedUnit = newValue!;
-              });
-            },
-            items: TimeFilterUnit.values.map((TimeFilterUnit unit) {
-              return DropdownMenuItem<TimeFilterUnit>(
-                value: unit,
-                child: Text(_displayStringForTimeFilterUnit(unit)),
-              );
-            }).toList(),
-          ),
-          ElevatedButton(
-            onPressed: () async {
-              final selectedDate = await showDatePicker(
-                context: context,
-                initialDate: DateTime.now(),
-                firstDate: DateTime(2000),
-                lastDate: DateTime(2101),
-              );
-              if (selectedDate != null && context.mounted) {
-                final selectedTime = await showTimePicker(
-                  context: context,
-                  initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+      content: SingleChildScrollView(
+        // Added scroll for flexibility
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            DropdownButton<TimeFilterType>(
+              value: _selectedType,
+              onChanged: (TimeFilterType? newValue) {
+                setState(() {
+                  _selectedType = newValue!;
+                });
+              },
+              items: TimeFilterType.values.map((TimeFilterType type) {
+                return DropdownMenuItem<TimeFilterType>(
+                  value: type,
+                  child: Text(_displayStringForTimeFilterType(type)),
                 );
-                if (selectedTime != null) {
-                  setState(() {
-                    _selectedDateTime = DateTime(
-                      selectedDate.year,
-                      selectedDate.month,
-                      selectedDate.day,
-                      selectedTime.hour,
-                      selectedTime.minute,
-                    );
-                  });
+              }).toList(),
+            ),
+            const SizedBox(height: 16),
+            if (_selectedType == TimeFilterType.inRange ||
+                _selectedType == TimeFilterType.newerThan ||
+                _selectedType == TimeFilterType.olderThan)
+              TextField(
+                controller: _rangeController,
+                decoration: const InputDecoration(
+                    labelText: 'Range (e.g., "5 days", "last week")'),
+              ),
+            const SizedBox(height: 16),
+            ElevatedButton(
+              onPressed: () async {
+                final selectedDate = await showDatePicker(
+                  context: context,
+                  initialDate: DateTime.now(),
+                  firstDate: DateTime(2000),
+                  lastDate: DateTime(2101),
+                );
+                if (selectedDate != null && context.mounted) {
+                  final selectedTime = await showTimePicker(
+                    context: context,
+                    initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+                  );
+                  if (selectedTime != null) {
+                    setState(() {
+                      _selectedDateTime = DateTime(
+                        selectedDate.year,
+                        selectedDate.month,
+                        selectedDate.day,
+                        selectedTime.hour,
+                        selectedTime.minute,
+                      );
+                    });
+                  }
                 }
-              }
-            },
-            child: const Text('Select Specific Time'),
-          ),
-          if (_selectedDateTime != null)
-            Text('Selected: ${_selectedDateTime.toString()}'),
-        ],
+              },
+              child: Text(_selectedDateTime == null
+                  ? 'Select Specific Time'
+                  : 'Time: ${_selectedDateTime.toString()}'),
+            ),
+            if (_selectedType == TimeFilterType.between) ...[
+              const SizedBox(height: 8),
+              ElevatedButton(
+                onPressed: () async {
+                  final selectedDate = await showDatePicker(
+                    context: context,
+                    initialDate: DateTime.now(),
+                    firstDate: DateTime(2000),
+                    lastDate: DateTime(2101),
+                  );
+                  if (selectedDate != null && context.mounted) {
+                    final selectedTime = await showTimePicker(
+                      context: context,
+                      initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+                    );
+                    if (selectedTime != null) {
+                      setState(() {
+                        _selectedDateTimeEnd = DateTime(
+                          selectedDate.year,
+                          selectedDate.month,
+                          selectedDate.day,
+                          selectedTime.hour,
+                          selectedTime.minute,
+                        );
+                      });
+                    }
+                  }
+                },
+                child: Text(_selectedDateTimeEnd == null
+                    ? 'Select End Time'
+                    : 'End Time: ${_selectedDateTimeEnd.toString()}'),
+              ),
+            ]
+          ],
+        ),
       ),
       actions: [
         TextButton(
@@ -111,17 +137,29 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         ),
         TextButton(
           onPressed: () {
-            final value = int.tryParse(_valueController.text) ?? 0;
+            final range =
+                _rangeController.text.isNotEmpty ? _rangeController.text : null;
             final timeFilter = TimeFilter(
               type: _selectedType,
-              value: value,
-              unit: _selectedUnit,
+              range: range,
               specificTime: _selectedDateTime,
+              specificTimeEnd: _selectedDateTimeEnd,
             );
 
-            final label = timeFilter.specificTime != null
-                ? 'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.specificTime!.toIso8601String()}'
-                : 'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.value} ${_displayStringForTimeFilterUnit(timeFilter.unit)}';
+            String label;
+            if (timeFilter.specificTime != null) {
+              if (timeFilter.type == TimeFilterType.between &&
+                  timeFilter.specificTimeEnd != null) {
+                label =
+                    'Time: Between ${timeFilter.specificTime} and ${timeFilter.specificTimeEnd}';
+              } else {
+                label =
+                    'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.specificTime}';
+              }
+            } else {
+              label =
+                  'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.range ?? ""}';
+            }
 
             Navigator.of(context).pop(
               FilterToken(

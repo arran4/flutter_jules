@@ -22,8 +22,8 @@ import '../widgets/new_session_dialog.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
-import '../widgets/note_dialog.dart';
 import 'dart:convert';
+import 'package:collection/collection.dart';
 import '../../services/exceptions.dart';
 
 class SessionDetailScreen extends StatefulWidget {
@@ -49,11 +49,136 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   bool _isRefreshDisabled = false; // Track refresh button disabled state
 
+  // Note State
+  bool _isNoteVisible = false;
+  bool _isNoteEditing = false;
+  final TextEditingController _noteController = TextEditingController();
+
   // Concurrency Control
   Future<void> _apiLock = Future.value();
   int _busyCount = 0;
 
   final FocusNode _messageFocusNode = FocusNode();
+
+  Future<void> _updateNote(String content) async {
+    if (!mounted) return;
+
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+
+    final newNote = Note(
+      content: content,
+      updatedDate: DateTime.now().toIso8601String(),
+      version: (_session.note?.version ?? 0) + 1,
+    );
+
+    // Update local state first for responsiveness
+    final updatedSession = _session.copyWith(note: newNote);
+    setState(() {
+      _session = updatedSession;
+    });
+
+    // Then update the provider (which will save to cache)
+    await sessionProvider.updateSession(
+      updatedSession,
+      authToken: authProvider.token,
+    );
+  }
+
+  Widget _buildNotesSection() {
+    if (!_isNoteVisible) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Text(
+                    "Notes",
+                    style: Theme.of(context).textTheme.titleMedium,
+                  ),
+                  const Spacer(),
+                  if (_isNoteEditing)
+                    TextButton.icon(
+                      icon: const Icon(Icons.done, size: 16),
+                      label: const Text('Done'),
+                      onPressed: () {
+                        _updateNote(_noteController.text);
+                        setState(() {
+                          _isNoteEditing = false;
+                        });
+                      },
+                    )
+                  else
+                    TextButton.icon(
+                      icon: const Icon(Icons.edit, size: 16),
+                      label: const Text('Edit'),
+                      onPressed: () {
+                        setState(() {
+                          _isNoteEditing = true;
+                        });
+                      },
+                    ),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 16),
+                    onPressed: () {
+                      setState(() {
+                        _isNoteVisible = false;
+                      });
+                    },
+                  ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              if (_isNoteEditing)
+                TextField(
+                  controller: _noteController,
+                  autofocus: true,
+                  maxLines: null, // Allows for multiline input
+                  keyboardType: TextInputType.multiline,
+                  decoration: const InputDecoration(
+                    hintText: 'Add your notes here...',
+                    border: InputBorder.none,
+                  ),
+                )
+              else if (_session.note?.content.isNotEmpty ?? false)
+                MarkdownBody(data: _session.note!.content)
+              else
+                const Text(
+                  'No notes added yet.',
+                  style: TextStyle(color: Colors.grey),
+                ),
+              if (!_isNoteEditing && _session.note != null) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerRight,
+                  child: Text(
+                    'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
+                    style: Theme.of(context).textTheme.bodySmall,
+                  ),
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 
   Future<T> _locked<T>(Future<T> Function() op) {
     setState(() => _busyCount++);
@@ -83,15 +208,69 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void initState() {
     super.initState();
+    _noteController.text = widget.session.note?.content ?? '';
     _messageFocusNode.onKeyEvent = (node, event) {
-      if (event is KeyDownEvent &&
-          event.logicalKey == LogicalKeyboardKey.enter &&
-          HardwareKeyboard.instance.isControlPressed) {
-        if (_messageController.text.isNotEmpty) {
-          _sendMessage(_messageController.text);
-          return KeyEventResult.handled;
+      if (event is! KeyDownEvent) {
+        return KeyEventResult.ignored;
+      }
+
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+      final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+
+      // --- Handle Escape Key ---
+      if (event.logicalKey == LogicalKeyboardKey.escape) {
+        final action = settings.escKeyAction;
+        switch (action) {
+          case EscKeyAction.savesDraftAndGoesBack:
+            if (_messageController.text.trim().isNotEmpty) {
+              Provider.of<MessageQueueProvider>(context, listen: false)
+                  .saveDraft(_session.id, _messageController.text);
+            }
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          case EscKeyAction.goesBack:
+            Navigator.pop(context);
+            return KeyEventResult.handled;
+          case EscKeyAction.doesNothing:
+            return KeyEventResult.handled;
         }
       }
+
+      // --- Handle Enter Key ---
+      if (event.logicalKey == LogicalKeyboardKey.enter) {
+        MessageSubmitAction action;
+        if (isControlPressed && isShiftPressed) {
+          action = settings.ctrlShiftEnterKeyAction;
+        } else if (isControlPressed) {
+          action = settings.ctrlEnterKeyAction;
+        } else if (isShiftPressed) {
+          action = settings.shiftEnterKeyAction;
+        } else {
+          action = settings.enterKeyAction;
+        }
+
+        // Common logic based on the action's enum index, since they all share the same structure.
+        switch (action) {
+          case MessageSubmitAction.addNewLine:
+            return KeyEventResult.ignored;
+          case MessageSubmitAction.submitsMessage:
+            if (_messageController.text.isNotEmpty) {
+              _sendMessage(_messageController.text);
+            }
+            return KeyEventResult.handled;
+          case MessageSubmitAction.submitsMessageAndGoesBack:
+            if (_messageController.text.isNotEmpty) {
+              _sendMessage(_messageController.text);
+              // Don't await, let it send in the background while we navigate away.
+              Navigator.pop(context);
+            }
+            return KeyEventResult.handled;
+          case MessageSubmitAction.doesNothing:
+            return KeyEventResult.handled;
+        }
+      }
+
       return KeyEventResult.ignored;
     };
     _session = widget.session;
@@ -127,6 +306,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   @override
   void dispose() {
     _messageController.dispose();
+    _noteController.dispose();
     _messageFocusNode.dispose();
     super.dispose();
   }
@@ -609,6 +789,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
+  void _toggleNoteVisibility() {
+    setState(() {
+      _isNoteVisible = !_isNoteVisible;
+      if (_isNoteVisible && (_session.note?.content.isEmpty ?? true)) {
+        _isNoteEditing = true;
+      }
+    });
+  }
+
   Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
@@ -691,31 +880,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     }
   }
 
-  Future<void> _editNote() async {
-    final newNote = await showDialog<Note>(
-      context: context,
-      builder: (context) => NoteDialog(note: _session.note),
-    );
-
-    if (newNote != null) {
-      if (!mounted) return;
-      final sessionProvider = Provider.of<SessionProvider>(
-        context,
-        listen: false,
-      );
-      final authProvider = Provider.of<AuthProvider>(context, listen: false);
-      // Update local state first for responsiveness
-      setState(() {
-        _session = _session.copyWith(note: newNote);
-      });
-      // Then update the provider (which will save to cache)
-      sessionProvider.updateSession(
-        _session, // already updated
-        authToken: authProvider.token,
-      );
-    }
-  }
-
   @override
   Widget build(BuildContext context) {
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
@@ -752,6 +916,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
           actions: [
             IconButton(
+              icon: Icon(
+                (_session.note?.content.isEmpty ?? true)
+                    ? Icons.note_add_outlined
+                    : _isNoteVisible
+                        ? Icons.speaker_notes_off_outlined
+                        : Icons.speaker_notes_outlined,
+              ),
+              tooltip: (_session.note?.content.isEmpty ?? true)
+                  ? 'Add Note'
+                  : _isNoteVisible
+                      ? 'Hide Note'
+                      : 'View Note',
+              onPressed: _toggleNoteVisibility,
+            ),
+            IconButton(
               icon: const Icon(Icons.add_circle_outline),
               tooltip: 'New Session',
               onPressed: _createNewSessionFromCurrent,
@@ -762,10 +941,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 icon: const Icon(Icons.merge_type, color: Colors.purple),
                 tooltip: 'Open Pull Request',
                 onPressed: () {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  launchUrl(Uri.parse(pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    launchUrl(Uri.parse(pr.url));
+                  }
+                },
+              )
+            else if (_session.state == SessionState.COMPLETED &&
+                _session.url != null)
+              IconButton(
+                icon: const Icon(Icons.open_in_new, color: Colors.green),
+                tooltip: 'Open in Jules',
+                onPressed: () {
+                  launchUrl(Uri.parse(_session.url!));
                 },
               ),
             IconButton(
@@ -844,16 +1034,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   ).markAsUnread(_session.id, auth.token!);
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'pr_back') {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  launchUrl(Uri.parse(pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    launchUrl(Uri.parse(pr.url));
+                  }
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'copy_pr_url') {
-                  final pr = _session.outputs!
-                      .firstWhere((o) => o.pullRequest != null)
-                      .pullRequest!;
-                  await Clipboard.setData(ClipboardData(text: pr.url));
+                  final pr = _session.outputs
+                      ?.firstWhereOrNull((o) => o.pullRequest != null)
+                      ?.pullRequest;
+                  if (pr != null) {
+                    await Clipboard.setData(ClipboardData(text: pr.url));
+                  }
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text('PR URL copied')),
@@ -905,234 +1099,274 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   if (context.mounted) Navigator.pop(context);
                 }
               },
-              itemBuilder: (context) => [
-                if (_session.outputs != null &&
-                    _session.outputs!.any((o) => o.pullRequest != null))
+              itemBuilder: (context) {
+                final settings =
+                    Provider.of<SettingsProvider>(context, listen: false);
+                return [
+                  if (settings.fabVisibility == FabVisibility.appBar)
+                    PopupMenuItem(
+                      onTap: _createNewSessionFromCurrent,
+                      child: const Row(
+                        children: [
+                          Icon(Icons.add_circle_outline),
+                          SizedBox(width: 8),
+                          Text('New Session'),
+                        ],
+                      ),
+                    ),
+                  if (settings.fabVisibility == FabVisibility.appBar)
+                    const PopupMenuDivider(),
+                  if (_session.outputs != null &&
+                      _session.outputs!.any((o) => o.pullRequest != null))
+                    const PopupMenuItem(
+                      value: 'pr_back',
+                      child: Row(
+                        children: [
+                          Icon(Icons.merge_type, color: Colors.purple),
+                          SizedBox(width: 8),
+                          Text('Open PR and Go Back'),
+                        ],
+                      ),
+                    ),
+                  if (_session.outputs != null &&
+                      _session.outputs!.any((o) => o.pullRequest != null))
+                    const PopupMenuItem(
+                      value: 'copy_pr_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, color: Colors.blueGrey),
+                          SizedBox(width: 8),
+                          Text('Copy PR URL'),
+                        ],
+                      ),
+                    ),
                   const PopupMenuItem(
-                    value: 'pr_back',
+                    value: 'hide_back',
                     child: Row(
                       children: [
-                        Icon(Icons.merge_type, color: Colors.purple),
+                        Icon(Icons.visibility_off),
                         SizedBox(width: 8),
-                        Text('Open PR and Go Back'),
+                        Text('Hide and go back'),
                       ],
                     ),
                   ),
-                if (_session.outputs != null &&
-                    _session.outputs!.any((o) => o.pullRequest != null))
                   const PopupMenuItem(
-                    value: 'copy_pr_url',
+                    value: 'mark_unread_back',
                     child: Row(
                       children: [
-                        Icon(Icons.copy, color: Colors.blueGrey),
+                        Icon(Icons.mark_email_unread, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Copy PR URL'),
+                        Text('Mark as Unread and Go Back'),
                       ],
                     ),
                   ),
-                const PopupMenuItem(
-                  value: 'hide_back',
-                  child: Row(
-                    children: [
-                      Icon(Icons.visibility_off),
-                      SizedBox(width: 8),
-                      Text('Hide and go back'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'mark_unread_back',
-                  child: Row(
-                    children: [
-                      Icon(Icons.mark_email_unread, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Mark as Unread and Go Back'),
-                    ],
-                  ),
-                ),
 
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.add_circle_outline),
-                      SizedBox(width: 8),
-                      Text('Resubmit as new session'),
-                    ],
-                  ),
-                  onTap: () async {
-                    await resubmitSession(
-                      context,
-                      _session,
-                      hideOriginal: false,
-                    );
-                  },
-                ),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.visibility_off_outlined),
-                      SizedBox(width: 8),
-                      Text('Resubmit as new session and hide'),
-                    ],
-                  ),
-                  onTap: () async {
-                    // This needs to be done without BuildContext, so we grab providers first
-                    final sessionProvider = Provider.of<SessionProvider>(
-                      context,
-                      listen: false,
-                    );
-                    final authProvider = Provider.of<AuthProvider>(
-                      context,
-                      listen: false,
-                    );
-                    final messageQueueProvider =
-                        Provider.of<MessageQueueProvider>(
-                      context,
-                      listen: false,
-                    );
-                    final settingsProvider = Provider.of<SettingsProvider>(
-                      context,
-                      listen: false,
-                    );
-
-                    // Allow user to configure new session
-                    final NewSessionResult? result =
-                        await showDialog<NewSessionResult>(
-                      context: context,
-                      builder: (context) =>
-                          NewSessionDialog(initialSession: _session),
-                    );
-
-                    if (result == null) return;
-
-                    // Immediately pop and do the work in the background
-                    if (context.mounted) Navigator.pop(context);
-
-                    // Show messages via the session list's scaffold
-                    final scaffoldMessenger = ScaffoldMessenger.of(
-                      sessionProvider.scaffoldKey.currentContext!,
-                    );
-                    void showMessage(String msg) {
-                      scaffoldMessenger.showSnackBar(
-                        SnackBar(content: Text(msg)),
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.add_circle_outline),
+                        SizedBox(width: 8),
+                        Text('Resubmit as new session'),
+                      ],
+                    ),
+                    onTap: () async {
+                      await resubmitSession(
+                        context,
+                        _session,
+                        hideOriginal: false,
                       );
-                    }
+                    },
+                  ),
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.visibility_off_outlined),
+                        SizedBox(width: 8),
+                        Text('Resubmit as new session and hide'),
+                      ],
+                    ),
+                    onTap: () async {
+                      // This needs to be done without BuildContext, so we grab providers first
+                      final sessionProvider = Provider.of<SessionProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final authProvider = Provider.of<AuthProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final messageQueueProvider =
+                          Provider.of<MessageQueueProvider>(
+                        context,
+                        listen: false,
+                      );
+                      final settingsProvider = Provider.of<SettingsProvider>(
+                        context,
+                        listen: false,
+                      );
 
-                    handleNewSessionResultInBackground(
-                      result: result,
-                      originalSession: _session,
-                      hideOriginal: true,
-                      sessionProvider: sessionProvider,
-                      authProvider: authProvider,
-                      messageQueueProvider: messageQueueProvider,
-                      settingsProvider: settingsProvider,
-                      showMessage: showMessage,
-                    );
-                  },
-                ),
-                const PopupMenuDivider(),
-                // Watch Toggle - we need to know current watch state.
-                // We access it via SessionProvider -> items.
-                // Note: This relies on cached items being up to date.
-                if (Provider.of<SessionProvider>(
-                  context,
-                  listen: false,
-                ).items.any(
-                      (i) => i.data.id == _session.id && i.metadata.isWatched,
-                    ))
+                      // Allow user to configure new session
+                      final NewSessionResult? result =
+                          await showDialog<NewSessionResult>(
+                        context: context,
+                        builder: (context) =>
+                            NewSessionDialog(initialSession: _session),
+                      );
+
+                      if (result == null) return;
+
+                      // Immediately pop and do the work in the background
+                      if (context.mounted) Navigator.pop(context);
+
+                      // Show messages via the session list's scaffold
+                      final scaffoldMessenger = ScaffoldMessenger.of(
+                        sessionProvider.scaffoldKey.currentContext!,
+                      );
+                      void showMessage(String msg) {
+                        scaffoldMessenger.showSnackBar(
+                          SnackBar(content: Text(msg)),
+                        );
+                      }
+
+                      handleNewSessionResultInBackground(
+                        result: result,
+                        originalSession: _session,
+                        hideOriginal: true,
+                        sessionProvider: sessionProvider,
+                        authProvider: authProvider,
+                        messageQueueProvider: messageQueueProvider,
+                        settingsProvider: settingsProvider,
+                        showMessage: showMessage,
+                      );
+                    },
+                  ),
+                  const PopupMenuDivider(),
+                  // Watch Toggle - we need to know current watch state.
+                  // We access it via SessionProvider -> items.
+                  // Note: This relies on cached items being up to date.
+                  if (Provider.of<SessionProvider>(
+                    context,
+                    listen: false,
+                  ).items.any(
+                        (i) => i.data.id == _session.id && i.metadata.isWatched,
+                      ))
+                    const PopupMenuItem(
+                      value: 'watch',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility_off, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Unwatch'),
+                        ],
+                      ),
+                    )
+                  else
+                    const PopupMenuItem(
+                      value: 'watch',
+                      child: Row(
+                        children: [
+                          Icon(Icons.visibility, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Watch'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
-                    value: 'watch',
+                    value: 'full_refresh',
                     child: Row(
                       children: [
-                        Icon(Icons.visibility_off, color: Colors.grey),
+                        Icon(Icons.refresh, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Unwatch'),
-                      ],
-                    ),
-                  )
-                else
-                  const PopupMenuItem(
-                    value: 'watch',
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Watch'),
+                        Text('Full Refresh'),
                       ],
                     ),
                   ),
-                const PopupMenuDivider(),
-                const PopupMenuItem(
-                  value: 'full_refresh',
-                  child: Row(
-                    children: [
-                      Icon(Icons.refresh, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Full Refresh'),
-                    ],
-                  ),
-                ),
-                const PopupMenuItem(
-                  value: 'copy_id',
-                  child: Row(
-                    children: [
-                      Icon(Icons.copy, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Copy Session ID'),
-                    ],
-                  ),
-                ),
-                if (_session.url != null)
                   const PopupMenuItem(
-                    value: 'open_browser',
-                    child: Row(
-                      children: [
-                        Icon(Icons.open_in_browser, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Open in Browser'),
-                      ],
-                    ),
-                  ),
-                if (_session.url != null)
-                  const PopupMenuItem(
-                    value: 'copy_jules_url',
+                    value: 'copy_id',
                     child: Row(
                       children: [
                         Icon(Icons.copy, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Copy Jules Link'),
+                        Text('Copy Session ID'),
                       ],
                     ),
                   ),
-                const PopupMenuItem(
-                  value: 'approve_plan',
-                  child: Row(
-                    children: [
-                      Icon(Icons.check_circle, color: Colors.green),
-                      SizedBox(width: 8),
-                      Text('Force Approve Plan'),
-                    ],
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                      value: 'open_browser',
+                      child: Row(
+                        children: [
+                          Icon(Icons.open_in_browser, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Open in Browser'),
+                        ],
+                      ),
+                    ),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                      value: 'copy_jules_url',
+                      child: Row(
+                        children: [
+                          Icon(Icons.copy, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Copy Jules Link'),
+                        ],
+                      ),
+                    ),
+                  const PopupMenuItem(
+                    value: 'approve_plan',
+                    child: Row(
+                      children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text('Force Approve Plan'),
+                      ],
+                    ),
                   ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.label, color: Colors.grey),
-                      SizedBox(width: 8),
-                      Text('Manage Tags'),
-                    ],
+                  const PopupMenuDivider(),
+                  PopupMenuItem(
+                    child: const Row(
+                      children: [
+                        Icon(Icons.label, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Manage Tags'),
+                      ],
+                    ),
+                    onTap: () {
+                      showDialog(
+                        context: context,
+                        builder: (context) =>
+                            TagManagementDialog(session: _session),
+                      );
+                    },
                   ),
-                  onTap: () {
-                    showDialog(
-                      context: context,
-                      builder: (context) =>
-                          TagManagementDialog(session: _session),
-                    );
-                  },
-                ),
-              ],
+                  PopupMenuItem(
+                    onTap: _toggleNoteVisibility,
+                    child: Row(
+                      children: [
+                        Icon(
+                          (_session.note?.content.isEmpty ?? true)
+                              ? Icons.note_add_outlined
+                              : _isNoteVisible
+                                  ? Icons.speaker_notes_off_outlined
+                                  : Icons.speaker_notes_outlined,
+                          color: Colors.grey,
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          (_session.note?.content.isEmpty ?? true)
+                              ? 'Add Note'
+                              : _isNoteVisible
+                                  ? 'Hide Note'
+                                  : 'View Note',
+                        ),
+                      ],
+                    ),
+                  ),
+                ];
+              },
             ),
           ],
         ),
@@ -1201,6 +1435,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
+
+    final bool showJulesNotice =
+        !hasPr && _session.state == SessionState.COMPLETED;
 
     // Group Activities
     final List<ActivityListItem> groupedItems = [];
@@ -1314,8 +1551,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount:
-          finalItems.length + (hasPr ? 2 : 0) + 1, // +1 for Last Updated Status
+      itemCount: finalItems.length +
+          (hasPr ? 2 : 0) +
+          (showJulesNotice ? 2 : 0) +
+          1, // +1 for Last Updated Status
       itemBuilder: (context, index) {
         if (index == 0) {
           // Visual Bottom: Last Updated Status
@@ -1348,9 +1587,16 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
             return _buildPrNotice(context);
           }
+        } else if (showJulesNotice) {
+          if (adjIndex == 0 || adjIndex == finalItems.length + 1) {
+            return _buildJulesNotice(context);
+          }
         }
 
-        final int listIndex = hasPr ? adjIndex - 1 : adjIndex;
+        int listIndex = adjIndex;
+        if (hasPr || showJulesNotice) {
+          listIndex = adjIndex - 1;
+        }
 
         if (listIndex < 0 || listIndex >= finalItems.length) {
           return const SizedBox.shrink();
@@ -1808,6 +2054,65 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     );
   }
 
+  Widget _buildJulesNotice(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      child: Card(
+        color: Colors.green.shade50,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Colors.green.shade100),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Theme(
+          data: Theme.of(context).copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            initiallyExpanded: true,
+            title: const Text(
+              "Session Complete",
+              style: TextStyle(
+                fontWeight: FontWeight.bold,
+                color: Colors.green,
+              ),
+            ),
+            leading:
+                const Icon(Icons.check_circle_outline, color: Colors.green),
+            children: [
+              Padding(
+                padding: const EdgeInsets.only(
+                  left: 16.0,
+                  right: 16.0,
+                  bottom: 16.0,
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      "Open Jules to publish a PR for this session.",
+                    ),
+                    const SizedBox(height: 8),
+                    SizedBox(
+                      width: double.infinity,
+                      child: ElevatedButton.icon(
+                        icon: const Icon(Icons.open_in_new),
+                        label: const Text("Open Jules"),
+                        onPressed: () {
+                          if (_session.url != null) {
+                            launchUrl(Uri.parse(_session.url!));
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   Widget _buildPrNotice(BuildContext context) {
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
@@ -1950,55 +2255,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ),
                     ),
                     const SizedBox(height: 16),
-                    Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(
-                        side: BorderSide(color: Theme.of(context).dividerColor),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(12.0),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Text(
-                                  "Notes",
-                                  style: Theme.of(
-                                    context,
-                                  ).textTheme.titleMedium,
-                                ),
-                                const Spacer(),
-                                TextButton.icon(
-                                  icon: const Icon(Icons.edit, size: 16),
-                                  label: const Text('Edit'),
-                                  onPressed: _editNote,
-                                ),
-                              ],
-                            ),
-                            const SizedBox(height: 8),
-                            if (_session.note?.content.isNotEmpty ?? false)
-                              MarkdownBody(data: _session.note!.content)
-                            else
-                              const Text(
-                                'No notes added yet.',
-                                style: TextStyle(color: Colors.grey),
-                              ),
-                            if (_session.note != null) ...[
-                              const SizedBox(height: 8),
-                              Align(
-                                alignment: Alignment.centerRight,
-                                child: Text(
-                                  'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
-                                  style: Theme.of(context).textTheme.bodySmall,
-                                ),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    ),
+                    _buildNotesSection(),
                   ],
                 ),
               ),
@@ -2090,7 +2347,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 controller: _messageController,
                 focusNode: _messageFocusNode,
                 decoration: const InputDecoration(
-                  hintText: "Send message... (Ctrl+Enter to send)",
+                  hintText: "Send message...",
                 ),
                 minLines: 1,
                 enabled: !_isSending, // Disable input while sending

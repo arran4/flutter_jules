@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
+import '../../models.dart';
 import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
@@ -49,6 +51,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: 'On Session Created',
                 value: settings.refreshOnCreate,
                 onChanged: settings.setRefreshOnCreate,
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Appearance'),
+              _buildFabDropdown(
+                context,
+                title: 'New Session Button',
+                value: settings.fabVisibility,
+                onChanged: settings.setFabVisibility,
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Source List'),
+              SwitchListTile(
+                title: const Text('Hide archived and read-only sources'),
+                subtitle: const Text(
+                  'Hide sources that are marked as archived or read-only.',
+                ),
+                value: settings.hideArchivedAndReadOnly,
+                onChanged: (value) =>
+                    settings.setHideArchivedAndReadOnly(value),
+              ),
+              _buildSectionHeader(context, 'Keybindings'),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Enter',
+                value: settings.enterKeyAction,
+                onChanged: settings.setEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Shift+Enter',
+                value: settings.shiftEnterKeyAction,
+                onChanged: settings.setShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Enter',
+                value: settings.ctrlEnterKeyAction,
+                onChanged: settings.setCtrlEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Shift+Enter',
+                value: settings.ctrlShiftEnterKeyAction,
+                onChanged: settings.setCtrlShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<EscKeyAction>(
+                context,
+                title: 'Escape',
+                value: settings.escKeyAction,
+                onChanged: settings.setEscKeyAction,
+                values: EscKeyAction.values,
+                formatter: _formatEscKeyAction,
               ),
               const Divider(),
               _buildAutomaticRefreshSection(context, settings),
@@ -111,6 +173,18 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (double value) {
                   settings.setSessionPageSize(value.toInt());
                 },
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Diagnostics'),
+              ListTile(
+                title: const Text('View Activity Log'),
+                leading: const Icon(Icons.history),
+                onTap: () => Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ActivityLogScreen(),
+                  ),
+                ),
               ),
               const Divider(),
               _buildSectionHeader(context, 'Developer'),
@@ -260,7 +334,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListTile(
               title: Text(schedule.name),
               subtitle: Text(
-                'Every ${schedule.intervalInMinutes} mins, ${_formatListPolicy(schedule.refreshPolicy)}',
+                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}',
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -301,6 +375,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       text: schedule?.intervalInMinutes.toString() ?? '',
     );
     var refreshPolicy = schedule?.refreshPolicy ?? ListRefreshPolicy.quick;
+    var taskType = schedule?.taskType ?? RefreshTaskType.refresh;
+    var sendMessagesMode =
+        schedule?.sendMessagesMode ?? SendMessagesMode.sendOne;
 
     showDialog(
       context: context,
@@ -323,23 +400,59 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ),
                     keyboardType: TextInputType.number,
                   ),
-                  DropdownButtonFormField<ListRefreshPolicy>(
+                  DropdownButtonFormField<RefreshTaskType>(
                     // ignore: deprecated_member_use
-                    value: refreshPolicy,
+                    value: taskType,
                     onChanged: (value) {
                       if (value != null) {
                         setState(() {
-                          refreshPolicy = value;
+                          taskType = value;
                         });
                       }
                     },
-                    items: ListRefreshPolicy.values.map((policy) {
+                    items: RefreshTaskType.values.map((task) {
                       return DropdownMenuItem(
-                        value: policy,
-                        child: Text(_formatListPolicy(policy)),
+                        value: task,
+                        child: Text(task.toString().split('.').last),
                       );
                     }).toList(),
                   ),
+                  if (taskType == RefreshTaskType.refresh)
+                    DropdownButtonFormField<ListRefreshPolicy>(
+                      // ignore: deprecated_member_use
+                      value: refreshPolicy,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            refreshPolicy = value;
+                          });
+                        }
+                      },
+                      items: ListRefreshPolicy.values.map((policy) {
+                        return DropdownMenuItem(
+                          value: policy,
+                          child: Text(_formatListPolicy(policy)),
+                        );
+                      }).toList(),
+                    ),
+                  if (taskType == RefreshTaskType.sendPendingMessages)
+                    DropdownButtonFormField<SendMessagesMode>(
+                      // ignore: deprecated_member_use
+                      value: sendMessagesMode,
+                      onChanged: (value) {
+                        if (value != null) {
+                          setState(() {
+                            sendMessagesMode = value;
+                          });
+                        }
+                      },
+                      items: SendMessagesMode.values.map((mode) {
+                        return DropdownMenuItem(
+                          value: mode,
+                          child: Text(_formatSendMessagesMode(mode)),
+                        );
+                      }).toList(),
+                    ),
                 ],
               );
             },
@@ -367,7 +480,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   id: schedule?.id,
                   name: nameController.text,
                   intervalInMinutes: interval,
-                  refreshPolicy: refreshPolicy,
+                  taskType: taskType,
+                  refreshPolicy: taskType == RefreshTaskType.refresh
+                      ? refreshPolicy
+                      : null,
+                  sendMessagesMode:
+                      taskType == RefreshTaskType.sendPendingMessages
+                          ? sendMessagesMode
+                          : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 
@@ -513,7 +633,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
-  String _formatListPolicy(ListRefreshPolicy policy) {
+  String _formatListPolicy(ListRefreshPolicy? policy) {
     switch (policy) {
       case ListRefreshPolicy.none:
         return 'None';
@@ -525,6 +645,111 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Quick Refresh';
       case ListRefreshPolicy.full:
         return 'Full Refresh';
+      default:
+        return '';
+    }
+  }
+
+  String _formatTask(RefreshSchedule schedule) {
+    switch (schedule.taskType) {
+      case RefreshTaskType.refresh:
+        return _formatListPolicy(schedule.refreshPolicy);
+      case RefreshTaskType.sendPendingMessages:
+        return 'Send Pending Messages (${_formatSendMessagesMode(schedule.sendMessagesMode)})';
+    }
+  }
+
+  String _formatSendMessagesMode(SendMessagesMode? mode) {
+    switch (mode) {
+      case SendMessagesMode.sendOne:
+        return 'Send One';
+      case SendMessagesMode.sendAllUntilFailure:
+        return 'Send All Until Failure';
+      default:
+        return '';
+    }
+  }
+
+  Widget _buildFabDropdown(
+    BuildContext context, {
+    required String title,
+    required FabVisibility value,
+    required Function(FabVisibility) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<FabVisibility>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: FabVisibility.values.map((policy) {
+          return DropdownMenuItem(
+            value: policy,
+            child: Text(_formatFabVisibility(policy)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatFabVisibility(FabVisibility policy) {
+    switch (policy) {
+      case FabVisibility.appBar:
+        return 'AppBar';
+      case FabVisibility.floating:
+        return 'Floating';
+      case FabVisibility.off:
+        return 'Off';
+    }
+  }
+
+  Widget _buildKeybindingDropdown<T extends Enum>(
+    BuildContext context, {
+    required String title,
+    required T value,
+    required List<T> values,
+    required Function(T) onChanged,
+    required String Function(T) formatter,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<T>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: values.map((v) {
+          return DropdownMenuItem(
+            value: v,
+            child: Text(formatter(v)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatMessageSubmitAction(MessageSubmitAction action) {
+    switch (action) {
+      case MessageSubmitAction.addNewLine:
+        return 'Adds a new line';
+      case MessageSubmitAction.submitsMessage:
+        return 'Submits message';
+      case MessageSubmitAction.submitsMessageAndGoesBack:
+        return 'Submits message and goes back';
+      case MessageSubmitAction.doesNothing:
+        return 'Does nothing';
+    }
+  }
+
+  String _formatEscKeyAction(EscKeyAction action) {
+    switch (action) {
+      case EscKeyAction.savesDraftAndGoesBack:
+        return 'Saves draft and goes back';
+      case EscKeyAction.goesBack:
+        return 'Goes back';
+      case EscKeyAction.doesNothing:
+        return 'Does nothing';
     }
   }
 }

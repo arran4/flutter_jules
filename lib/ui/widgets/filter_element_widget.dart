@@ -155,7 +155,7 @@ class FilterElementWidget extends StatelessWidget {
       if (tf.specificTime != null) {
         label = 'Time: ${tf.type.name} ${tf.specificTime}';
       } else {
-        label = 'Time: ${tf.type.name} ${tf.value} ${tf.unit.name}';
+        label = 'Time: ${tf.type.name} ${tf.range ?? ''}';
       }
       return _buildLeafElement(
         context,
@@ -173,6 +173,24 @@ class FilterElementWidget extends StatelessWidget {
         Colors.red.shade100,
         Colors.red.shade800,
         Icons.cloud_off,
+      );
+    } else if (element is TagElement) {
+      return _buildLeafElement(
+        context,
+        element,
+        '#${element.label}', // Assuming text/label is the tag name. Check FilterElement definition.
+        Colors.indigo.shade100,
+        Colors.indigo.shade800,
+        Icons.tag,
+      );
+    } else if (element is HasNotesElement) {
+      return _buildLeafElement(
+        context,
+        element,
+        'Has Notes',
+        Colors.amber.shade100,
+        Colors.amber.shade900,
+        Icons.note,
       );
     }
 

@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'package:flutter/material.dart';
+import 'package:flutter_jules/services/activity_provider.dart';
+import 'package:flutter_jules/services/message_queue_provider.dart';
 import 'settings_provider.dart';
 import 'session_provider.dart';
 import 'source_provider.dart';
@@ -16,6 +18,9 @@ class RefreshService extends ChangeNotifier {
   final SourceProvider _sourceProvider;
   final AuthProvider _authProvider;
   final NotificationService _notificationService;
+  final MessageQueueProvider _messageQueueProvider;
+  final ActivityProvider _activityProvider;
+
   final Map<String, Timer> _timers = {};
 
   RefreshService(
@@ -24,6 +29,8 @@ class RefreshService extends ChangeNotifier {
     this._sourceProvider,
     this._authProvider,
     this._notificationService,
+    this._messageQueueProvider,
+    this._activityProvider,
   ) {
     _settingsProvider.addListener(_onSettingsChanged);
     _initializeTimers();
@@ -52,14 +59,24 @@ class RefreshService extends ChangeNotifier {
   void _startTimer(RefreshSchedule schedule) {
     _timers[schedule.id] = Timer.periodic(
       Duration(minutes: schedule.intervalInMinutes),
-      (timer) => _executeRefresh(schedule),
+      (timer) => _executeSchedule(schedule),
     );
   }
 
-  void _executeRefresh(RefreshSchedule schedule) async {
+  void _executeSchedule(RefreshSchedule schedule) async {
     final client = JulesClient(accessToken: _authProvider.token);
-    final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
+    switch (schedule.taskType) {
+      case RefreshTaskType.refresh:
+        _executeRefresh(schedule, client);
+        break;
+      case RefreshTaskType.sendPendingMessages:
+        _executeSendPendingMessages(schedule, client);
+        break;
+    }
+  }
 
+  void _executeRefresh(RefreshSchedule schedule, JulesClient client) async {
+    final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
         await _sessionProvider.fetchSessions(client, force: true);
@@ -76,13 +93,49 @@ class RefreshService extends ChangeNotifier {
         break;
       case ListRefreshPolicy.none:
         return;
+      default:
+        return;
     }
-
     final newSessions = _sessionProvider.items.map((e) => e.data).toList();
-    _compareSessions(oldSessions, newSessions);
+    compareSessions(oldSessions, newSessions);
   }
 
-  void _compareSessions(List<Session> oldSessions, List<Session> newSessions) {
+  void _executeSendPendingMessages(
+      RefreshSchedule schedule, JulesClient client) async {
+    if (_messageQueueProvider.queue.isEmpty) {
+      _activityProvider
+          .addLog('No pending messages to send for schedule ${schedule.name}');
+      return;
+    }
+
+    switch (schedule.sendMessagesMode) {
+      case SendMessagesMode.sendOne:
+        try {
+          await _messageQueueProvider.sendQueue(client, limit: 1);
+          _activityProvider
+              .addLog('Successfully sent one message for ${schedule.name}');
+        } catch (e) {
+          _activityProvider
+              .addLog('Failed to send message for ${schedule.name}: $e');
+        }
+        break;
+      case SendMessagesMode.sendAllUntilFailure:
+        try {
+          await _messageQueueProvider.sendQueue(client);
+          _activityProvider.addLog(
+              'Successfully sent all pending messages for ${schedule.name}');
+        } catch (e) {
+          _activityProvider.addLog(
+              'Failed to send all pending messages for ${schedule.name}: $e');
+        }
+        break;
+      default:
+        return;
+    }
+  }
+
+  @visibleForTesting
+  void compareSessions(List<Session> oldSessions, List<Session> newSessions) {
     final oldSessionMap = {for (var s in oldSessions) s.name: s};
 
     for (final newSession in newSessions) {

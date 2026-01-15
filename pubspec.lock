@@ -138,7 +138,7 @@ packages:
     source: hosted
     version: "4.11.0"
   collection:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: collection
       sha256: "2f5709ae4d3d59dd8f7cd309b4e023046b57d8a6c82130785d2b0e5868084e76"
@@ -185,6 +185,14 @@ packages:
       url: "https://pub.dev"
     source: hosted
     version: "0.7.11"
+  duration:
+    dependency: "direct main"
+    description:
+      name: duration
+      sha256: "13e5d20723c9c1dde8fb318cf86716d10ce294734e81e44ae1a817f3ae714501"
+      url: "https://pub.dev"
+    source: hosted
+    version: "4.0.3"
   fake_async:
     dependency: "direct dev"
     description:

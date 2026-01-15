@@ -1,5 +1,5 @@
 name: flutter_jules
-description: A basic Flutter client for the Jules API.
+description: Arran's Flutter based jules client.
 publish_to: 'none'
 version: 1.0.0+1
 
@@ -25,7 +25,9 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   tray_manager: ^0.2.3
   window_manager: ^0.3.8
+  collection: ^1.18.0
 
+  duration: any
 dev_dependencies:
   flutter_test:
     sdk: flutter
