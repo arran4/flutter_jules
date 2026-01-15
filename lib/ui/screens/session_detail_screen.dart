@@ -24,6 +24,7 @@ import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
 import 'dart:convert';
 import 'package:collection/collection.dart';
+import 'package:file_saver/file_saver.dart';
 import '../../services/exceptions.dart';
 
 class SessionDetailScreen extends StatefulWidget {
@@ -798,6 +799,56 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     });
   }
 
+  Future<void> _downloadSession() async {
+    // Show a loading indicator
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Preparing download...')),
+    );
+
+    try {
+      // 1. Fetch full session details
+      final auth = Provider.of<AuthProvider>(context, listen: false);
+      final client = auth.client;
+      final fullSession = await client.getSession(widget.session.name);
+
+      // 2. Fetch all activities
+      final allActivities = await client.listActivities(widget.session.name);
+
+      // 3. Combine them into a single JSON object
+      final combinedData = {
+        'session': fullSession.toJson(),
+        'activities': allActivities.map((a) => a.toJson()).toList(),
+      };
+
+      // 4. Encode to a pretty-printed JSON string
+      const jsonEncoder = JsonEncoder.withIndent('  ');
+      final jsonString = jsonEncoder.convert(combinedData);
+      final bytes = utf8.encode(jsonString);
+
+      // 5. Use file_saver to save the file
+      final fileName =
+          'session_${_session.id}_${DateTime.now().toIso8601String()}.json';
+      await FileSaver.instance.saveFile(
+        name: fileName,
+        bytes: bytes,
+        ext: 'json',
+        mimeType: MimeType.json,
+      );
+
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Session downloaded as $fileName')),
+        );
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Download failed: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
     try {
       final client = Provider.of<AuthProvider>(context, listen: false).client;
@@ -958,6 +1009,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   launchUrl(Uri.parse(_session.url!));
                 },
               ),
+            IconButton(
+              icon: const Icon(Icons.download),
+              tooltip: 'Download Session',
+              onPressed: _downloadSession,
+            ),
             IconButton(
               icon: const Icon(Icons.data_object),
               tooltip: 'View Session Data',
