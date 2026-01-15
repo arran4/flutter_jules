@@ -50,7 +50,10 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
-        ChangeNotifierProvider(create: (_) => GithubProvider()),
+        ChangeNotifierProxyProvider<AuthProvider, GithubProvider>(
+          create: (context) => GithubProvider(context.read<AuthProvider>()),
+          update: (context, auth, github) => github!..update(auth),
+        ),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
