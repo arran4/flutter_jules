@@ -1,7 +1,7 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 import 'auth_provider.dart';
@@ -39,6 +39,12 @@ class GithubProvider extends ChangeNotifier {
   void update(AuthProvider auth) {
     _authProvider = auth;
     notifyListeners();
+  }
+
+  Future<String?> getToken() async => apiKey;
+
+  Future<void> setApiKey(String key) async {
+    await _authProvider.setToken(key, TokenType.apiKey);
   }
 
   Future<GitHubPrResponse?> getPrStatus(

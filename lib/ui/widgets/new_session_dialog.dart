@@ -104,7 +104,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _promptController = TextEditingController();
     _imageUrlController = TextEditingController();
 
-    if (widget.mode == SessionDialogMode.edit && widget.initialSession != null) {
+    if (widget.mode == SessionDialogMode.edit &&
+        widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
     }
 
@@ -958,7 +959,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
                       suffixIcon: (widget.mode == SessionDialogMode.edit ||
-                              widget.mode == SessionDialogMode.createWithContext)
+                              widget.mode ==
+                                  SessionDialogMode.createWithContext)
                           ? IconButton(
                               icon: const Icon(Icons.content_paste_go),
                               tooltip: 'Import Prompt from Original Session',
