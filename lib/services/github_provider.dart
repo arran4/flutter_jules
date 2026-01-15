@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
+import 'auth_provider.dart';
 
 class GithubApiException implements Exception {
   final int statusCode;
@@ -16,11 +17,9 @@ class GithubApiException implements Exception {
 }
 
 class GithubProvider extends ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  static const String _githubApiKey = 'github_api_key';
+  AuthProvider _authProvider;
 
-  String? _apiKey;
-  String? get apiKey => _apiKey;
+  String? get apiKey => _authProvider.token;
   // Rate Limiting
   int? _rateLimitLimit;
   int? _rateLimitRemaining;
@@ -35,29 +34,19 @@ class GithubProvider extends ChangeNotifier {
   DateTime? get rateLimitReset => _rateLimitReset;
   List<GithubJob> get queue => List.unmodifiable(_queue);
 
-  GithubProvider() {
-    _loadApiKey();
-  }
+  GithubProvider(this._authProvider);
 
-  Future<void> _loadApiKey() async {
-    _apiKey = await _secureStorage.read(key: _githubApiKey);
+  void update(AuthProvider auth) {
+    _authProvider = auth;
     notifyListeners();
   }
-
-  Future<void> setApiKey(String apiKey) async {
-    await _secureStorage.write(key: _githubApiKey, value: apiKey);
-    _apiKey = apiKey;
-    notifyListeners();
-  }
-
-  Future<String?> getToken() async => _apiKey;
 
   Future<GitHubPrResponse?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
   ) async {
-    if (_apiKey == null) {
+    if (apiKey == null) {
       return null;
     }
 
@@ -71,7 +60,7 @@ class GithubProvider extends ChangeNotifier {
         final response = await http.get(
           url,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
@@ -100,14 +89,14 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
     final response = await http.get(
       url,
       headers: {
-        'Authorization': 'token $_apiKey',
+        'Authorization': 'token $apiKey',
         'Accept': 'application/vnd.github.v3.diff',
       },
     );
@@ -119,14 +108,14 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
     final response = await http.get(
       url,
       headers: {
-        'Authorization': 'token $_apiKey',
+        'Authorization': 'token $apiKey',
         'Accept': 'application/vnd.github.v3.patch',
       },
     );
@@ -142,7 +131,7 @@ class GithubProvider extends ChangeNotifier {
     String repo,
     String prNumber,
   ) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null) return null;
 
     final job = GithubJob(
       id: 'ci_status_${owner}_${repo}_$prNumber',
@@ -155,7 +144,7 @@ class GithubProvider extends ChangeNotifier {
         final prResponse = await http.get(
           prUrl,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
@@ -179,7 +168,7 @@ class GithubProvider extends ChangeNotifier {
         final checksResponse = await http.get(
           checksUrl,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
@@ -235,7 +224,7 @@ class GithubProvider extends ChangeNotifier {
     String owner,
     String repo,
   ) async {
-    if (_apiKey == null) {
+    if (apiKey == null) {
       return null;
     }
     final job = createRepoDetailsJob(owner, repo);
@@ -253,7 +242,7 @@ class GithubProvider extends ChangeNotifier {
         final response = await http.get(
           url,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
