@@ -22,6 +22,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnFailure = 'notify_on_failure';
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
+  static const String keyTrayEnabled = 'tray_enabled';
 
   // Filter Memory
   FilterElement? _lastFilter;
@@ -46,6 +47,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnCompletion = true;
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
+  bool _trayEnabled = false;
 
   SharedPreferences? _prefs;
 
@@ -60,6 +62,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+  bool get trayEnabled => _trayEnabled;
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
@@ -106,6 +109,7 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
+    _trayEnabled = _prefs!.getBool(keyTrayEnabled) ?? false;
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -255,6 +259,12 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  Future<void> setTrayEnabled(bool value) async {
+    _trayEnabled = value;
+    notifyListeners();
+    await _prefs?.setBool(keyTrayEnabled, value);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {
