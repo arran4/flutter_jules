@@ -16,6 +16,7 @@ class FilterElementWidget extends StatelessWidget {
   final FilterElement? element;
   final Function(FilterElement)? onRemove;
   final Function(FilterElement)? onToggleNot;
+  final Function(FilterElement)? onToggleEnabled;
   final Function(FilterElement)? onTap;
   final Function(
     FilterElement source,
@@ -32,6 +33,7 @@ class FilterElementWidget extends StatelessWidget {
     required this.element,
     this.onRemove,
     this.onToggleNot,
+    this.onToggleEnabled,
     this.onTap,
     this.onDrop,
     this.onAddAlternative,
@@ -290,6 +292,7 @@ class FilterElementWidget extends StatelessWidget {
                       element: child,
                       onRemove: onRemove,
                       onToggleNot: onToggleNot,
+                      onToggleEnabled: onToggleEnabled,
                       onTap: onTap,
                       onDrop: onDrop,
                       onAddAlternative: onAddAlternative,
@@ -374,6 +377,7 @@ class FilterElementWidget extends StatelessWidget {
               element: element.child,
               onRemove: onRemove,
               onToggleNot: onToggleNot,
+              onToggleEnabled: onToggleEnabled,
               onTap: onTap,
               onDrop: onDrop,
               onAddAlternative: onAddAlternative,
@@ -396,12 +400,23 @@ class FilterElementWidget extends StatelessWidget {
 
     final items = <PopupMenuEntry<int>>[];
 
-    // 1. Exclude/Include logic
+    // 1. Enabled/Disabled checkbox
+    items.add(
+      CheckedPopupMenuItem(
+        value: 2,
+        checked: element.isEnabled,
+        child: const Text("Enabled"),
+      ),
+    );
+    items.add(const PopupMenuDivider());
+
+    // 2. Exclude/Include logic
     final isComposite = element is AndElement || element is OrElement;
     final excludeText = isComposite ? "Exclude this group" : "Exclude this";
     items.add(
       PopupMenuItem(
         value: 1,
+        enabled: element.isEnabled,
         child: Text(isNegated ? "Include this" : excludeText),
       ),
     );
@@ -443,6 +458,11 @@ class FilterElementWidget extends StatelessWidget {
       if (onToggleNot != null) {
         onToggleNot!(element);
       }
+    } else if (selected == 2) {
+      // Toggle Enabled
+      if (onToggleEnabled != null) {
+        onToggleEnabled!(element);
+      }
     } else if (selected >= 100) {
       // Alternative selected
       final altIndex = selected - 100;
@@ -463,6 +483,11 @@ class FilterElementWidget extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
+    final enabled = element.isEnabled;
+    final bgColor = enabled ? backgroundColor : Colors.grey.shade200;
+    final txtColor = enabled ? textColor : Colors.grey.shade500;
+    final effectiveIcon = enabled ? icon : Icons.visibility_off;
+
     return GestureDetector(
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, details, element),
@@ -470,21 +495,23 @@ class FilterElementWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: bgColor,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: textColor.withValues(alpha: 0.2)),
+          border: Border.all(color: txtColor.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: textColor),
+            Icon(effectiveIcon, size: 14, color: txtColor),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: textColor,
+                color: txtColor,
                 fontWeight: FontWeight.w500,
+                decoration:
+                    enabled ? TextDecoration.none : TextDecoration.lineThrough,
               ),
             ),
             if (onRemove != null) ...[
@@ -494,7 +521,7 @@ class FilterElementWidget extends StatelessWidget {
                 child: Icon(
                   Icons.close,
                   size: 14,
-                  color: textColor.withValues(alpha: 0.7),
+                  color: txtColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
