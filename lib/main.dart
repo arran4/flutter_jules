@@ -131,13 +131,16 @@ class _MyAppState extends State<MyApp> {
   void initState() {
     super.initState();
     // Register the global shortcuts here
-    final shortcutRegistry =
-        Provider.of<ShortcutRegistry>(context, listen: false);
-    shortcutRegistry.register(Shortcut(
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-            LogicalKeyboardKey.slash),
-        const ShowHelpIntent(),
-        'Show Help'));
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (!mounted) return;
+      final shortcutRegistry =
+          Provider.of<ShortcutRegistry>(context, listen: false);
+      shortcutRegistry.register(Shortcut(
+          LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
+              LogicalKeyboardKey.slash),
+          const ShowHelpIntent(),
+          'Show Help'));
+    });
   }
 
   @override
