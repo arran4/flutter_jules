@@ -1912,7 +1912,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   return;
                                                 }
 
-                                                _markAsRead(session);
                                                 await Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
@@ -1922,6 +1921,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
+                                                _markAsRead(session);
 
                                                 // On Return
                                                 if (!context.mounted) return;
