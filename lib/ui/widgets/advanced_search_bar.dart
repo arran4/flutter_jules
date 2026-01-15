@@ -5,10 +5,10 @@ import '../../models/filter_element_builder.dart';
 import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'package:provider/provider.dart';
-import 'package:collection/collection.dart';
 import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
+import '../../models/preset_state_manager.dart';
 import 'sort_pills_widget.dart';
 import 'time_filter_dialog.dart';
 
@@ -58,7 +58,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
   final GlobalKey _presetButtonKey = GlobalKey();
-  FilterBookmark? _lastLoadedBookmark;
+  final PresetStateManager _presetStateManager = PresetStateManager();
 
   @override
   void initState() {
@@ -86,17 +86,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       if (_expressionController.text != newExpr) {
         _expressionController.text = newExpr;
       }
-
-      if (_lastLoadedBookmark != null &&
-          newExpr != _lastLoadedBookmark!.expression) {
-        // Filter has been modified from the original bookmark, but we keep the bookmark
-        // to allow saving with the same name. If it becomes empty, we clear it.
-        if (newExpr.isEmpty) {
-          setState(() {
-            _lastLoadedBookmark = null;
-          });
-        }
-      }
+      _presetStateManager.onFilterChanged(widget.filterTree);
     }
   }
 
@@ -468,15 +458,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final bookmarkProvider =
         Provider.of<FilterBookmarkProvider>(context, listen: false);
 
-    // Pre-fill if we are editing a modified, non-system bookmark
-    if (_lastLoadedBookmark != null &&
-        !bookmarkProvider.isSystemBookmark(_lastLoadedBookmark!.name) &&
-        (_lastLoadedBookmark!.expression !=
-                (widget.filterTree?.toExpression() ?? '') ||
-            !const SetEquality().equals(
-                _lastLoadedBookmark!.sorts.toSet(), widget.activeSorts.toSet()))) {
-      nameController.text = _lastLoadedBookmark!.name;
-      descController.text = _lastLoadedBookmark!.description ?? '';
+    if (_presetStateManager.shouldPreFill(
+        widget.filterTree, widget.activeSorts, bookmarkProvider)) {
+      nameController.text = _presetStateManager.lastLoadedBookmark!.name;
+      descController.text =
+          _presetStateManager.lastLoadedBookmark!.description ?? '';
     }
 
     final result = await showDialog<bool>(
@@ -894,9 +880,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             onTap: () {
               widget.onFilterTreeChanged(bookmark.tree);
               widget.onSortsChanged(bookmark.sorts);
-              setState(() {
-                _lastLoadedBookmark = bookmark;
-              });
+              _presetStateManager.setLastLoadedBookmark(bookmark);
               _removePresetOverlay();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
