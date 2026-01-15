@@ -56,6 +56,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
+  final GlobalKey _presetButtonKey = GlobalKey();
 
   @override
   void initState() {
@@ -601,6 +602,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     CompositedTransformTarget(
                       link: _presetLayerLink,
                       child: IconButton(
+                        key: _presetButtonKey,
                         icon: const Icon(Icons.bookmarks),
                         tooltip: 'Filter Presets',
                         onPressed: _togglePresetMenu,
@@ -656,9 +658,41 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final bookmarkProvider =
         Provider.of<FilterBookmarkProvider>(context, listen: false);
 
+    final RenderBox? buttonBox =
+        _presetButtonKey.currentContext?.findRenderObject() as RenderBox?;
+    final buttonPos = buttonBox?.localToGlobal(Offset.zero) ?? Offset.zero;
+    final buttonSize = buttonBox?.size ?? Size.zero;
+
     final size = MediaQuery.of(context).size;
     final maxH = size.height * 0.8;
+
+    // Decide if we align left or right based on available space
+    final isRightSide = buttonPos.dx > size.width / 2;
+
+    Alignment targetAnchor;
+    Alignment followerAnchor;
+    double calcMaxWidth;
+
+    if (isRightSide) {
+      targetAnchor = Alignment.bottomRight;
+      followerAnchor = Alignment.topRight;
+      // Available space to the left of the button's right edge
+      final availableLeft = buttonPos.dx + buttonSize.width - 16;
+      calcMaxWidth = availableLeft;
+    } else {
+      targetAnchor = Alignment.bottomLeft;
+      followerAnchor = Alignment.topLeft;
+      // Available space to the right of the button's left edge
+      final availableRight = size.width - buttonPos.dx - 16;
+      calcMaxWidth = availableRight;
+    }
+
+    // Apply 80% constraint
     final maxW = size.width * 0.8;
+    if (calcMaxWidth > maxW) calcMaxWidth = maxW;
+
+    // Ensure minWidth isn't larger than maxWidth
+    final minW = 350.0 > calcMaxWidth ? calcMaxWidth : 350.0;
 
     _presetOverlayEntry = OverlayEntry(
       builder: (context) => Stack(
@@ -675,15 +709,17 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             child: CompositedTransformFollower(
               link: _presetLayerLink,
               showWhenUnlinked: false,
-              offset: const Offset(-300, 40), // Align right-ish
+              targetAnchor: targetAnchor,
+              followerAnchor: followerAnchor,
+              offset: const Offset(0, 5), // Slight vertical gap
               child: Material(
                 elevation: 8,
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.white,
                 child: Container(
                   constraints: BoxConstraints(
-                    minWidth: 350,
-                    maxWidth: maxW,
+                    minWidth: minW,
+                    maxWidth: calcMaxWidth,
                     maxHeight: maxH,
                   ),
                   decoration: BoxDecoration(
