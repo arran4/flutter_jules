@@ -1025,7 +1025,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             IconButton(
               icon: const Icon(Icons.download),
-              tooltip: 'Download Session',
+              tooltip: 'Download Raw Session Data',
               onPressed: _downloadSession,
             ),
             IconButton(
