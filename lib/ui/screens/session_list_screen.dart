@@ -128,25 +128,42 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      // Load last used filter if no explicit filter is set
-      if (widget.sourceFilter == null) {
-        final settings = Provider.of<SettingsProvider>(context, listen: false);
-        if (settings.lastFilter != _filterTree) {
-          setState(() {
-            _filterTree = settings.lastFilter;
-          });
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+
+      void loadFilterAndSessions() {
+        // Load last used filter if no explicit filter is set
+        if (widget.sourceFilter == null && widget.initialFilter == null) {
+          if (settings.lastFilter != _filterTree) {
+            setState(() {
+              _filterTree = settings.lastFilter;
+            });
+          }
+        }
+
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        if (auth.token != null) {
+          // Trigger generic load
+          _fetchSessions();
+          // Background load sources
+          Provider.of<SourceProvider>(
+            context,
+            listen: false,
+          ).fetchSources(auth.client, authToken: auth.token);
         }
       }
 
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      if (auth.token != null) {
-        // Trigger generic load
-        _fetchSessions();
-        // Background load sources
-        Provider.of<SourceProvider>(
-          context,
-          listen: false,
-        ).fetchSources(auth.client, authToken: auth.token);
+      if (settings.isInitialized) {
+        loadFilterAndSessions();
+      } else {
+        // Wait for settings to initialize
+        void listener() {
+          if (settings.isInitialized) {
+            settings.removeListener(listener);
+            loadFilterAndSessions();
+          }
+        }
+
+        settings.addListener(listener);
       }
     });
   }

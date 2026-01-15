@@ -656,6 +656,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final bookmarkProvider =
         Provider.of<FilterBookmarkProvider>(context, listen: false);
 
+    final size = MediaQuery.of(context).size;
+    final maxH = size.height * 0.8;
+    final maxW = size.width * 0.8;
+
     _presetOverlayEntry = OverlayEntry(
       builder: (context) => Stack(
         children: [
@@ -668,7 +672,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             ),
           ),
           Positioned(
-            width: 350,
             child: CompositedTransformFollower(
               link: _presetLayerLink,
               showWhenUnlinked: false,
@@ -678,7 +681,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 borderRadius: BorderRadius.circular(12),
                 color: Colors.white,
                 child: Container(
-                  constraints: const BoxConstraints(maxHeight: 500),
+                  constraints: BoxConstraints(
+                    minWidth: 350,
+                    maxWidth: maxW,
+                    maxHeight: maxH,
+                  ),
                   decoration: BoxDecoration(
                     borderRadius: BorderRadius.circular(12),
                     border: Border.all(color: Colors.grey.shade200),
