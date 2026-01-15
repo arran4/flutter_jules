@@ -225,14 +225,15 @@ Future<void> showNewSessionDialog(BuildContext context) async {
 
   handleNewSessionResultInBackground(
     result: result,
-    originalSession: Session.empty(),
+    originalSession: Session(name: '', id: '', prompt: ''),
     hideOriginal: false,
     sessionProvider: sessionProvider,
     authProvider: authProvider,
     messageQueueProvider: messageQueueProvider,
     settingsProvider: settingsProvider,
     showMessage: (message) {
-      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+      ScaffoldMessenger.of(context)
+          .showSnackBar(SnackBar(content: Text(message)));
     },
   );
 }

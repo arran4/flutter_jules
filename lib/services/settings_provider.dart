@@ -339,6 +339,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     await _prefs?.setBool(keyTrayEnabled, value);
   }
+
   Future<void> setFabVisibility(FabVisibility visibility) async {
     _fabVisibility = visibility;
     notifyListeners();

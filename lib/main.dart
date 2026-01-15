@@ -185,8 +185,19 @@ class _MyAppState extends State<MyApp> with WindowListener {
         }
       },
       onRefresh: () {
-        context.read<SessionProvider>().refreshSessions();
-        context.read<SourceProvider>().refreshSources();
+        final auth = context.read<AuthProvider>();
+        if (auth.isAuthenticated) {
+          context.read<SessionProvider>().fetchSessions(
+                auth.client,
+                authToken: auth.token,
+                force: true,
+              );
+          context.read<SourceProvider>().fetchSources(
+                auth.client,
+                authToken: auth.token,
+                force: true,
+              );
+        }
       },
     );
     _trayService!.init();
@@ -225,6 +236,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
               focusManager.requestFocus();
             },
             child: MaterialApp(
+              navigatorKey: navigatorKey,
               title: "Arran's Flutter based jules client",
               debugShowCheckedModeBanner: false,
               theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
@@ -246,29 +258,6 @@ class _MyAppState extends State<MyApp> with WindowListener {
                 },
               ),
             ),
-          ),
-        },
-        child: MaterialApp(
-          navigatorKey: navigatorKey,
-          title: 'Jules API Client',
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-          routes: {
-            '/settings': (context) => const SettingsScreen(),
-            '/sources_raw': (context) => const SourceListScreen(),
-          },
-          home: Consumer<AuthProvider>(
-            builder: (context, auth, _) {
-              if (auth.isLoading) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!auth.isAuthenticated) {
-                return const LoginScreen();
-              }
-              return const SessionListScreen();
-            },
           ),
         ),
       ),
