@@ -1215,19 +1215,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       );
 
                       if (result == null) return;
+                      if (!context.mounted) return;
+
+                      // Grab the messenger BEFORE we pop the context
+                      final scaffoldMessenger = ScaffoldMessenger.of(context);
 
                       // Immediately pop and do the work in the background
-                      if (context.mounted) Navigator.pop(context);
-
-                      // Show messages via the session list's scaffold
-                      final scaffoldMessenger = ScaffoldMessenger.of(
-                        sessionProvider.scaffoldKey.currentContext!,
-                      );
-                      void showMessage(String msg) {
-                        scaffoldMessenger.showSnackBar(
-                          SnackBar(content: Text(msg)),
-                        );
-                      }
+                      Navigator.pop(context);
 
                       handleNewSessionResultInBackground(
                         result: result,
@@ -1237,7 +1231,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         authProvider: authProvider,
                         messageQueueProvider: messageQueueProvider,
                         settingsProvider: settingsProvider,
-                        showMessage: showMessage,
+                        scaffoldMessenger: scaffoldMessenger,
                       );
                     },
                   ),
