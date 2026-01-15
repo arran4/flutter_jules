@@ -341,6 +341,7 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
     await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
   }
+
   // Keybinding Setters
   Future<void> setEnterKeyAction(MessageSubmitAction action) async {
     _enterKeyAction = action;

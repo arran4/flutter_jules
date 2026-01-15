@@ -232,9 +232,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             Provider.of<SettingsProvider>(context, listen: false);
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources = sources
-              .where((s) => !s.isArchived && !s.isReadOnly)
-              .toList();
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
         }
         _initializeSelection(sources);
         if (force) {
@@ -365,9 +364,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources = allSources
-          .where((s) => !s.isArchived && !s.isReadOnly)
-          .toList();
+      allSources =
+          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
     }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
@@ -783,9 +781,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources = sources
-              .where((s) => !s.isArchived && !s.isReadOnly)
-              .toList();
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
         }
 
         // Sort sources

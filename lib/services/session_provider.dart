@@ -119,7 +119,8 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
-        _progressStreamController.add('Merging ${newSessions.length} sessions...');
+        _progressStreamController
+            .add('Merging ${newSessions.length} sessions...');
         for (var session in newSessions) {
           final index = _items.indexWhere((i) => i.data.id == session.id);
           final oldItem = index != -1 ? _items[index] : null;
@@ -189,7 +190,8 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
-                _progressStreamController.add('Refreshing Git status for ${session.title ?? session.id}');
+                _progressStreamController.add(
+                    'Refreshing Git status for ${session.title ?? session.id}');
                 _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
@@ -354,7 +356,8 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
-          _progressStreamController.add('Refreshing Git status for ${updatedSession.title ?? updatedSession.id}');
+          _progressStreamController.add(
+              'Refreshing Git status for ${updatedSession.title ?? updatedSession.id}');
           _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }

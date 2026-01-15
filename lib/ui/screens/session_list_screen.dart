@@ -69,7 +69,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void initState() {
     super.initState();
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     _progressSubscription = sessionProvider.progressStream.listen((status) {
       if (mounted) {
         setState(() {
@@ -940,6 +941,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final indexB = b.data.state?.index ?? -1;
           cmp = indexA.compareTo(indexB);
           break;
+        case SortField.count:
+          cmp = 0;
+          break;
       }
 
       if (cmp != 0) {
@@ -1745,21 +1749,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 style: Theme.of(context)
                                                     .textTheme
                                                     .bodySmall
-                                              ?.copyWith(
-                                                color: DateTime.now()
-                                                            .difference(
-                                                                lastFetchTime)
-                                                            .inMinutes >
-                                                        15
-                                                    ? Colors.orange
-                                                    : Theme.of(
-                                                        context,
-                                                      )
-                                                        .textTheme
-                                                        .bodySmall
-                                                        ?.color,
+                                                    ?.copyWith(
+                                                      color: DateTime.now()
+                                                                  .difference(
+                                                                      lastFetchTime)
+                                                                  .inMinutes >
+                                                              15
+                                                          ? Colors.orange
+                                                          : Theme.of(
+                                                              context,
+                                                            )
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.color,
+                                                    ),
                                               ),
-                                        ),
                                       ),
                                     ),
                                   Expanded(

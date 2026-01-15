@@ -25,6 +25,7 @@ dependencies:
   flutter_local_notifications: ^17.2.1
   collection: ^1.18.0
 
+  duration: any
 dev_dependencies:
   flutter_test:
     sdk: flutter

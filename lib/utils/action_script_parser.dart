@@ -1,6 +1,5 @@
 import 'package:duration/duration.dart';
 import '../models/bulk_action.dart';
-import '../models/enums.dart';
 import '../models/filter_element.dart';
 
 class ActionScriptParser {

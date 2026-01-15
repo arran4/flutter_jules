@@ -1,8 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
-import 'session_list_screen.dart';
-import '../../utils/search_helper.dart';
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
@@ -12,11 +10,9 @@ import '../../models.dart';
 import '../../services/cache_service.dart';
 import '../widgets/advanced_search_bar.dart';
 import '../widgets/model_viewer.dart';
-import '../widgets/new_session_dialog.dart';
-import '../../services/filter_bookmark_provider.dart';
 import '../../services/message_queue_provider.dart';
-import '../widgets/source_stats_dialog.dart';
 import '../widgets/source_tile.dart';
+import '../../services/settings_provider.dart';
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -117,8 +113,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
     _updateSuggestions(sourceProvider.items.map((i) => i.data).toList());
     _processSessions();
     _onSearchChanged();
-     setState(() {}); // Trigger a rebuild to apply the initial sort
- }
+    setState(() {}); // Trigger a rebuild to apply the initial sort
+  }
 
   void _updateSuggestions(List<Source> sources) {
     final Set<FilterToken> suggestions = {};
@@ -287,7 +283,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
                     false) ||
                 (source.githubRepo?.owner.toLowerCase().contains(query) ??
                     false) ||
-                (source.githubRepo?.description?.toLowerCase().contains(query) ??
+                (source.githubRepo?.description
+                        ?.toLowerCase()
+                        .contains(query) ??
                     false))) {
               return false;
             }
@@ -298,7 +296,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
           final labels = <String>{};
           if (source.githubRepo?.isPrivate ?? false) labels.add('is:private');
           if (source.githubRepo?.isFork ?? false) labels.add('is:fork');
-          if (source.githubRepo?.isArchived ?? false) labels.add('is:archived');
+          if (source.isArchived) labels.add('is:archived');
           if (source.githubRepo?.primaryLanguage != null) {
             labels.add(
                 'lang:${source.githubRepo!.primaryLanguage!.toLowerCase()}');
@@ -307,9 +305,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
           final synthMetadata = CacheMetadata(
             firstSeen: metadata.firstSeen,
             lastRetrieved: metadata.lastRetrieved,
-            isNew: metadata.isNew,
-            isUpdated: metadata.isUpdated,
-            labels: labels,
+            lastOpened: metadata.lastOpened,
+            lastUpdated: metadata.lastUpdated,
+            labels: labels.toList(),
           );
 
           final synthSession = Session(
@@ -320,14 +318,14 @@ class _SourceListScreenState extends State<SourceListScreen> {
             sourceContext: SourceContext(source: source.name),
           );
 
-          final context = FilterContext(
+          final filterContext = FilterContext(
             session: synthSession,
             metadata: synthMetadata,
             queueProvider:
                 Provider.of<MessageQueueProvider>(context, listen: false),
           );
 
-          return _filterTree!.evaluate(context).isIn;
+          return _filterTree!.evaluate(filterContext).isIn;
         }).toList();
 
         final displaySources = _sortSources(filteredSources);

@@ -39,7 +39,7 @@ class BulkActionPresetProvider with ChangeNotifier {
         jsonList.map((json) => BulkActionPreset.fromJson(json)),
       );
     } catch (e) {
-      print('Failed to load default bulk action presets: $e');
+      debugPrint('Failed to load default bulk action presets: $e');
       _defaultPresets.clear();
     }
   }
@@ -67,7 +67,7 @@ class BulkActionPresetProvider with ChangeNotifier {
       final jsonString = jsonEncode(_presets.map((p) => p.toJson()).toList());
       await prefs.setString(_presetsKey, jsonString);
     } catch (e) {
-      print('Failed to save bulk action presets: $e');
+      debugPrint('Failed to save bulk action presets: $e');
     }
   }
 
@@ -136,7 +136,8 @@ class BulkActionPresetProvider with ChangeNotifier {
     try {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final imported = jsonList
-          .map((json) => BulkActionPreset.fromJson(json as Map<String, dynamic>))
+          .map(
+              (json) => BulkActionPreset.fromJson(json as Map<String, dynamic>))
           .toList();
 
       if (merge) {

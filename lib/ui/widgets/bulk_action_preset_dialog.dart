@@ -9,7 +9,6 @@ import 'bulk_action_progress_dialog.dart';
 import '../../services/session_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../models/filter_element.dart';
-import '../../models/session.dart';
 
 class BulkActionPresetDialog extends StatelessWidget {
   const BulkActionPresetDialog({super.key});

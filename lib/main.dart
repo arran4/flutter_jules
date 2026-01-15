@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:provider/provider.dart';
 import 'services/activity_provider.dart';
 import 'services/auth_provider.dart';
@@ -163,39 +163,26 @@ class _MyAppState extends State<MyApp> {
             onTap: () {
               focusManager.requestFocus();
             },
-          home: Consumer<AuthProvider>(
-            builder: (context, auth, _) {
-              if (auth.isLoading) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!auth.isAuthenticated) {
-                return const LoginScreen();
-              }
-              return const NotificationOverlay(child: SessionListScreen());
+            child: MaterialApp(
+              title: "Arran's Flutter based jules client",
+              debugShowCheckedModeBanner: false,
+              theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+              routes: {
+                '/settings': (context) => const SettingsScreen(),
+                '/sources_raw': (context) => const SourceListScreen(),
               },
-              child: MaterialApp(
-                title: "Arran's Flutter based jules client",
-                debugShowCheckedModeBanner: false,
-                theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-                routes: {
-                  '/settings': (context) => const SettingsScreen(),
-                  '/sources_raw': (context) => const SourceListScreen(),
+              home: Consumer<AuthProvider>(
+                builder: (context, auth, _) {
+                  if (auth.isLoading) {
+                    return const Scaffold(
+                      body: Center(child: CircularProgressIndicator()),
+                    );
+                  }
+                  if (!auth.isAuthenticated) {
+                    return const LoginScreen();
+                  }
+                  return const NotificationOverlay(child: SessionListScreen());
                 },
-                home: Consumer<AuthProvider>(
-                  builder: (context, auth, _) {
-                    if (auth.isLoading) {
-                      return const Scaffold(
-                        body: Center(child: CircularProgressIndicator()),
-                      );
-                    }
-                    if (!auth.isAuthenticated) {
-                      return const LoginScreen();
-                    }
-                    return const SessionListScreen();
-                  },
-                ),
               ),
             ),
           ),

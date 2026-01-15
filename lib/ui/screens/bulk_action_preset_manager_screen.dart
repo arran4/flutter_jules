@@ -1,4 +1,3 @@
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
@@ -363,9 +362,7 @@ class _BulkActionPresetManagerScreenState
                 }
 
                 try {
-                  await context
-                      .read<BulkActionPresetProvider>()
-                      .importFromJson(
+                  await context.read<BulkActionPresetProvider>().importFromJson(
                         jsonString,
                         merge: merge,
                       );
