@@ -15,7 +15,10 @@ Future<bool> resubmitSession(
 }) async {
   final NewSessionResult? result = await showDialog<NewSessionResult>(
     context: context,
-    builder: (context) => NewSessionDialog(initialSession: session),
+    builder: (context) => NewSessionDialog(
+      initialSession: session,
+      mode: SessionDialogMode.edit,
+    ),
   );
 
   if (result == null) return false;

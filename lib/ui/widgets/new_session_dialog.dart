@@ -16,6 +16,8 @@ import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
+enum SessionDialogMode { create, createWithContext, edit }
+
 class BulkSelection {
   final Source source;
   String branch;
@@ -26,8 +28,14 @@ class BulkSelection {
 class NewSessionDialog extends StatefulWidget {
   final String? sourceFilter;
   final Session? initialSession;
+  final SessionDialogMode mode;
 
-  const NewSessionDialog({super.key, this.sourceFilter, this.initialSession});
+  const NewSessionDialog({
+    super.key,
+    this.sourceFilter,
+    this.initialSession,
+    this.mode = SessionDialogMode.create,
+  });
 
   @override
   State<NewSessionDialog> createState() => _NewSessionDialogState();
@@ -96,8 +104,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _promptController = TextEditingController();
     _imageUrlController = TextEditingController();
 
-    if (widget.initialSession != null) {
+    if (widget.mode == SessionDialogMode.edit && widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
+    }
+
+    if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
       final mode = widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
@@ -846,7 +857,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
         return AlertDialog(
           title: Text(
-            widget.initialSession != null ? "Edit Draft" : "New Session",
+            widget.mode == SessionDialogMode.edit
+                ? "Edit Draft"
+                : "New Session",
           ),
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
@@ -944,7 +957,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       hintText: 'Describe what you want to do...',
                       border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
-                      suffixIcon: widget.initialSession != null
+                      suffixIcon: (widget.mode == SessionDialogMode.edit ||
+                              widget.mode == SessionDialogMode.createWithContext)
                           ? IconButton(
                               icon: const Icon(Icons.content_paste_go),
                               tooltip: 'Import Prompt from Original Session',
