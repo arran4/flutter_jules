@@ -96,6 +96,53 @@ class GithubProvider extends ChangeNotifier {
     return job.result as GitHubPrResponse?;
   }
 
+  Future<GitHubPrResponse?> getPrStatus(
+    String owner,
+    String repo,
+    String prNumber,
+  ) async {
+    if (_apiKey == null) {
+      return null;
+    }
+
+    final job = GithubJob(
+      id: 'pr_status_${owner}_${repo}_$prNumber',
+      description: 'Check PR Status: $owner/$repo #$prNumber',
+      action: () async {
+        final url = Uri.parse(
+          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
+        );
+        final response = await http.get(
+          url,
+          headers: {
+            'Authorization': 'token $_apiKey',
+            'Accept': 'application/vnd.github.v3+json',
+          },
+        );
+
+        _updateRateLimits(response.headers);
+
+        if (response.statusCode == 200) {
+          final data = jsonDecode(response.body);
+          return GitHubPrResponse(data);
+        } else {
+          debugPrint(
+            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+          );
+          return null;
+        }
+      },
+    );
+
+    _queue.add(job);
+    _processQueue();
+    notifyListeners();
+
+    // Wait for job to complete
+    await job.completer.future;
+    return job.result as GitHubPrResponse?;
+  }
+
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
     if (_apiKey == null) return null;
     final url = Uri.parse(
@@ -266,6 +313,7 @@ class GithubProvider extends ChangeNotifier {
             'openIssuesCount': data['open_issues_count'],
             'isFork': data['fork'],
             'forkParent': parent != null ? parent['full_name'] : null,
+            'html_url': data['html_url'],
           };
         } else {
           throw GithubApiException(response.statusCode, response.body);
@@ -387,8 +435,10 @@ class GithubJob {
 
 class GitHubPrResponse {
   final Map<String, dynamic> _data;
+  final Map<String, dynamic> _links;
 
-  GitHubPrResponse(this._data);
+  GitHubPrResponse(this._data)
+      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
@@ -403,6 +453,17 @@ class GitHubPrResponse {
       getNumberPropOrDefault<num?>(_data, 'changed_files', null)?.toInt();
   String? get diffUrl => getStringPropOrDefault(_data, 'diff_url', null);
   String? get patchUrl => getStringPropOrDefault(_data, 'patch_url', null);
+  String? get htmlUrl =>
+      (_links['html'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get statusesUrl =>
+      (_links['statuses'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get commentsUrl =>
+      (_links['comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get reviewCommentsUrl =>
+      (_links['review_comments'] as Map<String, dynamic>?)?['href']
+          as String?;
+  String? get headSha =>
+      (_data['head'] as Map<String, dynamic>?)?['sha'] as String?;
 
   String get displayStatus {
     if (isMerged == true) return 'Merged';
