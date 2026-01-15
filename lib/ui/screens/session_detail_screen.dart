@@ -23,6 +23,7 @@ import '../widgets/session_meta_pills.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../session_helpers.dart';
 import 'dart:convert';
+import 'package:archive/archive_io.dart';
 import 'package:collection/collection.dart';
 import 'package:file_saver/file_saver.dart';
 import '../../services/exceptions.dart';
@@ -814,25 +815,38 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       // 2. Fetch all activities
       final allActivities = await client.listActivities(widget.session.name);
 
-      // 3. Combine them into a single JSON object
-      final combinedData = {
-        'session': fullSession.toJson(),
-        'activities': allActivities.map((a) => a.toJson()).toList(),
-      };
-
-      // 4. Encode to a pretty-printed JSON string
+      // 3. Create JSON strings for session and activities
       const jsonEncoder = JsonEncoder.withIndent('  ');
-      final jsonString = jsonEncoder.convert(combinedData);
-      final bytes = utf8.encode(jsonString);
+      final sessionJson = jsonEncoder.convert(fullSession.toJson());
+      final activitiesJson =
+          jsonEncoder.convert(allActivities.map((a) => a.toJson()).toList());
 
-      // 5. Use file_saver to save the file
+      // 4. Create a zip archive
+      final archive = Archive();
+      archive.addFile(
+        ArchiveFile('session.json', sessionJson.length, utf8.encode(sessionJson)),
+      );
+      archive.addFile(
+        ArchiveFile('activities.json', activitiesJson.length,
+            utf8.encode(activitiesJson)),
+      );
+
+      // 5. Encode the archive to bytes
+      final zipEncoder = ZipEncoder();
+      final zipData = zipEncoder.encode(archive);
+
+      if (zipData == null) {
+        throw Exception("Failed to create zip file");
+      }
+
+      // 6. Use file_saver to save the file
       final fileName =
-          'session_${_session.id}_${DateTime.now().toIso8601String()}.json';
+          'session_${_session.id}_${DateTime.now().toIso8601String()}.zip';
       await FileSaver.instance.saveFile(
         name: fileName,
-        bytes: bytes,
-        ext: 'json',
-        mimeType: MimeType.json,
+        bytes: Uint8List.fromList(zipData),
+        ext: 'zip',
+        mimeType: MimeType.zip,
       );
 
       if (mounted) {
