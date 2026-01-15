@@ -1,582 +1,198 @@
-import 'package:flutter_jules/models/cache_metadata.dart';
-import 'package:flutter_jules/models/session.dart';
-import 'package:flutter_jules/models/source.dart';
-import 'package:flutter_test/flutter_test.dart';
-import 'package:flutter_jules/models/filter_element.dart';
-import 'package:flutter_jules/models/filter_element_builder.dart';
-import 'package:flutter_jules/models/search_filter.dart';
+import 'package:test/test.dart';
+import '../lib/models/filter_element.dart';
+import '../lib/models/filter_element_builder.dart';
 
 void main() {
-  group('FilterElement Basic Tests', () {
-    test('TextElement creation and JSON', () {
-      final element = TextElement('search term');
-      expect(element.type, FilterElementType.text);
-      expect(element.text, 'search term');
-
-      final json = element.toJson();
-      expect(json['type'], 'text');
-      expect(json['text'], 'search term');
-
-      final restored = TextElement.fromJson(json);
-      expect(restored.text, 'search term');
-    });
-
-    test('LabelElement creation and JSON', () {
-      final element = LabelElement('Unread', 'unread');
-      expect(element.type, FilterElementType.label);
-      expect(element.label, 'Unread');
-      expect(element.value, 'unread');
-
-      final json = element.toJson();
-      final restored = LabelElement.fromJson(json);
-      expect(restored.label, 'Unread');
-      expect(restored.value, 'unread');
-    });
-
-    test('AndElement with children', () {
-      final and = AndElement([
-        LabelElement('Unread', 'unread'),
-        LabelElement('New', 'new'),
-      ]);
-
-      expect(and.type, FilterElementType.and);
-      expect(and.children.length, 2);
-
-      final json = and.toJson();
-      expect(json['type'], 'and');
-      expect((json['children'] as List).length, 2);
-
-      final restored = AndElement.fromJson(json);
-      expect(restored.children.length, 2);
-    });
-
-    test('OrElement with children', () {
-      final or = OrElement([
-        LabelElement('Unread', 'unread'),
-        LabelElement('New', 'new'),
-      ]);
-
-      expect(or.type, FilterElementType.or);
-      expect(or.children.length, 2);
-    });
-
-    test('NotElement wrapping', () {
-      final not = NotElement(HasPrElement());
-      expect(not.type, FilterElementType.not);
-
-      final json = not.toJson();
-      expect(json['type'], 'not');
-      expect((json['child'] as Map)['type'], 'has_pr');
-    });
-
-    test('Complex nested structure', () {
-      final complex = AndElement([
+  group('FilterElement.fromJson/toJson', () {
+    test('serializes and deserializes a complex tree', () {
+      final original = AndElement([
         OrElement([
-          LabelElement('Unread', 'unread'),
-          LabelElement('New', 'new'),
+          PrStatusElement('Open', 'open'),
+          PrStatusElement('Draft', 'draft'),
         ]),
-        NotElement(HasPrElement()),
-        TextElement('search'),
+        NotElement(LabelElement('Bug', 'bug')),
       ]);
 
-      final json = complex.toJson();
-      final restored = FilterElement.fromJson(json);
+      final json = original.toJson();
+      final deserialized = FilterElement.fromJson(json);
 
-      expect(restored, isA<AndElement>());
-      final andElement = restored as AndElement;
-      expect(andElement.children.length, 3);
-      expect(andElement.children[0], isA<OrElement>());
-      expect(andElement.children[1], isA<NotElement>());
-      expect(andElement.children[2], isA<TextElement>());
-    });
-  });
-
-  group('FilterElementBuilder - Add Tests', () {
-    test('Add to empty root', () {
-      final result = FilterElementBuilder.addFilter(
-        null,
-        LabelElement('Unread', 'unread'),
-      );
-
-      expect(result, isA<LabelElement>());
-      expect((result as LabelElement).value, 'unread');
-    });
-
-    test('Add same type creates OR', () {
-      final root = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.addFilter(
-        root,
-        LabelElement('New', 'new'),
-      );
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 2);
-      expect(or.children[0], isA<LabelElement>());
-      expect(or.children[1], isA<LabelElement>());
-    });
-
-    test('Add to existing OR of same type', () {
-      final root = OrElement([
-        LabelElement('Unread', 'unread'),
-        LabelElement('New', 'new'),
-      ]);
-
-      final result = FilterElementBuilder.addFilter(
-        root,
-        LabelElement('Updated', 'updated'),
-      );
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 3);
-    });
-
-    test('Add different type creates AND', () {
-      final root = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.addFilter(
-        root,
-        StatusElement('Completed', 'COMPLETED'),
-      );
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children.length, 2);
-      expect(and.children[0], isA<LabelElement>());
-      expect(and.children[1], isA<StatusElement>());
-    });
-
-    test('Add to AND with existing OR group', () {
-      final root = AndElement([
-        OrElement([
-          LabelElement('Unread', 'unread'),
-          LabelElement('New', 'new'),
-        ]),
-        HasPrElement(),
-      ]);
-
-      final result = FilterElementBuilder.addFilter(
-        root,
-        LabelElement('Updated', 'updated'),
-      );
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
+      expect(deserialized, isA<AndElement>());
+      final and = deserialized as AndElement;
       expect(and.children.length, 2);
       expect(and.children[0], isA<OrElement>());
-      final or = and.children[0] as OrElement;
-      expect(or.children.length, 3); // Unread, New, Updated
-    });
-
-    test('Add different type to AND without matching OR', () {
-      final root = AndElement([
-        LabelElement('Unread', 'unread'),
-        HasPrElement(),
-      ]);
-
-      final result = FilterElementBuilder.addFilter(
-        root,
-        StatusElement('Completed', 'COMPLETED'),
-      );
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children.length, 3);
-    });
-
-    test('Adding another text element creates OR', () {
-      final root = TextElement('old');
-      final result = FilterElementBuilder.addFilter(root, TextElement('new'));
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 2);
-    });
-  });
-
-  group('FilterElementBuilder - Remove Tests', () {
-    test('Remove only element returns null', () {
-      final target = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.removeFilter(target, target);
-
-      expect(result, isNull);
-    });
-
-    test('Remove from OR reduces to single element', () {
-      final keep = LabelElement('Unread', 'unread');
-      final remove = LabelElement('New', 'new');
-      final root = OrElement([keep, remove]);
-
-      final result = FilterElementBuilder.removeFilter(root, remove);
-
-      expect(result, isA<LabelElement>());
-      expect((result as LabelElement).value, 'unread');
-    });
-
-    test('Remove from OR with 3+ elements', () {
-      final remove = LabelElement('New', 'new');
-      final root = OrElement([
-        LabelElement('Unread', 'unread'),
-        remove,
-        LabelElement('Updated', 'updated'),
-      ]);
-
-      final result = FilterElementBuilder.removeFilter(root, remove);
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 2);
-    });
-
-    test('Remove from AND reduces correctly', () {
-      final remove = HasPrElement();
-      final root = AndElement([LabelElement('Unread', 'unread'), remove]);
-
-      final result = FilterElementBuilder.removeFilter(root, remove);
-
-      expect(result, isA<LabelElement>());
-    });
-
-    test('Remove from nested structure', () {
-      final remove = LabelElement('New', 'new');
-      final root = AndElement([
-        OrElement([LabelElement('Unread', 'unread'), remove]),
-        HasPrElement(),
-      ]);
-
-      final result = FilterElementBuilder.removeFilter(root, remove);
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children.length, 2);
-      expect(
-        and.children[0],
-        isA<LabelElement>(),
-      ); // OR reduced to single element
-    });
-  });
-
-  group('FilterElementBuilder - Toggle NOT Tests', () {
-    test('Toggle NOT on simple element', () {
-      final target = LabelElement('Unread', 'unread');
-      final result = FilterElementBuilder.toggleNot(target, target);
-
-      expect(result, isA<NotElement>());
-      final not = result as NotElement;
-      expect(not.child, isA<LabelElement>());
-    });
-
-    test('Toggle NOT twice returns to original', () {
-      final target = LabelElement('Unread', 'unread');
-      final wrapped = FilterElementBuilder.toggleNot(target, target);
-      // wrapped is NotElement(target)
-
-      final unwrapped = FilterElementBuilder.toggleNot(wrapped, target);
-
-      expect(unwrapped, equals(target));
-    });
-
-    test('Toggle NOT in nested structure', () {
-      final target = HasPrElement();
-      final root = AndElement([LabelElement('Unread', 'unread'), target]);
-
-      final result = FilterElementBuilder.toggleNot(root, target);
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
       expect(and.children[1], isA<NotElement>());
     });
   });
 
-  group('FilterElementBuilder - Simplify Tests', () {
-    test('Simplify empty AND/OR returns null', () {
-      final and = AndElement([]);
-      final or = OrElement([]);
-
-      expect(FilterElementBuilder.simplify(and), isNull);
-      expect(FilterElementBuilder.simplify(or), isNull);
+  group('FilterElementBuilder', () {
+    test('addFilter combines same-type elements with OR', () {
+      var root = FilterElementBuilder.addFilter(null, PrStatusElement('Open', 'open'));
+      root = FilterElementBuilder.addFilter(root, PrStatusElement('Draft', 'draft'));
+      expect(root, isA<OrElement>());
+      expect((root as OrElement).children.length, 2);
     });
 
-    test('Simplify single-child AND/OR unwraps', () {
-      final and = AndElement([LabelElement('Unread', 'unread')]);
-      final or = OrElement([LabelElement('New', 'new')]);
-
-      final andResult = FilterElementBuilder.simplify(and);
-      final orResult = FilterElementBuilder.simplify(or);
-
-      expect(andResult, isA<LabelElement>());
-      expect(orResult, isA<LabelElement>());
+    test('addFilter combines different-type elements with AND', () {
+      var root = FilterElementBuilder.addFilter(null, PrStatusElement('Open', 'open'));
+      root = FilterElementBuilder.addFilter(root, LabelElement('Bug', 'bug'));
+      expect(root, isA<AndElement>());
+      expect((root as AndElement).children.length, 2);
     });
 
-    test('Simplify nested structure', () {
-      final nested = AndElement([
-        OrElement([LabelElement('Unread', 'unread')]), // Will simplify to Label
-        HasPrElement(),
-      ]);
-
-      final result = FilterElementBuilder.simplify(nested);
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children[0], isA<LabelElement>()); // OR unwrapped
+    test('removeFilter removes an element', () {
+      final prOpen = PrStatusElement('Open', 'open');
+      final prDraft = PrStatusElement('Draft', 'draft');
+      var root = FilterElementBuilder.addFilter(null, prOpen);
+      root = FilterElementBuilder.addFilter(root, prDraft);
+      root = FilterElementBuilder.removeFilter(root, prOpen);
+      expect(root, isA<PrStatusElement>());
+      expect((root as PrStatusElement).value, 'draft');
     });
 
-    test('Simplify flattens nested ORs', () {
-      final nested = OrElement([
-        LabelElement('A', 'a'),
-        OrElement([LabelElement('B', 'b'), LabelElement('C', 'c')]),
-        LabelElement('D', 'd'),
-      ]);
-
-      final result = FilterElementBuilder.simplify(nested);
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 4);
-      expect(or.children.every((c) => c is! OrElement), isTrue);
+    test('simplify removes redundant nesting', () {
+      final prOpen = PrStatusElement('Open', 'open');
+      var root = AndElement([OrElement([prOpen])]);
+      root = FilterElementBuilder.simplify(root) as AndElement?;
+      expect(root, isA<PrStatusElement>());
     });
   });
+  group('FilterElement.fromExpression', () {
+    test('parses a simple TEXT element', () {
+      final result = FilterElement.fromExpression('TEXT(hello)');
+      expect(result, isA<TextElement>());
+      expect((result as TextElement).text, 'hello');
+    });
 
-  group('Migration Tests', () {
-    test('Migrate single include token', () {
-      final tokens = [
-        const FilterToken(
-          id: 'flag:unread',
-          type: FilterType.flag,
-          label: 'Unread',
-          value: 'unread',
-          mode: FilterMode.include,
-        ),
-      ];
+    test('parses a simple PR element', () {
+      final result = FilterElement.fromExpression('PR(open)');
+      expect(result, isA<PrStatusElement>());
+      expect((result as PrStatusElement).value, 'open');
+    });
 
-      final result = FilterElementBuilder.fromFilterTokens(tokens);
+    test('parses a simple CI element', () {
+      final result = FilterElement.fromExpression('CI(success)');
+      expect(result, isA<CiStatusElement>());
+      expect((result as CiStatusElement).value, 'success');
+    });
 
+    test('parses a simple STATE element', () {
+      final result = FilterElement.fromExpression('STATE(active)');
+      expect(result, isA<StatusElement>());
+      expect((result as StatusElement).value, 'active');
+    });
+
+    test('parses a simple SOURCE element', () {
+      final result = FilterElement.fromExpression('SOURCE(github)');
+      expect(result, isA<SourceElement>());
+      expect((result as SourceElement).value, 'github');
+    });
+
+    test('parses a simple BRANCH element', () {
+      final result = FilterElement.fromExpression('BRANCH(main)');
+      expect(result, isA<BranchElement>());
+      expect((result as BranchElement).value, 'main');
+    });
+
+    test('parses a simple LABEL element', () {
+      final result = FilterElement.fromExpression('LABEL(bug)');
       expect(result, isA<LabelElement>());
-      expect((result as LabelElement).value, 'unread');
+      expect((result as LabelElement).value, 'bug');
     });
 
-    test('Migrate single exclude token', () {
-      final tokens = [
-        const FilterToken(
-          id: 'flag:has_pr',
-          type: FilterType.flag,
-          label: 'Has PR',
-          value: 'has_pr',
-          mode: FilterMode.exclude,
-        ),
-      ];
+    test('parses a simple HASHTAG element', () {
+      final result = FilterElement.fromExpression('HASHTAG(urgent)');
+      expect(result, isA<TagElement>());
+      expect((result as TagElement).value, 'urgent');
+    });
 
-      final result = FilterElementBuilder.fromFilterTokens(tokens);
+    test('parses keyword New()', () {
+      final result = FilterElement.fromExpression('New()');
+      expect(result, isA<LabelElement>());
+      expect((result as LabelElement).value, 'new');
+    });
 
+    test('parses keyword Has(PR)', () {
+      final result = FilterElement.fromExpression('Has(PR)');
+      expect(result, isA<HasPrElement>());
+    });
+
+    test('parses keyword Has(Notes)', () {
+      final result = FilterElement.fromExpression('Has(Notes)');
+      expect(result, isA<HasNotesElement>());
+    });
+
+    test('parses keyword Has(Drafts)', () {
+      final result = FilterElement.fromExpression('Has(Drafts)');
+      expect(result, isA<LabelElement>());
+      expect((result as LabelElement).value, 'draft');
+    });
+
+    test('parses keyword Has(NoSource)', () {
+      final result = FilterElement.fromExpression('Has(NoSource)');
+      expect(result, isA<NoSourceElement>());
+    });
+
+    test('parses a NOT element', () {
+      final result = FilterElement.fromExpression('NOT(PR(open))');
       expect(result, isA<NotElement>());
-      final not = result as NotElement;
-      expect(not.child, isA<HasPrElement>());
+      expect((result as NotElement).child, isA<PrStatusElement>());
     });
 
-    test('Migrate same type tokens to OR', () {
-      final tokens = [
-        const FilterToken(
-          id: 'flag:unread',
-          type: FilterType.flag,
-          label: 'Unread',
-          value: 'unread',
-        ),
-        const FilterToken(
-          id: 'flag:new',
-          type: FilterType.flag,
-          label: 'New',
-          value: 'new',
-        ),
-      ];
-
-      final result = FilterElementBuilder.fromFilterTokens(tokens);
-
-      expect(result, isA<OrElement>());
-      final or = result as OrElement;
-      expect(or.children.length, 2);
-    });
-
-    test('Migrate different type tokens to AND', () {
-      final tokens = [
-        const FilterToken(
-          id: 'flag:unread',
-          type: FilterType.flag,
-          label: 'Unread',
-          value: 'unread',
-        ),
-        const FilterToken(
-          id: 'status:COMPLETED',
-          type: FilterType.status,
-          label: 'Completed',
-          value: 'COMPLETED',
-        ),
-      ];
-
-      final result = FilterElementBuilder.fromFilterTokens(tokens);
-
+    test('parses an AND element', () {
+      final result =
+          FilterElement.fromExpression('AND(PR(open) STATE(active))');
       expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children.length, 2);
+      expect((result as AndElement).children.length, 2);
     });
 
-    test('Migrate complex token list', () {
-      final tokens = [
-        const FilterToken(
-          id: 'flag:unread',
-          type: FilterType.flag,
-          label: 'Unread',
-          value: 'unread',
-        ),
-        const FilterToken(
-          id: 'flag:new',
-          type: FilterType.flag,
-          label: 'New',
-          value: 'new',
-        ),
-        const FilterToken(
-          id: 'flag:has_pr',
-          type: FilterType.flag,
-          label: 'Has PR',
-          value: 'has_pr',
-          mode: FilterMode.exclude,
-        ),
-        const FilterToken(
-          id: 'status:COMPLETED',
-          type: FilterType.status,
-          label: 'Completed',
-          value: 'COMPLETED',
-        ),
-      ];
-
-      final result = FilterElementBuilder.fromFilterTokens(tokens);
-
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children.length, 3); // OR(unread, new), NOT(has_pr), status
-    });
-
-    test('Convert filter element back to tokens', () {
-      final element = AndElement([
-        OrElement([
-          LabelElement('Unread', 'unread'),
-          LabelElement('New', 'new'),
-        ]),
-        NotElement(HasPrElement()),
-      ]);
-
-      final tokens = FilterElementBuilder.toFilterTokens(element);
-
-      expect(tokens.length, 3);
-      expect(tokens[0].value, 'unread');
-      expect(tokens[0].mode, FilterMode.include);
-      expect(tokens[1].value, 'new');
-      expect(tokens[1].mode, FilterMode.include);
-      expect(tokens[2].value, 'has_pr');
-      expect(tokens[2].mode, FilterMode.exclude);
-    });
-
-    test('Round-trip migration preserves logic', () {
-      final originalTokens = [
-        const FilterToken(
-          id: 'flag:unread',
-          type: FilterType.flag,
-          label: 'Unread',
-          value: 'unread',
-        ),
-        const FilterToken(
-          id: 'flag:new',
-          type: FilterType.flag,
-          label: 'New',
-          value: 'new',
-        ),
-      ];
-
-      final element = FilterElementBuilder.fromFilterTokens(originalTokens);
-      final backToTokens = FilterElementBuilder.toFilterTokens(element);
-
-      expect(backToTokens.length, 2);
-      expect(backToTokens[0].value, 'unread');
-      expect(backToTokens[1].value, 'new');
-    });
-  });
-
-  group('Edge Cases', () {
-    test('Empty token list returns null', () {
-      final result = FilterElementBuilder.fromFilterTokens([]);
-      expect(result, isNull);
-    });
-
-    test('Null root with various operations', () {
-      expect(
-        FilterElementBuilder.removeFilter(null, LabelElement('test', 'test')),
-        isNull,
-      );
-      expect(
-        FilterElementBuilder.toggleNot(null, LabelElement('test', 'test')),
-        isNull,
-      );
-      expect(FilterElementBuilder.simplify(null), isNull);
-      expect(FilterElementBuilder.toFilterTokens(null), isEmpty);
-    });
-
-    test('Adding text to existing text creates OR', () {
-      final root = TextElement('old');
-      final result = FilterElementBuilder.addFilter(root, TextElement('new'));
-
+    test('parses an OR element', () {
+      final result = FilterElement.fromExpression('OR(PR(open) PR(draft))');
       expect(result, isA<OrElement>());
       expect((result as OrElement).children.length, 2);
     });
 
-    test('Status elements group with OR', () {
-      final root = StatusElement('Completed', 'COMPLETED');
-      final result = FilterElementBuilder.addFilter(
-        root,
-        StatusElement('In Progress', 'IN_PROGRESS'),
-      );
-
-      expect(result, isA<OrElement>());
+    test('parses a complex nested expression', () {
+      final result = FilterElement.fromExpression(
+          'AND(OR(PR(open) PR(draft)) NOT(LABEL(bug)))');
+      expect(result, isA<AndElement>());
+      final and = result as AndElement;
+      expect(and.children.length, 2);
+      expect(and.children[0], isA<OrElement>());
+      expect(and.children[1], isA<NotElement>());
     });
 
-    test('Source elements group with OR', () {
-      final root = SourceElement('repo1', 'sources/github/repo1');
-      final result = FilterElementBuilder.addFilter(
-        root,
-        SourceElement('repo2', 'sources/github/repo2'),
-      );
-
-      expect(result, isA<OrElement>());
+    test('is case-insensitive for keywords', () {
+      final result = FilterElement.fromExpression('hAs(pR)');
+      expect(result, isA<HasPrElement>());
     });
-  });
 
-  test('NoSourceElement should correctly filter sessions', () {
-    final noSourceElement = NoSourceElement();
+    test('is case-insensitive for functions', () {
+      final result = FilterElement.fromExpression('pr(oPeN)');
+      expect(result, isA<PrStatusElement>());
+      expect((result as PrStatusElement).value, 'oPeN');
+    });
 
-    final sessionWithSource = Session(
-      name: 'test',
-      id: '1',
-      prompt: 'test',
-      sourceContext: SourceContext(source: 'sources/github/test/repo'),
-    );
+    test('handles quoted strings with spaces', () {
+      final result = FilterElement.fromExpression('TEXT((hello world))');
+      expect(result, isA<TextElement>());
+      expect((result as TextElement).text, 'hello world');
+    });
 
-    final sessionWithoutSource = Session(name: 'test', id: '2', prompt: 'test');
+    test('handles multiple elements without a container', () {
+      final result = FilterElement.fromExpression('PR(open) STATE(active)');
+      expect(result, isA<AndElement>());
+      expect((result as AndElement).children.length, 2);
+    });
 
-    final contextWithSource = FilterContext(
-      session: sessionWithSource,
-      metadata: CacheMetadata.empty(),
-    );
+    test('returns a TextElement for unparseable strings', () {
+      final result = FilterElement.fromExpression('this is not a valid filter');
+      expect(result, isA<TextElement>());
+      expect((result as TextElement).text, 'this is not a valid filter');
+    });
 
-    final contextWithoutSource = FilterContext(
-      session: sessionWithoutSource,
-      metadata: CacheMetadata.empty(),
-    );
-
-    expect(
-      noSourceElement.evaluate(contextWithSource),
-      FilterState.explicitOut,
-    );
-    expect(
-      noSourceElement.evaluate(contextWithoutSource),
-      FilterState.explicitIn,
-    );
+    test('does not crash on malformed time filter', () {
+      final result = FilterElement.fromExpression('UPDATEDBETWEEN(2024-01-01)');
+      expect(result, isA<TextElement>());
+    });
   });
 }

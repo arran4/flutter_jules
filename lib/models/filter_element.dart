@@ -149,6 +149,22 @@ abstract class FilterElement {
         throw Exception('Unknown filter element type: $type');
     }
   }
+
+  /// Factory method to create FilterElement from a string expression
+  static FilterElement? fromExpression(String expression) {
+    if (expression.trim().isEmpty) {
+      return null;
+    }
+    try {
+      return _ExpressionParser(expression).parse();
+    } catch (e) {
+      // TODO: Replace with a proper logger in production
+      // ignore: avoid_print
+      print('Error parsing filter expression: $e');
+      // On failure, treat the whole thing as a text search
+      return TextElement(expression);
+    }
+  }
 }
 
 /// Composite element that applies AND logic to its children
@@ -868,5 +884,358 @@ class HasNotesElement extends FilterElement {
 
   factory HasNotesElement.fromJson(Map<String, dynamic> json) {
     return HasNotesElement();
+  }
+}
+
+class _ExpressionParser {
+  final String expression;
+  int _pos = 0;
+
+  _ExpressionParser(this.expression);
+
+  FilterElement? parse() {
+    final elements = <FilterElement>[];
+    while (_pos < expression.length) {
+      _consumeWhitespace();
+      if (_pos >= expression.length) break;
+
+      final element = _parseElement();
+      if (element != null) {
+        elements.add(element);
+      } else {
+        // If we can't parse a known element, assume the rest is a text literal
+        final remaining = expression.substring(_pos).trim();
+        if (remaining.isNotEmpty) {
+          elements.add(TextElement(remaining));
+        }
+        break; // Stop parsing
+      }
+      _consumeWhitespace();
+    }
+
+    if (elements.isEmpty) return null;
+    if (elements.length == 1) return elements.first;
+    return AndElement(elements);
+  }
+
+  void _consumeWhitespace() {
+    while (_pos < expression.length && expression[_pos].trim().isEmpty) {
+      _pos++;
+    }
+  }
+
+  bool _peek(String s) {
+    _consumeWhitespace();
+    if (_pos + s.length > expression.length) return false;
+    return expression.substring(_pos, _pos + s.length).toUpperCase() ==
+        s.toUpperCase();
+  }
+
+  bool _consume(String s, {bool caseSensitive = false}) {
+    _consumeWhitespace();
+    if (_pos + s.length > expression.length) return false;
+
+    final actual = expression.substring(_pos, _pos + s.length);
+    final expected = s;
+
+    if (caseSensitive ? (actual == expected) : (actual.toUpperCase() == expected.toUpperCase())) {
+      _pos += s.length;
+      return true;
+    }
+    return false;
+  }
+
+  String _parseArgument() {
+    _consumeWhitespace();
+    if (!_consume('(')) throw Exception('Expected (');
+    _consumeWhitespace();
+
+    if (_peek(')')) {
+      _consume(')');
+      return '';
+    }
+
+    String content;
+    if (_peek('(')) {
+      // Nested parentheses, parse as a quoted string
+      content = _parseQuotedString();
+    } else {
+      // Simple argument until the next ')'
+      final start = _pos;
+      while (_pos < expression.length && expression[_pos] != ')') {
+        _pos++;
+      }
+      content = expression.substring(start, _pos).trim();
+    }
+
+    _consumeWhitespace();
+    if (!_consume(')')) throw Exception('Expected )');
+    return content;
+  }
+
+    List<String> _parseArguments() {
+    _consumeWhitespace();
+    if (!_consume('(')) throw Exception('Expected (');
+
+    final args = <String>[];
+    while (!_peek(')')) {
+        _consumeWhitespace();
+        if (_peek(')')) break;
+
+        String arg;
+        if (_peek('(')) {
+            // This argument is a quoted string
+            arg = _parseQuotedString();
+        } else {
+            // Unquoted argument, read until comma or closing paren
+            final start = _pos;
+            while (_pos < expression.length && expression[_pos] != ',' && expression[_pos] != ')') {
+                _pos++;
+            }
+            arg = expression.substring(start, _pos).trim();
+        }
+
+        args.add(arg);
+
+        _consumeWhitespace();
+        if (_consume(',')) {
+            // Continue to next argument
+        } else if (_peek(')')) {
+            break; // End of arguments
+        } else {
+            throw Exception('Expected , or )');
+        }
+    }
+
+    if (!_consume(')')) throw Exception('Expected )');
+    return args;
+  }
+
+
+  String _parseQuotedString() {
+    if (!_consume('(')) throw Exception('Expected opening bracket for quoted string');
+    int balance = 1;
+    final start = _pos;
+    while (_pos < expression.length) {
+      if (expression[_pos] == '\\' && _pos + 1 < expression.length) {
+        _pos += 2; // Skip escaped char
+      } else if (expression[_pos] == '(') {
+        balance++;
+        _pos++;
+      } else if (expression[_pos] == ')') {
+        balance--;
+        if (balance == 0) {
+          final content = expression.substring(start, _pos);
+          _pos++;
+          // Un-escape content
+          return content.replaceAll('\\)', ')').replaceAll('\\\\', '\\');
+        }
+        _pos++;
+      } else {
+        _pos++;
+      }
+    }
+    throw Exception('Unterminated quoted string');
+  }
+
+  FilterElement? _parseElement() {
+    _consumeWhitespace();
+    if (_peek('AND(')) return _parseAnd();
+    if (_peek('OR(')) return _parseOr();
+    if (_peek('NOT(')) return _parseNot();
+    if (_peek('TEXT(')) return _parseText();
+    if (_peek('PR(')) return _parsePrStatus();
+    if (_peek('CI(')) return _parseCiStatus();
+    if (_peek('STATE(')) return _parseStatus();
+    if (_peek('SOURCE(')) return _parseSource();
+    if (_peek('BRANCH(')) return _parseBranch();
+    if (_peek('LABEL(')) return _parseLabel();
+    if (_peek('HASHTAG(')) return _parseTag();
+    if (_peek('New()')) return _parseKeyword('New()', LabelElement('New', 'new'));
+    if (_peek('Updated()')) return _parseKeyword('Updated()', LabelElement('Updated', 'updated'));
+    if (_peek('Unread()')) return _parseKeyword('Unread()', LabelElement('Unread', 'unread'));
+    if (_peek('Hidden()')) return _parseKeyword('Hidden()', LabelElement('Hidden', 'hidden'));
+    if (_peek('Watching()')) return _parseKeyword('Watching()', LabelElement('Watching', 'watched'));
+    if (_peek('Pending()')) return _parseKeyword('Pending()', LabelElement('Pending', 'pending'));
+    if (_peek('Has(PR)')) return _parseKeyword('Has(PR)', HasPrElement());
+    if (_peek('Has(Notes)')) return _parseKeyword('Has(Notes)', HasNotesElement());
+    if (_peek('Has(Drafts)')) return _parseKeyword('Has(Drafts)', LabelElement('Draft', 'draft'));
+    if (_peek('Has(NoSource)')) return _parseKeyword('Has(NoSource)', NoSourceElement());
+
+    // Time filters
+    final timeKeywords = ['CREATED', 'UPDATED'];
+    final timeOps = ['AFTER', 'BEFORE', 'BETWEEN', 'IN', 'ON'];
+    for (final field in timeKeywords) {
+      for (final op in timeOps) {
+        if (_peek('$field$op(')) {
+          return _parseTimeFilter(field, op);
+        }
+      }
+    }
+
+    return null;
+  }
+
+  FilterElement _parseKeyword(String keyword, FilterElement element) {
+    if (_consume(keyword)) {
+      return element;
+    }
+    throw Exception('Expected $keyword');
+  }
+
+  FilterElement _parseAnd() {
+    _consume('AND');
+    _consume('(');
+    final children = <FilterElement>[];
+    while (!_peek(')')) {
+      final child = _parseElement();
+      if (child != null) {
+        children.add(child);
+      } else {
+        throw Exception('Invalid child element in AND');
+      }
+      _consumeWhitespace();
+    }
+    _consume(')');
+    return AndElement(children);
+  }
+
+  FilterElement _parseOr() {
+    _consume('OR');
+    _consume('(');
+    final children = <FilterElement>[];
+    while (!_peek(')')) {
+      final child = _parseElement();
+      if (child != null) {
+        children.add(child);
+      } else {
+        throw Exception('Invalid child element in OR');
+      }
+      _consumeWhitespace();
+    }
+    _consume(')');
+    return OrElement(children);
+  }
+
+  FilterElement _parseNot() {
+    _consume('NOT');
+    _consume('(');
+    _consumeWhitespace();
+    final child = _parseElement();
+    if (child == null) throw Exception('Missing child for NOT');
+    _consumeWhitespace();
+    if (!_consume(')')) throw Exception('Expected ) after NOT child');
+    return NotElement(child);
+  }
+
+  FilterElement _parseText() {
+    _consume('TEXT');
+    final arg = _parseArgument();
+    return TextElement(arg);
+  }
+
+  FilterElement _parsePrStatus() {
+    _consume('PR');
+    final arg = _parseArgument();
+    return PrStatusElement(arg, arg);
+  }
+    FilterElement _parseCiStatus() {
+    _consume('CI');
+    final arg = _parseArgument();
+    return CiStatusElement(arg, arg);
+  }
+
+  FilterElement _parseStatus() {
+    _consume('STATE');
+    final arg = _parseArgument();
+    return StatusElement(arg, arg);
+  }
+
+  FilterElement _parseSource() {
+    _consume('SOURCE');
+    final arg = _parseArgument();
+    return SourceElement(arg, arg);
+  }
+
+  FilterElement _parseBranch() {
+    _consume('BRANCH');
+    final arg = _parseArgument();
+    return BranchElement(arg, arg);
+  }
+
+  FilterElement _parseLabel() {
+    _consume('LABEL');
+    final arg = _parseArgument();
+    return LabelElement(arg, arg);
+  }
+    FilterElement _parseTag() {
+    _consume('HASHTAG');
+    final arg = _parseArgument();
+    return TagElement(arg, arg);
+  }
+
+  FilterElement _parseTimeFilter(String fieldStr, String opStr) {
+    _consume(fieldStr);
+    _consume(opStr);
+    final args = _parseArguments();
+
+    if ((opStr == 'BETWEEN' && args.length != 2) ||
+        (opStr == 'ON' && args.length != 1) ||
+        (opStr == 'IN' && args.length != 1) ||
+        (opStr == 'AFTER' && args.length != 1) ||
+        (opStr == 'BEFORE' && args.length != 1)) {
+      throw Exception('Incorrect number of arguments for $opStr');
+    }
+
+    final field = fieldStr == 'CREATED' ? TimeFilterField.created : TimeFilterField.updated;
+    TimeFilterType type;
+    DateTime? specificTime, specificTimeEnd;
+    String? range;
+
+    switch (opStr) {
+      case 'AFTER':
+        type = TimeFilterType.newerThan;
+        break;
+      case 'BEFORE':
+        type = TimeFilterType.olderThan;
+        break;
+      case 'BETWEEN':
+        type = TimeFilterType.between;
+        break;
+      case 'IN':
+        type = TimeFilterType.inRange;
+        break;
+      case 'ON':
+        type = TimeFilterType.between; // ON is syntactic sugar for a one-day BETWEEN
+        break;
+      default:
+        throw Exception('Unknown time op: $opStr');
+    }
+
+    if (opStr == 'IN') {
+      range = args[0];
+    } else if (opStr == 'BETWEEN') {
+      specificTime = DateTime.parse(args[0]);
+      specificTimeEnd = DateTime.parse(args[1]);
+    } else if (opStr == 'ON') {
+        specificTime = DateTime.parse(args[0]);
+        specificTimeEnd = specificTime.add(const Duration(days: 1));
+    } else { // AFTER, BEFORE
+      // Could be a date string or a range string
+      try {
+        specificTime = DateTime.parse(args[0]);
+      } catch (e) {
+        range = args[0];
+      }
+    }
+
+    final timeFilter = TimeFilter(
+      field: field,
+      type: type,
+      specificTime: specificTime,
+      specificTimeEnd: specificTimeEnd,
+      range: range,
+    );
+    return TimeFilterElement(timeFilter);
   }
 }

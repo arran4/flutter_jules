@@ -1112,30 +1112,88 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
           '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
               .trim();
 
-      return InkWell(
-        onTap: () => setState(() => _activeFiltersExpanded = true),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.filter_alt, size: 16, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  fullExpression,
-                  style: const TextStyle(
-                      fontFamily: 'monospace', color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
-                ),
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.filter_alt, size: 16, color: Colors.grey),
+            const SizedBox(width: 8),
+            Expanded(
+              child: Text(
+                fullExpression.isEmpty ? 'No active filters' : fullExpression,
+                style: TextStyle(
+                    fontFamily: 'monospace',
+                    color: fullExpression.isEmpty
+                        ? Colors.grey.shade600
+                        : Colors.black87,
+                    fontStyle: fullExpression.isEmpty
+                        ? FontStyle.italic
+                        : FontStyle.normal),
+                overflow: TextOverflow.ellipsis,
               ),
-              const Spacer(),
-              const Icon(Icons.unfold_more, size: 16),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.copy),
+              onPressed: () async {
+                if (filterExpression.isEmpty) return;
+                await Clipboard.setData(ClipboardData(text: filterExpression));
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Filter expression copied to clipboard.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              tooltip: 'Copy Filter Expression',
+              iconSize: 16,
+              splashRadius: 18,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            IconButton(
+              icon: const Icon(Icons.paste),
+              onPressed: () async {
+                final clipboardData =
+                    await Clipboard.getData(Clipboard.kTextPlain);
+                final expression = clipboardData?.text ?? '';
+                if (expression.isEmpty) return;
+
+                final newTree = FilterElement.fromExpression(expression);
+                widget.onFilterTreeChanged(newTree);
+
+                if (mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Filter pasted from clipboard.'),
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
+              },
+              tooltip: 'Paste Filter Expression',
+              iconSize: 16,
+              splashRadius: 18,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+            const SizedBox(width: 4),
+            IconButton(
+              icon: const Icon(Icons.unfold_more),
+              onPressed: () => setState(() => _activeFiltersExpanded = true),
+              tooltip: 'Expand Filters',
+              iconSize: 18,
+              splashRadius: 18,
+              constraints: const BoxConstraints(),
+              padding: const EdgeInsets.symmetric(horizontal: 4),
+            ),
+          ],
         ),
       );
     }
