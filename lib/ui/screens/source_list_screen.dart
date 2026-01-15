@@ -345,11 +345,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 tooltip: 'Refresh',
                 onPressed: _refreshData,
               ),
+              IconButton(
+                icon: const Icon(Icons.settings),
+                tooltip: 'Settings',
+                onPressed: () {
+                  Navigator.pushNamed(context, '/settings');
+                },
+              ),
               PopupMenuButton<String>(
                 onSelected: (value) {
-                  if (value == 'settings') {
-                    Navigator.pushNamed(context, '/settings');
-                  } else if (value == 'raw_data') {
+                  if (value == 'raw_data') {
                     _showRawData(context);
                   }
                 },
@@ -361,16 +366,6 @@ class _SourceListScreenState extends State<SourceListScreen> {
                         Icon(Icons.data_object),
                         SizedBox(width: 8),
                         Text('View Raw Data'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'settings',
-                    child: Row(
-                      children: [
-                        Icon(Icons.settings),
-                        SizedBox(width: 8),
-                        Text('Settings'),
                       ],
                     ),
                   ),
