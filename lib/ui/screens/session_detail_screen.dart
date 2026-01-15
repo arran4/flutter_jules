@@ -900,7 +900,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             ).markAsRead(_session.id, auth.token!);
           }
           // Auto-save draft
-          if (_messageController.text.trim().isNotEmpty) {
+          if (_messageController.text.trim().isNotEmpty && !_isSending) {
             Provider.of<MessageQueueProvider>(
               context,
               listen: false,
