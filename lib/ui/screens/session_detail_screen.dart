@@ -1021,6 +1021,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 );
               },
             ),
+            IconButton(
+              icon: const Icon(Icons.settings),
+              tooltip: 'Settings',
+              onPressed: () {
+                Navigator.pushNamed(context, '/settings');
+              },
+            ),
             PopupMenuButton<String>(
               onSelected: (value) async {
                 if (value == 'mark_unread_back') {
