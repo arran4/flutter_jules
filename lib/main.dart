@@ -17,6 +17,9 @@ import 'services/notification_service.dart';
 import 'services/notification_provider.dart';
 import 'services/tags_provider.dart';
 import 'package:flutter/services.dart';
+import 'package:tray_manager/tray_manager.dart';
+import 'package:window_manager/window_manager.dart';
+import 'services/tray_service.dart';
 import 'services/global_shortcut_focus_manager.dart';
 import 'services/shortcut_registry.dart';
 import 'ui/screens/session_list_screen.dart';
@@ -24,7 +27,10 @@ import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
+import 'ui/session_helpers.dart';
 import 'ui/widgets/notification_overlay.dart';
+
+final navigatorKey = GlobalKey<NavigatorState>();
 
 class ShowHelpIntent extends Intent {
   const ShowHelpIntent();
@@ -32,6 +38,7 @@ class ShowHelpIntent extends Intent {
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await windowManager.ensureInitialized();
   await NotificationService().init();
 
   runApp(
@@ -126,10 +133,18 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 
-class _MyAppState extends State<MyApp> {
+class _MyAppState extends State<MyApp> with WindowListener {
+  TrayService? _trayService;
+
   @override
   void initState() {
     super.initState();
+    windowManager.addListener(this);
+    final settings = context.read<SettingsProvider>();
+    if (settings.isInitialized) {
+      _onSettingsChanged();
+    }
+    settings.addListener(_onSettingsChanged);
     // Register the global shortcuts here
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
@@ -141,6 +156,49 @@ class _MyAppState extends State<MyApp> {
           const ShowHelpIntent(),
           'Show Help'));
     });
+  }
+
+  @override
+  void dispose() {
+    windowManager.removeListener(this);
+    context.read<SettingsProvider>().removeListener(_onSettingsChanged);
+    _trayService?.dispose();
+    super.dispose();
+  }
+
+  void _onSettingsChanged() {
+    final settings = context.read<SettingsProvider>();
+    if (settings.trayEnabled && _trayService == null) {
+      _initTrayService();
+    } else if (!settings.trayEnabled && _trayService != null) {
+      _trayService?.dispose();
+      _trayService = null;
+      trayManager.destroy();
+    }
+  }
+
+  void _initTrayService() {
+    _trayService = TrayService(
+      onNewSession: () {
+        if (navigatorKey.currentContext != null) {
+          showNewSessionDialog(navigatorKey.currentContext!);
+        }
+      },
+      onRefresh: () {
+        context.read<SessionProvider>().refreshSessions();
+        context.read<SourceProvider>().refreshSources();
+      },
+    );
+    _trayService!.init();
+  }
+
+  @override
+  Future<void> onWindowClose() async {
+    if (context.read<SettingsProvider>().trayEnabled) {
+      await windowManager.hide();
+    } else {
+      await windowManager.destroy();
+    }
   }
 
   @override
@@ -188,6 +246,29 @@ class _MyAppState extends State<MyApp> {
                 },
               ),
             ),
+          ),
+        },
+        child: MaterialApp(
+          navigatorKey: navigatorKey,
+          title: 'Jules API Client',
+          debugShowCheckedModeBanner: false,
+          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
+          routes: {
+            '/settings': (context) => const SettingsScreen(),
+            '/sources_raw': (context) => const SourceListScreen(),
+          },
+          home: Consumer<AuthProvider>(
+            builder: (context, auth, _) {
+              if (auth.isLoading) {
+                return const Scaffold(
+                  body: Center(child: CircularProgressIndicator()),
+                );
+              }
+              if (!auth.isAuthenticated) {
+                return const LoginScreen();
+              }
+              return const SessionListScreen();
+            },
           ),
         ),
       ),

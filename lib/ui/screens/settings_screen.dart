@@ -149,6 +149,16 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) => settings.setNotifyOnFailure(value),
               ),
               const Divider(),
+              _buildSectionHeader(context, 'System Tray'),
+              SwitchListTile(
+                title: const Text('Enable System Tray'),
+                subtitle: const Text(
+                  'Show an icon in the system tray to manage the application.',
+                ),
+                value: settings.trayEnabled,
+                onChanged: (value) => settings.setTrayEnabled(value),
+              ),
+              const Divider(),
               _buildSectionHeader(context, 'Performance'),
               ListTile(
                 title: const Text('Sessions Page Size'),

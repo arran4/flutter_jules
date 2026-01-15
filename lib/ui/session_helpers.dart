@@ -209,3 +209,30 @@ Future<void> handleNewSessionResultInBackground({
     showMessage("New session(s) created.");
   }
 }
+
+Future<void> showNewSessionDialog(BuildContext context) async {
+  final result = await showDialog<NewSessionResult>(
+    context: context,
+    builder: (context) => const NewSessionDialog(),
+  );
+
+  if (result == null || !context.mounted) return;
+
+  final sessionProvider = context.read<SessionProvider>();
+  final authProvider = context.read<AuthProvider>();
+  final messageQueueProvider = context.read<MessageQueueProvider>();
+  final settingsProvider = context.read<SettingsProvider>();
+
+  handleNewSessionResultInBackground(
+    result: result,
+    originalSession: Session.empty(),
+    hideOriginal: false,
+    sessionProvider: sessionProvider,
+    authProvider: authProvider,
+    messageQueueProvider: messageQueueProvider,
+    settingsProvider: settingsProvider,
+    showMessage: (message) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
+    },
+  );
+}
