@@ -174,8 +174,16 @@ class Source {
   final String name;
   final String id;
   final GitHubRepo? githubRepo;
+  final bool isArchived;
+  final bool isReadOnly;
 
-  Source({required this.name, required this.id, this.githubRepo});
+  Source({
+    required this.name,
+    required this.id,
+    this.githubRepo,
+    this.isArchived = false,
+    this.isReadOnly = false,
+  });
 
   factory Source.fromJson(Map<String, dynamic> json) {
     return Source(
@@ -187,11 +195,18 @@ class Source {
         GitHubRepo.fromJson,
         null,
       ),
+      isArchived: getBooleanPropOrDefault(json, 'isArchived', false),
+      isReadOnly: getBooleanPropOrDefault(json, 'isReadOnly', false),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{'name': name, 'id': id};
+    final map = <String, dynamic>{
+      'name': name,
+      'id': id,
+      'isArchived': isArchived,
+      'isReadOnly': isReadOnly,
+    };
     if (githubRepo != null) {
       map['githubRepo'] = githubRepo!.toJson();
     }

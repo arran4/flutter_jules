@@ -25,6 +25,16 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyFabVisibility = 'fab_visibility';
+  static const String keyHideArchivedAndReadOnly =
+      'hide_archived_and_read_only';
+
+  // Keybindings
+  static const String keyEnterKeyAction = 'enter_key_action';
+  static const String keyShiftEnterKeyAction = 'shift_enter_key_action';
+  static const String keyCtrlEnterKeyAction = 'ctrl_enter_key_action';
+  static const String keyCtrlShiftEnterKeyAction =
+      'ctrl_shift_enter_key_action';
+  static const String keyEscKeyAction = 'esc_key_action';
 
   // Filter Memory
   FilterElement? _lastFilter;
@@ -50,6 +60,15 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
+  bool _hideArchivedAndReadOnly = true;
+
+  // Keybinding Actions
+  MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
+  MessageSubmitAction _shiftEnterKeyAction = MessageSubmitAction.addNewLine;
+  MessageSubmitAction _ctrlEnterKeyAction = MessageSubmitAction.submitsMessage;
+  MessageSubmitAction _ctrlShiftEnterKeyAction =
+      MessageSubmitAction.submitsMessageAndGoesBack;
+  EscKeyAction _escKeyAction = EscKeyAction.doesNothing;
 
   SharedPreferences? _prefs;
 
@@ -65,6 +84,14 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
   FabVisibility get fabVisibility => _fabVisibility;
+  bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
+
+  // Keybinding Getters
+  MessageSubmitAction get enterKeyAction => _enterKeyAction;
+  MessageSubmitAction get shiftEnterKeyAction => _shiftEnterKeyAction;
+  MessageSubmitAction get ctrlEnterKeyAction => _ctrlEnterKeyAction;
+  MessageSubmitAction get ctrlShiftEnterKeyAction => _ctrlShiftEnterKeyAction;
+  EscKeyAction get escKeyAction => _escKeyAction;
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
@@ -116,6 +143,36 @@ class SettingsProvider extends ChangeNotifier {
       FabVisibility.values,
       FabVisibility.floating,
     );
+    _hideArchivedAndReadOnly =
+        _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
+
+    // Load keybindings
+    _enterKeyAction = _loadEnum(
+      keyEnterKeyAction,
+      MessageSubmitAction.values,
+      MessageSubmitAction.addNewLine,
+    );
+    _shiftEnterKeyAction = _loadEnum(
+      keyShiftEnterKeyAction,
+      MessageSubmitAction.values,
+      MessageSubmitAction.addNewLine,
+    );
+    _ctrlEnterKeyAction = _loadEnum(
+      keyCtrlEnterKeyAction,
+      MessageSubmitAction.values,
+      MessageSubmitAction.submitsMessage,
+    );
+    _ctrlShiftEnterKeyAction = _loadEnum(
+      keyCtrlShiftEnterKeyAction,
+      MessageSubmitAction.values,
+      MessageSubmitAction.submitsMessageAndGoesBack,
+    );
+    _escKeyAction = _loadEnum(
+      keyEscKeyAction,
+      EscKeyAction.values,
+      EscKeyAction.doesNothing,
+    );
+
     _loadSchedules();
     _loadBulkActionConfig();
 
@@ -277,6 +334,42 @@ class SettingsProvider extends ChangeNotifier {
     _fabVisibility = visibility;
     notifyListeners();
     await _prefs?.setInt(keyFabVisibility, visibility.index);
+  }
+
+  Future<void> setHideArchivedAndReadOnly(bool value) async {
+    _hideArchivedAndReadOnly = value;
+    notifyListeners();
+    await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
+  }
+  // Keybinding Setters
+  Future<void> setEnterKeyAction(MessageSubmitAction action) async {
+    _enterKeyAction = action;
+    notifyListeners();
+    await _prefs?.setInt(keyEnterKeyAction, action.index);
+  }
+
+  Future<void> setShiftEnterKeyAction(MessageSubmitAction action) async {
+    _shiftEnterKeyAction = action;
+    notifyListeners();
+    await _prefs?.setInt(keyShiftEnterKeyAction, action.index);
+  }
+
+  Future<void> setCtrlEnterKeyAction(MessageSubmitAction action) async {
+    _ctrlEnterKeyAction = action;
+    notifyListeners();
+    await _prefs?.setInt(keyCtrlEnterKeyAction, action.index);
+  }
+
+  Future<void> setCtrlShiftEnterKeyAction(MessageSubmitAction action) async {
+    _ctrlShiftEnterKeyAction = action;
+    notifyListeners();
+    await _prefs?.setInt(keyCtrlShiftEnterKeyAction, action.index);
+  }
+
+  Future<void> setEscKeyAction(EscKeyAction action) async {
+    _escKeyAction = action;
+    notifyListeners();
+    await _prefs?.setInt(keyEscKeyAction, action.index);
   }
 
   Future<void> setLastFilter(FilterElement? filter) async {

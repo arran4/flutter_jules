@@ -98,4 +98,9 @@ class SortOption {
         return "Count";
     }
   }
+
+  String toExpression() {
+    final dir = direction == SortDirection.ascending ? 'asc' : 'desc';
+    return '${field.name} $dir';
+  }
 }
