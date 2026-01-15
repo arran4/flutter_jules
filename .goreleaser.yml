@@ -1,0 +1,5 @@
+# .goreleaser.yml
+builds:
+  - main: main.go
+    binary: metallic-coronal
+dist: dist
