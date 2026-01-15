@@ -20,11 +20,26 @@ class _ActivityItemState extends State<ActivityItem> {
   bool _isExpanded = true;
 
   String? _getPrUrl(ChangeSet changeSet) {
+    // Try to get session ID from activity name to link to Jules
+    final sessionId = _getSessionIdFromActivityName(widget.activity.name);
+    if (sessionId != null) {
+      return 'https://jules.corp.google.com/session/$sessionId';
+    }
+
+    // Fallback to GitHub URL
     final sourceParts = changeSet.source.split('/');
     if (sourceParts.length >= 4 && sourceParts[1] == 'github') {
       final owner = sourceParts[2];
       final repo = sourceParts[3];
       return 'https://github.com/$owner/$repo/pulls';
+    }
+    return null;
+  }
+
+  String? _getSessionIdFromActivityName(String name) {
+    final parts = name.split('/');
+    if (parts.length >= 2 && parts[0] == 'sessions') {
+      return parts[1];
     }
     return null;
   }
