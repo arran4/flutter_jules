@@ -64,7 +64,21 @@ class ActivityDisplayInfo {
       icon = Icons.smart_toy;
       iconColor = Colors.blue;
     } else if (activity.userMessaged != null) {
-      title = "User";
+      final isPending = activity.unmappedProps['isPending'] == true;
+      final isQueued = activity.unmappedProps['isQueued'] == true;
+      if (isPending) {
+        title = "Sending...";
+        icon = Icons.hourglass_empty;
+        iconColor = Colors.grey;
+      } else if (isQueued) {
+        title = "Sending Failed";
+        icon = Icons.cloud_off;
+        iconColor = Colors.orange;
+      } else {
+        title = "User";
+        icon = Icons.person;
+        iconColor = Colors.green;
+      }
       final msg = activity.userMessaged!.userMessage;
       summary = msg;
       if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
