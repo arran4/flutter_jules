@@ -2967,6 +2967,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         ),
       ],
     ).then((value) {
+      if (!context.mounted) return;
       if (value == 'source' && session.sourceContext?.source != null) {
         final sourceProvider =
             Provider.of<SourceProvider>(context, listen: false);
