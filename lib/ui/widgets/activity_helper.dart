@@ -29,10 +29,17 @@ class ActivityDisplayInfo {
       icon = Icons.error;
       iconColor = Colors.red;
     } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      summary = "Success";
-      icon = Icons.flag;
-      iconColor = Colors.green;
+      if (activity.sessionCompleted!.summary == 'Success') {
+        title = "Session Completed";
+        summary = "Success";
+        icon = Icons.flag;
+        iconColor = Colors.green;
+      } else {
+        title = "Session Ended";
+        summary = activity.sessionCompleted!.summary;
+        icon = Icons.flag_outlined;
+        iconColor = Colors.grey;
+      }
     } else if (activity.planApproved != null) {
       title = "Plan Approved";
       summary = "Plan ID: ${activity.planApproved!.planId}";

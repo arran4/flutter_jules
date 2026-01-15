@@ -5,6 +5,7 @@ import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
 import 'model_viewer.dart';
+import 'activity_helper.dart';
 
 class ActivityItem extends StatefulWidget {
   final Activity activity;
@@ -40,148 +41,12 @@ class _ActivityItemState extends State<ActivityItem> {
 
   Widget _buildHeader() {
     final activity = widget.activity;
-    String title = "Activity";
-    String? summary;
-    IconData icon = Icons.info;
-    Color? iconColor;
-    bool isCompactable = false;
-
-    // Type Detection Logic (Simplified for Header)
-    if (activity.sessionFailed != null) {
-      title = "Session Failed";
-      summary = activity.sessionFailed!.reason;
-      icon = Icons.error;
-      iconColor = Colors.red;
-    } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      icon = Icons.flag;
-      iconColor = Colors.green;
-    } else if (activity.planApproved != null) {
-      title = "Plan Approved";
-      summary = "Plan ID: ${activity.planApproved!.planId}";
-      icon = Icons.check_circle;
-      iconColor = Colors.teal;
-    } else if (activity.planGenerated != null) {
-      title = "Plan Generated";
-      summary = "${activity.planGenerated!.plan.steps.length} steps";
-      icon = Icons.list_alt;
-      iconColor = Colors.orange;
-    } else if (activity.agentMessaged != null) {
-      title = "Agent";
-      final msg = activity.agentMessaged!.agentMessage;
-      summary = msg;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          msg.length < 300 &&
-          !msg.contains('\n')) {
-        isCompactable = true;
-      } else {
-        summary = msg.split('\n').first;
-      }
-      icon = Icons.smart_toy;
-      iconColor = Colors.blue;
-    } else if (activity.userMessaged != null) {
-      final isPending = activity.unmappedProps['isPending'] == true;
-      final isQueued = activity.unmappedProps['isQueued'] == true;
-      if (isPending) {
-        title = "Sending...";
-        icon = Icons.hourglass_empty;
-        iconColor = Colors.grey;
-      } else if (isQueued) {
-        title = "Sending Failed";
-        icon = Icons.cloud_off;
-        iconColor = Colors.orange;
-      } else {
-        title = "User";
-        icon = Icons.person;
-        iconColor = Colors.green;
-      }
-      final msg = activity.userMessaged!.userMessage;
-      summary = msg;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          msg.length < 300 &&
-          !msg.contains('\n')) {
-        isCompactable = true;
-      } else {
-        summary = msg.split('\n').first;
-      }
-    } else if (activity.progressUpdated != null) {
-      title = activity.progressUpdated!.title;
-      summary = activity.progressUpdated!.description;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          summary.length < 300 &&
-          !summary.contains('\n')) {
-        isCompactable = true;
-      }
-      icon = Icons.update;
-      iconColor = Colors.indigo;
-    } else if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
-      // Artifact Logic
-      final bashArtifact = activity.artifacts!.firstWhere(
-        (a) => a.bashOutput != null,
-        orElse: () => Artifact(),
-      );
-      final mediaArtifact = activity.artifacts!.firstWhere(
-        (a) => a.media != null,
-        orElse: () => Artifact(),
-      );
-
-      if (bashArtifact.bashOutput != null) {
-        title = "Command";
-        summary = bashArtifact.bashOutput!.command;
-        if (bashArtifact.bashOutput!.exitCode != 0) {
-          icon = Icons.dangerous;
-          iconColor = Colors.red;
-        } else {
-          icon = Icons.terminal;
-          iconColor = Colors.grey;
-        }
-      } else if (mediaArtifact.media != null) {
-        title = "Media";
-        summary = mediaArtifact.media!.mimeType;
-        icon = Icons.image;
-        iconColor = Colors.purple;
-      } else {
-        // Just generic artifacts (e.g. ChangeSet)
-        // Check if it's the "Simple ChangeSet" case
-        final changeSetArtifact = activity.artifacts!.firstWhere(
-          (a) => a.changeSet != null,
-          orElse: () => Artifact(),
-        );
-
-        if (changeSetArtifact.changeSet != null) {
-          title = "Artifact";
-          summary =
-              "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
-          // If it has no patch, it's very compactable
-          if (changeSetArtifact.changeSet!.gitPatch == null) {
-            isCompactable = true;
-          }
-        } else {
-          title = "Artifacts";
-          summary = "${activity.artifacts!.length} items";
-        }
-        icon = Icons.category;
-        iconColor = Colors.blueGrey;
-      }
-    } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      summary = "Success";
-      icon = Icons.flag;
-      iconColor = Colors.green;
-    } else {
-      if (activity.description.isEmpty) {
-        title = "Empty Activity";
-        summary = "${activity.originator ?? 'Unknown'} • ${activity.id}";
-        isCompactable = true;
-        icon = Icons.crop_square;
-        iconColor = Colors.grey;
-      } else {
-        title = "Unknown";
-        summary = activity.description;
-        icon = Icons.help_outline;
-        iconColor = Colors.amber;
-      }
-    }
+    final info = ActivityDisplayInfo.fromActivity(activity);
+    final title = info.title;
+    final summary = info.summary;
+    final icon = info.icon;
+    final iconColor = info.iconColor;
+    final isCompactable = info.isCompactable;
 
     // Timestamp
     DateTime? timestamp;
