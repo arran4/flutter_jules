@@ -744,7 +744,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   Future<void> _createNewSessionFromCurrent() async {
     final NewSessionResult? result = await showDialog<NewSessionResult>(
       context: context,
-      builder: (context) => NewSessionDialog(initialSession: _session),
+      builder: (context) => NewSessionDialog(
+        initialSession: _session,
+        mode: SessionDialogMode.createWithContext,
+      ),
     );
 
     if (result == null || !mounted) return;
@@ -1217,8 +1220,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       final NewSessionResult? result =
                           await showDialog<NewSessionResult>(
                         context: context,
-                        builder: (context) =>
-                            NewSessionDialog(initialSession: _session),
+                        builder: (context) => NewSessionDialog(
+                          initialSession: _session,
+                          mode: SessionDialogMode.edit,
+                        ),
                       );
 
                       if (result == null) return;

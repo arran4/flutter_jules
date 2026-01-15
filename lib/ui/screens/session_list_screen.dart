@@ -1833,6 +1833,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     builder: (context) =>
                                                         NewSessionDialog(
                                                       initialSession: session,
+                                                      mode: SessionDialogMode
+                                                          .edit,
                                                     ),
                                                   );
 
