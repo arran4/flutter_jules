@@ -230,12 +230,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'GitHub'),
               ListTile(
                 title: const Text('Personal Access Token'),
-                subtitle: Text(
-                  github.apiKey != null
-                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
-                      : 'Not set',
+                subtitle: github.hasBadCredentials
+                    ? Text(
+                        'Error: ${github.authError ?? "Bad credentials"}',
+                        style: const TextStyle(color: Colors.red),
+                      )
+                    : Text(
+                        github.apiKey != null && github.apiKey!.length > 4
+                            ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                            : (github.apiKey != null ? '********' : 'Not set'),
+                      ),
+                leading: Icon(
+                  Icons.code,
+                  color: github.hasBadCredentials ? Colors.red : null,
                 ),
-                leading: const Icon(Icons.code),
                 onTap: () => _showGitHubKeyDialog(context, github),
               ),
             ],

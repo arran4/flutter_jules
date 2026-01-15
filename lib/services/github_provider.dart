@@ -25,6 +25,10 @@ class GithubProvider extends ChangeNotifier {
   int? _rateLimitRemaining;
   DateTime? _rateLimitReset;
 
+  // Auth Status
+  bool _hasBadCredentials = false;
+  String? _authError;
+
   // Queue
   final List<GithubJob> _queue = [];
   bool _isProcessingQueue = false;
@@ -33,6 +37,8 @@ class GithubProvider extends ChangeNotifier {
   int? get rateLimitRemaining => _rateLimitRemaining;
   DateTime? get rateLimitReset => _rateLimitReset;
   List<GithubJob> get queue => List.unmodifiable(_queue);
+  bool get hasBadCredentials => _hasBadCredentials;
+  String? get authError => _authError;
 
   GithubProvider(this._authProvider);
 
@@ -45,6 +51,42 @@ class GithubProvider extends ChangeNotifier {
 
   Future<void> setApiKey(String key) async {
     await _authProvider.setToken(key, TokenType.apiKey);
+    // Reset bad credentials state when key is updated
+    _hasBadCredentials = false;
+    _authError = null;
+    notifyListeners();
+    // Retry processing queue if it was stuck
+    _processQueue();
+  }
+
+  void _handleUnauthorized(String body) {
+    if (_hasBadCredentials) return; // Already known
+
+    _hasBadCredentials = true;
+    try {
+      final data = jsonDecode(body);
+      _authError = data['message'] ?? 'Bad credentials';
+    } catch (_) {
+      _authError = 'Bad credentials';
+    }
+    _cancelAllPendingJobs();
+    notifyListeners();
+  }
+
+  void _cancelAllPendingJobs() {
+    // Iterate backwards or on a copy to modify safely if needed,
+    // though we are clearing.
+    for (final job in _queue) {
+      if (job.status == GithubJobStatus.pending) {
+        job.status = GithubJobStatus.failed; // or canceled
+        job.result = null; // Return null so waiters don't crash
+        job.error = 'Bad credentials';
+        if (!job.completer.isCompleted) {
+          job.completer.complete();
+        }
+      }
+    }
+    _queue.removeWhere((job) => job.status == GithubJobStatus.failed);
   }
 
   Future<GitHubPrResponse?> getPrStatus(
@@ -55,11 +97,16 @@ class GithubProvider extends ChangeNotifier {
     if (apiKey == null) {
       return null;
     }
+    if (_hasBadCredentials) {
+      return null;
+    }
 
     final job = GithubJob(
       id: 'pr_status_${owner}_${repo}_$prNumber',
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
+        if (_hasBadCredentials) return null;
+
         final url = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
         );
@@ -76,6 +123,10 @@ class GithubProvider extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           return GitHubPrResponse(data);
+        } else if (response.statusCode == 401) {
+          _handleUnauthorized(response.body);
+          debugPrint('GitHub Unauthorized: ${response.body}');
+          return null;
         } else {
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
@@ -95,7 +146,7 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
-    if (apiKey == null) return null;
+    if (apiKey == null || _hasBadCredentials) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
@@ -109,12 +160,14 @@ class GithubProvider extends ChangeNotifier {
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
+    } else if (response.statusCode == 401) {
+      _handleUnauthorized(response.body);
     }
     return null;
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
-    if (apiKey == null) return null;
+    if (apiKey == null || _hasBadCredentials) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
@@ -128,6 +181,8 @@ class GithubProvider extends ChangeNotifier {
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
+    } else if (response.statusCode == 401) {
+      _handleUnauthorized(response.body);
     }
     return null;
   }
@@ -138,11 +193,14 @@ class GithubProvider extends ChangeNotifier {
     String prNumber,
   ) async {
     if (apiKey == null) return null;
+    if (_hasBadCredentials) return 'Unknown';
 
     final job = GithubJob(
       id: 'ci_status_${owner}_${repo}_$prNumber',
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
+        if (_hasBadCredentials) return 'Unknown';
+
         // 1. Get the PR's head SHA
         final prUrl = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
@@ -155,6 +213,11 @@ class GithubProvider extends ChangeNotifier {
           },
         );
         _updateRateLimits(prResponse.headers);
+
+        if (prResponse.statusCode == 401) {
+          _handleUnauthorized(prResponse.body);
+          return 'Unknown';
+        }
 
         if (prResponse.statusCode != 200) {
           throw GithubApiException(prResponse.statusCode, prResponse.body);
@@ -179,6 +242,11 @@ class GithubProvider extends ChangeNotifier {
           },
         );
         _updateRateLimits(checksResponse.headers);
+
+        if (checksResponse.statusCode == 401) {
+          _handleUnauthorized(checksResponse.body);
+          return 'Unknown';
+        }
 
         if (checksResponse.statusCode != 200) {
           debugPrint(
@@ -233,6 +301,8 @@ class GithubProvider extends ChangeNotifier {
     if (apiKey == null) {
       return null;
     }
+    if (_hasBadCredentials) return null;
+
     final job = createRepoDetailsJob(owner, repo);
     enqueue(job);
     await job.completer.future;
@@ -244,6 +314,8 @@ class GithubProvider extends ChangeNotifier {
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
+        if (_hasBadCredentials) throw Exception('Bad credentials');
+
         final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
         final response = await http.get(
           url,
@@ -254,6 +326,11 @@ class GithubProvider extends ChangeNotifier {
         );
 
         _updateRateLimits(response.headers);
+
+        if (response.statusCode == 401) {
+          _handleUnauthorized(response.body);
+          throw GithubApiException(response.statusCode, response.body);
+        }
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -280,6 +357,8 @@ class GithubProvider extends ChangeNotifier {
   }
 
   void enqueue(GithubJob job) {
+    if (_hasBadCredentials) return; // Don't enqueue if auth is bad
+
     // Avoid adding duplicate jobs
     if (_queue.any((j) => j.id == job.id)) {
       return;
@@ -319,9 +398,16 @@ class GithubProvider extends ChangeNotifier {
 
   Future<void> _processQueue() async {
     if (_isProcessingQueue) return;
+    if (_hasBadCredentials) return; // Stop processing
+
     _isProcessingQueue = true;
 
     while (_queue.isNotEmpty) {
+      // Check auth again in case it changed while processing
+      if (_hasBadCredentials) {
+        break;
+      }
+
       // Check Rate Limits
       if (_rateLimitRemaining != null && _rateLimitRemaining! <= 0) {
         if (_rateLimitReset != null &&
@@ -357,6 +443,14 @@ class GithubProvider extends ChangeNotifier {
         job.status = GithubJobStatus.completed;
         job.completer.complete();
       } catch (e) {
+        // If the job action threw an exception because of 401, we want to capture that
+        if (e.toString().contains('Bad credentials') || _hasBadCredentials) {
+            job.status = GithubJobStatus.failed;
+            job.error = 'Bad credentials';
+            job.completer.completeError(e);
+            break; // Stop queue processing
+        }
+
         job.status = GithubJobStatus.failed;
         job.error = e.toString();
         job.completer.completeError(e);

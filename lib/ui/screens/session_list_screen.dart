@@ -12,6 +12,8 @@ import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
 
 import '../../models.dart';
+import '../../services/github_provider.dart';
+import 'settings_screen.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
@@ -65,12 +67,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<FilterToken> _availableSuggestions = [];
   late NotificationService _notificationService;
   StreamSubscription<NotificationResponse>? _notificationSubscription;
+  bool _wasBadCredentials = false;
 
   @override
   void initState() {
     super.initState();
     final sessionProvider =
         Provider.of<SessionProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
+    githubProvider.addListener(_onGithubError);
     _progressSubscription = sessionProvider.progressStream.listen((status) {
       if (mounted) {
         setState(() {
@@ -170,10 +175,46 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   void dispose() {
+    // Check mounted because provider usage in dispose can be tricky if widget is unmounted
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
+    githubProvider.removeListener(_onGithubError);
     _notificationSubscription?.cancel();
     _progressSubscription?.cancel();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onGithubError() {
+    if (!mounted) return;
+    final github = Provider.of<GithubProvider>(context, listen: false);
+
+    if (github.hasBadCredentials && !_wasBadCredentials) {
+      _wasBadCredentials = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "GitHub Error: ${github.authError ?? 'Bad Credentials'}",
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'Fix',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    } else if (!github.hasBadCredentials) {
+      _wasBadCredentials = false;
+    }
+    // Force rebuild to update AppBar
+    setState(() {});
   }
 
   Future<void> _fetchSessions({bool force = false, bool shallow = true}) async {
@@ -1490,6 +1531,49 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         )
                       : null,
                   actions: [
+                    Consumer<GithubProvider>(
+                      builder: (context, github, _) {
+                        if (github.hasBadCredentials) {
+                          return IconButton(
+                            icon: const Icon(Icons.error, color: Colors.red),
+                            tooltip: 'GitHub Error: Bad Credentials',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title:
+                                      const Text('GitHub Authentication Error'),
+                                  content: Text(
+                                    github.authError ??
+                                        'Failed to access GitHub. Your Personal Access Token appears to be invalid or expired.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Close'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SettingsScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('Update Settings'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     Consumer<MessageQueueProvider>(
                       builder: (context, queueProvider, _) {
                         if (queueProvider.isOffline) {
