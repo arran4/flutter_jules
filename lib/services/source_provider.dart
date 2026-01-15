@@ -75,51 +75,6 @@ class SourceProvider extends ChangeNotifier {
         pageToken = response.nextPageToken;
       } while (pageToken != null && pageToken.isNotEmpty);
 
-      // Enrich with GitHub data if provider is available
-      if (githubProvider != null && githubProvider.apiKey != null) {
-        List<Source> enrichedSources = [];
-        for (final source in allSources) {
-          if (source.githubRepo != null) {
-            final details = await githubProvider.getRepoDetails(
-              source.githubRepo!.owner,
-              source.githubRepo!.repo,
-            );
-            if (details != null) {
-              final enrichedRepo = GitHubRepo(
-                owner: source.githubRepo!.owner,
-                repo: source.githubRepo!.repo,
-                isPrivate: source.githubRepo!.isPrivate,
-                defaultBranch: source.githubRepo!.defaultBranch,
-                branches: source.githubRepo!.branches,
-                repoName: details['repoName'],
-                repoId: details['repoId'],
-                isPrivateGithub: details['isPrivateGithub'],
-                description: details['description'],
-                primaryLanguage: details['primaryLanguage'],
-                license: details['license'],
-                openIssuesCount: details['openIssuesCount'],
-                isFork: details['isFork'],
-                forkParent: details['forkParent'],
-              );
-              enrichedSources.add(
-                Source(
-                  name: source.name,
-                  id: source.id,
-                  githubRepo: enrichedRepo,
-                  isArchived: source.isArchived,
-                  isReadOnly: source.isReadOnly,
-                ),
-              );
-            } else {
-              enrichedSources.add(source); // Add original if enrichment fails
-            }
-          } else {
-            enrichedSources.add(source);
-          }
-        }
-        allSources = enrichedSources;
-      }
-
       if (_cacheService != null && authToken != null) {
         await _cacheService!.saveSources(authToken, allSources);
         _items = await _cacheService!.loadSources(authToken);
@@ -135,6 +90,14 @@ class SourceProvider extends ChangeNotifier {
             .toList();
       }
 
+      // After loading sources, queue the github refresh
+      if (githubProvider != null) {
+        queueAllSourcesGithubRefresh(
+          githubProvider: githubProvider,
+          authToken: authToken,
+        );
+      }
+
       _lastFetchTime = DateTime.now();
     } catch (e) {
       _error = e.toString();
@@ -142,6 +105,90 @@ class SourceProvider extends ChangeNotifier {
       _isLoading = false;
       notifyListeners();
     }
+  }
+
+  void queueAllSourcesGithubRefresh({
+    required GithubProvider githubProvider,
+    String? authToken,
+  }) {
+    if (githubProvider.apiKey == null) {
+      return;
+    }
+
+    for (final item in _items) {
+      final source = item.data;
+      if (source.githubRepo != null) {
+        final job = githubProvider.createRepoDetailsJob(
+          source.githubRepo!.owner,
+          source.githubRepo!.repo,
+        );
+
+        job.completer.future.then((_) {
+          if (job.status == GithubJobStatus.completed) {
+            final details = job.result as Map<String, dynamic>?;
+            if (details != null) {
+              _updateSourceWithGithubDetails(source.name, details, authToken);
+            }
+          }
+        }).catchError((err) {
+          // Silently ignore, errors are handled in the provider
+        });
+
+        githubProvider.enqueue(job);
+      }
+    }
+  }
+
+  Future<void> _updateSourceWithGithubDetails(
+    String sourceName,
+    Map<String, dynamic> details,
+    String? authToken,
+  ) async {
+    final index = _items.indexWhere((item) => item.data.name == sourceName);
+    if (index == -1) return;
+
+    final oldItem = _items[index];
+    final oldSource = oldItem.data;
+    if (oldSource.githubRepo == null) return;
+
+    final enrichedRepo = GitHubRepo(
+      owner: oldSource.githubRepo!.owner,
+      repo: oldSource.githubRepo!.repo,
+      isPrivate: oldSource.githubRepo!.isPrivate,
+      defaultBranch: oldSource.githubRepo!.defaultBranch,
+      branches: oldSource.githubRepo!.branches,
+      repoName: details['repoName'],
+      repoId: details['repoId'],
+      isPrivateGithub: details['isPrivateGithub'],
+      description: details['description'],
+      primaryLanguage: details['primaryLanguage'],
+      license: details['license'],
+      openIssuesCount: details['openIssuesCount'],
+      isFork: details['isFork'],
+      forkParent: details['forkParent'],
+    );
+
+    final updatedSource = Source(
+      name: oldSource.name,
+      id: oldSource.id,
+      githubRepo: enrichedRepo,
+      isArchived: oldSource.isArchived,
+      isReadOnly: oldSource.isReadOnly,
+    );
+
+    final newItem = CachedItem(
+      updatedSource,
+      oldItem.metadata.copyWith(lastUpdated: DateTime.now()),
+    );
+
+    _items[index] = newItem;
+
+    if (_cacheService != null && authToken != null) {
+      final allSources = _items.map((item) => item.data).toList();
+      await _cacheService!.saveSources(authToken, allSources);
+    }
+
+    notifyListeners();
   }
 
   // Helper to ensure a specific source is in the cache/list, triggering refresh if missing.
