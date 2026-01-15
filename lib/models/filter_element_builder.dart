@@ -81,6 +81,34 @@ class FilterElementBuilder {
     return root;
   }
 
+  /// Toggle isEnabled flag on an element
+  static FilterElement? toggleEnabled(
+    FilterElement? root,
+    FilterElement target,
+  ) {
+    if (root == null) return null;
+
+    // Traverse the tree to find the target and toggle its isEnabled property
+    if (root == target) {
+      root.isEnabled = !root.isEnabled;
+      return root;
+    }
+
+    if (root is AndElement) {
+      for (final child in root.children) {
+        toggleEnabled(child, target);
+      }
+    } else if (root is OrElement) {
+      for (final child in root.children) {
+        toggleEnabled(child, target);
+      }
+    } else if (root is NotElement) {
+      toggleEnabled(root.child, target);
+    }
+
+    return root;
+  }
+
   /// Toggle NOT wrapper on an element
   static FilterElement? toggleNot(FilterElement? root, FilterElement target) {
     if (root == null) return null;

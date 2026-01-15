@@ -85,6 +85,7 @@ class FilterContext {
 /// Base class for all filter elements
 abstract class FilterElement {
   FilterElementType get type;
+  bool isEnabled = true;
 
   Map<String, dynamic> toJson();
 
@@ -114,40 +115,60 @@ abstract class FilterElement {
   /// Factory method to create FilterElement from JSON
   static FilterElement fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;
+    FilterElement element;
     switch (type) {
       case 'and':
-        return AndElement.fromJson(json);
+        element = AndElement.fromJson(json);
+        break;
       case 'or':
-        return OrElement.fromJson(json);
+        element = OrElement.fromJson(json);
+        break;
       case 'not':
-        return NotElement.fromJson(json);
+        element = NotElement.fromJson(json);
+        break;
       case 'text':
-        return TextElement.fromJson(json);
+        element = TextElement.fromJson(json);
+        break;
       case 'label':
-        return LabelElement.fromJson(json);
+        element = LabelElement.fromJson(json);
+        break;
       case 'status':
-        return StatusElement.fromJson(json);
+        element = StatusElement.fromJson(json);
+        break;
       case 'source':
-        return SourceElement.fromJson(json);
+        element = SourceElement.fromJson(json);
+        break;
       case 'no_source':
-        return NoSourceElement.fromJson(json);
+        element = NoSourceElement.fromJson(json);
+        break;
       case 'has_pr':
-        return HasPrElement.fromJson(json);
+        element = HasPrElement.fromJson(json);
+        break;
       case 'pr_status':
-        return PrStatusElement.fromJson(json);
+        element = PrStatusElement.fromJson(json);
+        break;
       case 'ci_status':
-        return CiStatusElement.fromJson(json);
+        element = CiStatusElement.fromJson(json);
+        break;
       case 'branch':
-        return BranchElement.fromJson(json);
+        element = BranchElement.fromJson(json);
+        break;
       case 'time':
-        return TimeFilterElement.fromJson(json);
+        element = TimeFilterElement.fromJson(json);
+        break;
       case 'tag':
-        return TagElement.fromJson(json);
+        element = TagElement.fromJson(json);
+        break;
       case 'has_notes':
-        return HasNotesElement.fromJson(json);
+        element = HasNotesElement.fromJson(json);
+        break;
       default:
         throw Exception('Unknown filter element type: $type');
     }
+    if (json.containsKey('isEnabled')) {
+      element.isEnabled = json['isEnabled'] as bool;
+    }
+    return element;
   }
 }
 
@@ -172,10 +193,12 @@ class AndElement extends FilterElement {
   Map<String, dynamic> toJson() => {
         'type': 'and',
         'children': children.map((c) => c.toJson()).toList(),
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     if (children.isEmpty) {
       return FilterState.implicitIn;
     }
@@ -258,10 +281,12 @@ class TimeFilterElement extends FilterElement {
   Map<String, dynamic> toJson() => {
         'type': 'time',
         'timeFilter': timeFilter.toJson(),
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches = matchesTimeFilter(context.session, timeFilter);
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -297,10 +322,12 @@ class OrElement extends FilterElement {
   Map<String, dynamic> toJson() => {
         'type': 'or',
         'children': children.map((c) => c.toJson()).toList(),
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     if (children.isEmpty) {
       return FilterState.implicitIn;
     }
@@ -339,10 +366,15 @@ class NotElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'not', 'child': child.toJson()};
+  Map<String, dynamic> toJson() => {
+        'type': 'not',
+        'child': child.toJson(),
+        'isEnabled': isEnabled,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     return child.evaluate(context).negate();
   }
 
@@ -371,10 +403,15 @@ class TextElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'text', 'text': text};
+  Map<String, dynamic> toJson() => {
+        'type': 'text',
+        'text': text,
+        'isEnabled': isEnabled,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final query = text.toLowerCase();
     final session = context.session;
     final matches = (session.title?.toLowerCase().contains(query) ?? false) ||
@@ -418,10 +455,12 @@ class PrStatusElement extends FilterElement {
         'type': 'pr_status',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches =
         context.session.prStatus?.toLowerCase() == value.toLowerCase();
     if (context.metadata.isHidden) return FilterState.implicitOut;
@@ -456,10 +495,12 @@ class CiStatusElement extends FilterElement {
         'type': 'ci_status',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches =
         context.session.ciStatus?.toLowerCase() == value.toLowerCase();
     if (context.metadata.isHidden) return FilterState.implicitOut;
@@ -526,10 +567,12 @@ class LabelElement extends FilterElement {
         'type': 'label',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     bool matched = false;
     final v = value.toLowerCase();
     final metadata = context.metadata;
@@ -619,10 +662,12 @@ class StatusElement extends FilterElement {
         'type': 'status',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     String cleanVal = value;
     if (cleanVal.startsWith('SessionState.')) cleanVal = cleanVal.substring(13);
     if (cleanVal.startsWith('State.')) cleanVal = cleanVal.substring(6);
@@ -674,10 +719,12 @@ class SourceElement extends FilterElement {
         'type': 'source',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches = context.session.sourceContext?.source.toLowerCase() ==
         value.toLowerCase();
     if (context.metadata.isHidden) {
@@ -707,10 +754,14 @@ class HasPrElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'has_pr'};
+  Map<String, dynamic> toJson() => {
+        'type': 'has_pr',
+        'isEnabled': isEnabled,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches =
         context.session.outputs?.any((o) => o.pullRequest != null) ?? false;
     if (context.metadata.isHidden) {
@@ -740,10 +791,14 @@ class NoSourceElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'no_source'};
+  Map<String, dynamic> toJson() => {
+        'type': 'no_source',
+        'isEnabled': isEnabled,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches = context.session.sourceContext == null;
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;
@@ -779,10 +834,12 @@ class BranchElement extends FilterElement {
         'type': 'branch',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final branch =
         context.session.sourceContext?.githubRepoContext?.startingBranch;
     final matches = branch?.toLowerCase() == value.toLowerCase();
@@ -821,10 +878,12 @@ class TagElement extends FilterElement {
         'type': 'tag',
         'label': label,
         'value': value,
+        'isEnabled': isEnabled,
       };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches = context.session.tags
             ?.any((t) => t.toLowerCase() == value.toLowerCase()) ??
         false;
@@ -855,10 +914,14 @@ class HasNotesElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'has_notes'};
+  Map<String, dynamic> toJson() => {
+        'type': 'has_notes',
+        'isEnabled': isEnabled,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
+    if (!isEnabled) return FilterState.implicitIn;
     final matches = context.session.note?.content.isNotEmpty ?? false;
     if (context.metadata.isHidden) {
       return matches ? FilterState.implicitOut : FilterState.explicitOut;

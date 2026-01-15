@@ -1067,6 +1067,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         widget.filterTree!, element);
                     widget.onFilterTreeChanged(newTree);
                   },
+                  onToggleEnabled: (element) {
+                    final newTree = FilterElementBuilder.toggleEnabled(
+                        widget.filterTree!, element);
+                    widget.onFilterTreeChanged(newTree);
+                  },
                   onTap: null,
                 )
               else
