@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../models.dart';
 import '../models/refresh_schedule.dart';
 
 enum SessionRefreshPolicy { none, shallow, full }
@@ -18,6 +19,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnCompletion = 'notify_on_completion';
   static const String keyNotifyOnWatch = 'notify_on_watch';
   static const String keyNotifyOnFailure = 'notify_on_failure';
+  static const String _lastFilterKey = 'last_filter';
 
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
@@ -30,6 +32,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnCompletion = true;
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
+  FilterElement? _lastFilter;
 
   SharedPreferences? _prefs;
 
@@ -44,6 +47,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+  FilterElement? get lastFilter => _lastFilter;
 
   Future<void> init() async {
     _prefs = await SharedPreferences.getInstance();
@@ -79,6 +83,7 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
     _loadSchedules();
+    _loadLastFilter();
     _isInitialized = true;
 
     notifyListeners();
@@ -107,6 +112,31 @@ class SettingsProvider extends ChangeNotifier {
       }
     } else {
       _schedules = _defaultSchedules();
+    }
+  }
+
+  void _loadLastFilter() {
+    final jsonString = _prefs?.getString(_lastFilterKey);
+    if (jsonString != null) {
+      try {
+        final Map<String, dynamic> decoded = jsonDecode(jsonString);
+        _lastFilter = FilterElement.fromJson(decoded);
+      } catch (e) {
+        _lastFilter = null;
+      }
+    } else {
+      _lastFilter = null;
+    }
+  }
+
+  Future<void> setLastFilter(FilterElement? filter) async {
+    _lastFilter = filter;
+    notifyListeners();
+    if (filter == null) {
+      await _prefs?.remove(_lastFilterKey);
+    } else {
+      final jsonString = jsonEncode(filter.toJson());
+      await _prefs?.setString(_lastFilterKey, jsonString);
     }
   }
 

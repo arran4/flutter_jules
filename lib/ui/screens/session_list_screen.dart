@@ -99,6 +99,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
     if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
+    } else {
+      // Otherwise, load the last used filter from settings
+      _filterTree =
+          Provider.of<SettingsProvider>(context, listen: false).lastFilter;
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
@@ -1596,6 +1600,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     setState(() {
                                       _filterTree = tree;
                                     });
+                                    Provider.of<SettingsProvider>(context,
+                                            listen: false)
+                                        .setLastFilter(tree);
                                   },
                                   searchText: _searchText,
                                   onSearchChanged: (text) {
