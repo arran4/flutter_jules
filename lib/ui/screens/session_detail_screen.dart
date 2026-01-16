@@ -940,7 +940,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             IconButton(
               icon: const Icon(Icons.data_object),
-              tooltip: 'View All Data',
+              tooltip: 'View raw data',
               onPressed: () {
                 showDialog(
                   context: context,
