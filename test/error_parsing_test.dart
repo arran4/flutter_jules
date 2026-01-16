@@ -49,4 +49,41 @@ void main() {
 
     expect(isUnavailable, true);
   });
+
+  test('Parses API Key Not Supported (401) error correctly', () {
+    const errorBody = '''
+{
+  "error": {
+    "code": 401,
+    "message": "API keys are not supported by this API. Expected OAuth2 access token or other authentication credentials that assert a principal. See https://cloud.google.com/docs/authentication",
+    "status": "UNAUTHENTICATED",
+    "details": [
+      {
+        "@type": "type.googleapis.com/google.rpc.ErrorInfo",
+        "reason": "CREDENTIALS_MISSING",
+        "domain": "googleapis.com",
+        "metadata": {
+          "method": "google.labs.jules.v1alpha.JulesService.CreateSession",
+          "service": "jules.googleapis.com"
+        }
+      }
+    ]
+  }
+}
+''';
+
+    final body = jsonDecode(errorBody);
+    bool isApiKeyError = false;
+    if (body is Map && body.containsKey('error')) {
+      final error = body['error'];
+      if (error is Map) {
+         if (error['code'] == 401 || error['status'] == 'UNAUTHENTICATED') {
+             // Check for specific message or reason if needed, but 401 is usually enough for this flow
+             isApiKeyError = true;
+         }
+      }
+    }
+
+    expect(isApiKeyError, true);
+  });
 }
