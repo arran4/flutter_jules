@@ -12,6 +12,8 @@ enum ListRefreshPolicy { none, dirty, watched, quick, full }
 
 enum FabVisibility { appBar, floating, off }
 
+enum DelayUnit { ms, s, min }
+
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';
@@ -46,6 +48,7 @@ class SettingsProvider extends ChangeNotifier {
   List<BulkActionStep> _lastBulkActions = [];
   int _lastBulkParallelQueries = 1;
   int _lastBulkWaitBetweenMilliseconds = 2000;
+  DelayUnit _lastBulkWaitBetweenUnit = DelayUnit.ms;
   int? _lastBulkLimit;
   int _lastBulkOffset = 0;
   bool _lastBulkRandomize = false;
@@ -107,6 +110,7 @@ class SettingsProvider extends ChangeNotifier {
   List<BulkActionStep> get lastBulkActions => _lastBulkActions;
   int get lastBulkParallelQueries => _lastBulkParallelQueries;
   int get lastBulkWaitBetweenMilliseconds => _lastBulkWaitBetweenMilliseconds;
+  DelayUnit get lastBulkWaitBetweenUnit => _lastBulkWaitBetweenUnit;
   int? get lastBulkLimit => _lastBulkLimit;
   int get lastBulkOffset => _lastBulkOffset;
   bool get lastBulkRandomize => _lastBulkRandomize;
@@ -421,6 +425,13 @@ class SettingsProvider extends ChangeNotifier {
           _lastBulkWaitBetweenMilliseconds = 2000;
         }
 
+        if (json['waitBetweenUnit'] != null) {
+          _lastBulkWaitBetweenUnit =
+              DelayUnit.values[json['waitBetweenUnit'] as int];
+        } else {
+          _lastBulkWaitBetweenUnit = DelayUnit.ms;
+        }
+
         _lastBulkLimit = json['limit'];
         _lastBulkOffset = json['offset'] ?? 0;
         _lastBulkRandomize = json['randomize'] ?? false;
@@ -435,6 +446,7 @@ class SettingsProvider extends ChangeNotifier {
     required List<BulkActionStep> actions,
     required int parallelQueries,
     required int waitBetweenMilliseconds,
+    required DelayUnit waitBetweenUnit,
     required int? limit,
     required int offset,
     required bool randomize,
@@ -443,6 +455,7 @@ class SettingsProvider extends ChangeNotifier {
     _lastBulkActions = actions;
     _lastBulkParallelQueries = parallelQueries;
     _lastBulkWaitBetweenMilliseconds = waitBetweenMilliseconds;
+    _lastBulkWaitBetweenUnit = waitBetweenUnit;
     _lastBulkLimit = limit;
     _lastBulkOffset = offset;
     _lastBulkRandomize = randomize;
@@ -452,6 +465,7 @@ class SettingsProvider extends ChangeNotifier {
       'actions': actions.map((a) => a.toJson()).toList(),
       'parallelQueries': parallelQueries,
       'waitBetweenMilliseconds': waitBetweenMilliseconds,
+      'waitBetweenUnit': waitBetweenUnit.index,
       'limit': limit,
       'offset': offset,
       'randomize': randomize,
