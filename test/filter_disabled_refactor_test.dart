@@ -40,8 +40,8 @@ void main() {
 
     test('should evaluate to implicitIn', () {
       final session = Session(
-        id: '1', 
-        name: 'test', 
+        id: '1',
+        name: 'test',
         prompt: 'test prompt',
         state: SessionState.STATE_UNSPECIFIED,
       );
@@ -83,10 +83,10 @@ void main() {
     test('should handle nested toggle', () {
       final child = TextElement('foo');
       final root = AndElement([child, LabelElement('Bar', 'bar')]);
-      
+
       // Wrap child in disabled
       final newRoot = FilterElementBuilder.toggleEnabled(root, child);
-      
+
       expect(newRoot, isA<AndElement>());
       final and = newRoot as AndElement;
       expect(and.children[0], isA<DisabledElement>());
@@ -94,7 +94,8 @@ void main() {
       expect(and.children[1], isA<LabelElement>());
 
       // Unwrap child
-      final newRoot2 = FilterElementBuilder.toggleEnabled(newRoot, and.children[0]);
+      final newRoot2 =
+          FilterElementBuilder.toggleEnabled(newRoot, and.children[0]);
       expect(newRoot2, isA<AndElement>());
       final and2 = newRoot2 as AndElement;
       expect(and2.children[0], isA<TextElement>());

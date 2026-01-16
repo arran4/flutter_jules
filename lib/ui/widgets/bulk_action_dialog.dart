@@ -570,7 +570,6 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       );
 
       final newPreset = BulkActionPreset(
-        id: DateTime.now().millisecondsSinceEpoch.toString(),
         name: name,
         description: description,
         filterExpression: filterExpression,
@@ -579,6 +578,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
       final provider = context.read<BulkActionPresetProvider>();
       await provider.addPreset(newPreset);
+
+      if (!mounted) return;
 
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(

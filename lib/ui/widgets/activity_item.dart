@@ -589,7 +589,8 @@ class _ActivityItemState extends State<ActivityItem> {
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if ((activity.unmappedProps['processingErrors']
+                                  if ((activity
+                                              .unmappedProps['processingErrors']
                                           as List)
                                       .isNotEmpty)
                                     Padding(
@@ -622,7 +623,8 @@ class _ActivityItemState extends State<ActivityItem> {
                                                   mainAxisSize:
                                                       MainAxisSize.min,
                                                   children: (activity
-                                                          .unmappedProps['processingErrors']
+                                                                  .unmappedProps[
+                                                              'processingErrors']
                                                           as List)
                                                       .map<Widget>((e) {
                                                     return Padding(

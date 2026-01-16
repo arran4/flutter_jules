@@ -1,4 +1,3 @@
-
 enum GithubExclusionType {
   org,
   repo,

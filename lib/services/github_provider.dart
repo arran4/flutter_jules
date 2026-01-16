@@ -87,13 +87,13 @@ class GithubProvider extends ChangeNotifier {
         'Accept': 'application/vnd.github.v3+json',
       },
     );
-    
+
     if (response.statusCode == 200) return true;
 
     // Also check membership specifically if possible
     final membershipResponse = await http.get(
-       Uri.parse('https://api.github.com/user/memberships/orgs/$org'),
-       headers: {
+      Uri.parse('https://api.github.com/user/memberships/orgs/$org'),
+      headers: {
         'Authorization': 'token $token',
         'Accept': 'application/vnd.github.v3+json',
       },
@@ -110,45 +110,45 @@ class GithubProvider extends ChangeNotifier {
       // But if user check fails, likely the TOP LEVEL PAT is bad.
       // However, per requirements: "if both fail the full PAT is disabled"
       // So we must check org too.
-      
+
       bool orgOk = false;
       orgOk = await _checkOrgAccess(owner);
-      
+
       if (!orgOk) {
-         // Both failed -> Full PAT Disable
-         _markBadCredentials('Access check failed for User and Org ($owner).');
+        // Both failed -> Full PAT Disable
+        _markBadCredentials('Access check failed for User and Org ($owner).');
       } else {
-         // User failed (odd), Org passed (maybe fine?).
-         // Technically if /user fails, PAT is usually invalid.
-         // But let's stick to strict interpretation or logical fallback.
-         // If /user fails, it's a scope/token validity issue generally.
-         // We'll mark bad credentials to safest.
-         _markBadCredentials('Access check failed for User.');
+        // User failed (odd), Org passed (maybe fine?).
+        // Technically if /user fails, PAT is usually invalid.
+        // But let's stick to strict interpretation or logical fallback.
+        // If /user fails, it's a scope/token validity issue generally.
+        // We'll mark bad credentials to safest.
+        _markBadCredentials('Access check failed for User.');
       }
     } else if (userOk) {
       // User is OK.
       if (owner != null) {
-         final orgOk = await _checkOrgAccess(owner);
-         if (!orgOk) {
-            // User OK, Org Failed -> Disable Org
-            await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.org,
-              value: owner,
-              reason: 'PAT access request failed for Org.',
-              date: DateTime.now(),
-            ));
-            return;
-         }
-         
-         // User OK, Org OK -> Must be Repo failure
-         if (repo != null) {
-           await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.repo,
-              value: '$owner/$repo',
-              reason: 'PAT access request failed for Repo.',
-              date: DateTime.now(),
-            ));
-         }
+        final orgOk = await _checkOrgAccess(owner);
+        if (!orgOk) {
+          // User OK, Org Failed -> Disable Org
+          await _settingsProvider.addGithubExclusion(GithubExclusion(
+            type: GithubExclusionType.org,
+            value: owner,
+            reason: 'PAT access request failed for Org.',
+            date: DateTime.now(),
+          ));
+          return;
+        }
+
+        // User OK, Org OK -> Must be Repo failure
+        if (repo != null) {
+          await _settingsProvider.addGithubExclusion(GithubExclusion(
+            type: GithubExclusionType.repo,
+            value: '$owner/$repo',
+            reason: 'PAT access request failed for Repo.',
+            date: DateTime.now(),
+          ));
+        }
       }
     }
   }
@@ -176,7 +176,8 @@ class GithubProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> _handleUnauthorized(String body, {String? owner, String? repo}) async {
+  Future<void> _handleUnauthorized(String body,
+      {String? owner, String? repo}) async {
     // Start analysis to determine granularity of failure
     await _analyzeFailure(owner, repo);
   }
@@ -232,10 +233,13 @@ class GithubProvider extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           return GitHubPrResponse(data);
-        } else if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
+        } else if (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404) {
           // 404 on private repo acts like auth failure often
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
-          debugPrint('GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
+          debugPrint(
+              'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
           return null;
         } else {
           debugPrint(
@@ -270,7 +274,9 @@ class GithubProvider extends ChangeNotifier {
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
-    } else if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
+    } else if (response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 404) {
       await _handleUnauthorized(response.body, owner: owner, repo: repo);
     }
     return null;
@@ -291,7 +297,9 @@ class GithubProvider extends ChangeNotifier {
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
-    } else if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
+    } else if (response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 404) {
       await _handleUnauthorized(response.body, owner: owner, repo: repo);
     }
     return null;
@@ -325,7 +333,9 @@ class GithubProvider extends ChangeNotifier {
         );
         _updateRateLimits(prResponse.headers);
 
-        if (prResponse.statusCode == 401 || prResponse.statusCode == 403 || prResponse.statusCode == 404) {
+        if (prResponse.statusCode == 401 ||
+            prResponse.statusCode == 403 ||
+            prResponse.statusCode == 404) {
           await _handleUnauthorized(prResponse.body, owner: owner, repo: repo);
           return 'Unknown';
         }
@@ -354,8 +364,11 @@ class GithubProvider extends ChangeNotifier {
         );
         _updateRateLimits(checksResponse.headers);
 
-        if (checksResponse.statusCode == 401 || checksResponse.statusCode == 403 || checksResponse.statusCode == 404) {
-          await _handleUnauthorized(checksResponse.body, owner: owner, repo: repo);
+        if (checksResponse.statusCode == 401 ||
+            checksResponse.statusCode == 403 ||
+            checksResponse.statusCode == 404) {
+          await _handleUnauthorized(checksResponse.body,
+              owner: owner, repo: repo);
           return 'Unknown';
         }
 
@@ -440,7 +453,9 @@ class GithubProvider extends ChangeNotifier {
 
         _updateRateLimits(response.headers);
 
-        if (response.statusCode == 401 || response.statusCode == 403 || response.statusCode == 404) {
+        if (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404) {
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
           throw GithubApiException(response.statusCode, response.body);
         }
@@ -558,10 +573,10 @@ class GithubProvider extends ChangeNotifier {
       } catch (e) {
         // If the job action threw an exception because of 401, we want to capture that
         if (e.toString().contains('Bad credentials') || _hasBadCredentials) {
-            job.status = GithubJobStatus.failed;
-            job.error = 'Bad credentials';
-            job.completer.completeError(e);
-            break; // Stop queue processing
+          job.status = GithubJobStatus.failed;
+          job.error = 'Bad credentials';
+          job.completer.completeError(e);
+          break; // Stop queue processing
         }
 
         job.status = GithubJobStatus.failed;

@@ -481,7 +481,6 @@ class FilterElementWidget extends StatelessWidget {
     );
   }
 
-
   void _showContextMenu(
     BuildContext context,
     TapUpDetails details,
@@ -497,7 +496,7 @@ class FilterElementWidget extends StatelessWidget {
     final isComposite = element is AndElement || element is OrElement;
     final isNot = element is NotElement;
     final isDisabled = element is DisabledElement;
-    
+
     if (!isNot && !isDisabled) {
       final excludeText = isComposite ? "Exclude this group" : "Exclude this";
       items.add(
@@ -507,7 +506,7 @@ class FilterElementWidget extends StatelessWidget {
           child: Text(isNegated ? "Include this" : excludeText),
         ),
       );
-       items.add(const PopupMenuDivider());
+      items.add(const PopupMenuDivider());
     }
 
     // 2. Enabled/Disabled checkbox
@@ -518,7 +517,6 @@ class FilterElementWidget extends StatelessWidget {
         child: const Text("Enabled"),
       ),
     );
-    
 
     if (alternatives.isNotEmpty) {
       items.add(const PopupMenuDivider());

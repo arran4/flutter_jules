@@ -96,7 +96,7 @@ class FilterElementBuilder {
     if (target is DisabledElement) {
       return replaceFilter(root, target, target.child);
     }
-    
+
     // Check if target is immediately wrapped by a DisabledElement in the tree,
     // which implies we might have passed the inner element but clicked "Enable".
     // However, usually the UI passes the specific element instance.

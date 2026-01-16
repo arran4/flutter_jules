@@ -3,6 +3,7 @@ import 'package:collection/collection.dart';
 import 'filter_bookmark.dart';
 import 'filter_element.dart';
 import '../services/filter_bookmark_provider.dart';
+import 'search_filter.dart';
 
 class PresetStateManager {
   FilterBookmark? _lastLoadedBookmark;

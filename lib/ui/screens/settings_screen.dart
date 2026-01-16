@@ -303,43 +303,42 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               actions: [
                 TextButton(
-                  onPressed:
-                      isTesting
-                          ? null
-                          : () async {
-                            final token = controller.text.trim();
-                            if (token.isEmpty) return;
+                  onPressed: isTesting
+                      ? null
+                      : () async {
+                          final token = controller.text.trim();
+                          if (token.isEmpty) return;
 
-                            setState(() {
-                              isTesting = true;
-                              testResult = null;
-                            });
+                          setState(() {
+                            isTesting = true;
+                            testResult = null;
+                          });
 
-                            try {
-                              final profile = await github.validateToken(token);
-                              if (context.mounted) {
-                                setState(() {
-                                  isTesting = false;
-                                  if (profile != null) {
-                                    testResult =
-                                        "Success! Logged in as ${profile['login']}";
-                                    resultColor = Colors.green;
-                                  } else {
-                                    testResult = "Invalid Token or Scope";
-                                    resultColor = Colors.red;
-                                  }
-                                });
-                              }
-                            } catch (e) {
-                              if (context.mounted) {
-                                setState(() {
-                                  isTesting = false;
-                                  testResult = "Error: $e";
+                          try {
+                            final profile = await github.validateToken(token);
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                if (profile != null) {
+                                  testResult =
+                                      "Success! Logged in as ${profile['login']}";
+                                  resultColor = Colors.green;
+                                } else {
+                                  testResult = "Invalid Token or Scope";
                                   resultColor = Colors.red;
-                                });
-                              }
+                                }
+                              });
                             }
-                          },
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = "Error: $e";
+                                resultColor = Colors.red;
+                              });
+                            }
+                          }
+                        },
                   child: const Text("Test"),
                 ),
                 TextButton(
@@ -809,9 +808,6 @@ class _SettingsScreenState extends State<SettingsScreen> {
       ),
     );
   }
-
-
-
 
   Widget _buildKeybindingDropdown<T extends Enum>(
     BuildContext context, {

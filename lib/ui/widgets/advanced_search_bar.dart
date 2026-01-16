@@ -536,11 +536,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       sorts: widget.activeSorts,
     );
 
-    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-      context,
-      listen: false,
-    );
-
     await bookmarkProvider.addBookmark(bookmark);
 
     if (!context.mounted) return;

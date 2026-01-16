@@ -693,26 +693,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // Ignore parsing errors
         }
       } else if (e is JulesException && e.statusCode == 404) {
-          // 404 Not Found.
-          // This likely means the session ID we have is invalid or deleted.
-          // We shouldn't queue a MESSAGE for a non-existent session.
-          if (mounted) {
-             _messageController.text = message; // Restore text
-             ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: const Text("Session not found (404). It may have been deleted."),
-                action: SnackBarAction(
-                  label: 'Recreate?',
-                  onPressed: () {
-                     // Offer to recreate session with this message as prompt? or original prompt?
-                     _createNewSessionFromCurrent();
-                  },
-                ),
-                duration: const Duration(seconds: 10),
+        // 404 Not Found.
+        // This likely means the session ID we have is invalid or deleted.
+        // We shouldn't queue a MESSAGE for a non-existent session.
+        if (mounted) {
+          _messageController.text = message; // Restore text
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(
+              content: const Text(
+                  "Session not found (404). It may have been deleted."),
+              action: SnackBarAction(
+                label: 'Recreate?',
+                onPressed: () {
+                  // Offer to recreate session with this message as prompt? or original prompt?
+                  _createNewSessionFromCurrent();
+                },
               ),
-             );
-          }
-          handled = true;
+              duration: const Duration(seconds: 10),
+            ),
+          );
+        }
+        handled = true;
       }
 
       if (!handled) {
@@ -819,7 +820,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Future<void> _handleNewSessionResult(NewSessionResult result) async {
     // Grab providers and scaffold messenger BEFORE any potential async gap or pop
-    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final authProvider = Provider.of<AuthProvider>(context, listen: false);
     final messageQueueProvider =
         Provider.of<MessageQueueProvider>(context, listen: false);
@@ -854,88 +856,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         _isNoteEditing = true;
       }
     });
-  }
-
-  Future<void> _performCreate(Session sessionToCreate, bool isBulk) async {
-    try {
-      final client = Provider.of<AuthProvider>(context, listen: false).client;
-      await client.createSession(sessionToCreate);
-
-      if (!mounted) return;
-
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Session created successfully!')),
-      );
-
-      // Optionally, refresh the main list in the background
-      final sessionProvider = Provider.of<SessionProvider>(
-        context,
-        listen: false,
-      );
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      sessionProvider.fetchSessions(
-        client,
-        force: true,
-        shallow: true,
-        authToken: auth.token,
-      );
-    } catch (e) {
-      if (!mounted) return;
-
-      bool handled = false;
-      if (e is JulesException && e.responseBody != null) {
-        try {
-          final body = jsonDecode(e.responseBody!);
-          if (body is Map && body.containsKey('error')) {
-            final error = body['error'];
-            if (error is Map) {
-              final status = error['status'];
-              if (status == 'RESOURCE_EXHAUSTED' || status == 'UNAVAILABLE') {
-                Provider.of<MessageQueueProvider>(
-                  context,
-                  listen: false,
-                ).addCreateSessionRequest(
-                  sessionToCreate,
-                  reason: status.toLowerCase(),
-                );
-                if (!isBulk) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'API limit reached. Session creation queued.',
-                      ),
-                    ),
-                  );
-                }
-                handled = true;
-              }
-            }
-          }
-        } catch (_) {}
-      }
-
-      if (!handled) {
-        Provider.of<MessageQueueProvider>(
-          context,
-          listen: false,
-        ).addCreateSessionRequest(sessionToCreate, reason: 'creation_failed');
-        if (!isBulk) {
-          showDialog(
-            context: context,
-            builder: (context) => AlertDialog(
-              title: const Text('Error Creating Session'),
-              content: SelectableText(e.toString()),
-              actions: [
-                TextButton(
-                  onPressed: () => Navigator.pop(context),
-                  child: const Text('Close'),
-                ),
-              ],
-            ),
-          );
-        }
-      }
-    }
   }
 
   @override

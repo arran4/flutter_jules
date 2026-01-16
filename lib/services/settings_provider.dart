@@ -476,8 +476,8 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> addGithubExclusion(GithubExclusion exclusion) async {
     // Avoid duplicates
-    if (_githubExclusions.any(
-        (e) => e.type == exclusion.type && e.value == exclusion.value)) {
+    if (_githubExclusions
+        .any((e) => e.type == exclusion.type && e.value == exclusion.value)) {
       return;
     }
     _githubExclusions.add(exclusion);
@@ -514,4 +514,3 @@ class SettingsProvider extends ChangeNotifier {
     return false;
   }
 }
-

@@ -93,8 +93,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
       }
     });
     _notificationService = context.read<NotificationService>();
-    _notificationSubscription =
-        _notificationService.onNotificationResponseStream.listen((response) {
+    _notificationSubscription = _notificationService
+        .onNotificationResponseStream
+        .listen((response) async {
       if (!mounted) return;
       if (response.payload != null) {
         try {

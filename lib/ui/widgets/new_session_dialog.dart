@@ -918,7 +918,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 (m) =>
                                     m.type ==
                                         QueuedMessageType.sessionCreation &&
-                                    m.content == widget.initialSession!.prompt &&
+                                    m.content ==
+                                        widget.initialSession!.prompt &&
                                     m.processingErrors.isNotEmpty,
                               );
 

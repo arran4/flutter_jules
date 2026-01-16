@@ -322,14 +322,15 @@ class MessageQueueProvider extends ChangeNotifier {
         if (index != -1) {
           final currentErrors =
               List<String>.from(_queue[index].processingErrors);
-          
+
           if (e is NotFoundException) {
-             // 404 Not Found. Session probably deleted or ID invalid.
-             currentErrors.add("Session not found (404). This session may have been deleted.");
+            // 404 Not Found. Session probably deleted or ID invalid.
+            currentErrors.add(
+                "Session not found (404). This session may have been deleted.");
           } else {
-             currentErrors.add(e.toString());
+            currentErrors.add(e.toString());
           }
-          
+
           _queue[index] =
               _queue[index].copyWith(processingErrors: currentErrors);
         }
