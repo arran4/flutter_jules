@@ -23,6 +23,9 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotifyOnCompletion = 'notify_on_completion';
   static const String keyNotifyOnWatch = 'notify_on_watch';
   static const String keyNotifyOnFailure = 'notify_on_failure';
+  static const String keyNotifyOnRefreshStart = 'notify_on_refresh_start';
+  static const String keyNotifyOnRefreshComplete = 'notify_on_refresh_complete';
+  static const String keyNotifyOnErrors = 'notify_on_errors';
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyTrayEnabled = 'tray_enabled';
@@ -63,6 +66,9 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnCompletion = true;
   bool _notifyOnWatch = true;
   bool _notifyOnFailure = true;
+  bool _notifyOnRefreshStart = false;
+  bool _notifyOnRefreshComplete = false;
+  bool _notifyOnErrors = false;
   bool _trayEnabled = false;
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
@@ -90,6 +96,9 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnCompletion => _notifyOnCompletion;
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
+  bool get notifyOnRefreshStart => _notifyOnRefreshStart;
+  bool get notifyOnRefreshComplete => _notifyOnRefreshComplete;
+  bool get notifyOnErrors => _notifyOnErrors;
   bool get trayEnabled => _trayEnabled;
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
@@ -148,6 +157,11 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
+    _notifyOnRefreshStart =
+        _prefs!.getBool(keyNotifyOnRefreshStart) ?? false;
+    _notifyOnRefreshComplete =
+        _prefs!.getBool(keyNotifyOnRefreshComplete) ?? false;
+    _notifyOnErrors = _prefs!.getBool(keyNotifyOnErrors) ?? false;
     _trayEnabled = _prefs!.getBool(keyTrayEnabled) ?? false;
     _fabVisibility = _loadEnum(
       keyFabVisibility,
@@ -342,6 +356,24 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnFailure = value;
     notifyListeners();
     await _prefs?.setBool(keyNotifyOnFailure, value);
+  }
+
+  Future<void> setNotifyOnRefreshStart(bool value) async {
+    _notifyOnRefreshStart = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnRefreshStart, value);
+  }
+
+  Future<void> setNotifyOnRefreshComplete(bool value) async {
+    _notifyOnRefreshComplete = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnRefreshComplete, value);
+  }
+
+  Future<void> setNotifyOnErrors(bool value) async {
+    _notifyOnErrors = value;
+    notifyListeners();
+    await _prefs?.setBool(keyNotifyOnErrors, value);
   }
 
   Future<void> setTrayEnabled(bool value) async {
