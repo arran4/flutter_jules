@@ -30,6 +30,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
   static const String _githubExclusionsKey = 'github_exclusions';
+  static const String keyUseGoogleJules = 'use_google_jules';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -66,6 +67,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
+  bool _useGoogleJules = false;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -92,6 +94,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
+  bool get useGoogleJules => _useGoogleJules;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -153,6 +156,7 @@ class SettingsProvider extends ChangeNotifier {
     );
     _hideArchivedAndReadOnly =
         _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
+    _useGoogleJules = _prefs!.getBool(keyUseGoogleJules) ?? false;
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -356,6 +360,12 @@ class SettingsProvider extends ChangeNotifier {
     _hideArchivedAndReadOnly = value;
     notifyListeners();
     await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
+  }
+
+  Future<void> setUseGoogleJules(bool value) async {
+    _useGoogleJules = value;
+    notifyListeners();
+    await _prefs?.setBool(keyUseGoogleJules, value);
   }
 
   // Keybinding Setters
