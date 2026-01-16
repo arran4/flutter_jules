@@ -2059,34 +2059,35 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             leading:
                 const Icon(Icons.check_circle_outline, color: Colors.green),
             children: [
-              Padding(
-                padding: const EdgeInsets.only(
-                  left: 16.0,
-                  right: 16.0,
-                  bottom: 16.0,
-                ),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    const Text(
-                      "Open Jules to publish a PR for this session.",
-                    ),
-                    const SizedBox(height: 8),
-                    SizedBox(
-                      width: double.infinity,
-                      child: ElevatedButton.icon(
-                        icon: const Icon(Icons.open_in_new),
-                        label: const Text("Open Jules"),
-                        onPressed: () {
-                          if (_session.url != null) {
-                            launchUrl(Uri.parse(_session.url!));
-                          }
-                        },
+              if (_session.outputs != null)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    left: 16.0,
+                    right: 16.0,
+                    bottom: 16.0,
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text(
+                        "Open Jules to publish a PR for this session.",
                       ),
-                    ),
-                  ],
+                      const SizedBox(height: 8),
+                      SizedBox(
+                        width: double.infinity,
+                        child: ElevatedButton.icon(
+                          icon: const Icon(Icons.open_in_new),
+                          label: const Text("Open Jules"),
+                          onPressed: () {
+                            if (_session.url != null) {
+                              launchUrl(Uri.parse(_session.url!));
+                            }
+                          },
+                        ),
+                      ),
+                    ],
+                  ),
                 ),
-              ),
             ],
           ),
         ),
