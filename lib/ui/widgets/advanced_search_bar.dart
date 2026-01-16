@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
+import '../../models/preset_state_manager.dart';
 import 'sort_pills_widget.dart';
 import 'time_filter_dialog.dart';
 
@@ -58,6 +59,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
   final GlobalKey _presetButtonKey = GlobalKey();
+  final PresetStateManager _presetStateManager = PresetStateManager();
 
   @override
   void initState() {
@@ -86,6 +88,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       if (_expressionController.text != newExpr) {
         _expressionController.text = newExpr;
       }
+      _presetStateManager.onFilterChanged(widget.filterTree);
     }
     if (widget.filterTree != oldWidget.filterTree ||
         widget.activeSorts != oldWidget.activeSorts) {
@@ -471,6 +474,15 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   Future<void> _saveCurrentFilters(BuildContext context) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+
+    if (_presetStateManager.shouldPreFill(
+        widget.filterTree, widget.activeSorts, bookmarkProvider)) {
+      nameController.text = _presetStateManager.lastLoadedBookmark!.name;
+      descController.text =
+          _presetStateManager.lastLoadedBookmark!.description ?? '';
+    }
 
     final result = await showDialog<bool>(
       context: context,
@@ -887,6 +899,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             onTap: () {
               widget.onFilterTreeChanged(bookmark.tree);
               widget.onSortsChanged(bookmark.sorts);
+              _presetStateManager.setLastLoadedBookmark(bookmark);
               _removePresetOverlay();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
