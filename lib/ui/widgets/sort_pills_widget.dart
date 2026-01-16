@@ -223,6 +223,8 @@ class SortPillsWidget extends StatelessWidget {
         return "Status";
       case SortField.count:
         return "Usage Count";
+      case SortField.opened:
+        return 'Opened';
     }
   }
 }

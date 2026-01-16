@@ -72,7 +72,7 @@ class FilterToken {
       id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
 }
 
-enum SortField { updated, created, name, source, status, count }
+enum SortField { updated, created, name, source, status, count, opened }
 
 enum SortDirection { ascending, descending }
 
