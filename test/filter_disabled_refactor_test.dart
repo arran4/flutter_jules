@@ -30,7 +30,7 @@ void main() {
     });
 
     test('should parse DISABLED expression', () {
-      final expression = 'DISABLED(TEXT(foo))';
+      const expression = 'DISABLED(TEXT(foo))';
       final element = FilterExpressionParser.parse(expression);
 
       expect(element, isA<DisabledElement>());
