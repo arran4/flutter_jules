@@ -5,12 +5,14 @@ import 'github_provider.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
 import 'session_provider.dart';
+import 'settings_provider.dart';
 
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];
   bool _isLoading = false;
   String? _error;
   CacheService? _cacheService;
+  SettingsProvider? _settingsProvider;
   DateTime? _lastFetchTime;
   final Set<String> _refreshingSources = {};
 
@@ -21,6 +23,10 @@ class SourceProvider extends ChangeNotifier {
 
   void setCacheService(CacheService service) {
     _cacheService = service;
+  }
+
+  void update(SettingsProvider settings) {
+    _settingsProvider = settings;
   }
 
   Future<void> fetchSources(
@@ -118,6 +124,10 @@ class SourceProvider extends ChangeNotifier {
     for (final item in _items) {
       final source = item.data;
       if (source.githubRepo != null) {
+        if (_settingsProvider != null &&
+            _settingsProvider!.isOrgBlacklisted(source.githubRepo!.owner)) {
+          continue; // Skip blacklisted orgs
+        }
         final job = githubProvider.createRepoDetailsJob(
           source.githubRepo!.owner,
           source.githubRepo!.repo,
@@ -222,6 +232,11 @@ class SourceProvider extends ChangeNotifier {
         githubProvider.apiKey == null ||
         sourceToRefresh.githubRepo == null) {
       return;
+    }
+
+    if (_settingsProvider != null &&
+        _settingsProvider!.isOrgBlacklisted(sourceToRefresh.githubRepo!.owner)) {
+      return; // Skip blacklisted orgs
     }
 
     final index =

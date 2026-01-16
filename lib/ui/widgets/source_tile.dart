@@ -7,6 +7,7 @@ import '../../services/auth_provider.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/session_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../services/source_provider.dart';
 import '../screens/session_list_screen.dart';
 import 'new_session_dialog.dart';
@@ -31,6 +32,11 @@ class SourceTile extends StatelessWidget {
     final source = item.data;
     final repo = source.githubRepo;
     final isPrivate = repo?.isPrivate ?? false;
+    final settingsProvider = Provider.of<SettingsProvider>(context);
+    final isBlacklisted = repo != null &&
+        settingsProvider.isOrgBlacklisted(repo.owner);
+    final blacklistInfo =
+        isBlacklisted ? settingsProvider.getBlacklistInfo(repo!.owner) : null;
     final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
     final branchCount = repo?.branches?.length;
 
@@ -87,6 +93,15 @@ class SourceTile extends StatelessWidget {
             const SizedBox(height: 4),
             Row(
               children: [
+                if (isBlacklisted)
+                  Tooltip(
+                    message: blacklistInfo?.reason ?? 'No reason provided',
+                    child: _buildStatusPill(
+                      context,
+                      'BLACKLISTED',
+                      Colors.red,
+                    ),
+                  ),
                 if (repo?.primaryLanguage != null)
                   _buildInfoPill(
                     context,

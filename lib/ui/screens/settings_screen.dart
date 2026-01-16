@@ -238,10 +238,47 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 leading: const Icon(Icons.code),
                 onTap: () => _showGitHubKeyDialog(context, github),
               ),
+              const Divider(),
+              _buildBlacklistSection(context, settings),
             ],
           );
         },
       ),
+    );
+  }
+
+  Widget _buildBlacklistSection(
+      BuildContext context, SettingsProvider settings) {
+    final blacklist = settings.orgBlacklist;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'GitHub API Blacklist'),
+        if (blacklist.isEmpty)
+          const ListTile(
+            title: Text('No organizations are currently blacklisted.'),
+            subtitle: Text(
+                'Organizations will be added here if the application fails to access them.'),
+          ),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: blacklist.length,
+          itemBuilder: (context, index) {
+            final item = blacklist[index];
+            return ListTile(
+              title: Text(item.orgName),
+              subtitle: Text(
+                  'Reason: ${item.reason}\nExpires: ${item.expiry.toLocal()}'),
+              trailing: IconButton(
+                icon: const Icon(Icons.delete),
+                tooltip: 'Remove from blacklist',
+                onPressed: () => settings.removeOrgFromBlacklist(item.orgName),
+              ),
+            );
+          },
+        ),
+      ],
     );
   }
 

@@ -50,8 +50,12 @@ void main() async {
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
-        ChangeNotifierProvider(create: (_) => GithubProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
+        ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
+          create: (context) =>
+              GithubProvider(settingsProvider: context.read<SettingsProvider>()),
+          update: (_, settings, github) => github!..update(settings),
+        ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
         ProxyProvider<DevModeProvider, CacheService>(
@@ -66,9 +70,12 @@ void main() async {
             ..setGithubProvider(github)
             ..setNotificationProvider(notifications),
         ),
-        ChangeNotifierProxyProvider<CacheService, SourceProvider>(
+        ChangeNotifierProxyProvider2<CacheService, SettingsProvider,
+            SourceProvider>(
           create: (_) => SourceProvider(),
-          update: (_, cache, source) => source!..setCacheService(cache),
+          update: (_, cache, settings, source) => source!
+            ..setCacheService(cache)
+            ..update(settings),
         ),
         ChangeNotifierProxyProvider2<CacheService, AuthProvider,
             MessageQueueProvider>(

@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
+import 'settings_provider.dart';
 
 class GithubApiException implements Exception {
   final int statusCode;
@@ -20,6 +21,7 @@ class GithubProvider extends ChangeNotifier {
   static const String _githubApiKey = 'github_api_key';
 
   String? _apiKey;
+  SettingsProvider? _settingsProvider;
   String? get apiKey => _apiKey;
   // Rate Limiting
   int? _rateLimitLimit;
@@ -35,8 +37,13 @@ class GithubProvider extends ChangeNotifier {
   DateTime? get rateLimitReset => _rateLimitReset;
   List<GithubJob> get queue => List.unmodifiable(_queue);
 
-  GithubProvider() {
+  GithubProvider({SettingsProvider? settingsProvider}) {
+    _settingsProvider = settingsProvider;
     _loadApiKey();
+  }
+
+  void update(SettingsProvider settingsProvider) {
+    _settingsProvider = settingsProvider;
   }
 
   Future<void> _loadApiKey() async {
@@ -82,10 +89,16 @@ class GithubProvider extends ChangeNotifier {
           final data = jsonDecode(response.body);
           return GitHubPrResponse(data);
         } else {
+          if (response.statusCode == 404) {
+            _settingsProvider?.addOrUpdateOrgBlacklist(
+              owner,
+              'API query failure',
+            );
+          }
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
           );
-          return null;
+          throw GithubApiException(response.statusCode, response.body);
         }
       },
     );

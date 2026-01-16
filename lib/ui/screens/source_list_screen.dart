@@ -14,6 +14,8 @@ import '../../services/message_queue_provider.dart';
 import '../widgets/source_tile.dart';
 import '../../services/settings_provider.dart';
 
+enum BlacklistFilter { all, blacklisted, notBlacklisted }
+
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
 
@@ -33,6 +35,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     const SortOption(SortField.name, SortDirection.ascending)
   ];
   List<FilterToken> _availableSuggestions = [];
+  BlacklistFilter _blacklistFilter = BlacklistFilter.all;
 
   final Map<String, int> _usageCount = {};
   final Map<String, DateTime> _lastUsed = {};
@@ -268,6 +271,22 @@ class _SourceListScreenState extends State<SourceListScreen> {
               .where((s) => !s.data.isArchived && !s.data.isReadOnly)
               .toList();
         }
+
+        // Apply blacklist filter
+        if (_blacklistFilter == BlacklistFilter.blacklisted) {
+          sources = sources
+              .where((s) =>
+                  s.data.githubRepo != null &&
+                  settingsProvider.isOrgBlacklisted(s.data.githubRepo!.owner))
+              .toList();
+        } else if (_blacklistFilter == BlacklistFilter.notBlacklisted) {
+          sources = sources
+              .where((s) =>
+                  s.data.githubRepo == null ||
+                  !settingsProvider.isOrgBlacklisted(s.data.githubRepo!.owner))
+              .toList();
+        }
+
         final isLoading = sourceProvider.isLoading;
         final error = sourceProvider.error;
         final lastFetchTime = sourceProvider.lastFetchTime;
@@ -404,6 +423,27 @@ class _SourceListScreenState extends State<SourceListScreen> {
                               _activeSorts = sorts;
                             });
                           },
+                        ),
+                        Padding(
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 16.0, vertical: 8.0),
+                          child: Row(
+                            children: [
+                              FilterChip(
+                                label: Text(
+                                    'Blacklisted: ${_blacklistFilter.name}'),
+                                selected:
+                                    _blacklistFilter != BlacklistFilter.all,
+                                onSelected: (selected) {
+                                  setState(() {
+                                    _blacklistFilter = BlacklistFilter.values[
+                                        (_blacklistFilter.index + 1) %
+                                            BlacklistFilter.values.length];
+                                  });
+                                },
+                              ),
+                            ],
+                          ),
                         ),
                         if (lastFetchTime != null)
                           Padding(

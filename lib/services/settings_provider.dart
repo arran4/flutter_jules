@@ -1,8 +1,11 @@
 import 'dart:convert';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:collection/collection.dart';
 import '../models.dart';
 import '../models/bulk_action.dart';
+import '../models/org_blacklist_info.dart';
 import '../models/refresh_schedule.dart';
 
 enum SessionRefreshPolicy { none, shallow, full }
@@ -28,6 +31,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyFabVisibility = 'fab_visibility';
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
+  static const String _orgBlacklistKey = 'org_blacklist';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -63,6 +67,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _trayEnabled = false;
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
+  List<OrgBlacklistInfo> _orgBlacklist = [];
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -88,6 +93,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get trayEnabled => _trayEnabled;
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
+  List<OrgBlacklistInfo> get orgBlacklist => _orgBlacklist;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -179,6 +185,7 @@ class SettingsProvider extends ChangeNotifier {
 
     _loadSchedules();
     _loadBulkActionConfig();
+    _loadOrgBlacklist();
 
     // Load last filter
     final lastFilterJson = _prefs!.getString(_lastFilterKey);
@@ -276,6 +283,58 @@ class SettingsProvider extends ChangeNotifier {
     _schedules.removeWhere((s) => s.id == scheduleId);
     await _saveSchedules();
     notifyListeners();
+  }
+
+  void _loadOrgBlacklist() {
+    final jsonString = _prefs?.getString(_orgBlacklistKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(jsonString);
+        _orgBlacklist = decodedList
+            .map((json) => OrgBlacklistInfo.fromJson(json))
+            .toList();
+        // Remove expired entries
+        _orgBlacklist.removeWhere((info) => info.expiry.isBefore(DateTime.now()));
+        _saveOrgBlacklist(); // Save to clean up expired entries
+      } catch (e) {
+        _orgBlacklist = [];
+      }
+    } else {
+      _orgBlacklist = [];
+    }
+  }
+
+  Future<void> _saveOrgBlacklist() async {
+    final jsonString = jsonEncode(_orgBlacklist.map((i) => i.toJson()).toList());
+    await _prefs?.setString(_orgBlacklistKey, jsonString);
+  }
+
+  Future<void> addOrUpdateOrgBlacklist(String orgName, String reason) async {
+    final expiry = DateTime.now().add(const Duration(days: 30));
+    final newInfo = OrgBlacklistInfo(orgName: orgName, reason: reason, expiry: expiry);
+
+    // Remove existing entry if it exists
+    _orgBlacklist.removeWhere((info) => info.orgName == orgName);
+    _orgBlacklist.add(newInfo);
+
+    await _saveOrgBlacklist();
+    notifyListeners();
+  }
+
+  Future<void> removeOrgFromBlacklist(String orgName) async {
+    _orgBlacklist.removeWhere((info) => info.orgName == orgName);
+    await _saveOrgBlacklist();
+    notifyListeners();
+  }
+
+  bool isOrgBlacklisted(String orgName) {
+    _orgBlacklist.removeWhere((info) => info.expiry.isBefore(DateTime.now()));
+    return _orgBlacklist.any((info) => info.orgName == orgName);
+  }
+
+  OrgBlacklistInfo? getBlacklistInfo(String orgName) {
+    _orgBlacklist.removeWhere((info) => info.expiry.isBefore(DateTime.now()));
+    return _orgBlacklist.firstWhereOrNull((info) => info.orgName == orgName);
   }
 
   Future<void> setSessionPageSize(int size) async {
