@@ -683,14 +683,16 @@ class SessionProvider extends ChangeNotifier {
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
 
-    if (pathSegments.length < 4 ||
-        pathSegments[pathSegments.length - 2] != 'pull') {
-      throw Exception("Invalid PR URL format");
+    // Find the 'pull' segment from the end
+    final pullIndex = pathSegments.lastIndexOf('pull');
+
+    if (pullIndex == -1 || pullIndex < 2) {
+      throw Exception("Invalid PR URL format: 'pull' segment not found or misplaced");
     }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
-    final prNumber = pathSegments[pathSegments.length - 1];
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
+    final prNumber = pathSegments[pullIndex + 1];
 
     // Fetch PR and CI statuses from GitHub in parallel
     final results = await Future.wait([
@@ -738,11 +740,18 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length < 4) return false;
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
-    final prNumber = pathSegments[pathSegments.length - 1];
+    // Find the 'pull' segment from the end
+    final pullIndex = pathSegments.lastIndexOf('pull');
+
+    if (pullIndex == -1 || pullIndex < 2) {
+      debugPrint("Invalid PR URL format: 'pull' segment not found or misplaced");
+      return false;
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
+    final prNumber = pathSegments[pullIndex + 1];
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
 
     return _githubProvider!.queue.any((job) => job.id == jobId);
@@ -759,9 +768,19 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final owner = pathSegments[0];
-      final repo = pathSegments[1];
-      final prNumber = pathSegments[pathSegments.length - 1];
+
+      // Find the 'pull' segment from the end
+      final pullIndex = pathSegments.lastIndexOf('pull');
+
+      if (pullIndex == -1 || pullIndex < 2) {
+        debugPrint(
+            "Invalid PR URL format: 'pull' segment not found or misplaced");
+        return;
+      }
+
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
+      final prNumber = pathSegments[pullIndex + 1];
 
       // Fetch statuses in parallel
       final results = await Future.wait([
@@ -801,6 +820,32 @@ class SessionProvider extends ChangeNotifier {
       debugPrint(
         "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
       );
+    }
+  }
+  ({String owner, String repo, String prNumber})? parsePrUrl(String prUrl) {
+    try {
+      final uri = Uri.parse(prUrl);
+      final pathSegments = uri.pathSegments;
+
+      // Find the 'pull' segment from the end
+      final pullIndex = pathSegments.lastIndexOf('pull');
+
+      if (pullIndex == -1 ||
+          pullIndex < 2 ||
+          (pullIndex + 1) >= pathSegments.length) {
+        debugPrint(
+            "Invalid PR URL format: 'pull' segment not found or misplaced");
+        return null;
+      }
+
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
+      final prNumber = pathSegments[pullIndex + 1];
+
+      return (owner: owner, repo: repo, prNumber: prNumber);
+    } catch (e) {
+      debugPrint("Failed to parse PR URL '$prUrl': $e");
+      return null;
     }
   }
 }
