@@ -1015,6 +1015,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final indexB = b.data.state?.index ?? -1;
           cmp = indexA.compareTo(indexB);
           break;
+        case SortField.opened:
+          final tA = a.metadata.lastOpened ?? DateTime(0);
+          final tB = b.metadata.lastOpened ?? DateTime(0);
+          cmp = tA.compareTo(tB);
+          break;
         case SortField.count:
           cmp = 0;
           break;
@@ -2008,6 +2013,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   return;
                                                 }
 
+                                                // Set the "Last Opened" date before navigating.
+                                                _markAsRead(session);
                                                 final result =
                                                     await Navigator.push(
                                                   context,
@@ -2018,7 +2025,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
-                                                _markAsRead(session);
                                                 if (result == true) {
                                                   if (mounted) {
                                                     _createSession();
@@ -2688,6 +2694,33 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                         );
                                                       },
                                                       onAddSort: _addSortOption,
+                                                    ),
+                                                    const SizedBox(height: 4),
+                                                    Row(
+                                                      children: [
+                                                        Text(
+                                                          'Updated: ${timeAgo(_getEffectiveTime(cachedItem))}',
+                                                          style: Theme.of(context)
+                                                              .textTheme
+                                                              .bodySmall,
+                                                        ),
+                                                        if (metadata.lastOpened != null) ...[
+                                                          const SizedBox(width: 8),
+                                                          Text(
+                                                            '·',
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .bodySmall,
+                                                          ),
+                                                          const SizedBox(width: 8),
+                                                          Text(
+                                                            'Opened: ${timeAgo(metadata.lastOpened!)}',
+                                                            style: Theme.of(context)
+                                                                .textTheme
+                                                                .bodySmall,
+                                                          ),
+                                                        ]
+                                                      ],
                                                     ),
                                                     // Progress bar if running
                                                     if (session.state ==
