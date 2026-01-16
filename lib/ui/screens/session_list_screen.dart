@@ -381,7 +381,119 @@ class _SessionListScreenState extends State<SessionListScreen> {
         if (!mounted) return;
 
         bool handled = false;
-        if (e is JulesException && e.responseBody != null) {
+
+        // Special handling for API Key / Authentication errors (401)
+        if (e is InvalidTokenException ||
+            (e is JulesException && e.statusCode == 401)) {
+          handled = true;
+          // Queue as failed first so we have a record
+          final queueProvider = Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          );
+          // If bulk, we loop, but here we are in performCreate which is per session.
+          // Note: sessionsToCreate is available in scope.
+          final msgId = queueProvider.addCreateSessionRequest(
+            sessionToCreate,
+            reason: 'auth_failed',
+          );
+
+          if (sessionsToCreate.length == 1) {
+            showDialog(
+              context: context,
+              builder: (context) => AlertDialog(
+                title: const Text('Authentication Error'),
+                content: const SingleChildScrollView(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        "The server returned an authentication error. "
+                        "This usually means the API key is missing, invalid, or not supported by the endpoint "
+                        "(e.g. requires OAuth2).",
+                      ),
+                      SizedBox(height: 16),
+                      Text(
+                          "We suggest checking your settings to try a different API key."),
+                    ],
+                  ),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      // Item remains in queue as failed
+                    },
+                    child: const Text('Close'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      // Retry the operation
+                      // Remove the previous failed request from queue to avoid duplicates if retry succeeds
+                      // (Actually, performCreate will add a NEW request if it fails, so we should arguably
+                      // clean up the old one or just let performCreate handle it.
+                      // Since we are "Retrying", let's clear the specific failed one we just added?
+                      // Or better: The msgId we have is for the failure record.
+                      // If we retry and succeed, we probably want to delete this failure record.
+                      // If we retry and fail, we get a new failure record (and dialog).
+                      // So deleting the current failure record before retrying seems appropriate to avoid clutter,
+                      // OR we keep it until success.
+                      // Let's delete it for now as "Retry" implies handling this instance.
+                      queueProvider.deleteMessage(msgId);
+                      performCreate(sessionToCreate);
+                    },
+                    child: const Text('Retry'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Update to draft so it doesn't auto-retry immediately on app restart
+                      queueProvider.updateCreateSessionRequest(
+                        msgId,
+                        sessionToCreate,
+                        isDraft: true,
+                        reason: 'User saved as draft after auth error',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Saved as draft")),
+                      );
+                    },
+                    child: const Text('Save as Draft'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(context);
+                      // Update to draft to be safe
+                      queueProvider.updateCreateSessionRequest(
+                        msgId,
+                        sessionToCreate,
+                        isDraft: true,
+                        reason: 'User went to settings after auth error',
+                      );
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => const SettingsScreen(),
+                        ),
+                      );
+                    },
+                    child: const Text('Settings'),
+                  ),
+                ],
+              ),
+            );
+          } else {
+            // For bulk, just notify once? or rely on queue indicators.
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                  content: Text("Authentication failed. Items queued.")),
+            );
+          }
+        }
+
+        if (!handled && e is JulesException && e.responseBody != null) {
           try {
             final body = jsonDecode(e.responseBody!);
             if (body is Map && body.containsKey('error')) {
