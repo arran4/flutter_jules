@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
-import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
 
 import '../../services/settings_provider.dart';
@@ -232,10 +231,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           force: force,
           githubProvider: githubProvider,
           sessionProvider: sessionProvider,
-          onProgress: (page) {
+          onProgress: (total) {
             if (mounted) {
               setState(() {
-                _refreshStatus = 'Loading page $page...';
+                _refreshStatus = 'Loaded $total sources...';
               });
             }
           },

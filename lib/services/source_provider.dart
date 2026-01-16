@@ -28,8 +28,8 @@ class SourceProvider extends ChangeNotifier {
     bool force = false,
     String? authToken,
     GithubProvider? githubProvider,
+    void Function(int total)? onProgress,
     SessionProvider? sessionProvider,
-    Function(int)? onProgress,
   }) async {
     // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
@@ -49,19 +49,6 @@ class SourceProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // Chain session fetch if requested
-      if (sessionProvider != null) {
-        // We don't wait for it here, but we trigger it.
-        // Let UI handle loading state of sessions.
-        unawaited(
-          sessionProvider.fetchSessions(
-            client,
-            authToken: authToken,
-            force: true,
-          ),
-        );
-      }
-
       List<Source> allSources = [];
       String? pageToken;
       int page = 0;
@@ -73,6 +60,9 @@ class SourceProvider extends ChangeNotifier {
         final response = await client.listSources(pageToken: pageToken);
         allSources.addAll(response.sources);
         pageToken = response.nextPageToken;
+        if (onProgress != null) {
+          onProgress(allSources.length);
+        }
       } while (pageToken != null && pageToken.isNotEmpty);
 
       if (_cacheService != null && authToken != null) {
