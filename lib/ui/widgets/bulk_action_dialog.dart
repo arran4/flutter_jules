@@ -377,7 +377,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           onPressed: _saveAsPreset,
           child: const Text('Save as Preset...'),
         ),
-        const Spacer(),
+
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),

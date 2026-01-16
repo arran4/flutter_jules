@@ -15,34 +15,65 @@ class ActionScriptParser {
 
     for (var line in lines) {
       line = line.trim();
-      if (line.isEmpty || line.startsWith('#')) {
+      if (line.isEmpty || line.startsWith('#') || line.startsWith('//')) {
         continue;
+      }
+
+      // Remove optional trailing semicolon
+      if (line.endsWith(';')) {
+        line = line.substring(0, line.length - 1).trim();
       }
 
       if (line.startsWith('@')) {
         final parts = line.substring(1).split(RegExp(r'\s+'));
         final directive = parts[0].toLowerCase();
         final value = parts.length > 1 ? parts.sublist(1).join(' ') : '';
+        _parseDirective(
+            directive,
+            value,
+            (v) => waitBetween = v,
+            (v) => parallelQueries = v,
+            (v) => limit = v,
+            (v) => offset = v,
+            (v) => randomize = v,
+            (v) => stopOnError = v);
+      } else {
 
-        switch (directive) {
-          case 'wait':
-            waitBetween = _tryParseDuration(value) ?? waitBetween;
-            break;
-          case 'parallel':
-            parallelQueries = int.tryParse(value) ?? parallelQueries;
-            break;
-          case 'limit':
-            limit = int.tryParse(value);
-            break;
-          case 'offset':
-            offset = int.tryParse(value) ?? offset;
-            break;
-          case 'randomize':
-            randomize = value.toLowerCase() == 'true';
-            break;
-          case 'stoponerror':
-            stopOnError = value.toLowerCase() == 'true';
-            break;
+        // Handle "SET Key = Value" or Action or Comment
+        // Strip inline comments if simple
+        var content = line;
+        if (content.contains('//')) {
+          content = content.substring(0, content.indexOf('//'));
+        }
+        content = content.trim();
+
+        if (content.isEmpty) continue;
+
+        if (content.toUpperCase().startsWith('SET ')) {
+          content = content.substring(4).trim();
+          // Remove optional trailing semicolon again after stripping comment
+          if (content.endsWith(';')) {
+            content = content.substring(0, content.length - 1).trim();
+          }
+
+          final equalsIndex = content.indexOf('=');
+        if (equalsIndex != -1) {
+          final key = content.substring(0, equalsIndex).trim().toLowerCase();
+          var val = content.substring(equalsIndex + 1).trim();
+          // Remove quotes if present
+          if (val.startsWith('"') && val.endsWith('"')) {
+            val = val.substring(1, val.length - 1);
+          }
+
+          _parseDirective(
+              key,
+              val,
+              (v) => waitBetween = v,
+              (v) => parallelQueries = v,
+              (v) => limit = v,
+              (v) => offset = v,
+              (v) => randomize = v,
+              (v) => stopOnError = v);
         }
       } else {
         final parts = line.split(RegExp(r'\s+'));
@@ -69,8 +100,8 @@ class ActionScriptParser {
           message: extractedMessage,
         ));
       }
+      }
     }
-
     return BulkJobConfig(
       targetType: BulkTargetType.filtered,
       filterTree: filterTree,
@@ -85,6 +116,44 @@ class ActionScriptParser {
     );
   }
 
+  static void _parseDirective(
+    String key,
+    String value,
+    Function(Duration) setWait,
+    Function(int) setParallel,
+    Function(int?) setLimit,
+    Function(int) setOffset,
+    Function(bool) setRandomize,
+    Function(bool) setStopOnError,
+  ) {
+    switch (key.toLowerCase()) {
+      case 'wait':
+      case 'waitbetween':
+        final d = _tryParseDuration(value);
+        if (d != null) setWait(d);
+        break;
+      case 'parallel':
+      case 'parallelqueries':
+        final i = int.tryParse(value);
+        if (i != null) setParallel(i);
+        break;
+      case 'limit':
+        final l = int.tryParse(value);
+        setLimit(l);
+        break;
+      case 'offset':
+        final o = int.tryParse(value);
+        if (o != null) setOffset(o);
+        break;
+      case 'randomize':
+        setRandomize(value.toLowerCase() == 'true');
+        break;
+      case 'stoponerror':
+        setStopOnError(value.toLowerCase() == 'true');
+        break;
+    }
+  }
+
   static Duration? _tryParseDuration(String input) {
     try {
       return parseDuration(input);
@@ -93,3 +162,4 @@ class ActionScriptParser {
     }
   }
 }
+
