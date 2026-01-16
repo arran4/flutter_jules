@@ -441,7 +441,7 @@ class LabelElement extends FilterElement {
     if (value == 'watched') return 'label:watched';
 
     // Group "queue" type labels (Drafts, Pending)
-    if (value == 'draft' || value == 'pending') {
+    if (value == 'draft' || value == 'pending' || value == 'pending_creation') {
       return 'label:queue';
     }
 
@@ -465,6 +465,8 @@ class LabelElement extends FilterElement {
         return 'Watching()';
       case 'pending':
         return 'Pending()';
+      case 'pending_creation':
+        return 'PendingCreation()';
       case 'draft':
         return 'Has(Drafts)';
       case 'has_pr':
@@ -508,6 +510,9 @@ class LabelElement extends FilterElement {
     } else if (v == 'watched' && metadata.isWatched) {
       matched = true;
     } else if (v == 'pending' && metadata.hasPendingUpdates) {
+      matched = true;
+    } else if (v == 'pending_creation' &&
+        metadata.labels.contains('PENDING_CREATION')) {
       matched = true;
     } else if (v == 'approval_required' &&
         (session.requirePlanApproval ?? false)) {

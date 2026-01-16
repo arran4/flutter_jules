@@ -752,6 +752,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
     suggestions.add(
       const FilterToken(
+        id: 'flag:pending_creation',
+        type: FilterType.flag,
+        label: 'Pending Creation',
+        value: 'pending_creation',
+      ),
+    );
+    suggestions.add(
+      const FilterToken(
         id: 'flag:watched',
         type: FilterType.flag,
         label: 'Watching',
@@ -916,6 +924,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         } else {
           element = LabelElement(token.label, token.value.toString());
         }
+        break;
+      case FilterType.text:
+        element = LabelElement(token.label, token.value.toString());
         break;
       default:
         return null;
