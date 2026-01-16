@@ -818,39 +818,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _handleNewSessionResult(NewSessionResult result) async {
-    if (result.isDraft) {
-      // Handle drafts
-      final queueProvider = Provider.of<MessageQueueProvider>(
-        context,
-        listen: false,
-      );
-      for (final session in result.sessions) {
-        queueProvider.addCreateSessionRequest(session, isDraft: true);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${result.sessions.length} draft(s) saved successfully',
-          ),
-        ),
-      );
-      return;
-    }
+    // Grab providers and scaffold messenger BEFORE any potential async gap or pop
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final messageQueueProvider =
+        Provider.of<MessageQueueProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-    // Handle session creation
-    final sessionsToCreate = result.sessions;
-    if (sessionsToCreate.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Starting creation of ${sessionsToCreate.length} sessions...',
-          ),
-        ),
-      );
-    }
+    // This handles both drafts and real creation requests in the background.
+    handleNewSessionResultInBackground(
+      result: result,
+      originalSession: _session, // The current session
+      hideOriginal: false, // Don't hide the session we're creating from
+      sessionProvider: sessionProvider,
+      authProvider: authProvider,
+      messageQueueProvider: messageQueueProvider,
+      settingsProvider: settingsProvider,
+      scaffoldMessenger: scaffoldMessenger,
+    );
 
-    for (final session in sessionsToCreate) {
-      await _performCreate(session, sessionsToCreate.length > 1);
+    // If "Send & New" was clicked, pop the current screen and return true.
+    if (result.openNewDialog) {
+      // Pop the current detail screen
+      navigator.pop(true);
     }
   }
 

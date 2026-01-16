@@ -43,6 +43,7 @@ class NewSessionDialog extends StatefulWidget {
   State<NewSessionDialog> createState() => _NewSessionDialogState();
 }
 
+// A result class for the NewSessionDialog.
 class NewSessionResult {
   final List<Session> sessions;
   final bool isDraft;

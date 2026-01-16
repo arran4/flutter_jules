@@ -111,12 +111,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
               launchUrl(Uri.parse(pr.url));
             }
           } else {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => SessionDetailScreen(session: session),
               ),
             );
+            if (result == true) {
+              if (mounted) {
+                _createSession();
+              }
+            }
           }
         } catch (_) {
           // Session not loaded or found
@@ -703,12 +708,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
 
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => SessionDetailScreen(session: session),
           ),
         );
+        if (result == true) {
+          if (mounted) {
+            _createSession();
+          }
+        }
       } catch (e) {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
@@ -1997,7 +2007,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 }
 
                                                 _markAsRead(session);
-                                                await Navigator.push(
+                                                final result =
+                                                    await Navigator.push(
                                                   context,
                                                   MaterialPageRoute(
                                                     builder: (_) =>
@@ -2006,6 +2017,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
+                                                if (result == true) {
+                                                  if (mounted) {
+                                                    _createSession();
+                                                  }
+                                                }
 
                                                 // On Return
                                                 if (!context.mounted) return;
