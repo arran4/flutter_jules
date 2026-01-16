@@ -16,6 +16,7 @@ import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/combined_data_viewer.dart';
 import '../widgets/metadata_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
@@ -939,13 +940,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             IconButton(
               icon: const Icon(Icons.data_object),
-              tooltip: 'View Session Data',
+              tooltip: 'View All Data',
               onPressed: () {
                 showDialog(
                   context: context,
-                  builder: (context) => ModelViewer(
-                    data: _session.toJson(),
-                    title: 'Session Data',
+                  builder: (context) => CombinedDataViewer(
+                    session: _session,
+                    activities: _activities,
                   ),
                 );
               },
