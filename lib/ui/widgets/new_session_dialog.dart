@@ -10,30 +10,51 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/source_provider.dart';
+
+import '../../services/settings_provider.dart';
+import '../../services/message_queue_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
+enum SessionDialogMode { create, createWithContext, edit }
+
+class BulkSelection {
+  final Source source;
+  String branch;
+
+  BulkSelection({required this.source, required this.branch});
+}
+
 class NewSessionDialog extends StatefulWidget {
   final String? sourceFilter;
   final Session? initialSession;
+  final SessionDialogMode mode;
 
-  const NewSessionDialog({super.key, this.sourceFilter, this.initialSession});
+  const NewSessionDialog({
+    super.key,
+    this.sourceFilter,
+    this.initialSession,
+    this.mode = SessionDialogMode.create,
+  });
 
   @override
   State<NewSessionDialog> createState() => _NewSessionDialogState();
 }
 
+// A result class for the NewSessionDialog.
 class NewSessionResult {
   final List<Session> sessions;
   final bool isDraft;
   final bool isDelete;
+  final bool openNewDialog;
 
   // Constructor for backward compatibility logic (single session)
   NewSessionResult(
     Session session, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   }) : sessions = [session];
 
   // Constructor for multiple sessions
@@ -41,6 +62,7 @@ class NewSessionResult {
     this.sessions, {
     this.isDraft = false,
     this.isDelete = false,
+    this.openNewDialog = false,
   });
 
   // Helper to get the first session for backward compatibility
@@ -55,7 +77,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   late final TextEditingController _imageUrlController;
 
   // Bulk Selection State
-  List<Source> _bulkSelections = [];
+  List<BulkSelection> _bulkSelections = [];
 
   // Task Mode
   // Options: Question (No Plan), Plan (Verify Plan), Start (Auto)
@@ -84,8 +106,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _promptController = TextEditingController();
     _imageUrlController = TextEditingController();
 
-    if (widget.initialSession != null) {
+    if (widget.mode == SessionDialogMode.edit &&
+        widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
+    }
+
+    if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
       final mode = widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
@@ -183,6 +209,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // Only show loading state on explicit user action
@@ -200,6 +230,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           authToken: auth.token,
           force: force,
           githubProvider: githubProvider,
+          sessionProvider: sessionProvider,
           onProgress: (total) {
             if (mounted) {
               setState(() {
@@ -211,7 +242,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       if (mounted) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+        final settingsProvider =
+            Provider.of<SettingsProvider>(context, listen: false);
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+        }
         _initializeSelection(sources);
         if (force) {
           setState(() {
@@ -336,8 +373,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
+    if (settingsProvider.hideArchivedAndReadOnly) {
+      allSources =
+          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+    }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
       final labelB = _getSourceDisplayLabel(b);
@@ -474,20 +517,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
-    // Determine initial selection
-    // If we are in bulk mode, use _bulkSelections
-    // If single mode, assume the currently selected source is the initial one
-    List<Source> initialSelection = [];
-    if (_bulkSelections.length > 1) {
-      initialSelection = _bulkSelections;
-    } else if (_selectedSource != null) {
-      // Find source object corresponding to _selectedSource
-      try {
-        final current = allSources.firstWhere(
-          (s) => s.name == _selectedSource!.name,
-        );
-        initialSelection = [current];
-      } catch (_) {}
+    // Convert existing BulkSelection to simple Source list for the dialog
+    List<Source> initialSelection =
+        _bulkSelections.map((bs) => bs.source).toList();
+    if (initialSelection.isEmpty && _selectedSource != null) {
+      initialSelection.add(_selectedSource!);
     }
 
     final List<Source>? result = await showDialog<List<Source>>(
@@ -502,10 +536,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       setState(() {
         if (result.length > 1) {
           // Bulk Mode
-          _bulkSelections = result;
-          // Sync Single Selection variables to null or first?
-          // Keeping them as "first" might be useful for fallback or editing one
-          // But UI will hide them.
+          final newSelections = result.map((source) {
+            // Try to preserve existing branch selection if source was already in the list
+            final existing = _bulkSelections.firstWhere(
+              (bs) => bs.source.name == source.name,
+              orElse: () => BulkSelection(
+                source: source,
+                branch: _getBranchLabelForSource(source),
+              ),
+            );
+            return existing;
+          }).toList();
+          _bulkSelections = newSelections;
+          _selectedSource = null;
+          _sourceController.clear();
         } else if (result.length == 1) {
           // Single Mode
           _bulkSelections = [];
@@ -513,17 +557,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         } else {
           // Cleared
           _bulkSelections = [];
-          // Maybe keep previous selection or clear it?
-          // "If they reduce the number down to 0 or 1 then it will then again become 'single' selection mode"
-          // If 0, we can clear.
-          // Let's keep existing if 0? Or clear.
-          // Clearing seems safer to avoid confusion.
         }
       });
     }
   }
 
-  Future<void> _create() async {
+  Future<void> _create({bool openNewDialog = false}) async {
     // Handle Image
     final imageUrl = _imageUrlController.text.trim();
     List<Media>? images;
@@ -581,25 +620,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (_bulkSelections.length > 1) {
       // Create session for each bulk selection
-      for (final source in _bulkSelections) {
-        // Determine branch for this source
-        // We use default branch logic since UI doesn't allow picking specific branch in bulk yet
-        String branch = 'main';
-        if (source.githubRepo?.defaultBranch != null) {
-          branch = source.githubRepo!.defaultBranch!.displayName;
-        } else if (source.githubRepo?.branches != null &&
-            source.githubRepo!.branches!.isNotEmpty) {
-          branch = source.githubRepo!.branches!.first.displayName;
-        }
-
+      for (final selection in _bulkSelections) {
         sessionsToCreate.add(
           Session(
             name: '',
             id: '',
             prompt: _promptController.text,
             sourceContext: SourceContext(
-              source: source.name,
-              githubRepoContext: GitHubRepoContext(startingBranch: branch),
+              source: selection.source.name,
+              githubRepoContext:
+                  GitHubRepoContext(startingBranch: selection.branch),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -660,7 +690,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (mounted) {
       Navigator.pop(
         context,
-        NewSessionResult.multiple(sessionsToCreate, isDraft: false),
+        NewSessionResult.multiple(sessionsToCreate,
+            isDraft: false, openNewDialog: openNewDialog),
       );
     }
   }
@@ -691,20 +722,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     List<Session> sessionsToCreate = [];
 
     if (_bulkSelections.length > 1) {
-      for (final source in _bulkSelections) {
-        String branch = 'main';
-        if (source.githubRepo?.defaultBranch != null) {
-          branch = source.githubRepo!.defaultBranch!.displayName;
-        }
-
+      for (final selection in _bulkSelections) {
         sessionsToCreate.add(
           Session(
             name: '',
             id: '',
             prompt: _promptController.text,
             sourceContext: SourceContext(
-              source: source.name,
-              githubRepoContext: GitHubRepoContext(startingBranch: branch),
+              source: selection.source.name,
+              githubRepoContext:
+                  GitHubRepoContext(startingBranch: selection.branch),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -741,12 +768,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   void _deleteDraft() {
     // Return dummy session but mark delete
-    final dummy = Session(
-      name: '',
-      id: '',
-      prompt: '',
-      sourceContext: null,
-    );
+    final dummy = Session(name: '', id: '', prompt: '', sourceContext: null);
     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
 
@@ -769,9 +791,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   @override
   Widget build(BuildContext context) {
-    return Consumer<SourceProvider>(
-      builder: (context, sourceProvider, _) {
-        final sources = sourceProvider.items.map((i) => i.data).toList();
+    return Consumer2<SourceProvider, SettingsProvider>(
+      builder: (context, sourceProvider, settingsProvider, _) {
+        var sources = sourceProvider.items.map((i) => i.data).toList();
+        if (settingsProvider.hideArchivedAndReadOnly) {
+          sources =
+              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+        }
 
         // Sort sources
         sources.sort((a, b) {
@@ -834,7 +860,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
         return AlertDialog(
           title: Text(
-            widget.initialSession != null ? "Edit Draft" : "New Session",
+            widget.mode == SessionDialogMode.edit
+                ? "Pending Session"
+                : "New Session",
           ),
           content: SizedBox(
             width: MediaQuery.of(context).size.width * 0.8,
@@ -846,29 +874,88 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     widget.initialSession!.currentAction != null)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
+                    width: double.infinity,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red.shade200),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Last Send Failed: ${widget.initialSession!.currentAction}",
-                            style: TextStyle(color: Colors.red.shade800),
-                          ),
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Last Send Failed: ${widget.initialSession!.currentAction}",
+                                style: TextStyle(
+                                  color: Colors.red.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Attempt to extract processingErrors from stashed metadata if available.
+                        // Since 'images' field is List<Media>, we can't easily stow List<String> there.
+                        // However, Session has a 'currentAction' which we already displayed.
+                        // If we want detailed logs, they would need to be passed explicitly or
+                        // retrieved from the queue now.
+                        Consumer<MessageQueueProvider>(
+                          builder: (context, queueProvider, _) {
+                            // Find the queued message that corresponds to this session creation attempt
+                            // This is heuristic: match by content/prompt if ID is empty/new_session
+                            // OR rely on how the session was passed to us.
+                            //
+                            // Better: We look for ANY pending item in the queue that matches this content/prompt
+                            // and has errors.
+                            try {
+                              final errorMsg = queueProvider.queue.firstWhere(
+                                (m) =>
+                                    m.type ==
+                                        QueuedMessageType.sessionCreation &&
+                                    m.content ==
+                                        widget.initialSession!.prompt &&
+                                    m.processingErrors.isNotEmpty,
+                              );
+
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: errorMsg.processingErrors
+                                      .map<Widget>(
+                                        (e) => Text(
+                                          "• $e",
+                                          style: TextStyle(
+                                            color: Colors.red.shade900,
+                                            fontSize: 11,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              );
+                            } catch (_) {
+                              // No matching detailed logs found in queue
+                              return const SizedBox.shrink();
+                            }
+                          },
                         ),
                       ],
                     ),
                   ),
 
-                const Text(
-                  'New Session',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Text(
+                  widget.mode == SessionDialogMode.edit
+                      ? "Pending Session"
+                      : "New Session",
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 
@@ -932,7 +1019,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       hintText: 'Describe what you want to do...',
                       border: const OutlineInputBorder(),
                       alignLabelWithHint: true,
-                      suffixIcon: widget.initialSession != null
+                      suffixIcon: (widget.mode == SessionDialogMode.edit ||
+                              widget.mode ==
+                                  SessionDialogMode.createWithContext)
                           ? IconButton(
                               icon: const Icon(Icons.content_paste_go),
                               tooltip: 'Import Prompt from Original Session',
@@ -1021,54 +1110,82 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 const SizedBox(height: 8),
 
                 if (_bulkSelections.length > 1) ...[
-                  // Pill Box for Bulk Selection
-                  Container(
-                    decoration: BoxDecoration(
-                      border: Border.all(color: Colors.grey.shade400),
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    padding: const EdgeInsets.all(8),
-                    width: double.infinity,
-                    child: Wrap(
-                      spacing: 8.0,
-                      runSpacing: 4.0,
-                      children: _bulkSelections.map((s) {
-                        final branch = _getBranchLabelForSource(s);
-                        return InputChip(
-                          label: RichText(
-                            text: TextSpan(
-                              style: DefaultTextStyle.of(context).style,
-                              children: [
-                                TextSpan(text: _getSourceDisplayLabel(s)),
-                                const TextSpan(text: '\n'),
-                                TextSpan(
-                                  text: branch,
-                                  style: TextStyle(
-                                    fontSize: 10,
-                                    color: Colors.grey.shade600,
+                  SizedBox(
+                    height: 150, // Constrain height
+                    child: ListView.builder(
+                      itemCount: _bulkSelections.length,
+                      itemBuilder: (context, index) {
+                        final selection = _bulkSelections[index];
+                        final source = selection.source;
+                        final repo = source.githubRepo;
+                        List<String> branches = repo?.branches
+                                ?.map((b) => b.displayName)
+                                .toList() ??
+                            [];
+                        if (!branches.contains(selection.branch)) {
+                          branches.add(selection.branch);
+                        }
+                        if (branches.isEmpty) branches.add('main');
+
+                        return ListTile(
+                          dense: true,
+                          leading: (repo?.isPrivate == true)
+                              ? const Icon(Icons.lock, size: 16)
+                              : null,
+                          title: Text(_getSourceDisplayLabel(source)),
+                          subtitle: Row(
+                            children: [
+                              Expanded(
+                                child: DropdownButtonFormField<String>(
+                                  isExpanded: true,
+                                  decoration: const InputDecoration(
+                                    labelText: 'Branch',
+                                    border: OutlineInputBorder(),
                                   ),
+                                  value: selection.branch,
+                                  items: branches
+                                      .map(
+                                        (b) => DropdownMenuItem(
+                                          value: b,
+                                          child: Text(
+                                            b,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                  onChanged: (val) {
+                                    if (val != null) {
+                                      setState(() {
+                                        selection.branch = val;
+                                      });
+                                    }
+                                  },
                                 ),
-                              ],
-                            ),
+                              ),
+                              const SizedBox(width: 8),
+                              IconButton(
+                                icon: const Icon(Icons.close, size: 16),
+                                onPressed: () {
+                                  setState(() {
+                                    _bulkSelections.removeAt(index);
+                                    if (_bulkSelections.length <= 1) {
+                                      if (_bulkSelections.isNotEmpty) {
+                                        _selectSource(
+                                            _bulkSelections.first.source);
+                                      } else {
+                                        _selectedSource = null;
+                                        _sourceController.clear();
+                                      }
+                                      _bulkSelections = [];
+                                    }
+                                  });
+                                },
+                              ),
+                            ],
                           ),
-                          onDeleted: () {
-                            setState(() {
-                              _bulkSelections.removeWhere(
-                                (item) => item.name == s.name,
-                              );
-                              if (_bulkSelections.length <= 1) {
-                                // Revert to single mode if 1 or 0
-                                if (_bulkSelections.isNotEmpty) {
-                                  _selectSource(_bulkSelections.first);
-                                } else {
-                                  _selectedSource = null;
-                                  _sourceController.clear();
-                                }
-                              }
-                            });
-                          },
                         );
-                      }).toList(),
+                      },
                     ),
                   ),
                 ] else ...[
@@ -1169,9 +1286,17 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                       child: const Text('Cancel'),
                     ),
                     const SizedBox(width: 8),
+                    FilledButton.tonal(
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: true)
+                          : null,
+                      child: const Text('Send & New'),
+                    ),
+                    const SizedBox(width: 8),
                     FilledButton(
-                      onPressed:
-                          (_promptController.text.isNotEmpty) ? _create : null,
+                      onPressed: (_promptController.text.isNotEmpty)
+                          ? () => _create(openNewDialog: false)
+                          : null,
                       child: const Text('Send Now'),
                     ),
                   ],

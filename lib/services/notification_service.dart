@@ -53,8 +53,11 @@ class NotificationService {
     );
   }
 
-  Future<void> showNotification(String title, String body,
-      {String? payload}) async {
+  Future<void> showNotification(
+    String title,
+    String body, {
+    String? payload,
+  }) async {
     const AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
       'jules_channel_id',

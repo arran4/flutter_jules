@@ -81,8 +81,7 @@ void main() {
         // TimeFilterElement
         final tf = TimeFilter(
           type: TimeFilterType.newerThan,
-          value: 5,
-          unit: TimeFilterUnit.days,
+          range: '5 days',
         );
         await pumpElement(tester, TimeFilterElement(tf));
         expect(find.byIcon(Icons.access_time), findsOneWidget);
@@ -120,6 +119,24 @@ void main() {
         expect(find.text('NOT'), findsOneWidget);
         expect(find.text('A'), findsOneWidget);
         expect(find.byIcon(Icons.block), findsOneWidget);
+      },
+      FilterElementType.tag: (tester) async {
+        // TagElement
+        await pumpElement(tester, TagElement('MyTag', 'mytag'));
+        expect(find.text('#MyTag'), findsOneWidget);
+        expect(find.byIcon(Icons.tag), findsOneWidget);
+      },
+      FilterElementType.hasNotes: (tester) async {
+        // HasNotesElement
+        await pumpElement(tester, HasNotesElement());
+        expect(find.text('Has Notes'), findsOneWidget);
+        expect(find.byIcon(Icons.note), findsOneWidget);
+      },
+      FilterElementType.disabled: (tester) async {
+        // DisabledElement
+        await pumpElement(tester, DisabledElement(TextElement('Disabled')));
+        expect(find.text('Disabled'), findsOneWidget);
+        // We can't easily test opacity, but we can verify text presence
       },
     };
 

@@ -10,6 +10,10 @@ import '../../services/message_queue_provider.dart';
 import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
 import 'delay_input_widget.dart';
+import 'save_bulk_action_preset_dialog.dart';
+import '../../models/bulk_action_preset.dart';
+import '../../services/bulk_action_preset_provider.dart';
+import '../../utils/action_script_builder.dart';
 
 class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;
@@ -138,11 +142,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = (screenSize.width * 0.8).clamp(800.0, 1800.0);
+    final dialogHeight = (screenSize.height * 0.8).clamp(600.0, 1200.0);
+
     return AlertDialog(
       title: const Text('Bulk Actions'),
       content: SizedBox(
-        width: 900,
-        height: 700,
+        width: dialogWidth,
+        height: dialogHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -366,6 +374,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       ),
       actions: [
         TextButton(
+          onPressed: _saveAsPreset,
+          child: const Text('Save as Preset...'),
+        ),
+        const Spacer(),
+        TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
@@ -533,6 +546,48 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     setState(() {
       _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
     });
+  }
+
+  void _saveAsPreset() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const SaveBulkActionPresetDialog(),
+    );
+
+    if (result != null && mounted) {
+      final name = result['name']!;
+      final description = result['description']!;
+
+      final filterExpression = _filterTree?.toExpression() ?? '';
+      final actionScript = buildActionScript(
+        actions: _actions,
+        parallelQueries: _parallelQueries,
+        waitBetween: _waitBetween,
+        limit: _limit,
+        offset: _offset,
+        randomize: _randomize,
+        stopOnError: _stopOnError,
+      );
+
+      final newPreset = BulkActionPreset(
+        name: name,
+        description: description,
+        filterExpression: filterExpression,
+        actionScript: actionScript,
+      );
+
+      final provider = context.read<BulkActionPresetProvider>();
+      await provider.addPreset(newPreset);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preset "$name" saved.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
   }
 
   void _startJob() {

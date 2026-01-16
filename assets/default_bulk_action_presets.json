@@ -1,0 +1,26 @@
+[
+  {
+    "name": "Mark Merged PRs as Read",
+    "description": "Marks all completed, unread sessions with a merged PR as read.",
+    "filterExpression": "state:completed is:unread has:pr pr:merged",
+    "actionScript": "@wait 0s\nmarkAsRead"
+  },
+  {
+    "name": "Open Draft/Open PRs",
+    "description": "Opens the PR in the browser for all unread sessions with a draft or open PR.",
+    "filterExpression": "is:unread has:pr pr:draft pr:open",
+    "actionScript": "@wait 1s\nopenPrInBrowser\nmarkAsRead"
+  },
+  {
+    "name": "Archive Stale Sessions",
+    "description": "Hides all sessions that haven't been updated in over 90 days.",
+    "filterExpression": "updatedBefore:90d",
+    "actionScript": "hide"
+  },
+  {
+    "name": "Refresh Watched Sessions",
+    "description": "Refreshes all sessions that you are currently watching.",
+    "filterExpression": "is:watched",
+    "actionScript": "refreshSession"
+  }
+]

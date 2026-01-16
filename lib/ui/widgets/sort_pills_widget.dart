@@ -221,6 +221,8 @@ class SortPillsWidget extends StatelessWidget {
         return "Source"; // Repo
       case SortField.status:
         return "Status";
+      case SortField.count:
+        return "Usage Count";
     }
   }
 }

@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
 import 'model_viewer.dart';
+import 'activity_helper.dart';
 
 class ActivityItem extends StatefulWidget {
   final Activity activity;
@@ -18,6 +20,31 @@ class ActivityItem extends StatefulWidget {
 class _ActivityItemState extends State<ActivityItem> {
   bool _isExpanded = true;
 
+  String? _getPrUrl(ChangeSet changeSet) {
+    // Try to get session ID from activity name to link to Jules
+    final sessionId = _getSessionIdFromActivityName(widget.activity.name);
+    if (sessionId != null) {
+      return 'https://jules.corp.google.com/session/$sessionId';
+    }
+
+    // Fallback to GitHub URL
+    final sourceParts = changeSet.source.split('/');
+    if (sourceParts.length >= 4 && sourceParts[1] == 'github') {
+      final owner = sourceParts[2];
+      final repo = sourceParts[3];
+      return 'https://github.com/$owner/$repo/pulls';
+    }
+    return null;
+  }
+
+  String? _getSessionIdFromActivityName(String name) {
+    final parts = name.split('/');
+    if (parts.length >= 2 && parts[0] == 'sessions') {
+      return parts[1];
+    }
+    return null;
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -29,148 +56,12 @@ class _ActivityItemState extends State<ActivityItem> {
 
   Widget _buildHeader() {
     final activity = widget.activity;
-    String title = "Activity";
-    String? summary;
-    IconData icon = Icons.info;
-    Color? iconColor;
-    bool isCompactable = false;
-
-    // Type Detection Logic (Simplified for Header)
-    if (activity.sessionFailed != null) {
-      title = "Session Failed";
-      summary = activity.sessionFailed!.reason;
-      icon = Icons.error;
-      iconColor = Colors.red;
-    } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      icon = Icons.flag;
-      iconColor = Colors.green;
-    } else if (activity.planApproved != null) {
-      title = "Plan Approved";
-      summary = "Plan ID: ${activity.planApproved!.planId}";
-      icon = Icons.check_circle;
-      iconColor = Colors.teal;
-    } else if (activity.planGenerated != null) {
-      title = "Plan Generated";
-      summary = "${activity.planGenerated!.plan.steps.length} steps";
-      icon = Icons.list_alt;
-      iconColor = Colors.orange;
-    } else if (activity.agentMessaged != null) {
-      title = "Agent";
-      final msg = activity.agentMessaged!.agentMessage;
-      summary = msg;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          msg.length < 300 &&
-          !msg.contains('\n')) {
-        isCompactable = true;
-      } else {
-        summary = msg.split('\n').first;
-      }
-      icon = Icons.smart_toy;
-      iconColor = Colors.blue;
-    } else if (activity.userMessaged != null) {
-      final isPending = activity.unmappedProps['isPending'] == true;
-      final isQueued = activity.unmappedProps['isQueued'] == true;
-      if (isPending) {
-        title = "Sending...";
-        icon = Icons.hourglass_empty;
-        iconColor = Colors.grey;
-      } else if (isQueued) {
-        title = "Sending Failed";
-        icon = Icons.cloud_off;
-        iconColor = Colors.orange;
-      } else {
-        title = "User";
-        icon = Icons.person;
-        iconColor = Colors.green;
-      }
-      final msg = activity.userMessaged!.userMessage;
-      summary = msg;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          msg.length < 300 &&
-          !msg.contains('\n')) {
-        isCompactable = true;
-      } else {
-        summary = msg.split('\n').first;
-      }
-    } else if (activity.progressUpdated != null) {
-      title = activity.progressUpdated!.title;
-      summary = activity.progressUpdated!.description;
-      if ((activity.artifacts == null || activity.artifacts!.isEmpty) &&
-          summary.length < 300 &&
-          !summary.contains('\n')) {
-        isCompactable = true;
-      }
-      icon = Icons.update;
-      iconColor = Colors.indigo;
-    } else if (activity.artifacts != null && activity.artifacts!.isNotEmpty) {
-      // Artifact Logic
-      final bashArtifact = activity.artifacts!.firstWhere(
-        (a) => a.bashOutput != null,
-        orElse: () => Artifact(),
-      );
-      final mediaArtifact = activity.artifacts!.firstWhere(
-        (a) => a.media != null,
-        orElse: () => Artifact(),
-      );
-
-      if (bashArtifact.bashOutput != null) {
-        title = "Command";
-        summary = bashArtifact.bashOutput!.command;
-        if (bashArtifact.bashOutput!.exitCode != 0) {
-          icon = Icons.dangerous;
-          iconColor = Colors.red;
-        } else {
-          icon = Icons.terminal;
-          iconColor = Colors.grey;
-        }
-      } else if (mediaArtifact.media != null) {
-        title = "Media";
-        summary = mediaArtifact.media!.mimeType;
-        icon = Icons.image;
-        iconColor = Colors.purple;
-      } else {
-        // Just generic artifacts (e.g. ChangeSet)
-        // Check if it's the "Simple ChangeSet" case
-        final changeSetArtifact = activity.artifacts!.firstWhere(
-          (a) => a.changeSet != null,
-          orElse: () => Artifact(),
-        );
-
-        if (changeSetArtifact.changeSet != null) {
-          title = "Artifact";
-          summary =
-              "Source: ${changeSetArtifact.changeSet!.source.split('/').last}";
-          // If it has no patch, it's very compactable
-          if (changeSetArtifact.changeSet!.gitPatch == null) {
-            isCompactable = true;
-          }
-        } else {
-          title = "Artifacts";
-          summary = "${activity.artifacts!.length} items";
-        }
-        icon = Icons.category;
-        iconColor = Colors.blueGrey;
-      }
-    } else if (activity.sessionCompleted != null) {
-      title = "Session Completed";
-      summary = "Success";
-      icon = Icons.flag;
-      iconColor = Colors.green;
-    } else {
-      if (activity.description.isEmpty) {
-        title = "Empty Activity";
-        summary = "${activity.originator ?? 'Unknown'} • ${activity.id}";
-        isCompactable = true;
-        icon = Icons.crop_square;
-        iconColor = Colors.grey;
-      } else {
-        title = "Unknown";
-        summary = activity.description;
-        icon = Icons.help_outline;
-        iconColor = Colors.amber;
-      }
-    }
+    final info = ActivityDisplayInfo.fromActivity(activity);
+    final title = info.title;
+    final summary = info.summary;
+    final icon = info.icon;
+    final iconColor = info.iconColor;
+    final isCompactable = info.isCompactable;
 
     // Timestamp
     DateTime? timestamp;
@@ -473,9 +364,58 @@ class _ActivityItemState extends State<ActivityItem> {
                 ],
                 if (artifact.changeSet != null) ...[
                   if (artifact.changeSet!.gitPatch != null) ...[
-                    Text(
-                      "Change in ${artifact.changeSet!.source}",
-                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        Flexible(
+                          child: Text(
+                            "Change in ${artifact.changeSet!.source}",
+                            style: const TextStyle(fontWeight: FontWeight.bold),
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                        if (_getPrUrl(artifact.changeSet!) != null)
+                          Padding(
+                            padding: const EdgeInsets.only(left: 8.0),
+                            child: ElevatedButton.icon(
+                              icon: const Icon(Icons.open_in_new),
+                              label: const Text('Create PR'),
+                              onPressed: () => launchUrl(
+                                  Uri.parse(_getPrUrl(artifact.changeSet!)!)),
+                              style: ElevatedButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                              ),
+                            ),
+                          ),
+                      ],
+                    ),
+                    const SizedBox(height: 8),
+                    if (artifact.changeSet!.gitPatch!.suggestedCommitMessage
+                        .isNotEmpty) ...[
+                      const Text(
+                        "Commit Message:",
+                        style: TextStyle(
+                            fontWeight: FontWeight.bold, fontSize: 12),
+                      ),
+                      const SizedBox(height: 4),
+                      Container(
+                        width: double.infinity,
+                        padding: const EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.black.withValues(alpha: 0.05),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: SelectableText(
+                          artifact.changeSet!.gitPatch!.suggestedCommitMessage,
+                          style: const TextStyle(fontFamily: 'monospace'),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                    ],
+                    const Text(
+                      "Patch:",
+                      style:
+                          TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
                     ),
                     const SizedBox(height: 4),
                     Container(
@@ -648,19 +588,85 @@ class _ActivityItemState extends State<ActivityItem> {
                               padding: const EdgeInsets.only(top: 4, left: 22),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
-                                children:
-                                    (activity.unmappedProps['processingErrors']
-                                            as List)
-                                        .map<Widget>(
-                                          (e) => Text(
-                                            "• $e",
-                                            style: const TextStyle(
-                                              color: Colors.red,
-                                              fontSize: 11,
-                                            ),
+                                children: [
+                                  if ((activity
+                                              .unmappedProps['processingErrors']
+                                          as List)
+                                      .isNotEmpty)
+                                    Padding(
+                                      padding: const EdgeInsets.only(bottom: 4),
+                                      child: OutlinedButton.icon(
+                                        icon: const Icon(
+                                          Icons.assignment,
+                                          size: 14,
+                                        ),
+                                        label: const Text(
+                                          "See Log",
+                                          style: TextStyle(fontSize: 12),
+                                        ),
+                                        style: OutlinedButton.styleFrom(
+                                          visualDensity: VisualDensity.compact,
+                                          padding: const EdgeInsets.symmetric(
+                                            horizontal: 8,
                                           ),
-                                        )
-                                        .toList(),
+                                          foregroundColor: Colors.red,
+                                        ),
+                                        onPressed: () {
+                                          showDialog(
+                                            context: context,
+                                            builder: (context) => AlertDialog(
+                                              title: const Text("Error Log"),
+                                              content: SingleChildScrollView(
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  mainAxisSize:
+                                                      MainAxisSize.min,
+                                                  children: (activity
+                                                                  .unmappedProps[
+                                                              'processingErrors']
+                                                          as List)
+                                                      .map<Widget>((e) {
+                                                    return Padding(
+                                                      padding:
+                                                          const EdgeInsets.only(
+                                                              bottom: 8.0),
+                                                      child: SelectableText(
+                                                        "• $e",
+                                                        style: const TextStyle(
+                                                          color: Colors.red,
+                                                          fontFamily:
+                                                              'monospace',
+                                                          fontSize: 12,
+                                                        ),
+                                                      ),
+                                                    );
+                                                  }).toList(),
+                                                ),
+                                              ),
+                                              actions: [
+                                                TextButton(
+                                                  onPressed: () =>
+                                                      Navigator.pop(context),
+                                                  child: const Text("Close"),
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  // Show latest error inline as preview
+                                  Text(
+                                    "Last Error: ${(activity.unmappedProps['processingErrors'] as List).last}",
+                                    style: const TextStyle(
+                                      color: Colors.red,
+                                      fontSize: 11,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ],
                               ),
                             ),
                         ],
