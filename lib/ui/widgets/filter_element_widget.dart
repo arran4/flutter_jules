@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import '../../models/filter_element.dart';
+import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {
@@ -152,13 +153,7 @@ class FilterElementWidget extends StatelessWidget {
         Icons.check_circle_outline,
       );
     } else if (element is TimeFilterElement) {
-      final tf = element.timeFilter;
-      String label;
-      if (tf.specificTime != null) {
-        label = 'Time: ${tf.type.name} ${tf.specificTime}';
-      } else {
-        label = 'Time: ${tf.type.name} ${tf.range ?? ''}';
-      }
+      final label = _formatTimeFilter(element.timeFilter);
       return _buildLeafElement(
         context,
         element,
@@ -677,6 +672,40 @@ class FilterElementWidget extends StatelessWidget {
       childWhenDragging: Opacity(opacity: 0.5, child: child),
       child: child,
     );
+  }
+
+  String _formatTimeFilter(dynamic tf) {
+    String field = tf.field.name;
+    field = field[0].toUpperCase() + field.substring(1);
+
+    String typeStr;
+    switch (tf.type) {
+      case TimeFilterType.newerThan:
+        typeStr = 'is newer than';
+        break;
+      case TimeFilterType.olderThan:
+        typeStr = 'is older than';
+        break;
+      case TimeFilterType.between:
+        typeStr = 'is between';
+        break;
+      case TimeFilterType.inRange:
+        typeStr = 'is in';
+        break;
+    }
+
+    if (tf.range != null) {
+      return '$field $typeStr ${tf.range}';
+    }
+
+    if (tf.specificTime != null) {
+      if (tf.type == TimeFilterType.between && tf.specificTimeEnd != null) {
+        return '$field is between ${tf.specificTime} and ${tf.specificTimeEnd}';
+      }
+      return '$field $typeStr ${tf.specificTime}';
+    }
+
+    return 'Invalid Time Filter';
   }
 
   void _handleDrop(
