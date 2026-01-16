@@ -9,7 +9,6 @@ import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
-import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
@@ -184,8 +183,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // Only show loading state on explicit user action
@@ -203,7 +200,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           authToken: auth.token,
           force: force,
           githubProvider: githubProvider,
-          sessionProvider: sessionProvider,
+          onProgress: (total) {
+            if (mounted) {
+              setState(() {
+                _refreshStatus = 'Loaded $total sources...';
+              });
+            }
+          },
         );
       }
 
