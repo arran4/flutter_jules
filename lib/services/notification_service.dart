@@ -33,11 +33,21 @@ class NotificationService {
     const AndroidInitializationSettings initializationSettingsAndroid =
         AndroidInitializationSettings('app_icon');
 
-    const DarwinInitializationSettings initializationSettingsDarwin =
+    final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
       requestAlertPermission: true,
       requestBadgePermission: true,
       requestSoundPermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'jules_category',
+          actions: [
+            const DarwinNotificationAction.plain('show_task', 'Show Task'),
+            const DarwinNotificationAction.plain('open_pr', 'Open PR'),
+            const DarwinNotificationAction.plain('show_new', 'Show New'),
+          ],
+        ),
+      ],
     );
 
     const LinuxInitializationSettings initializationSettingsLinux =
@@ -87,14 +97,44 @@ class NotificationService {
       actions: androidActions,
     );
 
-    // TODO(iOS/macOS support): Implement actions for DarwinNotificationDetails.
-    const DarwinNotificationDetails darwinPlatformChannelSpecifics =
-        DarwinNotificationDetails();
+    final darwinActions = actions?.map((action) {
+      switch (action) {
+        case NotificationAction.showTask:
+          return const DarwinNotificationAction.plain('show_task', 'Show Task');
+        case NotificationAction.openPr:
+          return const DarwinNotificationAction.plain('open_pr', 'Open PR');
+        case NotificationAction.showNew:
+          return const DarwinNotificationAction.plain('show_new', 'Show New');
+      }
+    }).toList();
 
-    const NotificationDetails platformChannelSpecifics = NotificationDetails(
+    final linuxActions = actions?.map((action) {
+      switch (action) {
+        case NotificationAction.showTask:
+          return const LinuxNotificationAction('show_task', 'Show Task');
+        case NotificationAction.openPr:
+          return const LinuxNotificationAction('open_pr', 'Open PR');
+        case NotificationAction.showNew:
+          return const LinuxNotificationAction('show_new', 'Show New');
+      }
+    }).toList();
+
+    final DarwinNotificationDetails darwinPlatformChannelSpecifics =
+        DarwinNotificationDetails(
+      categoryIdentifier: 'jules_category',
+      attachments: [],
+    );
+
+    final LinuxNotificationDetails linuxPlatformChannelSpecifics =
+        LinuxNotificationDetails(
+      actions: linuxActions,
+    );
+
+    final NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
       iOS: darwinPlatformChannelSpecifics,
       macOS: darwinPlatformChannelSpecifics,
+      linux: linuxPlatformChannelSpecifics,
     );
 
     await flutterLocalNotificationsPlugin.show(
