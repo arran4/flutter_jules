@@ -230,12 +230,20 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'GitHub'),
               ListTile(
                 title: const Text('Personal Access Token'),
-                subtitle: Text(
-                  github.apiKey != null
-                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
-                      : 'Not set',
+                subtitle: github.hasBadCredentials
+                    ? Text(
+                        'Error: ${github.authError ?? "Bad credentials"}',
+                        style: const TextStyle(color: Colors.red),
+                      )
+                    : Text(
+                        github.apiKey != null && github.apiKey!.length > 4
+                            ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                            : (github.apiKey != null ? '********' : 'Not set'),
+                      ),
+                leading: Icon(
+                  Icons.code,
+                  color: github.hasBadCredentials ? Colors.red : null,
                 ),
-                leading: const Icon(Icons.code),
                 onTap: () => _showGitHubKeyDialog(context, github),
               ),
             ],
@@ -252,27 +260,96 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final controller = TextEditingController();
     final newKey = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter GitHub PAT'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Personal Access Token',
-            hintText: 'Paste your token here',
-          ),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        bool isTesting = false;
+        String? testResult;
+        Color? resultColor;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Enter GitHub PAT'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Personal Access Token',
+                      hintText: 'Paste your token here',
+                    ),
+                    obscureText: true,
+                  ),
+                  if (isTesting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16.0),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (testResult != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(color: resultColor),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed:
+                      isTesting
+                          ? null
+                          : () async {
+                            final token = controller.text.trim();
+                            if (token.isEmpty) return;
+
+                            setState(() {
+                              isTesting = true;
+                              testResult = null;
+                            });
+
+                            try {
+                              final profile = await github.validateToken(token);
+                              if (context.mounted) {
+                                setState(() {
+                                  isTesting = false;
+                                  if (profile != null) {
+                                    testResult =
+                                        "Success! Logged in as ${profile['login']}";
+                                    resultColor = Colors.green;
+                                  } else {
+                                    testResult = "Invalid Token or Scope";
+                                    resultColor = Colors.red;
+                                  }
+                                });
+                              }
+                            } catch (e) {
+                              if (context.mounted) {
+                                setState(() {
+                                  isTesting = false;
+                                  testResult = "Error: $e";
+                                  resultColor = Colors.red;
+                                });
+                              }
+                            }
+                          },
+                  child: const Text("Test"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, controller.text),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
     if (newKey != null && newKey.isNotEmpty) {

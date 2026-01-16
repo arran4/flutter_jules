@@ -45,11 +45,15 @@ class BulkActionPresetDialog extends StatelessWidget {
         ),
         FilledButton.icon(
           onPressed: () {
-            Navigator.pop(context);
-            Navigator.push(
-              context,
+            final provider = context.read<BulkActionPresetProvider>();
+            final navigator = Navigator.of(context);
+            navigator.pop();
+            navigator.push(
               MaterialPageRoute(
-                builder: (_) => const BulkActionPresetManagerScreen(),
+                builder: (_) => ChangeNotifierProvider.value(
+                  value: provider,
+                  child: const BulkActionPresetManagerScreen(),
+                ),
               ),
             );
           },

@@ -558,6 +558,47 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
       // Logically cancel (ignore result) if user cancels, but we can't truly cancel the future
       await _locked(() async {
+        // Special Handling for Pending/Draft Sessions
+        // If we are in "Pending Session" mode, _session.name might be 'new_session' or a queue ID
+        // OR if the session state is technically valid but 404s, we need to handle that.
+        // But first, explicit check for known pending states.
+        final queueProvider = Provider.of<MessageQueueProvider>(
+          context,
+          listen: false,
+        );
+
+        // Check if there is a pending creation request for this session in the queue
+        // This heuristic matches how we identify pending sessions in the list
+        bool isPendingCreation = _session.name == 'new_session' ||
+            queueProvider.queue.any((m) =>
+                m.type == QueuedMessageType.sessionCreation &&
+                (m.sessionId == 'new_session' ||
+                    (m.metadata != null &&
+                        Session.fromJson(m.metadata!).prompt ==
+                            _session.prompt))); // Rough match
+
+        if (isPendingCreation) {
+          // Instead of sending a message, we should probably APPEND this message to the draft
+          // and re-submit the creation request?
+          // Or if the user thinks they are "Sending" the prompt.
+          // Since we are in Detail view, usually the prompt is already set.
+          // This "Message" is likely follow-up content.
+          // For now, let's treat this as: "We can't chat until session is created."
+          // But maybe we can try to CREATE the session using the original prompt?
+          //
+          // Better UX: If pending, try to Create Session now.
+          // Question: What about the message the user just typed?
+          // Option A: Append to prompt (if not sent).
+          // Option B: Create session (with original prompt), then send this message.
+
+          // Let's try Option B: Create Session first.
+          // We need the original session object.
+          // If we are here, _session is likely the draft.
+          throw JulesException(
+              "Session is pending creation. Please wait or retry creation.",
+              statusCode: 409);
+        }
+
         await client.sendMessage(_session.name, message);
       });
 
@@ -651,6 +692,27 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         } catch (_) {
           // Ignore parsing errors
         }
+      } else if (e is JulesException && e.statusCode == 404) {
+          // 404 Not Found.
+          // This likely means the session ID we have is invalid or deleted.
+          // We shouldn't queue a MESSAGE for a non-existent session.
+          if (mounted) {
+             _messageController.text = message; // Restore text
+             ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                content: const Text("Session not found (404). It may have been deleted."),
+                action: SnackBarAction(
+                  label: 'Recreate?',
+                  onPressed: () {
+                     // Offer to recreate session with this message as prompt? or original prompt?
+                     _createNewSessionFromCurrent();
+                  },
+                ),
+                duration: const Duration(seconds: 10),
+              ),
+             );
+          }
+          handled = true;
       }
 
       if (!handled) {
@@ -756,39 +818,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _handleNewSessionResult(NewSessionResult result) async {
-    if (result.isDraft) {
-      // Handle drafts
-      final queueProvider = Provider.of<MessageQueueProvider>(
-        context,
-        listen: false,
-      );
-      for (final session in result.sessions) {
-        queueProvider.addCreateSessionRequest(session, isDraft: true);
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${result.sessions.length} draft(s) saved successfully',
-          ),
-        ),
-      );
-      return;
-    }
+    // Grab providers and scaffold messenger BEFORE any potential async gap or pop
+    final sessionProvider = Provider.of<SessionProvider>(context, listen: false);
+    final authProvider = Provider.of<AuthProvider>(context, listen: false);
+    final messageQueueProvider =
+        Provider.of<MessageQueueProvider>(context, listen: false);
+    final settingsProvider =
+        Provider.of<SettingsProvider>(context, listen: false);
+    final scaffoldMessenger = ScaffoldMessenger.of(context);
+    final navigator = Navigator.of(context);
 
-    // Handle session creation
-    final sessionsToCreate = result.sessions;
-    if (sessionsToCreate.length > 1) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            'Starting creation of ${sessionsToCreate.length} sessions...',
-          ),
-        ),
-      );
-    }
+    // This handles both drafts and real creation requests in the background.
+    handleNewSessionResultInBackground(
+      result: result,
+      originalSession: _session, // The current session
+      hideOriginal: false, // Don't hide the session we're creating from
+      sessionProvider: sessionProvider,
+      authProvider: authProvider,
+      messageQueueProvider: messageQueueProvider,
+      settingsProvider: settingsProvider,
+      scaffoldMessenger: scaffoldMessenger,
+    );
 
-    for (final session in sessionsToCreate) {
-      await _performCreate(session, sessionsToCreate.length > 1);
+    // If "Send & New" was clicked, pop the current screen and return true.
+    if (result.openNewDialog) {
+      // Pop the current detail screen
+      navigator.pop(true);
     }
   }
 
@@ -900,7 +955,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             ).markAsRead(_session.id, auth.token!);
           }
           // Auto-save draft
-          if (_messageController.text.trim().isNotEmpty) {
+          if (_messageController.text.trim().isNotEmpty && !_isSending) {
             Provider.of<MessageQueueProvider>(
               context,
               listen: false,

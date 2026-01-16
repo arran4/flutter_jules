@@ -76,37 +76,35 @@ class FilterElementBuilder {
       }
       final newChild = removeFilter(root.child, target);
       return newChild != null ? NotElement(newChild) : null;
+    } else if (root is DisabledElement) {
+      if (root.child == target) {
+        return null;
+      }
+      final newChild = removeFilter(root.child, target);
+      return newChild != null ? DisabledElement(newChild) : null;
     }
 
     return root;
   }
 
-  /// Toggle isEnabled flag on an element
+  /// Toggle disabled wrapper on an element
   static FilterElement? toggleEnabled(
-    FilterElement? root,
-    FilterElement target,
-  ) {
+      FilterElement? root, FilterElement target) {
     if (root == null) return null;
 
-    // Traverse the tree to find the target and toggle its isEnabled property
-    if (root == target) {
-      root.isEnabled = !root.isEnabled;
-      return root;
+    // If target is already a DisabledElement, we want to unwrap it
+    if (target is DisabledElement) {
+      return replaceFilter(root, target, target.child);
     }
+    
+    // Check if target is immediately wrapped by a DisabledElement in the tree,
+    // which implies we might have passed the inner element but clicked "Enable".
+    // However, usually the UI passes the specific element instance.
+    // If the UI constructs the menu on a DisabledElement, it passes that DisabledElement.
+    // If it constructs it on a normal element, it passes that normal element.
 
-    if (root is AndElement) {
-      for (final child in root.children) {
-        toggleEnabled(child, target);
-      }
-    } else if (root is OrElement) {
-      for (final child in root.children) {
-        toggleEnabled(child, target);
-      }
-    } else if (root is NotElement) {
-      toggleEnabled(root.child, target);
-    }
-
-    return root;
+    // So if target is NOT disabled, we wrap it.
+    return replaceFilter(root, target, DisabledElement(target));
   }
 
   /// Toggle NOT wrapper on an element
@@ -139,6 +137,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final transformed = toggleNot(root.child, target);
       return transformed != null ? NotElement(transformed) : null;
+    } else if (root is DisabledElement) {
+      final transformed = toggleNot(root.child, target);
+      return transformed != null ? DisabledElement(transformed) : null;
     }
 
     return root;
@@ -176,6 +177,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final simplified = simplify(root.child);
       return simplified != null ? NotElement(simplified) : null;
+    } else if (root is DisabledElement) {
+      final simplified = simplify(root.child);
+      return simplified != null ? DisabledElement(simplified) : null;
     }
 
     return root;
@@ -186,6 +190,9 @@ class FilterElementBuilder {
   static bool _isSameFilterType(FilterElement a, FilterElement b) {
     // NOT elements should always be isolated (ANDed), never ORed
     if (a is NotElement || b is NotElement) {
+      return false;
+    }
+    if (a is DisabledElement || b is DisabledElement) {
       return false;
     }
     return a.groupingType == b.groupingType;
@@ -324,6 +331,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final newChild = replaceFilter(root.child, target, replacement);
       return NotElement(newChild ?? root.child);
+    } else if (root is DisabledElement) {
+      final newChild = replaceFilter(root.child, target, replacement);
+      return DisabledElement(newChild ?? root.child);
     }
 
     return root;
@@ -447,6 +457,8 @@ class FilterElementBuilder {
   ) {
     if (element is NotElement) {
       _collectTokens(element.child, tokens, FilterMode.exclude);
+    } else if (element is DisabledElement) {
+      // Skip disabled elements
     } else if (element is AndElement || element is OrElement) {
       final children = element is AndElement
           ? element.children

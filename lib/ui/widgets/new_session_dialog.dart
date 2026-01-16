@@ -11,7 +11,9 @@ import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/session_provider.dart';
 import '../../services/source_provider.dart';
+
 import '../../services/settings_provider.dart';
+import '../../services/message_queue_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
@@ -41,6 +43,7 @@ class NewSessionDialog extends StatefulWidget {
   State<NewSessionDialog> createState() => _NewSessionDialogState();
 }
 
+// A result class for the NewSessionDialog.
 class NewSessionResult {
   final List<Session> sessions;
   final bool isDraft;
@@ -859,7 +862,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         return AlertDialog(
           title: Text(
             widget.mode == SessionDialogMode.edit
-                ? "Edit Draft"
+                ? "Pending Session"
                 : "New Session",
           ),
           content: SizedBox(
@@ -872,29 +875,87 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     widget.initialSession!.currentAction != null)
                   Container(
                     margin: const EdgeInsets.only(bottom: 16),
+                    width: double.infinity,
                     padding: const EdgeInsets.all(8),
                     decoration: BoxDecoration(
                       color: Colors.red.shade50,
                       borderRadius: BorderRadius.circular(8),
                       border: Border.all(color: Colors.red.shade200),
                     ),
-                    child: Row(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.error_outline, color: Colors.red),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            "Last Send Failed: ${widget.initialSession!.currentAction}",
-                            style: TextStyle(color: Colors.red.shade800),
-                          ),
+                        Row(
+                          children: [
+                            const Icon(Icons.error_outline, color: Colors.red),
+                            const SizedBox(width: 8),
+                            Expanded(
+                              child: Text(
+                                "Last Send Failed: ${widget.initialSession!.currentAction}",
+                                style: TextStyle(
+                                  color: Colors.red.shade800,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                        // Attempt to extract processingErrors from stashed metadata if available.
+                        // Since 'images' field is List<Media>, we can't easily stow List<String> there.
+                        // However, Session has a 'currentAction' which we already displayed.
+                        // If we want detailed logs, they would need to be passed explicitly or
+                        // retrieved from the queue now.
+                        Consumer<MessageQueueProvider>(
+                          builder: (context, queueProvider, _) {
+                            // Find the queued message that corresponds to this session creation attempt
+                            // This is heuristic: match by content/prompt if ID is empty/new_session
+                            // OR rely on how the session was passed to us.
+                            //
+                            // Better: We look for ANY pending item in the queue that matches this content/prompt
+                            // and has errors.
+                            try {
+                              final errorMsg = queueProvider.queue.firstWhere(
+                                (m) =>
+                                    m.type ==
+                                        QueuedMessageType.sessionCreation &&
+                                    m.content == widget.initialSession!.prompt &&
+                                    m.processingErrors.isNotEmpty,
+                              );
+
+                              return Padding(
+                                padding: const EdgeInsets.only(top: 8.0),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: errorMsg.processingErrors
+                                      .map<Widget>(
+                                        (e) => Text(
+                                          "• $e",
+                                          style: TextStyle(
+                                            color: Colors.red.shade900,
+                                            fontSize: 11,
+                                            fontFamily: 'monospace',
+                                          ),
+                                        ),
+                                      )
+                                      .toList(),
+                                ),
+                              );
+                            } catch (_) {
+                              // No matching detailed logs found in queue
+                              return const SizedBox.shrink();
+                            }
+                          },
                         ),
                       ],
                     ),
                   ),
 
-                const Text(
-                  'New Session',
-                  style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+                Text(
+                  widget.mode == SessionDialogMode.edit
+                      ? "Pending Session"
+                      : "New Session",
+                  style: const TextStyle(
+                      fontSize: 24, fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 16),
 

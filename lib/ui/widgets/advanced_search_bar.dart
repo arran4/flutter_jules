@@ -8,6 +8,7 @@ import 'package:provider/provider.dart';
 import '../../models/filter_bookmark.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
+import '../../models/preset_state_manager.dart';
 import 'sort_pills_widget.dart';
 import 'time_filter_dialog.dart';
 
@@ -48,6 +49,7 @@ class AdvancedSearchBar extends StatefulWidget {
 class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _expressionController = TextEditingController();
+  final TextEditingController _formulaController = TextEditingController();
   late final FocusNode _focusNode;
   final LayerLink _layerLink = LayerLink();
   final LayerLink _presetLayerLink = LayerLink();
@@ -57,12 +59,14 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   int _highlightedIndex = 0;
   bool _activeFiltersExpanded = true;
   final GlobalKey _presetButtonKey = GlobalKey();
+  final PresetStateManager _presetStateManager = PresetStateManager();
 
   @override
   void initState() {
     super.initState();
     _textController.text = widget.searchText;
     _expressionController.text = widget.filterTree?.toExpression() ?? '';
+    _updateFormulaText();
     _focusNode = FocusNode(onKeyEvent: _handleFocusKey);
     _textController.addListener(_onTextChanged);
     _focusNode.addListener(() {
@@ -84,6 +88,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       if (_expressionController.text != newExpr) {
         _expressionController.text = newExpr;
       }
+      _presetStateManager.onFilterChanged(widget.filterTree);
+    }
+    if (widget.filterTree != oldWidget.filterTree ||
+        widget.activeSorts != oldWidget.activeSorts) {
+      _updateFormulaText();
     }
   }
 
@@ -93,8 +102,21 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     _removePresetOverlay();
     _textController.dispose();
     _expressionController.dispose();
+    _formulaController.dispose();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _updateFormulaText() {
+    final filterExpression = widget.filterTree?.toExpression() ?? '';
+    final sortExpression =
+        widget.activeSorts.map((s) => s.toExpression()).join(', ');
+    final fullExpression =
+        '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
+            .trim();
+    if (_formulaController.text != fullExpression) {
+      _formulaController.text = fullExpression;
+    }
   }
 
   void _onTextChanged() {
@@ -452,6 +474,15 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   Future<void> _saveCurrentFilters(BuildContext context) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
+
+    if (_presetStateManager.shouldPreFill(
+        widget.filterTree, widget.activeSorts, bookmarkProvider)) {
+      nameController.text = _presetStateManager.lastLoadedBookmark!.name;
+      descController.text =
+          _presetStateManager.lastLoadedBookmark!.description ?? '';
+    }
 
     final result = await showDialog<bool>(
       context: context,
@@ -868,6 +899,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             onTap: () {
               widget.onFilterTreeChanged(bookmark.tree);
               widget.onSortsChanged(bookmark.sorts);
+              _presetStateManager.setLastLoadedBookmark(bookmark);
               _removePresetOverlay();
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(
@@ -1110,37 +1142,42 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       );
     } else {
       // Collapsed view
-      final filterExpression = widget.filterTree?.toExpression() ?? '';
-      final sortExpression =
-          widget.activeSorts.map((s) => s.toExpression()).join(', ');
-      final fullExpression =
-          '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
-              .trim();
-
-      return InkWell(
-        onTap: () => setState(() => _activeFiltersExpanded = true),
-        child: Container(
-          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-          decoration: BoxDecoration(
-            color: Colors.grey.shade100,
-            borderRadius: BorderRadius.circular(8),
-          ),
-          child: Row(
-            children: [
-              const Icon(Icons.filter_alt, size: 16, color: Colors.grey),
-              const SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  fullExpression,
-                  style: const TextStyle(
-                      fontFamily: 'monospace', color: Colors.black87),
-                  overflow: TextOverflow.ellipsis,
+      return Container(
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
+        decoration: BoxDecoration(
+          color: Colors.grey.shade100,
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Row(
+          children: [
+            const Icon(Icons.filter_alt, size: 16, color: Colors.grey),
+            const SizedBox(width: 8),
+            Expanded(
+              child: TextField(
+                controller: _formulaController,
+                readOnly: true,
+                style: const TextStyle(
+                  fontFamily: 'monospace',
+                  color: Colors.black87,
+                  fontSize: 13,
+                ),
+                decoration: const InputDecoration(
+                  border: InputBorder.none,
+                  isDense: true,
+                  contentPadding: EdgeInsets.zero,
                 ),
               ),
-              const Spacer(),
-              const Icon(Icons.unfold_more, size: 16),
-            ],
-          ),
+            ),
+            const SizedBox(width: 8),
+            IconButton(
+              icon: const Icon(Icons.unfold_more, size: 16),
+              onPressed: () => setState(() => _activeFiltersExpanded = true),
+              tooltip: 'Expand filters',
+              padding: EdgeInsets.zero,
+              constraints: const BoxConstraints(),
+              splashRadius: 20,
+            ),
+          ],
         ),
       );
     }

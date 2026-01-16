@@ -73,8 +73,10 @@ class FilterExpressionParser {
       _skipWhitespace();
 
       final upperName = name.toUpperCase();
-      final isComposite =
-          upperName == 'AND' || upperName == 'OR' || upperName == 'NOT';
+      final isComposite = upperName == 'AND' ||
+          upperName == 'OR' ||
+          upperName == 'NOT' ||
+          upperName == 'DISABLED';
 
       if (isComposite) {
         while (pos < input.length && input[pos] != ')') {
@@ -149,6 +151,8 @@ class FilterExpressionParser {
         return AndElement(children);
       case 'OR':
         return OrElement(children);
+      case 'DISABLED':
+        return children.isNotEmpty ? DisabledElement(children[0]) : null;
       case 'NOT':
         return children.isNotEmpty ? NotElement(children[0]) : null;
       case 'TEXT':
