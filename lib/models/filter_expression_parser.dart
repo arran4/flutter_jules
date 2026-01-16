@@ -148,6 +148,7 @@ class FilterExpressionParser {
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }
+        if (arg == 'NOTES') return HasNotesElement();
         return LabelElement(args[0], args[0]);
       case 'HAS_PR':
         return HasPrElement();
@@ -171,6 +172,8 @@ class FilterExpressionParser {
         return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
+      case 'TAG':
+        return args.isNotEmpty ? TagElement(args[0]) : null;
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');

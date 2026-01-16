@@ -16,6 +16,8 @@ enum FilterElementType {
   ciStatus,
   branch,
   time,
+  hasNotes,
+  tag,
 }
 
 enum FilterState {
@@ -136,6 +138,10 @@ abstract class FilterElement {
         return BranchElement.fromJson(json);
       case 'time':
         return TimeFilterElement.fromJson(json);
+      case 'has_notes':
+        return HasNotesElement.fromJson(json);
+      case 'tag':
+        return TagElement.fromJson(json);
       default:
         throw Exception('Unknown filter element type: $type');
     }
@@ -716,5 +722,81 @@ class BranchElement extends FilterElement {
 
   factory BranchElement.fromJson(Map<String, dynamic> json) {
     return BranchElement(json['label'] as String, json['value'] as String);
+  }
+}
+
+/// Has Notes filter element
+class HasNotesElement extends FilterElement {
+  HasNotesElement();
+
+  @override
+  FilterElementType get type => FilterElementType.hasNotes;
+
+  @override
+  String get groupingType => 'has_notes';
+
+  @override
+  String toExpression() {
+    return 'Has(Notes)';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {'type': 'has_notes'};
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final notes = context.session.metadata
+        ?.firstWhere((m) => m.key == 'notes', orElse: () => null)
+        ?.value;
+    final matches = notes != null && notes.isNotEmpty;
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory HasNotesElement.fromJson(Map<String, dynamic> json) {
+    return HasNotesElement();
+  }
+}
+
+/// Tag filter element
+class TagElement extends FilterElement {
+  final String tag;
+
+  TagElement(this.tag);
+
+  @override
+  FilterElementType get type => FilterElementType.tag;
+
+  @override
+  String get groupingType => 'tag';
+
+  @override
+  String toExpression() {
+    return 'Tag(${FilterElement._quote(tag)})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'tag',
+        'tag': tag,
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final tags = context.session.metadata
+        ?.firstWhere((m) => m.key == 'tags', orElse: () => null)
+        ?.value
+        .split(',');
+    final matches = tags?.contains(tag) ?? false;
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory TagElement.fromJson(Map<String, dynamic> json) {
+    return TagElement(json['tag'] as String);
   }
 }

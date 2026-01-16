@@ -2,6 +2,7 @@ import 'package:dartobjectutils/dartobjectutils.dart';
 import 'enums.dart';
 import 'source.dart';
 import 'media.dart';
+import 'metadata.dart';
 
 class PullRequest {
   final String url;
@@ -77,6 +78,7 @@ class Session {
   final int? changedFiles;
   final String? diffUrl;
   final String? patchUrl;
+  final List<Metadata>? metadata;
 
   Session({
     required this.name,
@@ -103,6 +105,7 @@ class Session {
     this.changedFiles,
     this.diffUrl,
     this.patchUrl,
+    this.metadata,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -169,6 +172,12 @@ class Session {
           getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
+      metadata: getObjectArrayPropOrDefaultFunction(
+        json,
+        'metadata',
+        Metadata.fromJson,
+        () => null,
+      ),
     );
   }
 
@@ -211,6 +220,9 @@ class Session {
     if (changedFiles != null) map['changedFiles'] = changedFiles;
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
+    if (metadata != null) {
+      map['metadata'] = metadata!.map((e) => e.toJson()).toList();
+    }
     return map;
   }
 
@@ -240,6 +252,7 @@ class Session {
     int? changedFiles,
     String? diffUrl,
     String? patchUrl,
+    List<Metadata>? metadata,
   }) {
     return Session(
       name: name ?? this.name,
@@ -268,7 +281,20 @@ class Session {
       changedFiles: changedFiles ?? this.changedFiles,
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
+      metadata: metadata ?? this.metadata,
     );
+  }
+
+  List<String> get tags {
+    final tagsMeta = metadata?.firstWhere((m) => m.key == 'tags', orElse: () => null);
+    if (tagsMeta != null && tagsMeta.value.isNotEmpty) {
+      return tagsMeta.value.split(',');
+    }
+    return [];
+  }
+
+  String? get notes {
+    return metadata?.firstWhere((m) => m.key == 'notes', orElse: () => null)?.value;
   }
 }
 
