@@ -1010,23 +1010,24 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             ),
             PopupMenuButton<String>(
               onSelected: (value) async {
+                final sessionProvider =
+                    Provider.of<SessionProvider>(context, listen: false);
+                final authProvider =
+                    Provider.of<AuthProvider>(context, listen: false);
+                final messageQueueProvider =
+                    Provider.of<MessageQueueProvider>(context, listen: false);
+                final settingsProvider =
+                    Provider.of<SettingsProvider>(context, listen: false);
+                final auth = authProvider;
+
                 if (value == 'mark_unread_back') {
-                  final auth = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
-                  await Provider.of<SessionProvider>(
-                    context,
-                    listen: false,
-                  ).markAsUnread(_session.id, auth.token!);
+                  await sessionProvider.markAsUnread(_session.id, auth.token!);
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'pr_back') {
                   final pr = _session.outputs
                       ?.firstWhereOrNull((o) => o.pullRequest != null)
                       ?.pullRequest;
-                  if (pr != null) {
-                    launchUrl(Uri.parse(pr.url));
-                  }
+                  if (pr != null) launchUrl(Uri.parse(pr.url));
                   if (context.mounted) Navigator.pop(context);
                 } else if (value == 'copy_pr_url') {
                   final pr = _session.outputs
@@ -1034,11 +1035,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ?.pullRequest;
                   if (pr != null) {
                     await Clipboard.setData(ClipboardData(text: pr.url));
-                  }
-                  if (context.mounted) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('PR URL copied')),
-                    );
+                    if (context.mounted) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('PR URL copied')));
+                    }
                   }
                 } else if (value == 'full_refresh') {
                   _fetchActivities(force: true, shallow: false);
@@ -1046,340 +1046,191 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   await Clipboard.setData(ClipboardData(text: _session.id));
                   if (context.mounted) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Session ID copied')),
-                    );
+                        const SnackBar(content: Text('Session ID copied')));
                   }
                 } else if (value == 'open_browser') {
-                  if (_session.url != null) {
-                    launchUrl(Uri.parse(_session.url!));
-                  }
+                  if (_session.url != null) launchUrl(Uri.parse(_session.url!));
                 } else if (value == 'copy_jules_url') {
                   if (_session.url != null) {
                     await Clipboard.setData(ClipboardData(text: _session.url!));
                     if (context.mounted) {
                       ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text('Jules URL copied')),
-                      );
+                          const SnackBar(content: Text('Jules Link copied')));
                     }
+                  }
+                } else if (value == 'edit_session') {
+                  final result = await showDialog<NewSessionResult>(
+                    context: context,
+                    builder: (context) => NewSessionDialog(
+                        initialSession: _session, mode: SessionDialogMode.edit),
+                  );
+                  if (result != null && context.mounted) {
+                    Navigator.pop(context);
+                    final scaffoldMessenger = ScaffoldMessenger.of(context);
+                    handleNewSessionResultInBackground(
+                      result: result,
+                      originalSession: _session,
+                      hideOriginal: true,
+                      sessionProvider: sessionProvider,
+                      authProvider: authProvider,
+                      messageQueueProvider: messageQueueProvider,
+                      settingsProvider: settingsProvider,
+                      scaffoldMessenger: scaffoldMessenger,
+                    );
+                  }
+                } else if (value == 'watch') {
+                  final item = sessionProvider.items
+                      .firstWhereOrNull((i) => i.data.id == _session.id);
+                  final isWatched = item?.metadata.isWatched ?? false;
+                  if (isWatched) {
+                    await sessionProvider.unwatchSession(
+                        _session.id, auth.token!);
+                  } else {
+                    await sessionProvider.watchSession(
+                        _session.id, auth.token!);
                   }
                 } else if (value == 'approve_plan') {
                   _approvePlan();
-                } else if (value == 'watch') {
-                  final auth = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
-                  await Provider.of<SessionProvider>(
-                    context,
-                    listen: false,
-                  ).toggleWatch(_session.id, auth.token!);
-                  setState(() {}); // Rebuild to update menu icon
-                } else if (value == 'hide_back') {
-                  final auth = Provider.of<AuthProvider>(
-                    context,
-                    listen: false,
-                  );
-                  await Provider.of<SessionProvider>(
-                    context,
-                    listen: false,
-                  ).toggleHidden(_session.id, auth.token!);
-                  if (context.mounted) Navigator.pop(context);
+                } else if (value == 'manage_tags') {
+                  showDialog(
+                      context: context,
+                      builder: (context) =>
+                          TagManagementDialog(session: _session));
+                } else if (value == 'note_visibility') {
+                  _toggleNoteVisibility();
+                } else if (value == 'view_metadata') {
+                  if (_session.metadata != null &&
+                      _session.metadata!.isNotEmpty) {
+                    showDialog(
+                        context: context,
+                        builder: (context) =>
+                            MetadataViewer(metadata: _session.metadata!));
+                  } else {
+                    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+                        content:
+                            Text('No metadata available for this session')));
+                  }
                 }
               },
               itemBuilder: (context) {
-                final settings =
-                    Provider.of<SettingsProvider>(context, listen: false);
+                final sessionProvider =
+                    Provider.of<SessionProvider>(context, listen: false);
+                final item = sessionProvider.items
+                    .firstWhereOrNull((i) => i.data.id == _session.id);
+                final isWatched = item?.metadata.isWatched ?? false;
+
                 return [
-                  if (settings.fabVisibility == FabVisibility.appBar)
-                    PopupMenuItem(
-                      onTap: _createNewSessionFromCurrent,
-                      child: const Row(
-                        children: [
-                          Icon(Icons.add_circle_outline),
-                          SizedBox(width: 8),
-                          Text('New Session'),
-                        ],
-                      ),
-                    ),
-                  if (settings.fabVisibility == FabVisibility.appBar)
-                    const PopupMenuDivider(),
-                  if (_session.outputs != null &&
-                      _session.outputs!.any((o) => o.pullRequest != null))
-                    const PopupMenuItem(
-                      value: 'pr_back',
-                      child: Row(
-                        children: [
-                          Icon(Icons.merge_type, color: Colors.purple),
-                          SizedBox(width: 8),
-                          Text('Open PR and Go Back'),
-                        ],
-                      ),
-                    ),
-                  if (_session.outputs != null &&
-                      _session.outputs!.any((o) => o.pullRequest != null))
-                    const PopupMenuItem(
-                      value: 'copy_pr_url',
-                      child: Row(
-                        children: [
-                          Icon(Icons.copy, color: Colors.blueGrey),
-                          SizedBox(width: 8),
-                          Text('Copy PR URL'),
-                        ],
-                      ),
-                    ),
                   const PopupMenuItem(
-                    value: 'hide_back',
-                    child: Row(
-                      children: [
-                        Icon(Icons.visibility_off),
+                      value: 'mark_unread_back',
+                      child: Row(children: [
+                        Icon(Icons.mark_chat_unread, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Hide and go back'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'mark_unread_back',
-                    child: Row(
-                      children: [
-                        Icon(Icons.mark_email_unread, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Mark as Unread and Go Back'),
-                      ],
-                    ),
-                  ),
-
-                  const PopupMenuDivider(),
-                  PopupMenuItem(
-                    child: const Row(
-                      children: [
-                        Icon(Icons.add_circle_outline),
-                        SizedBox(width: 8),
-                        Text('Resubmit as new session'),
-                      ],
-                    ),
-                    onTap: () async {
-                      await resubmitSession(
-                        context,
-                        _session,
-                        hideOriginal: false,
-                      );
-                    },
-                  ),
-                  PopupMenuItem(
-                    child: const Row(
-                      children: [
-                        Icon(Icons.visibility_off_outlined),
-                        SizedBox(width: 8),
-                        Text('Resubmit as new session and hide'),
-                      ],
-                    ),
-                    onTap: () async {
-                      // This needs to be done without BuildContext, so we grab providers first
-                      final sessionProvider = Provider.of<SessionProvider>(
-                        context,
-                        listen: false,
-                      );
-                      final authProvider = Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      );
-                      final messageQueueProvider =
-                          Provider.of<MessageQueueProvider>(
-                        context,
-                        listen: false,
-                      );
-                      final settingsProvider = Provider.of<SettingsProvider>(
-                        context,
-                        listen: false,
-                      );
-
-                      // Allow user to configure new session
-                      final NewSessionResult? result =
-                          await showDialog<NewSessionResult>(
-                        context: context,
-                        builder: (context) => NewSessionDialog(
-                          initialSession: _session,
-                          mode: SessionDialogMode.edit,
-                        ),
-                      );
-
-                      if (result == null) return;
-                      if (!context.mounted) return;
-
-                      // Grab the messenger BEFORE we pop the context
-                      final scaffoldMessenger = ScaffoldMessenger.of(context);
-
-                      // Immediately pop and do the work in the background
-                      Navigator.pop(context);
-
-                      handleNewSessionResultInBackground(
-                        result: result,
-                        originalSession: _session,
-                        hideOriginal: true,
-                        sessionProvider: sessionProvider,
-                        authProvider: authProvider,
-                        messageQueueProvider: messageQueueProvider,
-                        settingsProvider: settingsProvider,
-                        scaffoldMessenger: scaffoldMessenger,
-                      );
-                    },
-                  ),
-                  const PopupMenuDivider(),
-                  // Watch Toggle - we need to know current watch state.
-                  // We access it via SessionProvider -> items.
-                  // Note: This relies on cached items being up to date.
-                  if (Provider.of<SessionProvider>(
-                    context,
-                    listen: false,
-                  ).items.any(
-                        (i) => i.data.id == _session.id && i.metadata.isWatched,
-                      ))
+                        Text('Mark as Unread & Back')
+                      ])),
+                  if (_session.outputs?.any((o) => o.pullRequest != null) ==
+                      true)
                     const PopupMenuItem(
-                      value: 'watch',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility_off, color: Colors.grey),
+                        value: 'pr_back',
+                        child: Row(children: [
+                          Icon(Icons.call_split, color: Colors.grey),
                           SizedBox(width: 8),
-                          Text('Unwatch'),
-                        ],
-                      ),
-                    )
-                  else
+                          Text('Open PR & Back')
+                        ])),
+                  if (_session.outputs?.any((o) => o.pullRequest != null) ==
+                      true)
                     const PopupMenuItem(
-                      value: 'watch',
-                      child: Row(
-                        children: [
-                          Icon(Icons.visibility, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('Watch'),
-                        ],
-                      ),
-                    ),
-                  const PopupMenuDivider(),
-                  const PopupMenuItem(
-                    value: 'full_refresh',
-                    child: Row(
-                      children: [
-                        Icon(Icons.refresh, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Full Refresh'),
-                      ],
-                    ),
-                  ),
-                  const PopupMenuItem(
-                    value: 'copy_id',
-                    child: Row(
-                      children: [
-                        Icon(Icons.copy, color: Colors.grey),
-                        SizedBox(width: 8),
-                        Text('Copy Session ID'),
-                      ],
-                    ),
-                  ),
-                  if (_session.url != null)
-                    const PopupMenuItem(
-                      value: 'open_browser',
-                      child: Row(
-                        children: [
-                          Icon(Icons.open_in_browser, color: Colors.grey),
-                          SizedBox(width: 8),
-                          Text('Open in Browser'),
-                        ],
-                      ),
-                    ),
-                  if (_session.url != null)
-                    const PopupMenuItem(
-                      value: 'copy_jules_url',
-                      child: Row(
-                        children: [
+                        value: 'copy_pr_url',
+                        child: Row(children: [
                           Icon(Icons.copy, color: Colors.grey),
                           SizedBox(width: 8),
-                          Text('Copy Jules Link'),
-                        ],
-                      ),
-                    ),
+                          Text('Copy PR URL')
+                        ])),
+                  const PopupMenuDivider(),
                   const PopupMenuItem(
-                    value: 'approve_plan',
-                    child: Row(
-                      children: [
-                        Icon(Icons.check_circle, color: Colors.green),
+                      value: 'full_refresh',
+                      child: Row(children: [
+                        Icon(Icons.refresh, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Force Approve Plan'),
-                      ],
-                    ),
-                  ),
+                        Text('Full Refresh')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'copy_id',
+                      child: Row(children: [
+                        Icon(Icons.copy, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Copy Session ID')
+                      ])),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                        value: 'open_browser',
+                        child: Row(children: [
+                          Icon(Icons.open_in_browser, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Open in Browser')
+                        ])),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                        value: 'copy_jules_url',
+                        child: Row(children: [
+                          Icon(Icons.copy, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Copy Jules Link')
+                        ])),
+                  const PopupMenuItem(
+                      value: 'edit_session',
+                      child: Row(children: [
+                        Icon(Icons.edit, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Edit Session...')
+                      ])),
                   const PopupMenuDivider(),
                   PopupMenuItem(
-                    child: const Row(
-                      children: [
+                      value: 'watch',
+                      child: Row(children: [
+                        Icon(
+                            isWatched ? Icons.visibility_off : Icons.visibility,
+                            color: Colors.grey),
+                        const SizedBox(width: 8),
+                        Text(isWatched ? 'Unwatch' : 'Watch')
+                      ])),
+                  const PopupMenuItem(
+                      value: 'approve_plan',
+                      child: Row(children: [
+                        Icon(Icons.check_circle, color: Colors.green),
+                        SizedBox(width: 8),
+                        Text('Force Approve Plan')
+                      ])),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                      value: 'manage_tags',
+                      child: Row(children: [
                         Icon(Icons.label, color: Colors.grey),
                         SizedBox(width: 8),
-                        Text('Manage Tags'),
-                      ],
-                    ),
-                    onTap: () {
-                      showDialog(
-                        context: context,
-                        builder: (context) =>
-                            TagManagementDialog(session: _session),
-                      );
-                    },
-                  ),
+                        Text('Manage Tags')
+                      ])),
                   PopupMenuItem(
-                    onTap: _toggleNoteVisibility,
-                    child: Row(
-                      children: [
+                      value: 'note_visibility',
+                      child: Row(children: [
                         Icon(
-                          (_session.note?.content.isEmpty ?? true)
-                              ? Icons.note_add_outlined
-                              : _isNoteVisible
-                                  ? Icons.speaker_notes_off_outlined
-                                  : Icons.speaker_notes_outlined,
-                          color: Colors.grey,
-                        ),
+                            (_session.note?.content.isEmpty ?? true)
+                                ? Icons.note_add_outlined
+                                : (_isNoteVisible
+                                    ? Icons.speaker_notes_off_outlined
+                                    : Icons.speaker_notes_outlined),
+                            color: Colors.grey),
                         const SizedBox(width: 8),
-                        Text(
-                          (_session.note?.content.isEmpty ?? true)
-                              ? 'Add Note'
-                              : _isNoteVisible
-                                  ? 'Hide Note'
-                                  : 'View Note',
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-                const PopupMenuDivider(),
-                PopupMenuItem(
-                  child: const Row(
-                    children: [
-                      Icon(Icons.table_chart),
-                      SizedBox(width: 8),
-                      Text('View Metadata'),
-                    ],
-                  ),
-                  onTap: () {
-                    Future.delayed(Duration.zero, () {
-                      if (mounted) {
-                        if (_session.metadata != null &&
-                            _session.metadata!.isNotEmpty) {
-                          showDialog(
-                            context: context,
-                            builder: (context) =>
-                                MetadataViewer(metadata: _session.metadata!),
-                          );
-                        } else {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text(
-                                  'No metadata available for this session'),
-                            ),
-                          );
-                        }
-                      }
-                    });
-                  },
-                ),
+                        Text((_session.note?.content.isEmpty ?? true)
+                            ? 'Add Note'
+                            : (_isNoteVisible ? 'Hide Note' : 'View Note'))
+                      ])),
+                  const PopupMenuDivider(),
+                  const PopupMenuItem(
+                      value: 'view_metadata',
+                      child: Row(children: [
+                        Icon(Icons.table_chart),
+                        SizedBox(width: 8),
+                        Text('View Metadata')
+                      ])),
                 ];
               },
             ),

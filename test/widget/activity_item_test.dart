@@ -2,6 +2,8 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/models/activity.dart';
 import 'package:flutter_jules/ui/widgets/activity_item.dart';
+import 'package:provider/provider.dart';
+import 'package:flutter_jules/services/settings_provider.dart';
 
 void main() {
   group('ActivityItem Widget', () {
@@ -32,9 +34,16 @@ void main() {
       final activity = Activity.fromJson(activityJson);
 
       await tester.pumpWidget(
-        MaterialApp(
-          home: Scaffold(
-            body: ActivityItem(activity: activity),
+        MultiProvider(
+          providers: [
+            ChangeNotifierProvider<SettingsProvider>(
+              create: (_) => SettingsProvider(),
+            ),
+          ],
+          child: MaterialApp(
+            home: Scaffold(
+              body: ActivityItem(activity: activity),
+            ),
           ),
         ),
       );

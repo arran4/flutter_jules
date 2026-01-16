@@ -2700,22 +2700,29 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                       children: [
                                                         Text(
                                                           'Updated: ${timeAgo(_getEffectiveTime(cachedItem))}',
-                                                          style: Theme.of(context)
-                                                              .textTheme
-                                                              .bodySmall,
+                                                          style:
+                                                              Theme.of(context)
+                                                                  .textTheme
+                                                                  .bodySmall,
                                                         ),
-                                                        if (metadata.lastOpened != null) ...[
-                                                          const SizedBox(width: 8),
+                                                        if (metadata
+                                                                .lastOpened !=
+                                                            null) ...[
+                                                          const SizedBox(
+                                                              width: 8),
                                                           Text(
                                                             '·',
-                                                            style: Theme.of(context)
+                                                            style: Theme.of(
+                                                                    context)
                                                                 .textTheme
                                                                 .bodySmall,
                                                           ),
-                                                          const SizedBox(width: 8),
+                                                          const SizedBox(
+                                                              width: 8),
                                                           Text(
                                                             'Opened: ${timeAgo(metadata.lastOpened!)}',
-                                                            style: Theme.of(context)
+                                                            style: Theme.of(
+                                                                    context)
                                                                 .textTheme
                                                                 .bodySmall,
                                                           ),
@@ -2923,11 +2930,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
         PopupMenuItem(
           child: const Row(
             children: [
-              Icon(Icons.add_circle_outline),
-              SizedBox(width: 8),
-              Text('Resubmit as new session'),
-            ],
-          ),
               Icon(Icons.table_chart),
               SizedBox(width: 8),
               Text('View Metadata'),

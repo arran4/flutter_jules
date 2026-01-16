@@ -80,6 +80,7 @@ class Session {
   final String? patchUrl;
   final List<String>? tags;
   final Note? note;
+  final List<Metadata>? metadata;
 
   Session({
     required this.name,
@@ -108,6 +109,7 @@ class Session {
     this.patchUrl,
     this.tags,
     this.note,
+    this.metadata,
   });
 
   factory Session.fromJson(Map<String, dynamic> json) {
@@ -179,6 +181,8 @@ class Session {
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
       tags: getStringArrayPropOrDefault(json, 'tags', null),
       note: getObjectFunctionPropOrDefault(json, 'note', Note.fromJson, null),
+      metadata: getObjectArrayPropOrDefaultFunction(
+          json, 'metadata', Metadata.fromJson, () => null),
     );
   }
 
@@ -219,6 +223,9 @@ class Session {
     if (patchUrl != null) map['patchUrl'] = patchUrl;
     if (tags != null) map['tags'] = tags;
     if (note != null) map['note'] = note!.toJson();
+    if (metadata != null) {
+      map['metadata'] = metadata!.map((e) => e.toJson()).toList();
+    }
     return map;
   }
 
@@ -250,6 +257,7 @@ class Session {
     String? patchUrl,
     List<String>? tags,
     Note? note,
+    List<Metadata>? metadata,
   }) {
     return Session(
       name: name ?? this.name,
@@ -280,6 +288,7 @@ class Session {
       patchUrl: patchUrl ?? this.patchUrl,
       tags: tags ?? this.tags,
       note: note ?? this.note,
+      metadata: metadata ?? this.metadata,
     );
   }
 }
@@ -315,5 +324,23 @@ class ListSessionsResponse {
       ),
       nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
     );
+  }
+}
+
+class Metadata {
+  final String key;
+  final String value;
+
+  Metadata({required this.key, required this.value});
+
+  factory Metadata.fromJson(Map<String, dynamic> json) {
+    return Metadata(
+      key: getStringPropOrThrow(json, 'key'),
+      value: getStringPropOrThrow(json, 'value'),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'key': key, 'value': value};
   }
 }

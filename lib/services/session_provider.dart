@@ -540,6 +540,40 @@ class SessionProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> watchSession(String sessionId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      if (item.metadata.isWatched) return;
+
+      final newMetadata = item.metadata.copyWith(isWatched: true);
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
+  Future<void> unwatchSession(String sessionId, String authToken) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      if (!item.metadata.isWatched) return;
+
+      final newMetadata = item.metadata.copyWith(isWatched: false);
+      final newItem = CachedItem(item.data, newMetadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
   Future<void> toggleHidden(String sessionId, String authToken) async {
     final index = _items.indexWhere((item) => item.data.id == sessionId);
     if (index != -1) {

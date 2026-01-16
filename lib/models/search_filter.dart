@@ -96,6 +96,8 @@ class SortOption {
         return "Status";
       case SortField.count:
         return "Count";
+      case SortField.opened:
+        return "Opened";
     }
   }
 
