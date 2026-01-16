@@ -600,11 +600,13 @@ class FilterElementWidget extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
-    final bool isActuallyDisabled = element is DisabledElement || isParentDisabled;
+    final bool isActuallyDisabled =
+        element is DisabledElement || isParentDisabled;
     final effectiveTextColor =
-        isActuallyDisabled ? textColor.withOpacity(0.5) : textColor;
-    final effectiveBackgroundColor =
-        isActuallyDisabled ? backgroundColor.withOpacity(0.5) : backgroundColor;
+        isActuallyDisabled ? textColor.withValues(alpha: 0.5) : textColor;
+    final effectiveBackgroundColor = isActuallyDisabled
+        ? backgroundColor.withValues(alpha: 0.5)
+        : backgroundColor;
 
     return GestureDetector(
       onSecondaryTapUp: (details) =>
