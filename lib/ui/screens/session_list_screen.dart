@@ -2006,7 +2006,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   return;
                                                 }
 
-                                                _markAsRead(session);
                                                 final result =
                                                     await Navigator.push(
                                                   context,
@@ -2017,6 +2016,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
+                                                _markAsRead(session);
                                                 if (result == true) {
                                                   if (mounted) {
                                                     _createSession();
