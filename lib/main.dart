@@ -108,15 +108,17 @@ void main() async {
           ) =>
               service!,
         ),
-        ChangeNotifierProxyProvider3<SessionProvider, AuthProvider,
-            GithubProvider, BulkActionExecutor>(
+        ChangeNotifierProxyProvider4<SessionProvider, AuthProvider,
+            GithubProvider, SettingsProvider, BulkActionExecutor>(
           create: (context) => BulkActionExecutor(
             sessionProvider: context.read<SessionProvider>(),
             julesClient: context.read<AuthProvider>().client,
             authProvider: context.read<AuthProvider>(),
             githubProvider: context.read<GithubProvider>(),
+            settingsProvider: context.read<SettingsProvider>(),
           ),
-          update: (context, session, auth, github, executor) => executor!,
+          update: (context, session, auth, github, settings, executor) =>
+              executor!,
         ),
         ChangeNotifierProxyProvider<SessionProvider, TagsProvider>(
           create: (context) => TagsProvider(context.read<SessionProvider>()),

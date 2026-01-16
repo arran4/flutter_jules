@@ -2,8 +2,10 @@ import 'package:flutter/material.dart';
 import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
+import '../../services/settings_provider.dart';
 import 'model_viewer.dart';
 import 'activity_helper.dart';
 
@@ -23,8 +25,12 @@ class _ActivityItemState extends State<ActivityItem> {
   String? _getPrUrl(ChangeSet changeSet) {
     // Try to get session ID from activity name to link to Jules
     final sessionId = _getSessionIdFromActivityName(widget.activity.name);
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
     if (sessionId != null) {
-      return 'https://jules.corp.google.com/session/$sessionId';
+      if (settings.useCorpJulesUrl) {
+        return 'https://jules.corp.google.com/session/$sessionId';
+      }
+      return 'https://jules.google.com/session/$sessionId';
     }
 
     // Fallback to GitHub URL
@@ -380,8 +386,12 @@ class _ActivityItemState extends State<ActivityItem> {
                             child: ElevatedButton.icon(
                               icon: const Icon(Icons.open_in_new),
                               label: const Text('Create PR'),
-                              onPressed: () => launchUrl(
-                                  Uri.parse(_getPrUrl(artifact.changeSet!)!)),
+                              onPressed: () {
+                                final url = _getPrUrl(artifact.changeSet!);
+                                if (url != null) {
+                                  launchUrl(Uri.parse(url));
+                                }
+                              },
                               style: ElevatedButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                               ),

@@ -202,6 +202,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: devMode.enableApiLogging,
                 onChanged: (value) => devMode.toggleApiLogging(value),
               ),
+              SwitchListTile(
+                title: const Text('Use Corp Jules Links'),
+                subtitle: const Text(
+                  'Use jules.corp.google.com links instead of jules.google.com for PRs.',
+                ),
+                value: settings.useCorpJulesUrl,
+                onChanged: (value) => settings.setUseCorpJulesUrl(value),
+              ),
               const Divider(),
               _buildSectionHeader(context, 'Authentication'),
               ListTile(

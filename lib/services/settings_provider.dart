@@ -30,6 +30,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
   static const String _githubExclusionsKey = 'github_exclusions';
+  static const String keyUseCorpJulesUrl = 'use_corp_jules_url';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -66,6 +67,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
+  bool _useCorpJulesUrl = false;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -92,6 +94,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
+  bool get useCorpJulesUrl => _useCorpJulesUrl;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -153,6 +156,7 @@ class SettingsProvider extends ChangeNotifier {
     );
     _hideArchivedAndReadOnly =
         _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
+    _useCorpJulesUrl = _prefs!.getBool(keyUseCorpJulesUrl) ?? false;
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -356,6 +360,12 @@ class SettingsProvider extends ChangeNotifier {
     _hideArchivedAndReadOnly = value;
     notifyListeners();
     await _prefs?.setBool(keyHideArchivedAndReadOnly, value);
+  }
+
+  Future<void> setUseCorpJulesUrl(bool value) async {
+    _useCorpJulesUrl = value;
+    notifyListeners();
+    await _prefs?.setBool(keyUseCorpJulesUrl, value);
   }
 
   // Keybinding Setters
