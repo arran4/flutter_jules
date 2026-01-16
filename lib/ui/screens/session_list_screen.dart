@@ -22,6 +22,7 @@ import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/metadata_viewer.dart';
 import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
@@ -2890,6 +2891,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
           child: const Row(
             children: [
               Icon(Icons.add_circle_outline),
+              SizedBox(width: 8),
+              Text('Resubmit as new session'),
+            ],
+          ),
+              Icon(Icons.table_chart),
+              SizedBox(width: 8),
+              Text('View Metadata'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                if (session.metadata != null && session.metadata!.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) =>
+                        MetadataViewer(metadata: session.metadata!),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No metadata available for this session'),
+                    ),
+                  );
+                }
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
               SizedBox(width: 8),
               Text('Resubmit as new session'),
             ],
