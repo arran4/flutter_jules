@@ -54,6 +54,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   List<FilterToken> _filteredSuggestions = [];
   int _highlightedIndex = 0;
   bool _showFilterMenu = false;
+  bool _showActiveFilters = true;
 
   @override
   void initState() {
@@ -714,21 +715,146 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
                 const SizedBox(height: 12),
 
-                // Filters and Sorts inline (collapsible)
+                // Active Filters (collapsible dropdown)
+                if (widget.filterTree != null)
+                  Theme(
+                    data: Theme.of(context)
+                        .copyWith(dividerColor: Colors.transparent),
+                    child: ExpansionTile(
+                      initiallyExpanded: _showActiveFilters,
+                      onExpansionChanged: (isExpanded) {
+                        setState(() {
+                          _showActiveFilters = isExpanded;
+                        });
+                      },
+                      title: Row(
+                        children: [
+                          const Text(
+                            'Active Filters',
+                            style: TextStyle(
+                              fontSize: 13,
+                              fontWeight: FontWeight.w500,
+                              color: Colors.grey,
+                            ),
+                          ),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: TextField(
+                              controller: _expressionController,
+                              readOnly: true,
+                              style: const TextStyle(
+                                fontSize: 12,
+                                color: Colors.blueAccent,
+                                fontFamily: 'monospace',
+                              ),
+                              decoration: const InputDecoration(
+                                isDense: true,
+                                border: InputBorder.none,
+                                contentPadding: EdgeInsets.zero,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      trailing: Icon(
+                        _showActiveFilters
+                            ? Icons.expand_less
+                            : Icons.expand_more,
+                      ),
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+                          child: FilterElementWidget(
+                            element: widget.filterTree,
+                            onAddAlternative: (target, alternative) {
+                              final newTree =
+                                  FilterElementBuilder.groupFilters(
+                                widget.filterTree,
+                                target,
+                                alternative,
+                                isAnd: false,
+                              );
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onDrop: (source, target, action, isCtrlPressed) {
+                              var newTree = widget.filterTree;
+                              final sourceCopy =
+                                  FilterElement.fromJson(source.toJson());
+                              final isCopy = isCtrlPressed;
+
+                              switch (action) {
+                                case FilterDropAction.groupOr:
+                                  newTree = FilterElementBuilder.groupFilters(
+                                      newTree, target, sourceCopy,
+                                      isAnd: false);
+                                  break;
+                                case FilterDropAction.groupAnd:
+                                  newTree = FilterElementBuilder.groupFilters(
+                                      newTree, target, sourceCopy,
+                                      isAnd: true);
+                                  break;
+                                case FilterDropAction.addToGroup:
+                                  newTree =
+                                      FilterElementBuilder.addFilterToComposite(
+                                          newTree, target, sourceCopy);
+                                  break;
+                                case FilterDropAction.groupAboveAnd:
+                                  newTree = FilterElementBuilder.groupFilters(
+                                      newTree, target, sourceCopy,
+                                      isAnd: true);
+                                  break;
+                                case FilterDropAction.groupAboveOr:
+                                  newTree = FilterElementBuilder.groupFilters(
+                                      newTree, target, sourceCopy,
+                                      isAnd: false);
+                                  break;
+                              }
+
+                              if (!isCopy && newTree != null) {
+                                newTree = FilterElementBuilder.removeFilter(
+                                    newTree, source);
+                              }
+
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onRemove: (element) {
+                              final newTree = FilterElementBuilder.removeFilter(
+                                  widget.filterTree, element);
+                              final simplified =
+                                  FilterElementBuilder.simplify(newTree);
+                              widget.onFilterTreeChanged(simplified);
+                            },
+                            onToggleNot: (element) {
+                              final newTree = FilterElementBuilder.toggleNot(
+                                  widget.filterTree!, element);
+                              widget.onFilterTreeChanged(newTree);
+                            },
+                            onTap: null,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+
+                // Sorts and Presets (collapsible menu)
                 if (_showFilterMenu)
                   Padding(
                     padding: const EdgeInsets.only(top: 8),
                     child: Row(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        // Left side: Active Filters
+                        // Left side: Sorts
                         Expanded(
                           flex: 2,
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
                               const Text(
-                                'Active Filters',
+                                'Sort Order',
                                 style: TextStyle(
                                   fontSize: 13,
                                   fontWeight: FontWeight.w500,
@@ -736,93 +862,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                 ),
                               ),
                               const Divider(height: 16),
-                              if (widget.filterTree != null)
-                                FilterElementWidget(
-                                  element: widget.filterTree,
-                                  onAddAlternative: (target, alternative) {
-                                    final newTree =
-                                        FilterElementBuilder.groupFilters(
-                                      widget.filterTree,
-                                      target,
-                                      alternative,
-                                      isAnd: false,
-                                    );
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onDrop:
-                                      (source, target, action, isCtrlPressed) {
-                                    var newTree = widget.filterTree;
-                                    final sourceCopy =
-                                        FilterElement.fromJson(source.toJson());
-                                    final isCopy = isCtrlPressed;
-
-                                    switch (action) {
-                                      case FilterDropAction.groupOr:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: false);
-                                        break;
-                                      case FilterDropAction.groupAnd:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: true);
-                                        break;
-                                      case FilterDropAction.addToGroup:
-                                        newTree = FilterElementBuilder
-                                            .addFilterToComposite(
-                                                newTree, target, sourceCopy);
-                                        break;
-                                      case FilterDropAction.groupAboveAnd:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: true);
-                                        break;
-                                      case FilterDropAction.groupAboveOr:
-                                        newTree =
-                                            FilterElementBuilder.groupFilters(
-                                                newTree, target, sourceCopy,
-                                                isAnd: false);
-                                        break;
-                                    }
-
-                                    if (!isCopy && newTree != null) {
-                                      newTree =
-                                          FilterElementBuilder.removeFilter(
-                                              newTree, source);
-                                    }
-
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onRemove: (element) {
-                                    final newTree =
-                                        FilterElementBuilder.removeFilter(
-                                            widget.filterTree, element);
-                                    final simplified =
-                                        FilterElementBuilder.simplify(newTree);
-                                    widget.onFilterTreeChanged(simplified);
-                                  },
-                                  onToggleNot: (element) {
-                                    final newTree =
-                                        FilterElementBuilder.toggleNot(
-                                            widget.filterTree!, element);
-                                    widget.onFilterTreeChanged(newTree);
-                                  },
-                                  onTap: null,
-                                )
-                              else
-                                const Text(
-                                  'No filters applied.',
-                                  style: TextStyle(
-                                      fontSize: 12, color: Colors.grey),
-                                ),
-                              const SizedBox(height: 16),
                               SortPillsWidget(
                                 activeSorts: widget.activeSorts,
                                 onSortsChanged: widget.onSortsChanged,
@@ -835,35 +874,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         Expanded(
                           flex: 1,
                           child: _buildBookmarksSection(context),
-                        ),
-                      ],
-                    ),
-                  )
-                else if (widget.filterTree != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4),
-                    child: Row(
-                      children: [
-                        Expanded(
-                          child: TextField(
-                            controller: _expressionController,
-                            readOnly: true,
-                            style: const TextStyle(
-                              fontSize: 12,
-                              color: Colors.blueAccent,
-                              fontFamily: 'monospace',
-                            ),
-                            decoration: const InputDecoration(
-                              isDense: true,
-                              border: InputBorder.none,
-                              contentPadding: EdgeInsets.zero,
-                            ),
-                            onTap: () {
-                              setState(() {
-                                _showFilterMenu = true;
-                              });
-                            },
-                          ),
                         ),
                       ],
                     ),
