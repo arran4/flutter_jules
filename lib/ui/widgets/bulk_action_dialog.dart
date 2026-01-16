@@ -62,7 +62,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     final settings = context.read<SettingsProvider>();
     _actions = List<BulkActionStep>.from(settings.lastBulkActions);
     _parallelQueries = settings.lastBulkParallelQueries;
-    _waitBetween = Duration(seconds: settings.lastBulkWaitBetweenSeconds);
+    _waitBetween =
+        Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
     _limit = settings.lastBulkLimit;
     _offset = settings.lastBulkOffset;
     _randomize = settings.lastBulkRandomize;
@@ -595,7 +596,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     context.read<SettingsProvider>().saveBulkActionConfig(
           actions: _actions,
           parallelQueries: _parallelQueries,
-          waitBetweenSeconds: _waitBetween.inSeconds,
+          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
           limit: _limit,
           offset: _offset,
           randomize: _randomize,

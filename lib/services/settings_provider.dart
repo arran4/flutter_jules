@@ -45,7 +45,7 @@ class SettingsProvider extends ChangeNotifier {
   // Bulk Action Memory
   List<BulkActionStep> _lastBulkActions = [];
   int _lastBulkParallelQueries = 1;
-  int _lastBulkWaitBetweenSeconds = 2;
+  int _lastBulkWaitBetweenMilliseconds = 2000;
   int? _lastBulkLimit;
   int _lastBulkOffset = 0;
   bool _lastBulkRandomize = false;
@@ -106,7 +106,7 @@ class SettingsProvider extends ChangeNotifier {
   // Bulk Action Getters
   List<BulkActionStep> get lastBulkActions => _lastBulkActions;
   int get lastBulkParallelQueries => _lastBulkParallelQueries;
-  int get lastBulkWaitBetweenSeconds => _lastBulkWaitBetweenSeconds;
+  int get lastBulkWaitBetweenMilliseconds => _lastBulkWaitBetweenMilliseconds;
   int? get lastBulkLimit => _lastBulkLimit;
   int get lastBulkOffset => _lastBulkOffset;
   bool get lastBulkRandomize => _lastBulkRandomize;
@@ -410,7 +410,17 @@ class SettingsProvider extends ChangeNotifier {
               .toList();
         }
         _lastBulkParallelQueries = json['parallelQueries'] ?? 1;
-        _lastBulkWaitBetweenSeconds = json['waitBetweenSeconds'] ?? 2;
+
+        // Load new millisecond value, fall back to old second value
+        if (json['waitBetweenMilliseconds'] != null) {
+          _lastBulkWaitBetweenMilliseconds = json['waitBetweenMilliseconds'];
+        } else if (json['waitBetweenSeconds'] != null) {
+          _lastBulkWaitBetweenMilliseconds =
+              (json['waitBetweenSeconds'] as int) * 1000;
+        } else {
+          _lastBulkWaitBetweenMilliseconds = 2000;
+        }
+
         _lastBulkLimit = json['limit'];
         _lastBulkOffset = json['offset'] ?? 0;
         _lastBulkRandomize = json['randomize'] ?? false;
@@ -424,7 +434,7 @@ class SettingsProvider extends ChangeNotifier {
   Future<void> saveBulkActionConfig({
     required List<BulkActionStep> actions,
     required int parallelQueries,
-    required int waitBetweenSeconds,
+    required int waitBetweenMilliseconds,
     required int? limit,
     required int offset,
     required bool randomize,
@@ -432,7 +442,7 @@ class SettingsProvider extends ChangeNotifier {
   }) async {
     _lastBulkActions = actions;
     _lastBulkParallelQueries = parallelQueries;
-    _lastBulkWaitBetweenSeconds = waitBetweenSeconds;
+    _lastBulkWaitBetweenMilliseconds = waitBetweenMilliseconds;
     _lastBulkLimit = limit;
     _lastBulkOffset = offset;
     _lastBulkRandomize = randomize;
@@ -441,7 +451,7 @@ class SettingsProvider extends ChangeNotifier {
     final Map<String, dynamic> config = {
       'actions': actions.map((a) => a.toJson()).toList(),
       'parallelQueries': parallelQueries,
-      'waitBetweenSeconds': waitBetweenSeconds,
+      'waitBetweenMilliseconds': waitBetweenMilliseconds,
       'limit': limit,
       'offset': offset,
       'randomize': randomize,
