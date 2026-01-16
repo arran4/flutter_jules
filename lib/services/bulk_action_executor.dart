@@ -47,7 +47,7 @@ class BulkActionExecutor extends ChangeNotifier {
 
   int get waitBetweenSeconds => _waitBetweenSecondsOverride != -1
       ? _waitBetweenSecondsOverride
-      : (_config?.waitBetweenSeconds ?? 2);
+      : (_config?.waitBetween.inSeconds ?? 2);
 
   set waitBetweenSeconds(int value) {
     _waitBetweenSecondsOverride = value;
@@ -55,6 +55,9 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   String get estimatedTimeRemaining {
+    if (_status == BulkJobStatus.completed) return "Done";
+    if (_status == BulkJobStatus.canceled) return "Canceled";
+    if (_status == BulkJobStatus.paused) return "Paused";
     if (_status != BulkJobStatus.running || _completed.isEmpty) {
       return "Calculating...";
     }

@@ -71,3 +71,16 @@ enum SessionState {
     }
   }
 }
+
+enum MessageSubmitAction {
+  addNewLine,
+  submitsMessage,
+  submitsMessageAndGoesBack,
+  doesNothing,
+}
+
+enum EscKeyAction {
+  savesDraftAndGoesBack,
+  goesBack,
+  doesNothing,
+}

@@ -157,13 +157,32 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           bookmark.name,
           style: const TextStyle(fontWeight: FontWeight.bold),
         ),
-        subtitle: bookmark.description != null
-            ? Text(
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            if (bookmark.description != null)
+              Text(
                 bookmark.description!,
                 maxLines: 1,
                 overflow: TextOverflow.ellipsis,
-              )
-            : null,
+              ),
+            if (bookmark.expression.isNotEmpty)
+              Padding(
+                padding: const EdgeInsets.only(top: 4.0),
+                child: Text(
+                  bookmark.expression,
+                  style: TextStyle(
+                    fontSize: 10,
+                    color: Colors.grey[500],
+                    fontFamily: 'monospace',
+                  ),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                ),
+              ),
+          ],
+        ),
         onTap: () => _showBookmarkEditor(context, bookmark),
         trailing: Row(
           mainAxisSize: MainAxisSize.min,

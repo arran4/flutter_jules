@@ -1,4 +1,8 @@
-# Flutter Jules Client
+<p align="center">
+  <img src="assets/icon/app_icon.png" width="256" alt="App Icon">
+</p>
+
+# Arran's Flutter based jules client
 
 A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.
 
@@ -68,6 +72,10 @@ Monitor your Pull Requests (Open, Merged, Draft) effortlessly from the session l
 ### Advanced Filtering
 Create and save filter presets to organize your workspace efficiently.
 ![Filter Presets](docs/Screenshot_20260110_200853.png)
+
+### Complex Query Visualization
+Visualize and construct intricate logical queries (AND/OR/NOT groups) to pinpoint exact sessions.
+![Complex Queries](docs/complex_query_builder.png)
 
 ### Session Creation
 Start new tasks with specific modes (Plan, Question, Automate) using the creation wizard.

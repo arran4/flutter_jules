@@ -1,5 +1,6 @@
 import '../models/session.dart';
 import '../models/time_filter.dart';
+import 'time_parser.dart';
 
 String timeAgo(DateTime dateTime) {
   final now = DateTime.now();
@@ -21,40 +22,43 @@ String timeAgo(DateTime dateTime) {
 }
 
 bool matchesTimeFilter(Session session, TimeFilter timeFilter) {
-  if (session.updateTime == null) return false;
-  final sessionTime = DateTime.tryParse(session.updateTime!);
+  final timeStr = timeFilter.field == TimeFilterField.created
+      ? session.createTime
+      : session.updateTime;
+  if (timeStr == null) return false;
+  final sessionTime = DateTime.tryParse(timeStr);
   if (sessionTime == null) return false;
 
-  final now = DateTime.now();
-  bool matches = false;
-
   if (timeFilter.specificTime != null) {
-    if (timeFilter.type == TimeFilterType.newerThan) {
-      matches = sessionTime.isAfter(timeFilter.specificTime!);
-    } else {
-      matches = sessionTime.isBefore(timeFilter.specificTime!);
-    }
-  } else {
-    Duration duration;
-    switch (timeFilter.unit) {
-      case TimeFilterUnit.hours:
-        duration = Duration(hours: timeFilter.value);
-        break;
-      case TimeFilterUnit.days:
-        duration = Duration(days: timeFilter.value);
-        break;
-      case TimeFilterUnit.months:
-        duration = Duration(days: timeFilter.value * 30); // Approximation
-        break;
-    }
-
-    final cutoff = now.subtract(duration);
-    if (timeFilter.type == TimeFilterType.newerThan) {
-      matches = sessionTime.isAfter(cutoff);
-    } else {
-      matches = sessionTime.isBefore(cutoff);
+    switch (timeFilter.type) {
+      case TimeFilterType.newerThan:
+        return sessionTime.isAfter(timeFilter.specificTime!);
+      case TimeFilterType.olderThan:
+        return sessionTime.isBefore(timeFilter.specificTime!);
+      case TimeFilterType.between:
+      case TimeFilterType.inRange:
+        return timeFilter.specificTimeEnd != null &&
+            sessionTime.isAfter(timeFilter.specificTime!) &&
+            sessionTime.isBefore(timeFilter.specificTimeEnd!);
     }
   }
 
-  return matches;
+  if (timeFilter.range != null) {
+    if (timeFilter.type == TimeFilterType.between ||
+        timeFilter.type == TimeFilterType.inRange) {
+      final range = TimeParser.parseRange(timeFilter.range!);
+      if (range == null) return false;
+      return sessionTime.isAfter(range.start) &&
+          sessionTime.isBefore(range.end);
+    }
+    final cutoff = TimeParser.parse(timeFilter.range!);
+    if (cutoff == null) return false;
+    if (timeFilter.type == TimeFilterType.newerThan) {
+      return sessionTime.isAfter(cutoff);
+    } else if (timeFilter.type == TimeFilterType.olderThan) {
+      return sessionTime.isBefore(cutoff);
+    }
+  }
+
+  return false;
 }

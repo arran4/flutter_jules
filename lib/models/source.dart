@@ -91,6 +91,7 @@ class GitHubRepo {
   final int? openIssuesCount;
   final bool? isFork;
   final String? forkParent; // e.g. "owner/repo"
+  final String? htmlUrl;
 
   GitHubRepo({
     required this.owner,
@@ -107,6 +108,7 @@ class GitHubRepo {
     this.openIssuesCount,
     this.isFork,
     this.forkParent,
+    this.htmlUrl,
   });
 
   factory GitHubRepo.fromJson(Map<String, dynamic> json) {
@@ -133,10 +135,14 @@ class GitHubRepo {
       description: getStringPropOrDefault(json, 'description', null),
       primaryLanguage: getStringPropOrDefault(json, 'primaryLanguage', null),
       license: getStringPropOrDefault(json, 'license', null),
-      openIssuesCount:
-          getNumberPropOrDefault<num?>(json, 'openIssuesCount', null)?.toInt(),
+      openIssuesCount: getNumberPropOrDefault<num?>(
+        json,
+        'openIssuesCount',
+        null,
+      )?.toInt(),
       isFork: json['isFork'] as bool?,
       forkParent: getStringPropOrDefault(json, 'forkParent', null),
+      htmlUrl: getStringPropOrDefault(json, 'html_url', null),
     );
   }
 
@@ -162,6 +168,7 @@ class GitHubRepo {
     if (openIssuesCount != null) map['openIssuesCount'] = openIssuesCount;
     if (isFork != null) map['isFork'] = isFork;
     if (forkParent != null) map['forkParent'] = forkParent;
+    if (htmlUrl != null) map['html_url'] = htmlUrl;
 
     return map;
   }
@@ -171,8 +178,16 @@ class Source {
   final String name;
   final String id;
   final GitHubRepo? githubRepo;
+  final bool isArchived;
+  final bool isReadOnly;
 
-  Source({required this.name, required this.id, this.githubRepo});
+  Source({
+    required this.name,
+    required this.id,
+    this.githubRepo,
+    this.isArchived = false,
+    this.isReadOnly = false,
+  });
 
   factory Source.fromJson(Map<String, dynamic> json) {
     return Source(
@@ -184,11 +199,18 @@ class Source {
         GitHubRepo.fromJson,
         null,
       ),
+      isArchived: getBooleanPropOrDefault(json, 'isArchived', false),
+      isReadOnly: getBooleanPropOrDefault(json, 'isReadOnly', false),
     );
   }
 
   Map<String, dynamic> toJson() {
-    final map = <String, dynamic>{'name': name, 'id': id};
+    final map = <String, dynamic>{
+      'name': name,
+      'id': id,
+      'isArchived': isArchived,
+      'isReadOnly': isReadOnly,
+    };
     if (githubRepo != null) {
       map['githubRepo'] = githubRepo!.toJson();
     }

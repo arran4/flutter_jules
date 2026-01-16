@@ -1,12 +1,17 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
+import 'notification_provider.dart';
 
 import 'jules_client.dart';
 import 'cache_service.dart';
 import 'github_provider.dart';
 
 class SessionProvider extends ChangeNotifier {
+  final GlobalKey<ScaffoldMessengerState> scaffoldKey =
+      GlobalKey<ScaffoldMessengerState>();
   List<CachedItem<Session>> _items = [];
   bool _isLoading = false;
   String? _error;
@@ -14,6 +19,11 @@ class SessionProvider extends ChangeNotifier {
   DateTime? _lastFetchTime;
   CacheService? _cacheService;
   GithubProvider? _githubProvider;
+  NotificationProvider? _notificationProvider;
+  final StreamController<String> _progressStreamController =
+      StreamController<String>.broadcast();
+
+  Stream<String> get progressStream => _progressStreamController.stream;
 
   List<CachedItem<Session>> get items => _items;
   bool get isLoading => _isLoading;
@@ -21,12 +31,22 @@ class SessionProvider extends ChangeNotifier {
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
 
+  @override
+  void dispose() {
+    _progressStreamController.close();
+    super.dispose();
+  }
+
   void setCacheService(CacheService service) {
     _cacheService = service;
   }
 
   void setGithubProvider(GithubProvider service) {
     _githubProvider = service;
+  }
+
+  void setNotificationProvider(NotificationProvider service) {
+    _notificationProvider = service;
   }
 
   Future<void> fetchSessions(
@@ -60,14 +80,20 @@ class SessionProvider extends ChangeNotifier {
 
     _isLoading = true;
     _error = null;
+    _progressStreamController.add('Fetching sessions...');
     notifyListeners();
 
     try {
       List<Session> newSessions = [];
       String? pageToken;
+      int pageCount = 0;
 
       // Load sessions
       do {
+        pageCount++;
+        if (pageCount > 1) {
+          _progressStreamController.add('Fetching page $pageCount...');
+        }
         final response = await client.listSessions(
           pageSize: pageSize,
           pageToken: pageToken,
@@ -93,6 +119,8 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
+        _progressStreamController
+            .add('Merging ${newSessions.length} sessions...');
         for (var session in newSessions) {
           final index = _items.indexWhere((i) => i.data.id == session.id);
           final oldItem = index != -1 ? _items[index] : null;
@@ -162,6 +190,8 @@ class SessionProvider extends ChangeNotifier {
               }
 
               if (shouldRefresh) {
+                _progressStreamController.add(
+                    'Refreshing Git status for ${session.title ?? session.id}');
                 _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
@@ -191,7 +221,9 @@ class SessionProvider extends ChangeNotifier {
 
       _lastFetchTime = DateTime.now();
       _error = null;
+      _progressStreamController.add('Refresh complete.');
     } catch (e) {
+      _progressStreamController.add('Error: ${e.toString()}');
       if (shallow && _items.isNotEmpty) {
         final msg = "Shallow refresh failed ($e), switching to full refresh";
         // print(msg);
@@ -213,6 +245,7 @@ class SessionProvider extends ChangeNotifier {
       // Ensure we don't double-reset if recursive call handled it
       if (_isLoading) {
         _isLoading = false;
+        _progressStreamController.add('Done.');
         notifyListeners();
       }
     }
@@ -262,9 +295,11 @@ class SessionProvider extends ChangeNotifier {
     String? authToken,
   }) async {
     try {
+      _progressStreamController.add('Refreshing session $sessionName...');
       final updatedSession = await client.getSession(sessionName);
 
       List<Activity>? activities;
+      _progressStreamController.add('Fetching activities for $sessionName...');
       try {
         activities = await client.listActivities(sessionName);
       } catch (e) {
@@ -321,12 +356,16 @@ class SessionProvider extends ChangeNotifier {
       if (authToken != null && _githubProvider != null) {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
+          _progressStreamController.add(
+              'Refreshing Git status for ${updatedSession.title ?? updatedSession.id}');
           _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
 
+      _progressStreamController.add('Session refreshed.');
       notifyListeners();
     } catch (e) {
+      _progressStreamController.add('Error: ${e.toString()}');
       // print("Failed to refresh individual session: $e");
       rethrow;
     }
@@ -682,14 +721,19 @@ class SessionProvider extends ChangeNotifier {
     // URL format: https://github.com/owner/repo/pull/123
     final uri = Uri.parse(pr.url);
     final pathSegments = uri.pathSegments;
-
-    if (pathSegments.length < 4 ||
-        pathSegments[pathSegments.length - 2] != 'pull') {
-      throw Exception("Invalid PR URL format");
+    var pullIndex = pathSegments.lastIndexOf('pull');
+    if (pullIndex == -1) {
+      pullIndex = pathSegments.lastIndexOf('pulls');
     }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    if (pullIndex == -1 || pullIndex < 2) {
+      throw Exception(
+        "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
+      );
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
 
     // Fetch PR and CI statuses from GitHub in parallel
@@ -698,12 +742,26 @@ class SessionProvider extends ChangeNotifier {
       _githubProvider!.getCIStatus(owner, repo, prNumber),
     ]);
 
-    final prResponse = results[0] as GitHubPrResponse?;
+    Object? result0 = results[0];
+    GitHubPrResponse? prResponse;
+    String? rawPrStatus;
+
+    if (result0 is GitHubPrResponse) {
+      prResponse = result0;
+    } else if (result0 is String) {
+      debugPrint('Warning: getPrStatus returned String: $result0');
+      rawPrStatus = result0;
+    } else if (result0 is Map<String, dynamic>) {
+      // debugPrint('Warning: getPrStatus returned Map');
+      // Backward compatibility if needed
+      prResponse = GitHubPrResponse(result0);
+    }
+
     final ciStatus = results[1] as String?;
 
     // Update session with new statuses
     final updatedSession = session.copyWith(
-      prStatus: prResponse?.displayStatus ?? session.prStatus,
+      prStatus: prResponse?.displayStatus ?? rawPrStatus ?? session.prStatus,
       ciStatus: ciStatus ?? session.ciStatus,
       mergeableState: prResponse?.mergeableState,
       additions: prResponse?.additions,
@@ -724,6 +782,22 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> updateSessionTags(Session session, List<String> tags) async {
+    final index = _items.indexWhere((i) => i.data.id == session.id);
+    if (index != -1) {
+      final item = _items[index];
+      final updatedSession = item.data.copyWith(tags: tags);
+      final newItem = CachedItem(updatedSession, item.metadata);
+      _items[index] = newItem;
+      notifyListeners();
+
+      if (_cacheService != null) {
+        await _cacheService!.updateSession(
+            (await _githubProvider!.getToken())!, updatedSession);
+      }
+    }
+  }
+
   String? _getPrUrl(Session session) {
     if (session.outputs != null) {
       for (var o in session.outputs!) {
@@ -738,10 +812,17 @@ class SessionProvider extends ChangeNotifier {
 
     final uri = Uri.parse(prUrl);
     final pathSegments = uri.pathSegments;
-    if (pathSegments.length < 4) return false;
+    var pullIndex = pathSegments.lastIndexOf('pull');
+    if (pullIndex == -1) {
+      pullIndex = pathSegments.lastIndexOf('pulls');
+    }
 
-    final owner = pathSegments[0];
-    final repo = pathSegments[1];
+    if (pullIndex == -1 || pullIndex < 2) {
+      return false;
+    }
+
+    final owner = pathSegments[pullIndex - 2];
+    final repo = pathSegments[pullIndex - 1];
     final prNumber = pathSegments[pathSegments.length - 1];
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
 
@@ -759,8 +840,18 @@ class SessionProvider extends ChangeNotifier {
     try {
       final uri = Uri.parse(prUrl);
       final pathSegments = uri.pathSegments;
-      final owner = pathSegments[0];
-      final repo = pathSegments[1];
+      var pullIndex = pathSegments.lastIndexOf('pull');
+      if (pullIndex == -1) {
+        pullIndex = pathSegments.lastIndexOf('pulls');
+      }
+
+      if (pullIndex == -1 || pullIndex < 2) {
+        throw Exception(
+          "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
+        );
+      }
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
       final prNumber = pathSegments[pathSegments.length - 1];
 
       // Fetch statuses in parallel
@@ -768,17 +859,31 @@ class SessionProvider extends ChangeNotifier {
         _githubProvider!.getPrStatus(owner, repo, prNumber),
         _githubProvider!.getCIStatus(owner, repo, prNumber),
       ]);
-      final prResponse = results[0] as GitHubPrResponse?;
+
+      Object? result0 = results[0];
+      GitHubPrResponse? prResponse;
+      String? rawPrStatus;
+
+      if (result0 is GitHubPrResponse) {
+        prResponse = result0;
+      } else if (result0 is String) {
+        // debugPrint('Warning: background getPrStatus returned String: $result0');
+        rawPrStatus = result0;
+      } else if (result0 is Map<String, dynamic>) {
+        prResponse = GitHubPrResponse(result0);
+      }
+
       final ciStatus = results[1] as String?;
 
-      if (prResponse != null || ciStatus != null) {
+      if (prResponse != null || ciStatus != null || rawPrStatus != null) {
         // Update session
         final index = _items.indexWhere((i) => i.data.id == sessionId);
         if (index != -1) {
           final item = _items[index];
 
           final updatedSession = item.data.copyWith(
-            prStatus: prResponse?.displayStatus ?? item.data.prStatus,
+            prStatus:
+                prResponse?.displayStatus ?? rawPrStatus ?? item.data.prStatus,
             ciStatus: ciStatus ?? item.data.ciStatus,
             mergeableState: prResponse?.mergeableState,
             additions: prResponse?.additions,
@@ -798,9 +903,62 @@ class SessionProvider extends ChangeNotifier {
         }
       }
     } catch (e) {
-      debugPrint(
-        "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+      if (e is GithubApiException) {
+        if (e.statusCode == 401 || e.statusCode == 403) {
+          _notificationProvider?.addNotification(
+            NotificationMessage(
+              id: 'github-auth-error',
+              title: 'GitHub Authentication Error',
+              message:
+                  'Failed to fetch data from GitHub. Your PAT may be invalid or expired.',
+              type: NotificationType.error,
+              actionLabel: 'Update PAT',
+              actionType: NotificationActionType.showGithubPatDialog,
+            ),
+          );
+        } else {
+          // Other API errors (like 404 Not Found)
+          debugPrint(
+            "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+          );
+        }
+      } else {
+        // Other general errors
+        debugPrint(
+          "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+        );
+      }
+    }
+  }
+
+  Future<void> refreshSessionsForSource(
+    JulesClient client,
+    String sourceName, {
+    required String authToken,
+  }) async {
+    if (_isLoading) return;
+    _isLoading = true;
+    notifyListeners();
+
+    try {
+      final sourceSessions = _items
+          .where((item) => item.data.sourceContext?.source == sourceName)
+          .toList();
+
+      if (sourceSessions.isEmpty) {
+        return;
+      }
+
+      await Future.wait(
+        sourceSessions.map((item) =>
+            refreshSession(client, item.data.name, authToken: authToken)),
       );
+    } catch (e) {
+      debugPrint("Failed to refresh sessions for source $sourceName: $e");
+      rethrow;
+    } finally {
+      _isLoading = false;
+      notifyListeners();
     }
   }
 }

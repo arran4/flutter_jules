@@ -12,18 +12,23 @@ import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
 
 import '../../models.dart';
+import '../../services/github_provider.dart';
+import 'settings_screen.dart';
 import '../widgets/new_session_dialog.dart';
 import 'session_detail_screen.dart';
 import '../widgets/session_meta_pills.dart';
 import '../widgets/advanced_search_bar.dart';
-import '../widgets/bulk_action_dialog.dart';
+import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
 import '../widgets/metadata_viewer.dart';
+import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
+import '../widgets/tag_management_dialog.dart';
+import '../widgets/note_dialog.dart';
 
 import 'dart:async';
 import 'dart:convert';
@@ -32,8 +37,9 @@ import '../../services/notification_service.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
+  final FilterElement? initialFilter;
 
-  const SessionListScreen({super.key, this.sourceFilter});
+  const SessionListScreen({super.key, this.sourceFilter, this.initialFilter});
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
@@ -53,6 +59,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<SortOption> _activeSorts = [
     const SortOption(SortField.updated, SortDirection.descending),
   ];
+  String? _refreshStatus;
+  StreamSubscription<String>? _progressSubscription;
 
   List<CachedItem<Session>> _displayItems = [];
 
@@ -60,13 +68,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<FilterToken> _availableSuggestions = [];
   late NotificationService _notificationService;
   StreamSubscription<NotificationResponse>? _notificationSubscription;
+  bool _wasBadCredentials = false;
 
   @override
   void initState() {
     super.initState();
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
+    githubProvider.addListener(_onGithubError);
+    _progressSubscription = sessionProvider.progressStream.listen((status) {
+      if (mounted) {
+        setState(() {
+          _refreshStatus = status;
+        });
+        if (status == 'Done.') {
+          Future.delayed(const Duration(seconds: 2), () {
+            if (mounted) {
+              setState(() {
+                _refreshStatus = null;
+              });
+            }
+          });
+        }
+      }
+    });
     _notificationService = context.read<NotificationService>();
-    _notificationSubscription =
-        _notificationService.onNotificationResponseStream.listen((response) {
+    _notificationSubscription = _notificationService
+        .onNotificationResponseStream
+        .listen((response) async {
       if (!mounted) return;
       if (response.payload != null) {
         try {
@@ -83,12 +113,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
               launchUrl(Uri.parse(pr.url));
             }
           } else {
-            Navigator.push(
+            final result = await Navigator.push(
               context,
               MaterialPageRoute(
                 builder: (_) => SessionDetailScreen(session: session),
               ),
             );
+            if (result == true) {
+              if (mounted) {
+                _createSession();
+              }
+            }
           }
         } catch (_) {
           // Session not loaded or found
@@ -97,30 +132,96 @@ class _SessionListScreenState extends State<SessionListScreen> {
     });
 
     _focusNode.requestFocus();
-    if (widget.sourceFilter != null) {
+    if (widget.initialFilter != null) {
+      _filterTree = widget.initialFilter;
+    } else if (widget.sourceFilter != null) {
       // Pre-populate source filter if passed from arguments
       _filterTree = SourceElement(widget.sourceFilter!, widget.sourceFilter!);
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
-      if (auth.token != null) {
-        // Trigger generic load
-        _fetchSessions();
-        // Background load sources
-        Provider.of<SourceProvider>(
-          context,
-          listen: false,
-        ).fetchSources(auth.client, authToken: auth.token);
+      final settings = Provider.of<SettingsProvider>(context, listen: false);
+
+      void loadFilterAndSessions() {
+        // Load last used filter if no explicit filter is set
+        if (widget.sourceFilter == null && widget.initialFilter == null) {
+          if (settings.lastFilter != _filterTree) {
+            setState(() {
+              _filterTree = settings.lastFilter;
+            });
+          }
+        }
+
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        if (auth.token != null) {
+          // Trigger generic load
+          _fetchSessions();
+          // Background load sources
+          Provider.of<SourceProvider>(
+            context,
+            listen: false,
+          ).fetchSources(auth.client, authToken: auth.token);
+        }
+      }
+
+      if (settings.isInitialized) {
+        loadFilterAndSessions();
+      } else {
+        // Wait for settings to initialize
+        void listener() {
+          if (settings.isInitialized) {
+            settings.removeListener(listener);
+            loadFilterAndSessions();
+          }
+        }
+
+        settings.addListener(listener);
       }
     });
   }
 
   @override
   void dispose() {
+    // Check mounted because provider usage in dispose can be tricky if widget is unmounted
+    final githubProvider = Provider.of<GithubProvider>(context, listen: false);
+    githubProvider.removeListener(_onGithubError);
     _notificationSubscription?.cancel();
+    _progressSubscription?.cancel();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  void _onGithubError() {
+    if (!mounted) return;
+    final github = Provider.of<GithubProvider>(context, listen: false);
+
+    if (github.hasBadCredentials && !_wasBadCredentials) {
+      _wasBadCredentials = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            "GitHub Error: ${github.authError ?? 'Bad Credentials'}",
+            style: const TextStyle(color: Colors.white),
+          ),
+          backgroundColor: Colors.red,
+          duration: const Duration(seconds: 10),
+          action: SnackBarAction(
+            label: 'Fix',
+            textColor: Colors.white,
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+        ),
+      );
+    } else if (!github.hasBadCredentials) {
+      _wasBadCredentials = false;
+    }
+    // Force rebuild to update AppBar
+    setState(() {});
   }
 
   Future<void> _fetchSessions({bool force = false, bool shallow = true}) async {
@@ -185,7 +286,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   void _openBulkActionDialog() {
     showDialog(
       context: context,
-      builder: (context) => BulkActionDialog(
+      builder: (context) => BulkActionEntryDialog(
         currentFilterTree: _filterTree,
         currentSorts: _activeSorts,
         availableSuggestions: _availableSuggestions,
@@ -402,6 +503,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
       // This check is a bit loose, but good enough for UI feedback
       // Ideally performCreate would return status.
     }
+
+    // If requested, open a new dialog immediately
+    if (result.openNewDialog) {
+      // Use a short delay to allow the UI to settle before opening a new dialog
+      Future.delayed(const Duration(milliseconds: 100), () {
+        if (mounted) {
+          _createSession();
+        }
+      });
+    }
   }
 
   Future<void> _quickReply(Session session) async {
@@ -532,10 +643,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
-  void _openSourceUrl(String sourceName) {
-    // Expected format: sources/github/{owner}/{repo}
-    if (sourceName.startsWith("sources/github/")) {
-      final parts = sourceName.split('/');
+  void _openSourceUrl(Source source) {
+    if (source.githubRepo?.htmlUrl != null) {
+      launchUrl(Uri.parse(source.githubRepo!.htmlUrl!));
+      return;
+    }
+    // Fallback for older data or different source types
+    if (source.name.startsWith("sources/github/")) {
+      final parts = source.name.split('/');
       if (parts.length >= 4) {
         final owner = parts[2];
         final repo = parts[3];
@@ -547,7 +662,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     // Fallback or generic handling
     ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Cannot open URL for source: $sourceName')),
+      SnackBar(content: Text('Cannot open URL for source: ${source.name}')),
     );
   }
 
@@ -595,12 +710,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
 
-        Navigator.push(
+        final result = await Navigator.push(
           context,
           MaterialPageRoute(
             builder: (_) => SessionDetailScreen(session: session),
           ),
         );
+        if (result == true) {
+          if (mounted) {
+            _createSession();
+          }
+        }
       } catch (e) {
         if (!mounted) return;
         Navigator.pop(context); // Dismiss loading
@@ -718,6 +838,15 @@ class _SessionListScreenState extends State<SessionListScreen> {
       }
     }
 
+    suggestions.add(
+      const FilterToken(
+        id: 'source:no_source',
+        type: FilterType.source,
+        label: 'No Source',
+        value: 'no_source',
+      ),
+    );
+
     // Flags
     suggestions.add(
       const FilterToken(
@@ -781,6 +910,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
         type: FilterType.flag,
         label: 'Has Drafts',
         value: 'draft',
+      ),
+    );
+    suggestions.add(
+      const FilterToken(
+        id: 'flag:has_notes',
+        type: FilterType.flag,
+        label: 'Has Notes',
+        value: 'has_notes',
       ),
     );
 
@@ -878,6 +1015,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
           final indexB = b.data.state?.index ?? -1;
           cmp = indexA.compareTo(indexB);
           break;
+        case SortField.count:
+          cmp = 0;
+          break;
       }
 
       if (cmp != 0) {
@@ -903,7 +1043,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
         element = StatusElement(token.label, token.value.toString());
         break;
       case FilterType.source:
-        element = SourceElement(token.label, token.value.toString());
+        if (token.value.toString() == 'no_source') {
+          element = NoSourceElement();
+        } else {
+          element = SourceElement(token.label, token.value.toString());
+        }
         break;
       case FilterType.prStatus:
         element = PrStatusElement(token.label, token.value.toString());
@@ -911,12 +1055,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.ciStatus:
         element = CiStatusElement(token.label, token.value.toString());
         break;
+      case FilterType.text:
+        element = LabelElement(token.label, token.value.toString());
+        break;
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
           element = HasPrElement();
         } else {
           element = LabelElement(token.label, token.value.toString());
         }
+        break;
+      case FilterType.tag:
+        element = TagElement(token.label, token.value.toString());
         break;
       default:
         return null;
@@ -1234,6 +1384,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         final error = sessionProvider.error;
         final lastFetchTime = sessionProvider.lastFetchTime;
         final queueProvider = Provider.of<MessageQueueProvider>(context);
+        final settings = Provider.of<SettingsProvider>(context);
 
         // Inject draft sessions
         // Inject draft and pending sessions
@@ -1375,6 +1526,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
               focusNode: _focusNode,
               autofocus: true,
               child: Scaffold(
+                floatingActionButton:
+                    settings.fabVisibility == FabVisibility.floating
+                        ? FloatingActionButton(
+                            onPressed: _createSession,
+                            tooltip: 'New Session',
+                            child: const Icon(Icons.add),
+                          )
+                        : null,
                 appBar: AppBar(
                   title: const Text('Sessions'),
                   bottom: isLoading
@@ -1384,6 +1543,49 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         )
                       : null,
                   actions: [
+                    Consumer<GithubProvider>(
+                      builder: (context, github, _) {
+                        if (github.hasBadCredentials) {
+                          return IconButton(
+                            icon: const Icon(Icons.error, color: Colors.red),
+                            tooltip: 'GitHub Error: Bad Credentials',
+                            onPressed: () {
+                              showDialog(
+                                context: context,
+                                builder: (_) => AlertDialog(
+                                  title:
+                                      const Text('GitHub Authentication Error'),
+                                  content: Text(
+                                    github.authError ??
+                                        'Failed to access GitHub. Your Personal Access Token appears to be invalid or expired.',
+                                  ),
+                                  actions: [
+                                    TextButton(
+                                      onPressed: () => Navigator.pop(context),
+                                      child: const Text('Close'),
+                                    ),
+                                    FilledButton(
+                                      onPressed: () {
+                                        Navigator.pop(context);
+                                        Navigator.push(
+                                          context,
+                                          MaterialPageRoute(
+                                            builder: (_) =>
+                                                const SettingsScreen(),
+                                          ),
+                                        );
+                                      },
+                                      child: const Text('Update Settings'),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          );
+                        }
+                        return const SizedBox.shrink();
+                      },
+                    ),
                     Consumer<MessageQueueProvider>(
                       builder: (context, queueProvider, _) {
                         if (queueProvider.isOffline) {
@@ -1431,9 +1633,18 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         );
                       },
                     ),
+                    IconButton(
+                      icon: const Icon(Icons.source),
+                      tooltip: 'Manage Sources',
+                      onPressed: () {
+                        Navigator.pushNamed(context, '/sources_raw');
+                      },
+                    ),
                     PopupMenuButton<String>(
                       onSelected: (value) {
-                        if (value == 'full_refresh') {
+                        if (value == 'new_session') {
+                          _createSession();
+                        } else if (value == 'full_refresh') {
                           _fetchSessions(force: true, shallow: false);
                         } else if (value == 'bulk_actions') {
                           _openBulkActionDialog();
@@ -1485,6 +1696,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           listen: false,
                         ).isOffline;
                         return [
+                          if (settings.fabVisibility == FabVisibility.appBar)
+                            const PopupMenuItem(
+                              value: 'new_session',
+                              child: Row(
+                                children: [
+                                  Icon(Icons.add),
+                                  SizedBox(width: 8),
+                                  Text('New Session'),
+                                ],
+                              ),
+                            ),
+                          if (settings.fabVisibility == FabVisibility.appBar)
+                            const PopupMenuDivider(),
                           const PopupMenuItem(
                             value: 'full_refresh',
                             child: Row(
@@ -1583,783 +1807,921 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     ),
                   ],
                 ),
-                body: (cachedItems.isEmpty && isLoading)
-                    ? const Center(child: Text("Loading sessions..."))
-                    : (cachedItems.isEmpty && error != null)
-                        ? Center(child: Text('Error: $error'))
-                        : Column(
-                            children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: AdvancedSearchBar(
-                                  filterTree: _filterTree,
-                                  onFilterTreeChanged: (tree) {
-                                    setState(() {
-                                      _filterTree = tree;
-                                    });
-                                  },
-                                  searchText: _searchText,
-                                  onSearchChanged: (text) {
-                                    setState(() {
-                                      _searchText = text;
-                                    });
-                                  },
-                                  availableSuggestions: _availableSuggestions,
-                                  activeSorts: _activeSorts,
-                                  onSortsChanged: (sorts) {
-                                    setState(() {
-                                      _activeSorts = sorts;
-                                    });
-                                  },
-                                ),
-                              ),
-                              if (lastFetchTime != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: Text(
-                                      'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
-                                      style: Theme.of(context)
-                                          .textTheme
-                                          .bodySmall
-                                          ?.copyWith(
-                                            color: DateTime.now()
-                                                        .difference(
-                                                            lastFetchTime)
-                                                        .inMinutes >
-                                                    15
-                                                ? Colors.orange
-                                                : Theme.of(
-                                                    context,
-                                                  ).textTheme.bodySmall?.color,
-                                          ),
+                body: Consumer<SettingsProvider>(
+                  builder: (context, settings, _) {
+                    return (cachedItems.isEmpty && isLoading)
+                        ? const Center(child: Text("Loading sessions..."))
+                        : (cachedItems.isEmpty && error != null)
+                            ? Center(child: Text('Error: $error'))
+                            : Column(
+                                children: [
+                                  Padding(
+                                    padding: const EdgeInsets.all(8.0),
+                                    child: AdvancedSearchBar(
+                                      filterTree: _filterTree,
+                                      onFilterTreeChanged: (tree) {
+                                        setState(() {
+                                          _filterTree = tree;
+                                        });
+                                        // Also save to settings
+                                        final settings =
+                                            Provider.of<SettingsProvider>(
+                                          context,
+                                          listen: false,
+                                        );
+                                        settings.setLastFilter(tree);
+                                      },
+                                      searchText: _searchText,
+                                      onSearchChanged: (text) {
+                                        setState(() {
+                                          _searchText = text;
+                                        });
+                                      },
+                                      availableSuggestions:
+                                          _availableSuggestions,
+                                      activeSorts: _activeSorts,
+                                      onSortsChanged: (sorts) {
+                                        setState(() {
+                                          _activeSorts = sorts;
+                                        });
+                                      },
                                     ),
                                   ),
-                                ),
-                              Expanded(
-                                child: RefreshIndicator(
-                                  onRefresh: () => _fetchSessions(
-                                      force: true, shallow: true),
-                                  child: ListView.builder(
-                                    itemCount: _displayItems.length,
-                                    itemBuilder: (context, index) {
-                                      final cachedItem = _displayItems[index];
-                                      final session = cachedItem.data;
-                                      final metadata = cachedItem.metadata;
-                                      final isDevMode =
-                                          Provider.of<DevModeProvider>(
-                                        context,
-                                      ).isDevMode;
-
-                                      return Card(
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        child: InkWell(
-                                          onTap: () async {
-                                            if (session.id.startsWith(
-                                              'DRAFT_CREATION_',
-                                            )) {
-                                              final realId =
-                                                  session.id.substring(
-                                                15,
-                                              ); // Length of DRAFT_CREATION_
-                                              if (!queueProvider.queue.any(
-                                                (m) => m.id == realId,
-                                              )) {
-                                                return;
-                                              }
-
-                                              // Reuse Logic inline
-                                              // We can't easily call _openDraft here without duplication or refactor.
-                                              // Let's implement inline for now.
-                                              final result = await showDialog<
-                                                  NewSessionResult>(
-                                                context: context,
-                                                builder: (context) =>
-                                                    NewSessionDialog(
-                                                  initialSession: session,
-                                                ),
-                                              );
-
-                                              if (result == null) return;
-                                              if (!context.mounted) return;
-
-                                              if (result.isDelete) {
-                                                queueProvider
-                                                    .deleteMessage(realId);
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content:
-                                                        Text("Draft deleted"),
-                                                  ),
-                                                );
-                                              } else if (result.isDraft) {
-                                                // Draft Update is always single
-                                                queueProvider
-                                                    .updateCreateSessionRequest(
-                                                  realId,
-                                                  result.session,
-                                                  isDraft: true,
-                                                );
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content:
-                                                        Text("Draft updated"),
-                                                  ),
-                                                );
-                                              } else {
-                                                // Send Now: Delete draft, add new request (non-draft)
-                                                queueProvider
-                                                    .deleteMessage(realId);
-                                                // Add new request
-                                                queueProvider
-                                                    .addCreateSessionRequest(
-                                                  result.session,
-                                                  isDraft: false,
-                                                );
-                                                // Also could call _createSession direct logic if online
-                                                // But queuing is safer/consistent.
-                                                // But if we want immediate feedback like "Creating...", we normally do that.
-                                                // But here we are in list.
-                                                // Let's try to send immediately if possible?
-                                                // Actually, just queuing as non-draft will trigger auto-send if online?
-                                                // MessageQueueProvider 'sendQueue' needs to be triggered.
-                                                // Or assume queue provider handles it?
-                                                // queueProvider.sendQueue() is usually manual or on connection.
-                                                // Let's trigger it.
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
-                                                  context,
-                                                  listen: false,
-                                                );
-                                                queueProvider.sendQueue(
-                                                  auth.client,
-                                                );
-                                              }
-                                              return;
-                                            }
-
-                                            _markAsRead(session);
-                                            await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    SessionDetailScreen(
-                                                  session: session,
-                                                ),
+                                  if (lastFetchTime != null)
+                                    Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 16,
+                                      ),
+                                      child: Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: (_refreshStatus != null)
+                                            ? Text(
+                                                _refreshStatus!,
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall,
+                                              )
+                                            : Text(
+                                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                                                style: Theme.of(context)
+                                                    .textTheme
+                                                    .bodySmall
+                                                    ?.copyWith(
+                                                      color: DateTime.now()
+                                                                  .difference(
+                                                                      lastFetchTime)
+                                                                  .inMinutes >
+                                                              15
+                                                          ? Colors.orange
+                                                          : Theme.of(
+                                                              context,
+                                                            )
+                                                              .textTheme
+                                                              .bodySmall
+                                                              ?.color,
+                                                    ),
                                               ),
-                                            );
+                                      ),
+                                    ),
+                                  Expanded(
+                                    child: RefreshIndicator(
+                                      onRefresh: () => _fetchSessions(
+                                          force: true, shallow: true),
+                                      child: ListView.builder(
+                                        itemCount: _displayItems.length,
+                                        itemBuilder: (context, index) {
+                                          final cachedItem =
+                                              _displayItems[index];
+                                          final session = cachedItem.data;
+                                          final metadata = cachedItem.metadata;
+                                          final isDevMode =
+                                              Provider.of<DevModeProvider>(
+                                            context,
+                                          ).isDevMode;
 
-                                            // On Return
-                                            if (!context.mounted) return;
-                                            final settings =
-                                                Provider.of<SettingsProvider>(
-                                              context,
-                                              listen: false,
-                                            );
-                                            switch (settings.refreshOnReturn) {
-                                              case ListRefreshPolicy.none:
-                                                break;
-                                              case ListRefreshPolicy.dirty:
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
+                                          return Card(
+                                            margin: const EdgeInsets.symmetric(
+                                              horizontal: 8,
+                                              vertical: 4,
+                                            ),
+                                            child: InkWell(
+                                              onTap: () async {
+                                                if (session.id.startsWith(
+                                                  'DRAFT_CREATION_',
+                                                )) {
+                                                  final realId =
+                                                      session.id.substring(
+                                                    15,
+                                                  ); // Length of DRAFT_CREATION_
+                                                  if (!queueProvider.queue.any(
+                                                    (m) => m.id == realId,
+                                                  )) {
+                                                    return;
+                                                  }
+
+                                                  // Reuse Logic inline
+                                                  // We can't easily call _openDraft here without duplication or refactor.
+                                                  // Let's implement inline for now.
+                                                  final result =
+                                                      await showDialog<
+                                                          NewSessionResult>(
+                                                    context: context,
+                                                    builder: (context) =>
+                                                        NewSessionDialog(
+                                                      initialSession: session,
+                                                      mode: SessionDialogMode
+                                                          .edit,
+                                                    ),
+                                                  );
+
+                                                  if (result == null) return;
+                                                  if (!context.mounted) return;
+
+                                                  if (result.isDelete) {
+                                                    queueProvider
+                                                        .deleteMessage(realId);
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                            "Draft deleted"),
+                                                      ),
+                                                    );
+                                                  } else if (result.isDraft) {
+                                                    // Draft Update is always single
+                                                    queueProvider
+                                                        .updateCreateSessionRequest(
+                                                      realId,
+                                                      result.session,
+                                                      isDraft: true,
+                                                    );
+                                                    ScaffoldMessenger.of(
+                                                      context,
+                                                    ).showSnackBar(
+                                                      const SnackBar(
+                                                        content: Text(
+                                                            "Draft updated"),
+                                                      ),
+                                                    );
+                                                  } else {
+                                                    // Send Now: Delete draft, add new request (non-draft)
+                                                    queueProvider
+                                                        .deleteMessage(realId);
+                                                    // Add new request
+                                                    queueProvider
+                                                        .addCreateSessionRequest(
+                                                      result.session,
+                                                      isDraft: false,
+                                                    );
+                                                    // Also could call _createSession direct logic if online
+                                                    // But queuing is safer/consistent.
+                                                    // But if we want immediate feedback like "Creating...", we normally do that.
+                                                    // But here we are in list.
+                                                    // Let's try to send immediately if possible?
+                                                    // Actually, just queuing as non-draft will trigger auto-send if online?
+                                                    // MessageQueueProvider 'sendQueue' needs to be triggered.
+                                                    // Or assume queue provider handles it?
+                                                    // queueProvider.sendQueue() is usually manual or on connection.
+                                                    // Let's trigger it.
+                                                    final auth = Provider.of<
+                                                        AuthProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    );
+                                                    queueProvider.sendQueue(
+                                                      auth.client,
+                                                      onSessionCreated:
+                                                          (newSession) {
+                                                        // Immediately add to provider
+                                                        Provider.of<
+                                                            SessionProvider>(
+                                                          context,
+                                                          listen: false,
+                                                        ).updateSession(
+                                                          newSession,
+                                                          authToken: auth.token,
+                                                        );
+                                                      },
+                                                    );
+                                                  }
+                                                  return;
+                                                }
+
+                                                final result =
+                                                    await Navigator.push(
+                                                  context,
+                                                  MaterialPageRoute(
+                                                    builder: (_) =>
+                                                        SessionDetailScreen(
+                                                      session: session,
+                                                    ),
+                                                  ),
+                                                );
+                                                _markAsRead(session);
+                                                if (result == true) {
+                                                  if (mounted) {
+                                                    _createSession();
+                                                  }
+                                                }
+
+                                                // On Return
+                                                if (!context.mounted) return;
+                                                final settings = Provider.of<
+                                                    SettingsProvider>(
                                                   context,
                                                   listen: false,
                                                 );
-                                                Provider.of<SessionProvider>(
+                                                switch (
+                                                    settings.refreshOnReturn) {
+                                                  case ListRefreshPolicy.none:
+                                                    break;
+                                                  case ListRefreshPolicy.dirty:
+                                                    final auth = Provider.of<
+                                                        AuthProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    );
+                                                    Provider.of<
+                                                        SessionProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    ).refreshDirtySessions(
+                                                      auth.client,
+                                                      authToken: auth.token!,
+                                                    );
+                                                    break;
+                                                  case ListRefreshPolicy
+                                                        .watched:
+                                                    final auth = Provider.of<
+                                                        AuthProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    );
+                                                    Provider.of<
+                                                        SessionProvider>(
+                                                      context,
+                                                      listen: false,
+                                                    ).refreshWatchedSessions(
+                                                      auth.client,
+                                                      authToken: auth.token!,
+                                                    );
+                                                    break;
+                                                  case ListRefreshPolicy.quick:
+                                                    _fetchSessions(
+                                                      force: true,
+                                                      shallow: true,
+                                                    );
+                                                    break;
+                                                  case ListRefreshPolicy.full:
+                                                    _fetchSessions(
+                                                      force: true,
+                                                      shallow: false,
+                                                    );
+                                                    break;
+                                                }
+                                              },
+                                              onLongPress: () {
+                                                _showTileMenu(
                                                   context,
-                                                  listen: false,
-                                                ).refreshDirtySessions(
-                                                  auth.client,
-                                                  authToken: auth.token!,
+                                                  session,
+                                                  metadata,
+                                                  isDevMode,
                                                 );
-                                                break;
-                                              case ListRefreshPolicy.watched:
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
+                                              },
+                                              onSecondaryTapUp: (details) {
+                                                _showTileMenu(
                                                   context,
-                                                  listen: false,
+                                                  session,
+                                                  metadata,
+                                                  isDevMode,
+                                                  position:
+                                                      details.globalPosition,
                                                 );
-                                                Provider.of<SessionProvider>(
-                                                  context,
-                                                  listen: false,
-                                                ).refreshWatchedSessions(
-                                                  auth.client,
-                                                  authToken: auth.token!,
-                                                );
-                                                break;
-                                              case ListRefreshPolicy.quick:
-                                                _fetchSessions(
-                                                  force: true,
-                                                  shallow: true,
-                                                );
-                                                break;
-                                              case ListRefreshPolicy.full:
-                                                _fetchSessions(
-                                                  force: true,
-                                                  shallow: false,
-                                                );
-                                                break;
-                                            }
-                                          },
-                                          onLongPress: () {
-                                            _showTileMenu(
-                                              context,
-                                              session,
-                                              metadata,
-                                              isDevMode,
-                                            );
-                                          },
-                                          onSecondaryTapUp: (details) {
-                                            _showTileMenu(
-                                              context,
-                                              session,
-                                              metadata,
-                                              isDevMode,
-                                              position: details.globalPosition,
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(12),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
+                                              },
+                                              child: Padding(
+                                                padding:
+                                                    const EdgeInsets.all(12),
+                                                child: Column(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
                                                   children: [
-                                                    Expanded(
-                                                      child: Row(
-                                                        children: [
-                                                          if (Provider.of<
-                                                                      MessageQueueProvider>(
-                                                                  context)
-                                                              .getDrafts(
-                                                                  session.id)
-                                                              .isNotEmpty)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'DRAFT',
-                                                              backgroundColor:
-                                                                  Colors.orange,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:draft',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Has Drafts',
-                                                                value: 'draft',
-                                                              ),
-                                                            ),
-                                                          if (metadata.isNew)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'NEW',
-                                                              backgroundColor:
-                                                                  Colors.green,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:new',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label: 'New',
-                                                                value: 'new',
-                                                              ),
-                                                              sortField:
-                                                                  SortField
-                                                                      .created,
-                                                            ),
-                                                          if (metadata
-                                                                  .isUpdated &&
-                                                              !metadata.isNew)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'UPDATED',
-                                                              backgroundColor:
-                                                                  Colors.amber,
-                                                              textColor:
-                                                                  Colors.black,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:updated',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Updated',
-                                                                value:
-                                                                    'updated',
-                                                              ),
-                                                              sortField:
-                                                                  SortField
-                                                                      .updated,
-                                                            ),
-                                                          if (metadata
-                                                                  .isUnread &&
-                                                              !metadata.isNew &&
-                                                              !metadata
-                                                                  .isUpdated)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'UNREAD',
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .blueAccent,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:unread',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label: 'Unread',
-                                                                value: 'unread',
-                                                              ),
-                                                            ),
-                                                          if (metadata
-                                                              .isWatched)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'WATCHING',
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .deepPurple,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:watched',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Watching',
-                                                                value:
-                                                                    'watched',
-                                                              ),
-                                                            ),
-                                                          // PR Status - only for final states (Closed/Merged)
-                                                          if (session.prStatus !=
-                                                                  null &&
-                                                              (session.prStatus ==
-                                                                      'Closed' ||
-                                                                  session.prStatus ==
-                                                                      'Merged'))
-                                                            _buildPill(
-                                                              context,
-                                                              metadata:
-                                                                  metadata,
-                                                              session: session,
-                                                              label:
-                                                                  '${session.prStatus}',
-                                                              backgroundColor:
-                                                                  session.prStatus ==
+                                                    Row(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Row(
+                                                            children: [
+                                                              if (Provider.of<
+                                                                          MessageQueueProvider>(
+                                                                      context)
+                                                                  .getDrafts(
+                                                                      session
+                                                                          .id)
+                                                                  .isNotEmpty)
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label:
+                                                                      'DRAFT',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .orange,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:draft',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'Has Drafts',
+                                                                    value:
+                                                                        'draft',
+                                                                  ),
+                                                                ),
+                                                              if (metadata
+                                                                  .isNew)
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label: 'NEW',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .green,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:new',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'New',
+                                                                    value:
+                                                                        'new',
+                                                                  ),
+                                                                  sortField:
+                                                                      SortField
+                                                                          .created,
+                                                                ),
+                                                              if (metadata
+                                                                      .isUpdated &&
+                                                                  !metadata
+                                                                      .isNew)
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label:
+                                                                      'UPDATED',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .amber,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .black,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:updated',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'Updated',
+                                                                    value:
+                                                                        'updated',
+                                                                  ),
+                                                                  sortField:
+                                                                      SortField
+                                                                          .updated,
+                                                                ),
+                                                              if (metadata.isUnread &&
+                                                                  !metadata
+                                                                      .isNew &&
+                                                                  !metadata
+                                                                      .isUpdated)
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label:
+                                                                      'UNREAD',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .blueAccent,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:unread',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'Unread',
+                                                                    value:
+                                                                        'unread',
+                                                                  ),
+                                                                ),
+                                                              if (metadata
+                                                                  .isWatched)
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label:
+                                                                      'WATCHING',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .deepPurple,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:watched',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'Watching',
+                                                                    value:
+                                                                        'watched',
+                                                                  ),
+                                                                ),
+                                                              // PR Status - only for final states (Closed/Merged)
+                                                              if (session.prStatus !=
+                                                                      null &&
+                                                                  (session.prStatus ==
+                                                                          'Closed' ||
+                                                                      session.prStatus ==
+                                                                          'Merged'))
+                                                                _buildPill(
+                                                                  context,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  session:
+                                                                      session,
+                                                                  label:
+                                                                      '${session.prStatus}',
+                                                                  backgroundColor: session
+                                                                              .prStatus ==
                                                                           'Merged'
                                                                       ? Colors
                                                                           .green
                                                                       : Colors
                                                                           .red,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  FilterToken(
-                                                                id: 'prStatus:${session.prStatus}',
-                                                                type: FilterType
-                                                                    .prStatus,
-                                                                label:
-                                                                    'PR: ${session.prStatus}',
-                                                                value: session
-                                                                    .prStatus!,
-                                                              ),
-                                                            ),
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      FilterToken(
+                                                                    id: 'prStatus:${session.prStatus}',
+                                                                    type: FilterType
+                                                                        .prStatus,
+                                                                    label:
+                                                                        'PR: ${session.prStatus}',
+                                                                    value: session
+                                                                        .prStatus!,
+                                                                  ),
+                                                                ),
 
-                                                          // Render custom labels
-                                                          for (final label
-                                                              in metadata
-                                                                  .labels)
-                                                            _buildPill(
+                                                              if (metadata
+                                                                  .labels
+                                                                  .contains(
+                                                                      'PENDING_CREATION'))
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label:
+                                                                      'PENDING',
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .blue,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      const FilterToken(
+                                                                    id: 'flag:pending',
+                                                                    type: FilterType
+                                                                        .flag,
+                                                                    label:
+                                                                        'Pending',
+                                                                    value:
+                                                                        'pending',
+                                                                  ),
+                                                                ),
+
+                                                              // Render custom labels
+                                                              for (final label in metadata
+                                                                  .labels
+                                                                  .where((l) =>
+                                                                      l !=
+                                                                          'PENDING_CREATION' &&
+                                                                      l !=
+                                                                          'DRAFT_CREATION'))
+                                                                _buildPill(
+                                                                  context,
+                                                                  session:
+                                                                      session,
+                                                                  metadata:
+                                                                      metadata,
+                                                                  label: label
+                                                                      .toUpperCase(),
+                                                                  backgroundColor:
+                                                                      Colors
+                                                                          .grey
+                                                                          .shade700,
+                                                                  textColor:
+                                                                      Colors
+                                                                          .white,
+                                                                  filterToken:
+                                                                      FilterToken(
+                                                                    id: 'text:$label',
+                                                                    type: FilterType
+                                                                        .text,
+                                                                    label:
+                                                                        label,
+                                                                    value:
+                                                                        label,
+                                                                  ),
+                                                                ),
+
+                                                              Expanded(
+                                                                child:
+                                                                    LayoutBuilder(
+                                                                  builder: (context,
+                                                                      constraints) {
+                                                                    // Simple responsive logic for max lines
+                                                                    int maxLines =
+                                                                        1;
+                                                                    if (constraints
+                                                                            .maxWidth >
+                                                                        800) {
+                                                                      maxLines =
+                                                                          3;
+                                                                    } else if (constraints
+                                                                            .maxWidth >
+                                                                        400) {
+                                                                      maxLines =
+                                                                          2;
+                                                                    }
+
+                                                                    return PopupText(
+                                                                      (session.title ??
+                                                                              session.prompt)
+                                                                          .replaceAll(
+                                                                        '\n',
+                                                                        ' ',
+                                                                      ),
+                                                                      maxLines:
+                                                                          maxLines,
+                                                                      style:
+                                                                          TextStyle(
+                                                                        fontWeight: (metadata.isUnread)
+                                                                            ? FontWeight.bold
+                                                                            : FontWeight.normal,
+                                                                        fontSize:
+                                                                            16,
+                                                                      ),
+                                                                    );
+                                                                  },
+                                                                ),
+                                                              ),
+                                                            ],
+                                                          ),
+                                                        ),
+                                                        // Trailing Menu Button
+                                                        InkWell(
+                                                          borderRadius:
+                                                              BorderRadius
+                                                                  .circular(16),
+                                                          onTapDown: (details) {
+                                                            _showTileMenu(
                                                               context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: label
-                                                                  .toUpperCase(),
-                                                              backgroundColor:
-                                                                  Colors.grey
-                                                                      .shade700,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  FilterToken(
-                                                                id: 'text:$label',
-                                                                type: FilterType
-                                                                    .text,
-                                                                label: label,
-                                                                value: label,
-                                                              ),
+                                                              session,
+                                                              metadata,
+                                                              isDevMode,
+                                                              position: details
+                                                                  .globalPosition,
+                                                            );
+                                                          },
+                                                          child: const Padding(
+                                                            padding:
+                                                                EdgeInsets.all(
+                                                              8.0,
                                                             ),
-
-                                                          Expanded(
-                                                            child: Text(
-                                                              session.title ??
-                                                                  session
-                                                                      .prompt,
-                                                              maxLines: 1,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                              style: TextStyle(
-                                                                fontWeight: (metadata
-                                                                        .isUnread)
-                                                                    ? FontWeight
-                                                                        .bold
-                                                                    : FontWeight
-                                                                        .normal,
-                                                                fontSize: 16,
+                                                            child: Icon(
+                                                              Icons.more_vert,
+                                                              size: 20,
+                                                            ),
+                                                          ),
+                                                        ),
+                                                        if (session.outputs !=
+                                                                null &&
+                                                            session.outputs!
+                                                                .any(
+                                                              (o) =>
+                                                                  o.pullRequest !=
+                                                                  null,
+                                                            ))
+                                                          Padding(
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .symmetric(
+                                                              horizontal: 4.0,
+                                                            ),
+                                                            child:
+                                                                GestureDetector(
+                                                              onSecondaryTapUp:
+                                                                  (details) {
+                                                                final RenderBox
+                                                                    overlay =
+                                                                    Overlay.of(
+                                                                            context)
+                                                                        .context
+                                                                        .findRenderObject() as RenderBox;
+                                                                final RelativeRect
+                                                                    position =
+                                                                    RelativeRect
+                                                                        .fromRect(
+                                                                  Rect.fromPoints(
+                                                                    details
+                                                                        .globalPosition,
+                                                                    details
+                                                                        .globalPosition,
+                                                                  ),
+                                                                  Offset.zero &
+                                                                      overlay
+                                                                          .size,
+                                                                );
+                                                                showMenu(
+                                                                  context:
+                                                                      context,
+                                                                  position:
+                                                                      position,
+                                                                  items: <PopupMenuEntry>[
+                                                                    PopupMenuItem(
+                                                                      child:
+                                                                          const Row(
+                                                                        children: [
+                                                                          Icon(
+                                                                            Icons.filter_alt,
+                                                                            size:
+                                                                                16,
+                                                                          ),
+                                                                          SizedBox(
+                                                                            width:
+                                                                                8,
+                                                                          ),
+                                                                          Text(
+                                                                            "Filter 'Has PR'",
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      onTap:
+                                                                          () {
+                                                                        _addFilterToken(
+                                                                          const FilterToken(
+                                                                            id: 'flag:has_pr',
+                                                                            type:
+                                                                                FilterType.flag,
+                                                                            label:
+                                                                                'Has Pull Request',
+                                                                            value:
+                                                                                'has_pr',
+                                                                            mode:
+                                                                                FilterMode.include,
+                                                                          ),
+                                                                        );
+                                                                        ScaffoldMessenger
+                                                                            .of(
+                                                                          context,
+                                                                        ).hideCurrentSnackBar();
+                                                                        ScaffoldMessenger
+                                                                            .of(
+                                                                          context,
+                                                                        ).showSnackBar(
+                                                                          const SnackBar(
+                                                                            content:
+                                                                                Text(
+                                                                              "Added filter: Has Pull Request",
+                                                                            ),
+                                                                            duration:
+                                                                                Duration(
+                                                                              seconds: 1,
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                    PopupMenuItem(
+                                                                      child:
+                                                                          const Row(
+                                                                        children: [
+                                                                          Icon(
+                                                                            Icons.filter_alt_off,
+                                                                            size:
+                                                                                16,
+                                                                          ),
+                                                                          SizedBox(
+                                                                            width:
+                                                                                8,
+                                                                          ),
+                                                                          Text(
+                                                                            "Exclude 'Has PR'",
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      onTap:
+                                                                          () {
+                                                                        _addFilterToken(
+                                                                          const FilterToken(
+                                                                            id: 'flag:has_pr',
+                                                                            type:
+                                                                                FilterType.flag,
+                                                                            label:
+                                                                                'Has Pull Request',
+                                                                            value:
+                                                                                'has_pr',
+                                                                            mode:
+                                                                                FilterMode.exclude,
+                                                                          ),
+                                                                        );
+                                                                        ScaffoldMessenger
+                                                                            .of(
+                                                                          context,
+                                                                        ).hideCurrentSnackBar();
+                                                                        ScaffoldMessenger
+                                                                            .of(
+                                                                          context,
+                                                                        ).showSnackBar(
+                                                                          const SnackBar(
+                                                                            content:
+                                                                                Text(
+                                                                              "Added filter: Exclude Has Pull Request",
+                                                                            ),
+                                                                            duration:
+                                                                                Duration(
+                                                                              seconds: 1,
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                    const PopupMenuDivider(),
+                                                                    PopupMenuItem(
+                                                                      child:
+                                                                          const Row(
+                                                                        children: [
+                                                                          Icon(
+                                                                            Icons.copy,
+                                                                            size:
+                                                                                16,
+                                                                          ),
+                                                                          SizedBox(
+                                                                            width:
+                                                                                8,
+                                                                          ),
+                                                                          Text(
+                                                                            "Copy PR URL",
+                                                                          ),
+                                                                        ],
+                                                                      ),
+                                                                      onTap:
+                                                                          () {
+                                                                        final pr = session
+                                                                            .outputs!
+                                                                            .firstWhere(
+                                                                              (o) => o.pullRequest != null,
+                                                                            )
+                                                                            .pullRequest!;
+                                                                        Clipboard
+                                                                            .setData(
+                                                                          ClipboardData(
+                                                                            text:
+                                                                                pr.url,
+                                                                          ),
+                                                                        );
+                                                                        ScaffoldMessenger
+                                                                            .of(
+                                                                          context,
+                                                                        ).showSnackBar(
+                                                                          const SnackBar(
+                                                                            content:
+                                                                                Text(
+                                                                              "PR URL copied to clipboard",
+                                                                            ),
+                                                                          ),
+                                                                        );
+                                                                      },
+                                                                    ),
+                                                                  ],
+                                                                );
+                                                              },
+                                                              child: IconButton(
+                                                                icon:
+                                                                    const Icon(
+                                                                  Icons
+                                                                      .merge_type,
+                                                                  color: Colors
+                                                                      .purple,
+                                                                ),
+                                                                tooltip:
+                                                                    'Open Pull Request',
+                                                                onPressed: () {
+                                                                  final pr = session
+                                                                      .outputs!
+                                                                      .firstWhere(
+                                                                        (o) =>
+                                                                            o.pullRequest !=
+                                                                            null,
+                                                                      )
+                                                                      .pullRequest!;
+                                                                  launchUrl(
+                                                                    Uri.parse(
+                                                                        pr.url),
+                                                                  );
+                                                                },
                                                               ),
                                                             ),
                                                           ),
-                                                        ],
-                                                      ),
+                                                      ],
                                                     ),
-                                                    // Trailing Menu Button
-                                                    InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              16),
-                                                      onTapDown: (details) {
-                                                        _showTileMenu(
+                                                    const SizedBox(height: 8),
+                                                    SessionMetaPills(
+                                                      session: session,
+                                                      compact: true,
+                                                      onAddFilter: (token) {
+                                                        _addFilterToken(token);
+                                                        ScaffoldMessenger.of(
                                                           context,
-                                                          session,
-                                                          metadata,
-                                                          isDevMode,
-                                                          position: details
-                                                              .globalPosition,
+                                                        ).hideCurrentSnackBar();
+                                                        ScaffoldMessenger.of(
+                                                          context,
+                                                        ).showSnackBar(
+                                                          SnackBar(
+                                                            content: Text(
+                                                              "Added filter: ${token.label}",
+                                                            ),
+                                                            duration:
+                                                                const Duration(
+                                                              seconds: 1,
+                                                            ),
+                                                          ),
                                                         );
                                                       },
-                                                      child: const Padding(
-                                                        padding: EdgeInsets.all(
-                                                          8.0,
-                                                        ),
-                                                        child: Icon(
-                                                          Icons.more_vert,
-                                                          size: 20,
-                                                        ),
-                                                      ),
+                                                      onAddSort: _addSortOption,
                                                     ),
-                                                    if (session.outputs !=
+                                                    // Progress bar if running
+                                                    if (session.state ==
+                                                            SessionState
+                                                                .IN_PROGRESS &&
+                                                        session.totalSteps !=
                                                             null &&
-                                                        session.outputs!.any(
-                                                          (o) =>
-                                                              o.pullRequest !=
-                                                              null,
-                                                        ))
+                                                        session.totalSteps! > 0)
                                                       Padding(
                                                         padding:
                                                             const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 4.0,
+                                                                .only(
+                                                          top: 8.0,
                                                         ),
-                                                        child: GestureDetector(
-                                                          onSecondaryTapUp:
-                                                              (details) {
-                                                            final RenderBox
-                                                                overlay =
-                                                                Overlay.of(context)
-                                                                        .context
-                                                                        .findRenderObject()
-                                                                    as RenderBox;
-                                                            final RelativeRect
-                                                                position =
-                                                                RelativeRect
-                                                                    .fromRect(
-                                                              Rect.fromPoints(
-                                                                details
-                                                                    .globalPosition,
-                                                                details
-                                                                    .globalPosition,
-                                                              ),
-                                                              Offset.zero &
-                                                                  overlay.size,
-                                                            );
-                                                            showMenu(
-                                                              context: context,
-                                                              position:
-                                                                  position,
-                                                              items: <PopupMenuEntry>[
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .filter_alt,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Filter 'Has PR'",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    _addFilterToken(
-                                                                      const FilterToken(
-                                                                        id: 'flag:has_pr',
-                                                                        type: FilterType
-                                                                            .flag,
-                                                                        label:
-                                                                            'Has Pull Request',
-                                                                        value:
-                                                                            'has_pr',
-                                                                        mode: FilterMode
-                                                                            .include,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).hideCurrentSnackBar();
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "Added filter: Has Pull Request",
-                                                                        ),
-                                                                        duration:
-                                                                            Duration(
-                                                                          seconds:
-                                                                              1,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .filter_alt_off,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Exclude 'Has PR'",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    _addFilterToken(
-                                                                      const FilterToken(
-                                                                        id: 'flag:has_pr',
-                                                                        type: FilterType
-                                                                            .flag,
-                                                                        label:
-                                                                            'Has Pull Request',
-                                                                        value:
-                                                                            'has_pr',
-                                                                        mode: FilterMode
-                                                                            .exclude,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).hideCurrentSnackBar();
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "Added filter: Exclude Has Pull Request",
-                                                                        ),
-                                                                        duration:
-                                                                            Duration(
-                                                                          seconds:
-                                                                              1,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                const PopupMenuDivider(),
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .copy,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Copy PR URL",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    final pr = session
-                                                                        .outputs!
-                                                                        .firstWhere(
-                                                                          (o) =>
-                                                                              o.pullRequest !=
-                                                                              null,
-                                                                        )
-                                                                        .pullRequest!;
-                                                                    Clipboard
-                                                                        .setData(
-                                                                      ClipboardData(
-                                                                        text: pr
-                                                                            .url,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "PR URL copied to clipboard",
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                          child: IconButton(
-                                                            icon: const Icon(
-                                                              Icons.merge_type,
-                                                              color:
-                                                                  Colors.purple,
-                                                            ),
-                                                            tooltip:
-                                                                'Open Pull Request',
-                                                            onPressed: () {
-                                                              final pr = session
-                                                                  .outputs!
-                                                                  .firstWhere(
-                                                                    (o) =>
-                                                                        o.pullRequest !=
-                                                                        null,
-                                                                  )
-                                                                  .pullRequest!;
-                                                              launchUrl(
-                                                                Uri.parse(
-                                                                    pr.url),
-                                                              );
-                                                            },
-                                                          ),
+                                                        child:
+                                                            LinearProgressIndicator(
+                                                          value: session
+                                                                  .currentStep! /
+                                                              session
+                                                                  .totalSteps!,
                                                         ),
                                                       ),
                                                   ],
                                                 ),
-                                                const SizedBox(height: 8),
-                                                SessionMetaPills(
-                                                  session: session,
-                                                  compact: true,
-                                                  onAddFilter: (token) {
-                                                    _addFilterToken(token);
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).hideCurrentSnackBar();
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          "Added filter: ${token.label}",
-                                                        ),
-                                                        duration:
-                                                            const Duration(
-                                                          seconds: 1,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  onAddSort: _addSortOption,
-                                                ),
-                                                // Progress bar if running
-                                                if (session.state ==
-                                                        SessionState
-                                                            .IN_PROGRESS &&
-                                                    session.totalSteps !=
-                                                        null &&
-                                                    session.totalSteps! > 0)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                      top: 8.0,
-                                                    ),
-                                                    child:
-                                                        LinearProgressIndicator(
-                                                      value: session
-                                                              .currentStep! /
-                                                          session.totalSteps!,
-                                                    ),
-                                                  ),
-                                              ],
+                                              ),
                                             ),
-                                          ),
-                                        ),
-                                      );
-                                    },
+                                          );
+                                        },
+                                      ),
+                                    ),
                                   ),
-                                ),
-                              ),
-                            ],
-                          ),
-                floatingActionButton: FloatingActionButton(
-                  onPressed: _createSession,
-                  child: const Icon(Icons.add),
+                                ],
+                              );
+                  },
                 ),
               ),
             ),
@@ -2510,6 +2872,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () => _quickReply(session),
         ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.note_add),
+              SizedBox(width: 8),
+              Text('Edit Note'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) _editNote(session);
+            });
+          },
+        ),
         const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
@@ -2519,20 +2895,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
               Text('Resubmit as new session'),
             ],
           ),
-          onTap: () {
-            Future.delayed(
-              Duration.zero,
-              () {
-                if (context.mounted) {
-                  resubmitSession(context, session, hideOriginal: false);
-                }
-              },
-            );
-          },
-        ),
-        PopupMenuItem(
-          child: const Row(
-            children: [
               Icon(Icons.table_chart),
               SizedBox(width: 8),
               Text('View Metadata'),
@@ -2563,35 +2925,49 @@ class _SessionListScreenState extends State<SessionListScreen> {
             children: [
               Icon(Icons.visibility_off_outlined),
               SizedBox(width: 8),
-              Text('Resubmit as new session and hide'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(
-              Duration.zero,
-              () {
-                if (context.mounted) {
-                  resubmitSession(context, session, hideOriginal: true);
-                }
-              },
-            );
-          },
-        ),
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.refresh),
-              SizedBox(width: 8),
-              Text('Refresh Session'),
+              Text('Resubmit as new session'),
             ],
           ),
           onTap: () {
             Future.delayed(Duration.zero, () {
-              if (context.mounted) _refreshSession(session);
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: false);
+              }
             });
           },
         ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit as new session and hide'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: true);
+              }
+            });
+          },
+        ),
+        const PopupMenuDivider(),
+        if (!session.id.startsWith('DRAFT_CREATION_'))
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.refresh),
+                SizedBox(width: 8),
+                Text('Refresh Session'),
+              ],
+            ),
+            onTap: () {
+              Future.delayed(Duration.zero, () {
+                if (context.mounted) _refreshSession(session);
+              });
+            },
+          ),
         PopupMenuItem(
           child: const Row(
             children: [
@@ -2706,11 +3082,57 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.label, color: Colors.grey),
+              SizedBox(width: 8),
+              Text('Manage Tags'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => TagManagementDialog(session: session),
+                );
+              }
+            });
+          },
+        ),
       ],
     ).then((value) {
+      if (!context.mounted) return;
       if (value == 'source' && session.sourceContext?.source != null) {
-        _openSourceUrl(session.sourceContext!.source);
+        final sourceProvider =
+            Provider.of<SourceProvider>(context, listen: false);
+        final source = sourceProvider.items
+            .firstWhere((s) => s.data.name == session.sourceContext!.source)
+            .data;
+        _openSourceUrl(source);
       }
     });
+  }
+
+  Future<void> _editNote(Session session) async {
+    final newNote = await showDialog<Note>(
+      context: context,
+      builder: (context) => NoteDialog(note: session.note),
+    );
+
+    if (newNote != null) {
+      if (!mounted) return;
+      final sessionProvider = Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      );
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
+      sessionProvider.updateSession(
+        session.copyWith(note: newNote),
+        authToken: authProvider.token,
+      );
+    }
   }
 }

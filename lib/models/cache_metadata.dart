@@ -14,6 +14,9 @@ class CacheMetadata {
       hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
 
+  factory CacheMetadata.empty() =>
+      CacheMetadata(firstSeen: DateTime.now(), lastRetrieved: DateTime.now());
+
   CacheMetadata({
     required this.firstSeen,
     required this.lastRetrieved,

@@ -11,6 +11,17 @@
     ]
   },
   {
+    "name": "Pending",
+    "description": "Sessions queued for creation or with pending messages.",
+    "expression": "Pending()",
+    "sorts": [
+      {
+        "field": "created",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
     "name": "Needs Attention",
     "description": "Sessions that are new, updated, or awaiting approval.",
     "expression": "OR(New() Updated() State(AWAITING_PLAN_APPROVAL))",
@@ -124,6 +135,39 @@
     "name": "Completed PRs (Open/Draft)",
     "description": "Completed sessions with open or draft pull requests.",
     "expression": "AND(OR(PR(open) PR(draft)) State(COMPLETED))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Review Queue",
+    "description": "Sessions that are completed, awaiting feedback/approval, or have open/draft PRs.",
+    "expression": "AND(OR(State(COMPLETED) State(AWAITING_USER_FEEDBACK) State(AWAITING_PLAN_APPROVAL)) OR(PR(Draft) PR(open)))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "Active CI Failures",
+    "description": "Open PRs with failed CI checks.",
+    "expression": "AND(CI(Failure) PR(Open))",
+    "sorts": [
+      {
+        "field": "updated",
+        "direction": "descending"
+      }
+    ]
+  },
+  {
+    "name": "CI Passing (Open)",
+    "description": "Open PRs with passing CI checks.",
+    "expression": "AND(CI(Success) PR(Open))",
     "sorts": [
       {
         "field": "updated",

@@ -5,9 +5,15 @@ import '../../models/session.dart';
 import '../../models/search_filter.dart';
 import '../../models/filter_element.dart';
 import '../../services/session_provider.dart';
+import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';
 import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
+import 'delay_input_widget.dart';
+import 'save_bulk_action_preset_dialog.dart';
+import '../../models/bulk_action_preset.dart';
+import '../../services/bulk_action_preset_provider.dart';
+import '../../utils/action_script_builder.dart';
 
 class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;
@@ -30,9 +36,9 @@ class BulkActionDialog extends StatefulWidget {
 class _BulkActionDialogState extends State<BulkActionDialog> {
   FilterElement? _filterTree;
   late List<SortOption> _sorts;
-  final List<BulkActionStep> _actions = [];
+  List<BulkActionStep> _actions = [];
   int _parallelQueries = 1;
-  int _waitBetweenSeconds = 2;
+  Duration _waitBetween = const Duration(seconds: 2);
   String _searchText = '';
 
   // Execution control
@@ -52,8 +58,19 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     _sorts = List.from(widget.currentSorts);
     _searchText = widget.mainSearchText;
 
-    // Add a default action
-    _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
+    // Load last used settings
+    final settings = context.read<SettingsProvider>();
+    _actions = List<BulkActionStep>.from(settings.lastBulkActions);
+    _parallelQueries = settings.lastBulkParallelQueries;
+    _waitBetween = Duration(seconds: settings.lastBulkWaitBetweenSeconds);
+    _limit = settings.lastBulkLimit;
+    _offset = settings.lastBulkOffset;
+    _randomize = settings.lastBulkRandomize;
+    _stopOnError = settings.lastBulkStopOnError;
+
+    if (_actions.isEmpty) {
+      _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _updatePreview());
   }
@@ -125,11 +142,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = (screenSize.width * 0.8).clamp(800.0, 1800.0);
+    final dialogHeight = (screenSize.height * 0.8).clamp(600.0, 1200.0);
+
     return AlertDialog(
       title: const Text('Bulk Actions'),
       content: SizedBox(
-        width: 900,
-        height: 700,
+        width: dialogWidth,
+        height: dialogHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -197,13 +218,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                         ),
                         const SizedBox(width: 16),
                         Expanded(
-                          child: _buildNumberInput(
-                            label: 'Wait Between (sec)',
-                            value: _waitBetweenSeconds,
-                            onChanged: (v) =>
-                                setState(() => _waitBetweenSeconds = v),
-                            min: 0,
-                            max: 60,
+                          child: DelayInputWidget(
+                            label: 'Wait Between',
+                            initialDelay: _waitBetween,
+                            onDelayChanged: (d) =>
+                                setState(() => _waitBetween = d),
                           ),
                         ),
                       ],
@@ -225,6 +244,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 ),
                                 keyboardType: TextInputType.number,
                                 style: const TextStyle(fontSize: 12),
+                                controller: TextEditingController(
+                                  text: _limit != null ? _limit.toString() : '',
+                                ),
                                 onChanged: (val) {
                                   setState(() {
                                     _limit =
@@ -351,6 +373,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: _saveAsPreset,
+          child: const Text('Save as Preset...'),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
@@ -521,14 +547,67 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     });
   }
 
+  void _saveAsPreset() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const SaveBulkActionPresetDialog(),
+    );
+
+    if (result != null && mounted) {
+      final name = result['name']!;
+      final description = result['description']!;
+
+      final filterExpression = _filterTree?.toExpression() ?? '';
+      final actionScript = buildActionScript(
+        actions: _actions,
+        parallelQueries: _parallelQueries,
+        waitBetween: _waitBetween,
+        limit: _limit,
+        offset: _offset,
+        randomize: _randomize,
+        stopOnError: _stopOnError,
+      );
+
+      final newPreset = BulkActionPreset(
+        name: name,
+        description: description,
+        filterExpression: filterExpression,
+        actionScript: actionScript,
+      );
+
+      final provider = context.read<BulkActionPresetProvider>();
+      await provider.addPreset(newPreset);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preset "$name" saved.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   void _startJob() {
+    // Save configuration
+    context.read<SettingsProvider>().saveBulkActionConfig(
+          actions: _actions,
+          parallelQueries: _parallelQueries,
+          waitBetweenSeconds: _waitBetween.inSeconds,
+          limit: _limit,
+          offset: _offset,
+          randomize: _randomize,
+          stopOnError: _stopOnError,
+        );
+
     final config = BulkJobConfig(
       targetType: BulkTargetType.filtered,
       filterTree: _filterTree,
       sorts: _sorts,
       actions: _actions,
       parallelQueries: _parallelQueries,
-      waitBetweenSeconds: _waitBetweenSeconds,
+      waitBetween: _waitBetween,
       limit: _limit,
       offset: _offset,
       randomize: _randomize,

@@ -1,5 +1,6 @@
 import 'filter_element.dart';
 import 'time_filter.dart';
+import '../utils/time_parser.dart';
 
 class FilterExpressionParser {
   final String input;
@@ -33,6 +34,33 @@ class FilterExpressionParser {
 
   FilterElement? _parseElement() {
     _skipWhitespace();
+    if (pos < input.length && input[pos] == '#') {
+      pos++;
+      final args = <String>[];
+      if (pos < input.length && input[pos] == '(') {
+        pos++;
+        final start = pos;
+        int depth = 1;
+        while (pos < input.length && depth > 0) {
+          if (input[pos] == '(') depth++;
+          if (input[pos] == ')') depth--;
+          if (depth > 0) pos++;
+        }
+        final content = input.substring(start, pos).trim();
+        if (content.isNotEmpty) {
+          args.add(_unescape(content));
+        }
+        if (pos < input.length && input[pos] == ')') {
+          pos++;
+        }
+      } else {
+        final ident = _readIdentifier();
+        if (ident.isNotEmpty) {
+          args.add(ident);
+        }
+      }
+      return _createFilter('HASHTAG', [], args);
+    }
     final name = _readIdentifier();
     if (name.isEmpty) return null;
 
@@ -45,8 +73,10 @@ class FilterExpressionParser {
       _skipWhitespace();
 
       final upperName = name.toUpperCase();
-      final isComposite =
-          upperName == 'AND' || upperName == 'OR' || upperName == 'NOT';
+      final isComposite = upperName == 'AND' ||
+          upperName == 'OR' ||
+          upperName == 'NOT' ||
+          upperName == 'DISABLED';
 
       if (isComposite) {
         while (pos < input.length && input[pos] != ')') {
@@ -121,6 +151,8 @@ class FilterExpressionParser {
         return AndElement(children);
       case 'OR':
         return OrElement(children);
+      case 'DISABLED':
+        return children.isNotEmpty ? DisabledElement(children[0]) : null;
       case 'NOT':
         return children.isNotEmpty ? NotElement(children[0]) : null;
       case 'TEXT':
@@ -145,6 +177,8 @@ class FilterExpressionParser {
         if (args.isEmpty) return null;
         final arg = args[0].toUpperCase();
         if (arg == 'PR') return HasPrElement();
+        if (arg == 'NOSOURCE') return NoSourceElement();
+        if (arg == 'NOTES') return HasNotesElement();
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }
@@ -171,37 +205,148 @@ class FilterExpressionParser {
         return args.isNotEmpty ? CiStatusElement(args[0], args[0]) : null;
       case 'BRANCH':
         return args.isNotEmpty ? BranchElement(args[0], args[0]) : null;
+      case 'CREATEDBEFORE':
+      case 'CREATED_BEFORE':
+        return _createTimeFilter(
+            args, TimeFilterType.olderThan, TimeFilterField.created);
+      case 'CREATEDAFTER':
+      case 'CREATED_AFTER':
+        return _createTimeFilter(
+            args, TimeFilterType.newerThan, TimeFilterField.created);
+      case 'CREATEDON':
+      case 'CREATED_ON':
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.created,
+            isSingleDay: true);
+      case 'CREATEDBETWEEN':
+      case 'CREATED_BETWEEN':
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.created);
+      case 'UPDATEDBEFORE':
+      case 'UPDATED_BEFORE':
+      case 'BEFORE':
+        return _createTimeFilter(
+            args, TimeFilterType.olderThan, TimeFilterField.updated);
+      case 'UPDATEDAFTER':
+      case 'UPDATED_AFTER':
+      case 'AFTER':
+        return _createTimeFilter(
+            args, TimeFilterType.newerThan, TimeFilterField.updated);
+      case 'UPDATEDON':
+      case 'UPDATED_ON':
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.updated,
+            isSingleDay: true);
+      case 'UPDATEDBETWEEN':
+      case 'UPDATED_BETWEEN':
+      case 'BETWEEN':
+        return _createTimeFilter(
+            args, TimeFilterType.between, TimeFilterField.updated);
+      case 'CREATEDIN':
+      case 'CREATED_IN':
+        return _createTimeFilter(
+            args, TimeFilterType.inRange, TimeFilterField.created);
+      case 'UPDATEDIN':
+      case 'UPDATED_IN':
+        return _createTimeFilter(
+            args, TimeFilterType.inRange, TimeFilterField.updated);
       case 'TIME':
         if (args.isEmpty) return null;
         final parts = args[0].split(' ');
-        if (parts.length < 2) return null;
 
-        final type = TimeFilterType.values.byName(parts[0]);
-        final valueStr = parts[1];
+        TimeFilterField field = TimeFilterField.updated;
+        int currentPart = 0;
+        try {
+          field = TimeFilterField.values.byName(parts[currentPart]);
+          currentPart++;
+        } catch (_) {
+          // It's the old format, which doesn't have a field
+        }
 
-        // Try to parse as a specific date
-        final specificTime = DateTime.tryParse(valueStr);
-        if (specificTime != null) {
+        if (parts.length < currentPart + 2) return null;
+
+        final type = TimeFilterType.values.byName(parts[currentPart++]);
+        final remaining = parts.sublist(currentPart).join(' ');
+
+        // New format: range string (e.g., "last 5 days")
+        if (remaining.startsWith('last')) {
           return TimeFilterElement(
-            TimeFilter(
-              type: type,
-              value: 0,
-              unit: TimeFilterUnit.days, // a default value
-              specificTime: specificTime,
-            ),
+            TimeFilter(type: type, range: remaining, field: field),
           );
         }
 
-        // Try to parse as relative time
-        if (parts.length < 3) return null;
-        final value = int.tryParse(parts[1]) ?? 0;
-        final unit = TimeFilterUnit.values.byName(parts[2]);
-
+        // Old format: value + unit (e.g., "5 days") or specific date
+        final date = TimeParser.parse(remaining);
+        if (date != null) {
+          // This is a specific date from an old filter
+          return TimeFilterElement(
+            TimeFilter(type: type, specificTime: date, field: field),
+          );
+        }
         return TimeFilterElement(
-          TimeFilter(type: type, value: value, unit: unit),
+          TimeFilter(type: type, range: 'last $remaining', field: field),
         );
+      case 'HASHTAG':
+        return args.isNotEmpty ? TagElement(args[0], args[0]) : null;
       default:
         return null;
+    }
+  }
+
+  TimeFilterElement? _createTimeFilter(
+      List<String> args, TimeFilterType type, TimeFilterField field,
+      {bool isSingleDay = false}) {
+    if (args.isEmpty) return null;
+
+    if (type == TimeFilterType.inRange) {
+      final rangeStr = args[0];
+      final range = TimeParser.parseRange(rangeStr);
+      if (range == null) return null;
+      return TimeFilterElement(
+        TimeFilter(
+          type: type,
+          specificTime: range.start,
+          specificTimeEnd: range.end,
+          range: rangeStr,
+          field: field,
+        ),
+      );
+    }
+
+    if (type == TimeFilterType.between) {
+      if (isSingleDay) {
+        final date = TimeParser.parse(args[0]);
+        if (date == null) return null;
+        final start = DateTime(date.year, date.month, date.day);
+        final end = start.add(const Duration(days: 1));
+        return TimeFilterElement(
+          TimeFilter(
+            type: type,
+            specificTime: start,
+            specificTimeEnd: end,
+            field: field,
+          ),
+        );
+      }
+      final parts = args[0].split(',');
+      if (parts.length < 2) return null;
+      final start = TimeParser.parse(parts[0].trim());
+      final end = TimeParser.parse(parts[1].trim());
+      if (start == null || end == null) return null;
+      return TimeFilterElement(
+        TimeFilter(
+          type: type,
+          specificTime: start,
+          specificTimeEnd: end,
+          field: field,
+        ),
+      );
+    } else {
+      final date = TimeParser.parse(args[0]);
+      if (date == null) return null;
+      return TimeFilterElement(
+        TimeFilter(type: type, specificTime: date, field: field),
+      );
     }
   }
 }
