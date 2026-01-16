@@ -64,6 +64,8 @@ class RefreshService extends ChangeNotifier {
   }
 
   void _executeSchedule(RefreshSchedule schedule) async {
+    schedule.lastRun = DateTime.now();
+    _settingsProvider.updateSchedule(schedule);
     final client = JulesClient(accessToken: _authProvider.token);
     switch (schedule.taskType) {
       case RefreshTaskType.refresh:

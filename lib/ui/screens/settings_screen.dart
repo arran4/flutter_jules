@@ -423,7 +423,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListTile(
               title: Text(schedule.name),
               subtitle: Text(
-                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}',
+                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}\n'
+                'Last run: ${_formatLastRun(schedule.lastRun)}',
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -839,6 +840,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
       default:
         return '';
     }
+  }
+
+  String _formatLastRun(DateTime? lastRun) {
+    if (lastRun == null) {
+      return 'Never';
+    }
+    return '${lastRun.toLocal().toString().substring(0, 16)}';
   }
 
   String _formatTask(RefreshSchedule schedule) {
