@@ -674,7 +674,7 @@ class FilterElementWidget extends StatelessWidget {
     );
   }
 
-  String _formatTimeFilter(dynamic tf) {
+  String _formatTimeFilter(TimeFilter tf) {
     String field = tf.field.name;
     field = field[0].toUpperCase() + field.substring(1);
 

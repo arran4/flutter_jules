@@ -66,5 +66,55 @@ void main() {
     test('should return null for invalid input', () {
       expect(TimeParser.parse('invalid input'), isNull);
     });
+
+    test('should parse various duration strings correctly', () {
+      final now = DateTime(2024, 3, 31, 10, 0, 0);
+      final testCases = {
+        '1 hour': DateTime(2024, 3, 31, 9, 0, 0),
+        '2 days': DateTime(2024, 3, 29, 10, 0, 0),
+        '3 weeks': DateTime(2024, 3, 10, 10, 0, 0),
+        '1 year': DateTime(2023, 3, 31, 10, 0, 0),
+        '1 hour and 30 minutes': DateTime(2024, 3, 31, 8, 30, 0),
+        '2 years, 3 months and 4 days': DateTime(2021, 12, 27, 10, 0, 0),
+        '1 month ago': DateTime(2024, 2, 29, 10, 0, 0),
+      };
+
+      testCases.forEach((input, expected) {
+        final result = TimeParser.parse(input, now: now)!;
+        expect(result, expected);
+      });
+    });
+
+    test('should handle month-end and leap-year edge cases', () {
+      final testCases = [
+        // March 31 -> Feb 29 (leap year)
+        {
+          'now': DateTime(2024, 3, 31),
+          'input': '1 month',
+          'expected': DateTime(2024, 2, 29)
+        },
+        // March 31 -> Feb 28 (non-leap year)
+        {
+          'now': DateTime(2023, 3, 31),
+          'input': '1 month',
+          'expected': DateTime(2023, 2, 28)
+        },
+        // May 31 -> April 30
+        {
+          'now': DateTime(2023, 5, 31),
+          'input': '1 month',
+          'expected': DateTime(2023, 4, 30)
+        },
+      ];
+
+      for (var tc in testCases) {
+        final result = TimeParser.parse(tc['input'] as String,
+            now: tc['now'] as DateTime)!;
+        final expected = tc['expected'] as DateTime;
+        expect(result.year, expected.year);
+        expect(result.month, expected.month);
+        expect(result.day, expected.day);
+      }
+    });
   });
 }

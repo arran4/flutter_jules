@@ -1,30 +1,84 @@
 class TimeParser {
-  static DateTime? parse(String input) {
+  static DateTime? parse(String input, {DateTime? now}) {
+    now ??= DateTime.now();
     // First check for complex range phrases like "last week"
-    final range = parseRange(input);
+    final range = parseRange(input, now: now);
     if (range != null) {
       return range.start;
     }
 
-    // Then, check for simple duration phrases like "30 days"
     input = input.toLowerCase().trim();
-    final durationMatch =
-        RegExp(r'^(\d+)\s+(hour|day|week|month|year)s?$').firstMatch(input);
-    if (durationMatch != null) {
-      final value = int.parse(durationMatch.group(1)!);
-      final unit = durationMatch.group(2)!;
-      final now = DateTime.now();
-      switch (unit) {
-        case 'hour':
-          return now.subtract(Duration(hours: value));
-        case 'day':
-          return now.subtract(Duration(days: value));
-        case 'week':
-          return now.subtract(Duration(days: value * 7));
-        case 'month':
-          return DateTime(now.year, now.month - value, now.day);
-        case 'year':
-          return DateTime(now.year - value, now.month, now.day);
+    // Regex to find all number-unit pairs, e.g., "1 hour", "3 minutes"
+    final regex = RegExp(r'(\d+)\s+(year|month|week|day|hour|minute|second)s?');
+    final durationMatches = regex.allMatches(input);
+
+    if (durationMatches.isNotEmpty) {
+      // To avoid parsing sentences, check if the string only contains duration parts and separators.
+      String tempInput = input.replaceAll(regex, '').trim();
+      tempInput = tempInput.replaceAll('and', '').replaceAll(',', '').trim();
+      tempInput = tempInput.replaceAll('ago', '').trim();
+
+      if (tempInput.isEmpty) {
+        Duration duration = Duration.zero;
+        int months = 0;
+        int years = 0;
+
+        for (final match in durationMatches) {
+          final value = int.parse(match.group(1)!);
+          final unit = match.group(2)!;
+
+          switch (unit) {
+            case 'year':
+              years += value;
+              break;
+            case 'month':
+              months += value;
+              break;
+            case 'week':
+              duration += Duration(days: value * 7);
+              break;
+            case 'day':
+              duration += Duration(days: value);
+              break;
+            case 'hour':
+              duration += Duration(hours: value);
+              break;
+            case 'minute':
+              duration += Duration(minutes: value);
+              break;
+            case 'second':
+              duration += Duration(seconds: value);
+              break;
+          }
+        }
+
+        // To safely subtract months and years, we need to handle date rollovers.
+        int newYear = now.year - years;
+        int newMonth = now.month - months;
+        int newDay = now.day;
+
+        // Adjust month and year if newMonth is zero or negative
+        while (newMonth <= 0) {
+          newYear--;
+          newMonth += 12;
+        }
+
+        // Check if the day exists in the new month and adjust if necessary
+        final daysInNewMonth = DateTime(newYear, newMonth + 1, 0).day;
+        if (newDay > daysInNewMonth) {
+          newDay = daysInNewMonth;
+        }
+
+        DateTime result = DateTime(
+          newYear,
+          newMonth,
+          newDay,
+          now.hour,
+          now.minute,
+          now.second,
+        );
+        result = result.subtract(duration);
+        return result;
       }
     }
 
@@ -32,9 +86,10 @@ class TimeParser {
     return _parseDateTime(input);
   }
 
-  static ({DateTime start, DateTime end})? parseRange(String input) {
+  static ({DateTime start, DateTime end})? parseRange(String input,
+      {DateTime? now}) {
     input = input.toLowerCase().trim();
-    final now = DateTime.now();
+    now ??= DateTime.now();
 
     // Duration-based phrases (e.g., "last 24 hours")
     final durationMatch =
