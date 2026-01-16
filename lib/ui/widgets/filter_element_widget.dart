@@ -497,7 +497,16 @@ class FilterElementWidget extends StatelessWidget {
     final isNot = element is NotElement;
     final isDisabled = element is DisabledElement;
 
-    if (!isNot && !isDisabled) {
+    if (isNot) {
+      items.add(
+        const PopupMenuItem(
+          value: 3, // New value for "Remove NOT"
+          enabled: true,
+          child: Text("Remove NOT"),
+        ),
+      );
+      items.add(const PopupMenuDivider());
+    } else if (!isDisabled) {
       final excludeText = isComposite ? "Exclude this group" : "Exclude this";
       items.add(
         PopupMenuItem(
@@ -552,6 +561,11 @@ class FilterElementWidget extends StatelessWidget {
 
     if (selected == 1) {
       // Toggle NOT
+      if (onToggleNot != null) {
+        onToggleNot!(element);
+      }
+    } else if (selected == 3) {
+      // Remove NOT
       if (onToggleNot != null) {
         onToggleNot!(element);
       }
