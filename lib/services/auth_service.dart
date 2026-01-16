@@ -49,4 +49,32 @@ class AuthService {
       debugPrint('Error deleting token: $e');
     }
   }
+
+  // --- GitHub Token Support ---
+  static const _githubTokenKey = 'github_api_token';
+
+  Future<void> saveGithubToken(String token) async {
+    try {
+      await _storage.write(key: _githubTokenKey, value: token);
+    } on PlatformException catch (e) {
+      debugPrint('Error saving GitHub token: $e');
+    }
+  }
+
+  Future<String?> getGithubToken() async {
+    try {
+      return await _storage.read(key: _githubTokenKey);
+    } on PlatformException catch (e) {
+      debugPrint('Error reading GitHub token: $e');
+      return null;
+    }
+  }
+
+  Future<void> deleteGithubToken() async {
+    try {
+      await _storage.delete(key: _githubTokenKey);
+    } on PlatformException catch (e) {
+      debugPrint('Error deleting GitHub token: $e');
+    }
+  }
 }

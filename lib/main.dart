@@ -51,13 +51,10 @@ void main() async {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
-        ChangeNotifierProxyProvider2<AuthProvider, SettingsProvider,
-            GithubProvider>(
-          create: (context) => GithubProvider(
-            context.read<AuthProvider>(),
-            context.read<SettingsProvider>(),
-          ),
-          update: (context, auth, settings, github) => github!..update(auth),
+        ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
+          create: (context) =>
+              GithubProvider(context.read<SettingsProvider>()),
+          update: (context, settings, github) => github!,
         ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),

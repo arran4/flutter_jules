@@ -4,7 +4,8 @@ import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
-import 'auth_provider.dart';
+
+import 'auth_service.dart';
 import 'settings_provider.dart';
 import '../models/github_exclusion.dart';
 
@@ -19,10 +20,12 @@ class GithubApiException implements Exception {
 }
 
 class GithubProvider extends ChangeNotifier {
-  AuthProvider _authProvider;
   final SettingsProvider _settingsProvider;
+  final AuthService _authService = AuthService();
 
-  String? get apiKey => _authProvider.token;
+  String? _githubToken;
+  String? get apiKey => _githubToken;
+
   // Rate Limiting
   int? _rateLimitLimit;
   int? _rateLimitRemaining;
@@ -43,17 +46,20 @@ class GithubProvider extends ChangeNotifier {
   bool get hasBadCredentials => _hasBadCredentials;
   String? get authError => _authError;
 
-  GithubProvider(this._authProvider, this._settingsProvider);
+  GithubProvider(this._settingsProvider) {
+    _loadToken();
+  }
 
-  void update(AuthProvider auth) {
-    _authProvider = auth;
+  Future<void> _loadToken() async {
+    _githubToken = await _authService.getGithubToken();
     notifyListeners();
   }
 
   Future<String?> getToken() async => apiKey;
 
   Future<void> setApiKey(String key) async {
-    await _authProvider.setToken(key, TokenType.apiKey);
+    await _authService.saveGithubToken(key);
+    _githubToken = key;
     // Reset bad credentials state when key is updated
     _hasBadCredentials = false;
     _authError = null;

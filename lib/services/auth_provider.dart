@@ -28,6 +28,17 @@ class AuthProvider extends ChangeNotifier {
     }
   }
 
+  Future<void> validateToken(String token, TokenType type) async {
+    final client = type == TokenType.apiKey
+        ? JulesClient(apiKey: token)
+        : JulesClient(accessToken: token);
+    try {
+      await client.listSessions(pageSize: 1);
+    } finally {
+      client.close();
+    }
+  }
+
   AuthProvider() {
     _loadToken();
   }

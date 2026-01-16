@@ -208,13 +208,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 title: const Text('Current Session'),
                 subtitle: Text(
                   auth.tokenType == TokenType.apiKey
-                      ? 'API Key'
+                      ? 'Manual Access Token'
                       : 'Google Access Token',
                 ),
                 trailing: const Icon(Icons.check_circle, color: Colors.green),
               ),
               ListTile(
-                title: const Text('Update API Key'),
+                title: const Text('Update Access Token'),
                 leading: const Icon(Icons.vpn_key),
                 onTap: () => _showApiKeyDialog(context, auth),
               ),
@@ -592,38 +592,135 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AuthProvider auth,
   ) async {
     final controller = TextEditingController();
-    final newKey = await showDialog<String>(
+    TokenType tempType = auth.tokenType;
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter API Key'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'API Key',
-            hintText: 'Paste your API key here',
-          ),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        bool isTesting = false;
+        String? testResult;
+        Color? resultColor;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Authentication Credentials'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  DropdownButtonFormField<TokenType>(
+                    value: tempType,
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    items: const [
+                      DropdownMenuItem(
+                        value: TokenType.accessToken,
+                        child: Text('OAuth Access Token'),
+                      ),
+                      DropdownMenuItem(
+                        value: TokenType.apiKey,
+                        child: Text('Jules API Key'),
+                      ),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          tempType = val;
+                        });
+                      }
+                    },
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: tempType == TokenType.apiKey
+                          ? 'API Key'
+                          : 'Access Token',
+                      hintText: tempType == TokenType.apiKey
+                          ? 'Paste your API Key here'
+                          : 'Paste your OAuth2 Access Token here',
+                    ),
+                    obscureText: true,
+                  ),
+                  if (isTesting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16.0),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (testResult != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(color: resultColor),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isTesting
+                      ? null
+                      : () async {
+                          final token = controller.text.trim();
+                          if (token.isEmpty) return;
+
+                          setState(() {
+                            isTesting = true;
+                            testResult = null;
+                          });
+
+                          try {
+                            await auth.validateToken(token, tempType);
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = 'Success!';
+                                resultColor = Colors.green;
+                              });
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = 'Error: $e';
+                                resultColor = Colors.red;
+                              });
+                            }
+                          }
+                        },
+                  child: const Text('Test'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, {
+                    'token': controller.text,
+                    'type': tempType,
+                  }),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (newKey != null && newKey.isNotEmpty) {
-      if (!context.mounted) return;
-      await auth.setToken(newKey, TokenType.apiKey);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('API Key updated successfully')),
-        );
+    if (result != null) {
+      final newKey = result['token'] as String;
+      final type = result['type'] as TokenType;
+
+      if (newKey.isNotEmpty) {
+        if (!context.mounted) return;
+        await auth.setToken(newKey, type);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Credentials updated successfully')),
+          );
+        }
       }
     }
   }
