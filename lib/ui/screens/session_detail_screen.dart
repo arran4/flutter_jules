@@ -801,6 +801,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   }
 
   Future<void> _downloadSession() async {
+    final fileName =
+        'session_${_session.id}_${DateTime.now().toIso8601String()}.zip';
+
+    final bool? shouldDownload = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Confirm Download'),
+        content: Text('Download the raw session data as:\n\n$fileName'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Download'),
+          ),
+        ],
+      ),
+    );
+
+    if (shouldDownload != true || !mounted) return;
+
     // Show a loading indicator
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Preparing download...')),
@@ -824,7 +847,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       // 4. Create a zip archive
       final archive = Archive();
       archive.addFile(
-        ArchiveFile('session.json', sessionJson.length, utf8.encode(sessionJson)),
+        ArchiveFile(
+            'session.json', sessionJson.length, utf8.encode(sessionJson)),
       );
       archive.addFile(
         ArchiveFile('activities.json', activitiesJson.length,
@@ -840,8 +864,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       }
 
       // 6. Use file_saver to save the file
-      final fileName =
-          'session_${_session.id}_${DateTime.now().toIso8601String()}.zip';
       await FileSaver.instance.saveFile(
         name: fileName,
         bytes: Uint8List.fromList(zipData),
@@ -1025,7 +1047,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
             IconButton(
               icon: const Icon(Icons.download),
-              tooltip: 'Download Raw Session Data',
+              tooltip: 'Download Raw Session Data to File',
               onPressed: _downloadSession,
             ),
             IconButton(
