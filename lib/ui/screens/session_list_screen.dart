@@ -917,6 +917,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
           element = LabelElement(token.label, token.value.toString());
         }
         break;
+      case FilterType.hasNotes:
+        element = HasNotesElement();
+        break;
+      case FilterType.tag:
+        element = TagElement(token.value.toString());
+        break;
       default:
         return null;
     }

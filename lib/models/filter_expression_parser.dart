@@ -148,7 +148,10 @@ class FilterExpressionParser {
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }
+        if (arg == 'NOTES') return HasNotesElement();
         return LabelElement(args[0], args[0]);
+      case 'TAG':
+        return args.isNotEmpty ? TagElement(args[0]) : null;
       case 'HAS_PR':
         return HasPrElement();
       case 'STATE':

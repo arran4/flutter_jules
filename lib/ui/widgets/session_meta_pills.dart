@@ -205,6 +205,36 @@ class SessionMetaPills extends StatelessWidget {
             avatar: const Icon(Icons.edit_document, size: 16),
             backgroundColor: Colors.grey.shade200,
           ),
+
+        // Tags
+        for (final tag in session.tags)
+          _buildChip(
+            context,
+            label: tag,
+            avatar: const Icon(Icons.tag, size: 16),
+            backgroundColor: Colors.blueGrey.shade50,
+            filterToken: FilterToken(
+              id: 'tag:$tag',
+              type: FilterType.tag,
+              label: 'Tag: $tag',
+              value: tag,
+            ),
+          ),
+
+        // Notes
+        if (session.notes != null)
+          _buildChip(
+            context,
+            label: 'Notes',
+            avatar: const Icon(Icons.note, size: 16),
+            backgroundColor: Colors.yellow.shade100,
+            filterToken: const FilterToken(
+              id: 'has_notes',
+              type: FilterType.hasNotes,
+              label: 'Has Notes',
+              value: 'notes',
+            ),
+          ),
       ],
     );
   }

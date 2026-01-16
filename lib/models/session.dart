@@ -3,6 +3,34 @@ import 'enums.dart';
 import 'source.dart';
 import 'media.dart';
 
+class Metadata {
+  final String key;
+  final String value;
+  final String updateTime;
+
+  Metadata({
+    required this.key,
+    required this.value,
+    required this.updateTime,
+  });
+
+  factory Metadata.fromJson(Map<String, dynamic> json) {
+    return Metadata(
+      key: getStringPropOrThrow(json, 'key'),
+      value: getStringPropOrThrow(json, 'value'),
+      updateTime: getStringPropOrThrow(json, 'updateTime'),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {
+      'key': key,
+      'value': value,
+      'updateTime': updateTime,
+    };
+  }
+}
+
 class PullRequest {
   final String url;
   final String title;
@@ -77,6 +105,7 @@ class Session {
   final int? changedFiles;
   final String? diffUrl;
   final String? patchUrl;
+  final List<Metadata> metadata;
 
   Session({
     required this.name,
@@ -103,7 +132,26 @@ class Session {
     this.changedFiles,
     this.diffUrl,
     this.patchUrl,
+    this.metadata = const [],
   });
+
+  List<String> get tags {
+    try {
+      final meta = metadata.firstWhere((m) => m.key == 'tags');
+      return meta.value.split(',').map((t) => t.trim()).where((t) => t.isNotEmpty).toList();
+    } catch (e) {
+      return [];
+    }
+  }
+
+  String? get notes {
+    try {
+      final meta = metadata.firstWhere((m) => m.key == 'notes');
+      return meta.value;
+    } catch (e) {
+      return null;
+    }
+  }
 
   factory Session.fromJson(Map<String, dynamic> json) {
     return Session(
@@ -169,6 +217,12 @@ class Session {
           getNumberPropOrDefault<num?>(json, 'changedFiles', null)?.toInt(),
       diffUrl: getStringPropOrDefault(json, 'diffUrl', null),
       patchUrl: getStringPropOrDefault(json, 'patchUrl', null),
+      metadata: getObjectArrayPropOrDefaultFunction(
+        json,
+        'metadata',
+        Metadata.fromJson,
+        () => [],
+      ),
     );
   }
 
@@ -211,6 +265,9 @@ class Session {
     if (changedFiles != null) map['changedFiles'] = changedFiles;
     if (diffUrl != null) map['diffUrl'] = diffUrl;
     if (patchUrl != null) map['patchUrl'] = patchUrl;
+    if (metadata.isNotEmpty) {
+      map['metadata'] = metadata.map((e) => e.toJson()).toList();
+    }
     return map;
   }
 
@@ -240,6 +297,7 @@ class Session {
     int? changedFiles,
     String? diffUrl,
     String? patchUrl,
+    List<Metadata>? metadata,
   }) {
     return Session(
       name: name ?? this.name,
@@ -268,6 +326,7 @@ class Session {
       changedFiles: changedFiles ?? this.changedFiles,
       diffUrl: diffUrl ?? this.diffUrl,
       patchUrl: patchUrl ?? this.patchUrl,
+      metadata: metadata ?? this.metadata,
     );
   }
 }
