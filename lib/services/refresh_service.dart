@@ -85,9 +85,14 @@ class RefreshService extends ChangeNotifier {
           break;
       }
       if (_settingsProvider.notifyOnRefreshComplete) {
+        final actions = <NotificationAction>[];
+        if (summary != 'No new updates.') {
+          actions.add(NotificationAction.showNew);
+        }
         _notificationService.showNotification(
           'Refresh Complete',
           'Finished executing schedule: ${schedule.name}. $summary',
+          actions: actions,
         );
       }
     } catch (e) {
@@ -223,7 +228,24 @@ class RefreshService extends ChangeNotifier {
         }
       }
     }
-    return 'New unread: $newUnread, new sessions: $newSessionsCount, waiting approval: $newWaitingApproval, waiting feedback: $newWaitingFeedback, PRs waiting: $prsWaiting.';
+    final summaryParts = <String>[];
+    if (newUnread > 0) summaryParts.add('new unread: $newUnread');
+    if (newSessionsCount > 0) summaryParts.add('new sessions: $newSessionsCount');
+    if (newWaitingApproval > 0) {
+      summaryParts.add('waiting approval: $newWaitingApproval');
+    }
+    if (newWaitingFeedback > 0) {
+      summaryParts.add('waiting feedback: $newWaitingFeedback');
+    }
+    if (prsWaiting > 0) summaryParts.add('PRs waiting: $prsWaiting');
+
+    if (summaryParts.isEmpty) {
+      return 'No new updates.';
+    }
+
+    String summary = summaryParts.join(', ');
+    summary = summary[0].toUpperCase() + summary.substring(1);
+    return summary + '.';
   }
 
   void _cancelAllTimers() {
