@@ -846,7 +846,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     if (lastRun == null) {
       return 'Never';
     }
-    return '${lastRun.toLocal().toString().substring(0, 16)}';
+    return lastRun.toLocal().toString().substring(0, 16);
   }
 
   String _formatTask(RefreshSchedule schedule) {
