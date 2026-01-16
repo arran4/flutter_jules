@@ -59,6 +59,21 @@ class GithubProvider extends ChangeNotifier {
     _processQueue();
   }
 
+  Future<Map<String, dynamic>?> validateToken(String token) async {
+    final response = await http.get(
+      Uri.parse('https://api.github.com/user'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
   void _handleUnauthorized(String body) {
     if (_hasBadCredentials) return; // Already known
 
