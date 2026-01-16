@@ -26,8 +26,11 @@ class _ActivityItemState extends State<ActivityItem> {
     // Try to get session ID from activity name to link to Jules
     final sessionId = _getSessionIdFromActivityName(widget.activity.name);
     final settings = Provider.of<SettingsProvider>(context, listen: false);
-    if (sessionId != null && settings.useGoogleJules) {
-      return 'https://jules.corp.google.com/session/$sessionId';
+    if (sessionId != null) {
+      if (settings.useCorpJulesUrl) {
+        return 'https://jules.corp.google.com/session/$sessionId';
+      }
+      return 'https://jules.google.com/session/$sessionId';
     }
 
     // Fallback to GitHub URL

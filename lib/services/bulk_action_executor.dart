@@ -357,17 +357,12 @@ class BulkActionExecutor extends ChangeNotifier {
         }
         break;
       case BulkActionType.openJulesLink:
-        if (settingsProvider.useGoogleJules) {
-          final url = "https://jules.corp.google.com/session/${session.id}";
-          _addLog("Opening session in Jules UI: $url", false, session.id);
-          await launchUrl(Uri.parse(url));
-        } else {
-          _addLog(
-            "Google Jules link is disabled in settings. Skipping.",
-            false,
-            session.id,
-          );
-        }
+        final baseUrl = settingsProvider.useCorpJulesUrl
+            ? "https://jules.corp.google.com"
+            : "https://jules.google.com";
+        final url = "$baseUrl/session/${session.id}";
+        _addLog("Opening session in Jules UI: $url", false, session.id);
+        await launchUrl(Uri.parse(url));
         break;
       case BulkActionType.quickReply:
         final message = step.message;

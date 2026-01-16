@@ -203,12 +203,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: (value) => devMode.toggleApiLogging(value),
               ),
               SwitchListTile(
-                title: const Text('Use Google Jules Links'),
+                title: const Text('Use Corp Jules Links'),
                 subtitle: const Text(
-                  'Use jules.corp.google.com links instead of github.com for PRs.',
+                  'Use jules.corp.google.com links instead of jules.google.com for PRs.',
                 ),
-                value: settings.useGoogleJules,
-                onChanged: (value) => settings.setUseGoogleJules(value),
+                value: settings.useCorpJulesUrl,
+                onChanged: (value) => settings.setUseCorpJulesUrl(value),
               ),
               const Divider(),
               _buildSectionHeader(context, 'Authentication'),
