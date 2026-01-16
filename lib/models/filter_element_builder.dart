@@ -97,14 +97,57 @@ class FilterElementBuilder {
       return replaceFilter(root, target, target.child);
     }
 
-    // Check if target is immediately wrapped by a DisabledElement in the tree,
-    // which implies we might have passed the inner element but clicked "Enable".
-    // However, usually the UI passes the specific element instance.
-    // If the UI constructs the menu on a DisabledElement, it passes that DisabledElement.
-    // If it constructs it on a normal element, it passes that normal element.
+    // Check if target is wrapped by a DisabledElement in the tree (immediate parent)
+    final recursiveUnwrap = _removeImmediateDisabledParent(root, target);
+    if (recursiveUnwrap != null) {
+      return recursiveUnwrap;
+    }
 
     // So if target is NOT disabled, we wrap it.
     return replaceFilter(root, target, DisabledElement(target));
+  }
+
+  /// Recursively walks filter tree. If it finds DisabledElement(target), replaces it with target.
+  /// Returns the new tree if found, or null if not found.
+  static FilterElement? _removeImmediateDisabledParent(
+      FilterElement root, FilterElement target) {
+    if (root is DisabledElement && root.child == target) {
+      return target;
+    }
+
+    if (root is AndElement) {
+      final children = root.children;
+      for (int i = 0; i < children.length; i++) {
+        final res = _removeImmediateDisabledParent(children[i], target);
+        if (res != null) {
+          final newChildren = List<FilterElement>.from(children);
+          newChildren[i] = res;
+          return AndElement(newChildren);
+        }
+      }
+    } else if (root is OrElement) {
+      final children = root.children;
+      for (int i = 0; i < children.length; i++) {
+        final res = _removeImmediateDisabledParent(children[i], target);
+        if (res != null) {
+          final newChildren = List<FilterElement>.from(children);
+          newChildren[i] = res;
+          return OrElement(newChildren);
+        }
+      }
+    } else if (root is NotElement) {
+      final res = _removeImmediateDisabledParent(root.child, target);
+      if (res != null) {
+        return NotElement(res);
+      }
+    } else if (root is DisabledElement) {
+      final res = _removeImmediateDisabledParent(root.child, target);
+      if (res != null) {
+        return DisabledElement(res);
+      }
+    }
+
+    return null;
   }
 
   /// Toggle NOT wrapper on an element

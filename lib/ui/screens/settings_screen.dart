@@ -608,26 +608,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
               content: Column(
                 mainAxisSize: MainAxisSize.min,
                 children: [
-                  DropdownButtonFormField<TokenType>(
-                    value: tempType,
+                  InputDecorator(
                     decoration: const InputDecoration(labelText: 'Type'),
-                    items: const [
-                      DropdownMenuItem(
-                        value: TokenType.accessToken,
-                        child: Text('OAuth Access Token'),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<TokenType>(
+                        value: tempType,
+                        isDense: true,
+                        items: const [
+                          DropdownMenuItem(
+                            value: TokenType.accessToken,
+                            child: Text('OAuth Access Token'),
+                          ),
+                          DropdownMenuItem(
+                            value: TokenType.apiKey,
+                            child: Text('Jules API Key'),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              tempType = val;
+                            });
+                          }
+                        },
                       ),
-                      DropdownMenuItem(
-                        value: TokenType.apiKey,
-                        child: Text('Jules API Key'),
-                      ),
-                    ],
-                    onChanged: (val) {
-                      if (val != null) {
-                        setState(() {
-                          tempType = val;
-                        });
-                      }
-                    },
+                    ),
                   ),
                   const SizedBox(height: 16),
                   TextField(
