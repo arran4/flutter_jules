@@ -95,23 +95,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _promptController = TextEditingController();
     _imageUrlController = TextEditingController();
 
-    if (widget.initialSession != null) {
-      _promptController.text = widget.initialSession!.prompt;
-      // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
-          AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
-      final requireApproval =
-          widget.initialSession!.requirePlanApproval ?? false;
-
-      if (mode == AutomationMode.AUTO_CREATE_PR) {
-        _selectedModeIndex = 2; // Start
-        _autoCreatePr = true;
-      } else if (requireApproval) {
-        _selectedModeIndex = 1; // Plan
-      } else {
-        _selectedModeIndex = 0; // Question (default)
-      }
-    }
     _sourceFocusNode = FocusNode(onKeyEvent: _handleSourceFocusKey);
     _sourceFocusNode.addListener(() {
       if (!_sourceFocusNode.hasFocus) {
@@ -128,11 +111,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         });
       }
     });
-    // _sourceController.addListener(_onSourceTextChanged); // We'll call explicit filter update from onChanged to avoid loops
 
-    _loadPreferences();
-    // Defer data fetching to after the first frame
+    // Defer data fetching and async initialization to after the first frame
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      _initialize();
       _fetchSources();
     });
   }
@@ -177,15 +159,39 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     return KeyEventResult.ignored;
   }
 
-  Future<void> _loadPreferences() async {
-    if (widget.initialSession != null) return;
+  Future<void> _initialize() async {
+    // First, load the last-used preferences to set a baseline default.
+    await _loadPreferences();
 
+    // Then, if we are creating a new session from an existing one,
+    // check if we can infer a more specific mode.
+    if (widget.initialSession != null) {
+      _promptController.text = widget.initialSession!.prompt;
+      final mode = widget.initialSession!.automationMode ??
+          AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+      final requireApproval =
+          widget.initialSession!.requirePlanApproval ?? false;
+
+      // This logic will now correctly override the preference-loaded value.
+      if (mode == AutomationMode.AUTO_CREATE_PR) {
+        setState(() {
+          _selectedModeIndex = 2; // Start
+          _autoCreatePr = true;
+        });
+      } else if (requireApproval) {
+        setState(() {
+          _selectedModeIndex = 1; // Plan
+        });
+      }
+    }
+  }
+
+  Future<void> _loadPreferences() async {
     final prefs = await SharedPreferences.getInstance();
     if (!mounted) return;
     setState(() {
       _selectedModeIndex = prefs.getInt('new_session_last_mode') ?? 0;
       _autoCreatePr = prefs.getBool('new_session_last_auto_pr') ?? true;
-      // Sources and branches are handled in _initializeSelection after sources are loaded
     });
   }
 
