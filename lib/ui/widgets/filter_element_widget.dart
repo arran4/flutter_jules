@@ -27,6 +27,7 @@ class FilterElementWidget extends StatelessWidget {
   final Function(FilterElement target, FilterElement alternative)?
       onAddAlternative;
   final bool isNegated;
+  final bool isParentDisabled;
 
   const FilterElementWidget({
     super.key,
@@ -38,6 +39,7 @@ class FilterElementWidget extends StatelessWidget {
     this.onDrop,
     this.onAddAlternative,
     this.isNegated = false,
+    this.isParentDisabled = false,
   });
 
   @override
@@ -301,6 +303,7 @@ class FilterElementWidget extends StatelessWidget {
                       onAddAlternative: onAddAlternative,
                       // Children of composite are not negated by the composite itself
                       isNegated: false,
+                      isParentDisabled: isParentDisabled,
                     );
                   }).toList(),
                 ),
@@ -389,6 +392,7 @@ class FilterElementWidget extends StatelessWidget {
               onDrop: onDrop,
               onAddAlternative: onAddAlternative,
               isNegated: true,
+              isParentDisabled: isParentDisabled,
             ),
           ),
         ],
@@ -474,6 +478,7 @@ class FilterElementWidget extends StatelessWidget {
               onDrop: onDrop,
               onAddAlternative: onAddAlternative,
               isNegated: isNegated, // Inherit
+              isParentDisabled: true,
             ),
           ),
         ],
@@ -513,7 +518,8 @@ class FilterElementWidget extends StatelessWidget {
     items.add(
       CheckedPopupMenuItem(
         value: 2,
-        checked: element is! DisabledElement,
+        checked: element is! DisabledElement && !isParentDisabled,
+        enabled: !isParentDisabled,
         child: const Text("Enabled"),
       ),
     );
@@ -580,6 +586,12 @@ class FilterElementWidget extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
+    final bool isActuallyDisabled = element is DisabledElement || isParentDisabled;
+    final effectiveTextColor =
+        isActuallyDisabled ? textColor.withOpacity(0.5) : textColor;
+    final effectiveBackgroundColor =
+        isActuallyDisabled ? backgroundColor.withOpacity(0.5) : backgroundColor;
+
     return GestureDetector(
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, details, element),
@@ -587,21 +599,24 @@ class FilterElementWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: effectiveBackgroundColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: textColor.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: textColor),
+            Icon(icon, size: 14, color: effectiveTextColor),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: textColor,
+                color: effectiveTextColor,
                 fontWeight: FontWeight.w500,
+                decoration: isActuallyDisabled
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
               ),
             ),
             if (onRemove != null) ...[
@@ -611,7 +626,7 @@ class FilterElementWidget extends StatelessWidget {
                 child: Icon(
                   Icons.close,
                   size: 14,
-                  color: textColor.withValues(alpha: 0.7),
+                  color: effectiveTextColor.withValues(alpha: 0.7),
                 ),
               ),
             ],
