@@ -13,6 +13,7 @@ class RefreshSchedule {
   RefreshTaskType taskType;
   ListRefreshPolicy? refreshPolicy;
   SendMessagesMode? sendMessagesMode;
+  DateTime? lastRun;
 
   RefreshSchedule({
     String? id,
@@ -22,6 +23,7 @@ class RefreshSchedule {
     this.taskType = RefreshTaskType.refresh,
     this.refreshPolicy,
     this.sendMessagesMode,
+    this.lastRun,
   }) : id = id ?? const Uuid().v4();
 
   factory RefreshSchedule.fromJson(Map<String, dynamic> json) {
@@ -37,6 +39,8 @@ class RefreshSchedule {
       sendMessagesMode: json['sendMessagesMode'] != null
           ? SendMessagesMode.values[json['sendMessagesMode']]
           : null,
+      lastRun:
+          json['lastRun'] != null ? DateTime.tryParse(json['lastRun']) : null,
     );
   }
 
@@ -49,6 +53,7 @@ class RefreshSchedule {
       'taskType': taskType.index,
       'refreshPolicy': refreshPolicy?.index,
       'sendMessagesMode': sendMessagesMode?.index,
+      'lastRun': lastRun?.toIso8601String(),
     };
   }
 }
