@@ -4,6 +4,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
+import '../models/github_exclusion.dart';
 
 enum SessionRefreshPolicy { none, shallow, full }
 
@@ -28,6 +29,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyFabVisibility = 'fab_visibility';
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
+  static const String _githubExclusionsKey = 'github_exclusions';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -63,6 +65,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _trayEnabled = false;
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
+  List<GithubExclusion> _githubExclusions = [];
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -88,6 +91,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get trayEnabled => _trayEnabled;
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
+  List<GithubExclusion> get githubExclusions => _githubExclusions;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -178,7 +182,9 @@ class SettingsProvider extends ChangeNotifier {
     );
 
     _loadSchedules();
+    _loadSchedules();
     _loadBulkActionConfig();
+    _loadGithubExclusions();
 
     // Load last filter
     final lastFilterJson = _prefs!.getString(_lastFilterKey);
@@ -446,4 +452,66 @@ class SettingsProvider extends ChangeNotifier {
     await _prefs?.setString(_bulkActionConfigKey, jsonString);
     notifyListeners();
   }
+
+  void _loadGithubExclusions() {
+    final jsonString = _prefs?.getString(_githubExclusionsKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(jsonString);
+        _githubExclusions =
+            decodedList.map((json) => GithubExclusion.fromJson(json)).toList();
+      } catch (e) {
+        _githubExclusions = [];
+      }
+    } else {
+      _githubExclusions = [];
+    }
+  }
+
+  Future<void> _saveGithubExclusions() async {
+    final jsonString =
+        jsonEncode(_githubExclusions.map((e) => e.toJson()).toList());
+    await _prefs?.setString(_githubExclusionsKey, jsonString);
+  }
+
+  Future<void> addGithubExclusion(GithubExclusion exclusion) async {
+    // Avoid duplicates
+    if (_githubExclusions.any(
+        (e) => e.type == exclusion.type && e.value == exclusion.value)) {
+      return;
+    }
+    _githubExclusions.add(exclusion);
+    await _saveGithubExclusions();
+    notifyListeners();
+  }
+
+  Future<void> removeGithubExclusion(
+      String value, GithubExclusionType type) async {
+    _githubExclusions.removeWhere((e) => e.value == value && e.type == type);
+    await _saveGithubExclusions();
+    notifyListeners();
+  }
+
+  bool isExcluded(String userOrgRepo) {
+    if (userOrgRepo.isEmpty) return false;
+
+    // Check for repo exclusion
+    if (_githubExclusions.any(
+        (e) => e.type == GithubExclusionType.repo && e.value == userOrgRepo)) {
+      return true;
+    }
+
+    // Check for org exclusion
+    final parts = userOrgRepo.split('/');
+    if (parts.length == 2) {
+      final org = parts[0];
+      if (_githubExclusions
+          .any((e) => e.type == GithubExclusionType.org && e.value == org)) {
+        return true;
+      }
+    }
+
+    return false;
+  }
 }
+

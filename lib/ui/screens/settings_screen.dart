@@ -246,6 +246,11 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 onTap: () => _showGitHubKeyDialog(context, github),
               ),
+              if (settings.githubExclusions.isNotEmpty) ...[
+                const Divider(),
+                _buildSectionHeader(context, 'GitHub Exclusions'),
+                _buildGithubExclusionsTable(context, settings),
+              ],
             ],
           );
         },
@@ -760,26 +765,53 @@ class _SettingsScreenState extends State<SettingsScreen> {
         onChanged: (newValue) {
           if (newValue != null) onChanged(newValue);
         },
-        items: FabVisibility.values.map((policy) {
+        items: FabVisibility.values.map((v) {
           return DropdownMenuItem(
-            value: policy,
-            child: Text(_formatFabVisibility(policy)),
+            value: v,
+            child: Text(v.toString().split('.').last),
           );
         }).toList(),
       ),
     );
   }
 
-  String _formatFabVisibility(FabVisibility policy) {
-    switch (policy) {
-      case FabVisibility.appBar:
-        return 'AppBar';
-      case FabVisibility.floating:
-        return 'Floating';
-      case FabVisibility.off:
-        return 'Off';
-    }
+  Widget _buildGithubExclusionsTable(
+      BuildContext context, SettingsProvider settings) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Type')),
+          DataColumn(label: Text('Value')),
+          DataColumn(label: Text('Reason')),
+          DataColumn(label: Text('Date')),
+          DataColumn(label: Text('Action')),
+        ],
+        rows: settings.githubExclusions.map((exclusion) {
+          return DataRow(
+            cells: [
+              DataCell(Text(exclusion.type.toString().split('.').last)),
+              DataCell(Text(exclusion.value)),
+              DataCell(Text(exclusion.reason)),
+              DataCell(Text(exclusion.date.toIso8601String().split('T')[0])),
+              DataCell(
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onPressed: () {
+                    settings.removeGithubExclusion(
+                        exclusion.value, exclusion.type);
+                  },
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
   }
+
+
+
 
   Widget _buildKeybindingDropdown<T extends Enum>(
     BuildContext context, {
