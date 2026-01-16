@@ -16,6 +16,7 @@ import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/metadata_viewer.dart';
 import '../widgets/activity_item.dart';
 import '../widgets/activity_helper.dart';
 import '../widgets/new_session_dialog.dart';
@@ -1037,6 +1038,37 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       Text('Force Approve Plan'),
                     ],
                   ),
+                ),
+                const PopupMenuDivider(),
+                PopupMenuItem(
+                  child: const Row(
+                    children: [
+                      Icon(Icons.table_chart),
+                      SizedBox(width: 8),
+                      Text('View Metadata'),
+                    ],
+                  ),
+                  onTap: () {
+                    Future.delayed(Duration.zero, () {
+                      if (mounted) {
+                        if (_session.metadata != null &&
+                            _session.metadata!.isNotEmpty) {
+                          showDialog(
+                            context: context,
+                            builder: (context) =>
+                                MetadataViewer(metadata: _session.metadata!),
+                          );
+                        } else {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text(
+                                  'No metadata available for this session'),
+                            ),
+                          );
+                        }
+                      }
+                    });
+                  },
                 ),
               ],
             ),

@@ -20,6 +20,7 @@ import '../widgets/bulk_action_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
+import '../widgets/metadata_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
 import '../session_helpers.dart';
@@ -2527,6 +2528,34 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 }
               },
             );
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.table_chart),
+              SizedBox(width: 8),
+              Text('View Metadata'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                if (session.metadata != null && session.metadata!.isNotEmpty) {
+                  showDialog(
+                    context: context,
+                    builder: (context) =>
+                        MetadataViewer(metadata: session.metadata!),
+                  );
+                } else {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('No metadata available for this session'),
+                    ),
+                  );
+                }
+              }
+            });
           },
         ),
         PopupMenuItem(
