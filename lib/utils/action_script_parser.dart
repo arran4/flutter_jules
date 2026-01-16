@@ -38,7 +38,6 @@ class ActionScriptParser {
             (v) => randomize = v,
             (v) => stopOnError = v);
       } else {
-
         // Handle "SET Key = Value" or Action or Comment
         // Strip inline comments if simple
         var content = line;
@@ -57,49 +56,49 @@ class ActionScriptParser {
           }
 
           final equalsIndex = content.indexOf('=');
-        if (equalsIndex != -1) {
-          final key = content.substring(0, equalsIndex).trim().toLowerCase();
-          var val = content.substring(equalsIndex + 1).trim();
-          // Remove quotes if present
-          if (val.startsWith('"') && val.endsWith('"')) {
-            val = val.substring(1, val.length - 1);
+          if (equalsIndex != -1) {
+            final key = content.substring(0, equalsIndex).trim().toLowerCase();
+            var val = content.substring(equalsIndex + 1).trim();
+            // Remove quotes if present
+            if (val.startsWith('"') && val.endsWith('"')) {
+              val = val.substring(1, val.length - 1);
+            }
+
+            _parseDirective(
+                key,
+                val,
+                (v) => waitBetween = v,
+                (v) => parallelQueries = v,
+                (v) => limit = v,
+                (v) => offset = v,
+                (v) => randomize = v,
+                (v) => stopOnError = v);
+          }
+        } else {
+          final parts = line.split(RegExp(r'\s+'));
+          final actionName = parts[0];
+          final message =
+              parts.length > 1 ? parts.sublist(1).join(' ').trim() : null;
+
+          final actionType = BulkActionType.values.firstWhere(
+            (e) => e.name == actionName,
+            orElse: () => throw FormatException('Unknown action: $actionName'),
+          );
+
+          String? extractedMessage;
+          if (message != null) {
+            if (message.startsWith('"') && message.endsWith('"')) {
+              extractedMessage = message.substring(1, message.length - 1);
+            } else {
+              extractedMessage = message;
+            }
           }
 
-          _parseDirective(
-              key,
-              val,
-              (v) => waitBetween = v,
-              (v) => parallelQueries = v,
-              (v) => limit = v,
-              (v) => offset = v,
-              (v) => randomize = v,
-              (v) => stopOnError = v);
+          actions.add(BulkActionStep(
+            type: actionType,
+            message: extractedMessage,
+          ));
         }
-      } else {
-        final parts = line.split(RegExp(r'\s+'));
-        final actionName = parts[0];
-        final message =
-            parts.length > 1 ? parts.sublist(1).join(' ').trim() : null;
-
-        final actionType = BulkActionType.values.firstWhere(
-          (e) => e.name == actionName,
-          orElse: () => throw FormatException('Unknown action: $actionName'),
-        );
-
-        String? extractedMessage;
-        if (message != null) {
-          if (message.startsWith('"') && message.endsWith('"')) {
-            extractedMessage = message.substring(1, message.length - 1);
-          } else {
-            extractedMessage = message;
-          }
-        }
-
-        actions.add(BulkActionStep(
-          type: actionType,
-          message: extractedMessage,
-        ));
-      }
       }
     }
     return BulkJobConfig(
@@ -162,4 +161,3 @@ class ActionScriptParser {
     }
   }
 }
-

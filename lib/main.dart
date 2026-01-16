@@ -52,8 +52,7 @@ void main() async {
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
-          create: (context) =>
-              GithubProvider(context.read<SettingsProvider>()),
+          create: (context) => GithubProvider(context.read<SettingsProvider>()),
           update: (context, settings, github) => github!,
         ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),

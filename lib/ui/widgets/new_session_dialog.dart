@@ -10,6 +10,7 @@ import 'package:shared_preferences/shared_preferences.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/source_provider.dart';
+import '../../services/session_provider.dart';
 
 import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';

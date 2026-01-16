@@ -94,7 +94,7 @@ SET ParallelQueries = 5; // Inline comment
 refreshSession;
 ''';
       final config = ActionScriptParser.parse(script, null);
-      expect(config.parallelQueries, 5); 
+      expect(config.parallelQueries, 5);
       expect(config.actions.length, 1);
       expect(config.actions[0].type, BulkActionType.refreshSession);
     });
