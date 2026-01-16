@@ -427,6 +427,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   ),
                   TextButton(
                     onPressed: () {
+                      Navigator.pop(context); // Close dialog
+                      // Retry the operation
+                      // Remove the previous failed request from queue to avoid duplicates if retry succeeds
+                      // (Actually, performCreate will add a NEW request if it fails, so we should arguably
+                      // clean up the old one or just let performCreate handle it.
+                      // Since we are "Retrying", let's clear the specific failed one we just added?
+                      // Or better: The msgId we have is for the failure record.
+                      // If we retry and succeed, we probably want to delete this failure record.
+                      // If we retry and fail, we get a new failure record (and dialog).
+                      // So deleting the current failure record before retrying seems appropriate to avoid clutter,
+                      // OR we keep it until success.
+                      // Let's delete it for now as "Retry" implies handling this instance.
+                      queueProvider.deleteMessage(msgId);
+                      performCreate(sessionToCreate);
+                    },
+                    child: const Text('Retry'),
+                  ),
+                  TextButton(
+                    onPressed: () {
                       Navigator.pop(context);
                       // Update to draft so it doesn't auto-retry immediately on app restart
                       queueProvider.updateCreateSessionRequest(
