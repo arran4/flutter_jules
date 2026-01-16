@@ -1,3 +1,6 @@
+import 'dart:convert';
+
+import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:provider/provider.dart';
 import 'services/activity_provider.dart';
@@ -22,6 +25,8 @@ import 'package:window_manager/window_manager.dart';
 import 'services/tray_service.dart';
 import 'services/global_shortcut_focus_manager.dart';
 import 'services/shortcut_registry.dart';
+import 'ui/app_container.dart';
+import 'ui/screens/new_session_window.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -36,99 +41,24 @@ class ShowHelpIntent extends Intent {
   const ShowHelpIntent();
 }
 
-void main() async {
-  WidgetsFlutterBinding.ensureInitialized();
-  await windowManager.ensureInitialized();
-  await NotificationService().init();
+void main(List<String> args) async {
+  if (args.firstOrNull == 'multi_window') {
+    final windowId = int.parse(args[1]);
+    final arguments = args[2].isEmpty
+        ? const {}
+        : jsonDecode(args[2]) as Map<String, dynamic>;
+    runApp(NewSessionWindow(
+      windowId: windowId,
+    ));
+  } else {
+    WidgetsFlutterBinding.ensureInitialized();
+    await windowManager.ensureInitialized();
+    await NotificationService().init();
 
-  runApp(
-    MultiProvider(
-      providers: [
-        Provider<NotificationService>(create: (_) => NotificationService()),
-        ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
-        ChangeNotifierProvider(create: (_) => NotificationProvider()),
-        ChangeNotifierProvider(create: (_) => ActivityProvider()),
-        ChangeNotifierProvider(create: (_) => AuthProvider()),
-        ChangeNotifierProvider(create: (_) => DevModeProvider()),
-        ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
-        ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
-          create: (context) => GithubProvider(context.read<SettingsProvider>()),
-          update: (context, settings, github) => github!,
-        ),
-        ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
-        ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
-        ProxyProvider<DevModeProvider, CacheService>(
-          update: (_, devMode, __) =>
-              CacheService(isDevMode: devMode.isDevMode),
-        ),
-        ChangeNotifierProxyProvider3<CacheService, GithubProvider,
-            NotificationProvider, SessionProvider>(
-          create: (_) => SessionProvider(),
-          update: (_, cache, github, notifications, session) => session!
-            ..setCacheService(cache)
-            ..setGithubProvider(github)
-            ..setNotificationProvider(notifications),
-        ),
-        ChangeNotifierProxyProvider<CacheService, SourceProvider>(
-          create: (_) => SourceProvider(),
-          update: (_, cache, source) => source!..setCacheService(cache),
-        ),
-        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
-            MessageQueueProvider>(
-          create: (_) => MessageQueueProvider(),
-          update: (_, cache, auth, queue) =>
-              queue!..setCacheService(cache, auth.token),
-        ),
-        ChangeNotifierProxyProvider6<
-            SettingsProvider,
-            SessionProvider,
-            SourceProvider,
-            NotificationService,
-            MessageQueueProvider,
-            ActivityProvider,
-            RefreshService>(
-          create: (context) => RefreshService(
-            context.read<SettingsProvider>(),
-            context.read<SessionProvider>(),
-            context.read<SourceProvider>(),
-            context.read<AuthProvider>(),
-            context.read<NotificationService>(),
-            context.read<MessageQueueProvider>(),
-            context.read<ActivityProvider>(),
-          ),
-          update: (
-            _,
-            settings,
-            sessionProvider,
-            sourceProvider,
-            notificationService,
-            messageQueueProvider,
-            activityProvider,
-            service,
-          ) =>
-              service!,
-        ),
-        ChangeNotifierProxyProvider4<SessionProvider, AuthProvider,
-            GithubProvider, SettingsProvider, BulkActionExecutor>(
-          create: (context) => BulkActionExecutor(
-            sessionProvider: context.read<SessionProvider>(),
-            julesClient: context.read<AuthProvider>().client,
-            authProvider: context.read<AuthProvider>(),
-            githubProvider: context.read<GithubProvider>(),
-            settingsProvider: context.read<SettingsProvider>(),
-          ),
-          update: (context, session, auth, github, settings, executor) =>
-              executor!,
-        ),
-        ChangeNotifierProxyProvider<SessionProvider, TagsProvider>(
-          create: (context) => TagsProvider(context.read<SessionProvider>()),
-          update: (_, sessionProvider, tagsProvider) =>
-              tagsProvider ?? TagsProvider(sessionProvider),
-        ),
-      ],
-      child: const GlobalShortcutFocusManager(child: MyApp()),
-    ),
-  );
+    runApp(const AppContainer(
+      child: GlobalShortcutFocusManager(child: MyApp()),
+    ));
+  }
 }
 
 class MyApp extends StatefulWidget {
@@ -184,10 +114,17 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
   void _initTrayService() {
     _trayService = TrayService(
-      onNewSession: () {
-        if (navigatorKey.currentContext != null) {
-          showNewSessionDialog(navigatorKey.currentContext!);
-        }
+      onNewSession: () async {
+        final window = await DesktopMultiWindow.createWindow(
+          jsonEncode({
+            'type': 'new_session',
+          }),
+        );
+        window
+          ..setFrame(const Offset(0, 0) & const Size(800, 600))
+          ..center()
+          ..setTitle('New Session')
+          ..show();
       },
       onRefresh: () {
         final auth = context.read<AuthProvider>();
