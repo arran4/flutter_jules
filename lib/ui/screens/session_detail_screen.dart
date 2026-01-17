@@ -55,6 +55,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   bool _isNoteVisible = false;
   bool _isNoteEditing = false;
   final TextEditingController _noteController = TextEditingController();
+  bool _shouldMarkRead = true;
 
   // Concurrency Control
   Future<void> _apiLock = Future.value();
@@ -847,7 +848,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // If "Send & New" was clicked, pop the current screen and return true.
     if (result.openNewDialog) {
       // Pop the current detail screen
-      navigator.pop(true);
+      navigator.pop(
+        SessionDetailResult(openNewSessionDialog: true, markAsRead: true),
+      );
     }
   }
 
@@ -868,8 +871,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) {
+          bool shouldMark = _shouldMarkRead;
+          if (result is SessionDetailResult) {
+            shouldMark = result.markAsRead;
+          }
+
           final auth = Provider.of<AuthProvider>(context, listen: false);
-          if (auth.token != null) {
+          if (auth.token != null && shouldMark) {
             // Fire and forget
             Provider.of<SessionProvider>(
               context,
@@ -1021,14 +1029,25 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 final auth = authProvider;
 
                 if (value == 'mark_unread_back') {
+                  _shouldMarkRead = false;
                   await sessionProvider.markAsUnread(_session.id, auth.token!);
-                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(
+                      context,
+                      const SessionDetailResult(markAsRead: false),
+                    );
+                  }
                 } else if (value == 'pr_back') {
                   final pr = _session.outputs
                       ?.firstWhereOrNull((o) => o.pullRequest != null)
                       ?.pullRequest;
                   if (pr != null) launchUrl(Uri.parse(pr.url));
-                  if (context.mounted) Navigator.pop(context);
+                  if (context.mounted) {
+                    Navigator.pop(
+                      context,
+                      const SessionDetailResult(markAsRead: true),
+                    );
+                  }
                 } else if (value == 'copy_pr_url') {
                   final pr = _session.outputs
                       ?.firstWhereOrNull((o) => o.pullRequest != null)
