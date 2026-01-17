@@ -66,20 +66,15 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8.0,
-                    children: [
-                      '15 minutes',
-                      '1 hour',
-                      '1 day',
-                      '7 days',
-                      '30 days'
-                    ]
-                        .map((range) => FilterChip(
-                              label: Text(range),
-                              onSelected: (selected) {
-                                _rangeController.text = range;
-                              },
-                            ))
-                        .toList(),
+                    children:
+                        ['15 minutes', '1 hour', '1 day', '7 days', '30 days']
+                            .map((range) => FilterChip(
+                                  label: Text(range),
+                                  onSelected: (selected) {
+                                    _rangeController.text = range;
+                                  },
+                                ))
+                            .toList(),
                   ),
                 ],
               ),

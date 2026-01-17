@@ -131,7 +131,7 @@ class RefreshService extends ChangeNotifier {
     return compareSessions(oldSessions, newSessions);
   }
 
-  void _executeSendPendingMessages(
+  Future<void> _executeSendPendingMessages(
       RefreshSchedule schedule, JulesClient client) async {
     if (_messageQueueProvider.queue.isEmpty) {
       _activityProvider
@@ -180,13 +180,13 @@ class RefreshService extends ChangeNotifier {
       if (isNew) {
         newSessionsCount++;
       }
-      if (newSession.isUnread ?? false) {
+      /* if (newSession.isUnread ?? false) {
         newUnread++;
-      }
+      } */
       if (newSession.state == SessionState.AWAITING_PLAN_APPROVAL) {
         newWaitingApproval++;
       }
-      if (newSession.state == SessionState.AWAITING_FEEDBACK) {
+      if (newSession.state == SessionState.AWAITING_USER_FEEDBACK) {
         newWaitingFeedback++;
       }
       // Assuming some logic to determine if a session is a PR
@@ -230,7 +230,9 @@ class RefreshService extends ChangeNotifier {
     }
     final summaryParts = <String>[];
     if (newUnread > 0) summaryParts.add('new unread: $newUnread');
-    if (newSessionsCount > 0) summaryParts.add('new sessions: $newSessionsCount');
+    if (newSessionsCount > 0) {
+      summaryParts.add('new sessions: $newSessionsCount');
+    }
     if (newWaitingApproval > 0) {
       summaryParts.add('waiting approval: $newWaitingApproval');
     }
@@ -245,7 +247,7 @@ class RefreshService extends ChangeNotifier {
 
     String summary = summaryParts.join(', ');
     summary = summary[0].toUpperCase() + summary.substring(1);
-    return summary + '.';
+    return '${summary[0].toUpperCase()}${summary.substring(1)}.';
   }
 
   void _cancelAllTimers() {

@@ -719,7 +719,11 @@ class FilterElementWidget extends StatelessWidget {
       case TimeFilterType.inRange:
         if (tf.specificTime != null && tf.specificTimeEnd != null) {
           final difference = tf.specificTimeEnd!.difference(tf.specificTime!);
-          if (difference.inHours <= 24 && tf.specificTime!.day == tf.specificTimeEnd!.subtract(const Duration(seconds: 1)).day) {
+          if (difference.inHours <= 24 &&
+              tf.specificTime!.day ==
+                  tf.specificTimeEnd!
+                      .subtract(const Duration(seconds: 1))
+                      .day) {
             return '$field is on ${DateFormat.yMMMd().format(tf.specificTime!)}';
           }
           return '$field is between ${DateFormat.yMMMd().format(tf.specificTime!)} and ${DateFormat.yMMMd().format(tf.specificTimeEnd!)}';

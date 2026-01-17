@@ -168,8 +168,7 @@ class SettingsProvider extends ChangeNotifier {
     _notifyOnCompletion = _prefs!.getBool(keyNotifyOnCompletion) ?? true;
     _notifyOnWatch = _prefs!.getBool(keyNotifyOnWatch) ?? true;
     _notifyOnFailure = _prefs!.getBool(keyNotifyOnFailure) ?? true;
-    _notifyOnRefreshStart =
-        _prefs!.getBool(keyNotifyOnRefreshStart) ?? false;
+    _notifyOnRefreshStart = _prefs!.getBool(keyNotifyOnRefreshStart) ?? false;
     _notifyOnRefreshComplete =
         _prefs!.getBool(keyNotifyOnRefreshComplete) ?? false;
     _notifyOnErrors = _prefs!.getBool(keyNotifyOnErrors) ?? false;

@@ -42,9 +42,9 @@ class NotificationService {
         DarwinNotificationCategory(
           'jules_category',
           actions: [
-            const DarwinNotificationAction.plain('show_task', 'Show Task'),
-            const DarwinNotificationAction.plain('open_pr', 'Open PR'),
-            const DarwinNotificationAction.plain('show_new', 'Show New'),
+            DarwinNotificationAction.plain('show_task', 'Show Task'),
+            DarwinNotificationAction.plain('open_pr', 'Open PR'),
+            DarwinNotificationAction.plain('show_new', 'Show New'),
           ],
         ),
       ],
@@ -53,19 +53,21 @@ class NotificationService {
     const LinuxInitializationSettings initializationSettingsLinux =
         LinuxInitializationSettings(defaultActionName: 'Open notification');
 
+/*
     const WindowsInitializationSettings initializationSettingsWindows =
         WindowsInitializationSettings(
       appName: 'Jules',
       appUserModelId: 'Jules',
     );
+*/
 
-    const InitializationSettings initializationSettings =
+    final InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
       linux: initializationSettingsLinux,
-      windows: initializationSettingsWindows,
+      // windows: initializationSettingsWindows,
     );
 
     await flutterLocalNotificationsPlugin.initialize(
@@ -104,29 +106,21 @@ class NotificationService {
       actions: androidActions,
     );
 
-    final darwinActions = actions?.map((action) {
-      switch (action) {
-        case NotificationAction.showTask:
-          return const DarwinNotificationAction.plain('show_task', 'Show Task');
-        case NotificationAction.openPr:
-          return const DarwinNotificationAction.plain('open_pr', 'Open PR');
-        case NotificationAction.showNew:
-          return const DarwinNotificationAction.plain('show_new', 'Show New');
-      }
-    }).toList();
-
     final linuxActions = actions?.map((action) {
       switch (action) {
         case NotificationAction.showTask:
-          return const LinuxNotificationAction('show_task', 'Show Task');
+          return const LinuxNotificationAction(
+              key: 'show_task', label: 'Show Task');
         case NotificationAction.openPr:
-          return const LinuxNotificationAction('open_pr', 'Open PR');
+          return const LinuxNotificationAction(
+              key: 'open_pr', label: 'Open PR');
         case NotificationAction.showNew:
-          return const LinuxNotificationAction('show_new', 'Show New');
+          return const LinuxNotificationAction(
+              key: 'show_new', label: 'Show New');
       }
     }).toList();
 
-    final DarwinNotificationDetails darwinPlatformChannelSpecifics =
+    const DarwinNotificationDetails darwinPlatformChannelSpecifics =
         DarwinNotificationDetails(
       categoryIdentifier: 'jules_category',
       attachments: [],
@@ -134,18 +128,20 @@ class NotificationService {
 
     final LinuxNotificationDetails linuxPlatformChannelSpecifics =
         LinuxNotificationDetails(
-      actions: linuxActions,
+      actions: linuxActions ?? [],
     );
 
+/*
     const WindowsNotificationDetails windowsPlatformChannelSpecifics =
         WindowsNotificationDetails();
+*/
 
     final NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
       iOS: darwinPlatformChannelSpecifics,
       macOS: darwinPlatformChannelSpecifics,
       linux: linuxPlatformChannelSpecifics,
-      windows: windowsPlatformChannelSpecifics,
+      // windows: windowsPlatformChannelSpecifics,
     );
 
     await flutterLocalNotificationsPlugin.show(

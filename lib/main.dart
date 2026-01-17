@@ -7,6 +7,7 @@ import 'services/auth_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
 import 'services/settings_provider.dart';
+import 'services/refresh_service.dart';
 import 'services/notification_service.dart';
 import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart';

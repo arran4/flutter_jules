@@ -85,7 +85,7 @@ void main() {
         );
         await pumpElement(tester, TimeFilterElement(tf));
         expect(find.byIcon(Icons.access_time), findsOneWidget);
-        expect(find.text('Time: newerThan 5 days'), findsOneWidget);
+        expect(find.text('Updated is newer than 5 days'), findsOneWidget);
       },
       FilterElementType.noSource: (tester) async {
         // NoSourceElement
