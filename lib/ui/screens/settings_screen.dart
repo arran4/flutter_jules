@@ -148,6 +148,31 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.notifyOnFailure,
                 onChanged: (value) => settings.setNotifyOnFailure(value),
               ),
+              SwitchListTile(
+                title: const Text('Refresh Started'),
+                subtitle: const Text(
+                  'Receive a notification when a refresh starts.',
+                ),
+                value: settings.notifyOnRefreshStart,
+                onChanged: (value) => settings.setNotifyOnRefreshStart(value),
+              ),
+              SwitchListTile(
+                title: const Text('Refresh Complete'),
+                subtitle: const Text(
+                  'Receive a notification when a refresh is complete.',
+                ),
+                value: settings.notifyOnRefreshComplete,
+                onChanged: (value) =>
+                    settings.setNotifyOnRefreshComplete(value),
+              ),
+              SwitchListTile(
+                title: const Text('Errors'),
+                subtitle: const Text(
+                  'Receive a notification when an error occurs.',
+                ),
+                value: settings.notifyOnErrors,
+                onChanged: (value) => settings.setNotifyOnErrors(value),
+              ),
               const Divider(),
               _buildSectionHeader(context, 'System Tray'),
               SwitchListTile(

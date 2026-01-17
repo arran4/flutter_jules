@@ -70,10 +70,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
   late NotificationService _notificationService;
   StreamSubscription<NotificationResponse>? _notificationSubscription;
   bool _wasBadCredentials = false;
+  Timer? _lastRefreshedTimer;
 
   @override
   void initState() {
     super.initState();
+    _lastRefreshedTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
     final sessionProvider =
         Provider.of<SessionProvider>(context, listen: false);
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
@@ -183,6 +189,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   void dispose() {
+    _lastRefreshedTimer?.cancel();
     // Check mounted because provider usage in dispose can be tricky if widget is unmounted
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
     githubProvider.removeListener(_onGithubError);

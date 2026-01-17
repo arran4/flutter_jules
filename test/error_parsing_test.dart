@@ -77,10 +77,10 @@ void main() {
     if (body is Map && body.containsKey('error')) {
       final error = body['error'];
       if (error is Map) {
-         if (error['code'] == 401 || error['status'] == 'UNAUTHENTICATED') {
-             // Check for specific message or reason if needed, but 401 is usually enough for this flow
-             isApiKeyError = true;
-         }
+        if (error['code'] == 401 || error['status'] == 'UNAUTHENTICATED') {
+          // Check for specific message or reason if needed, but 401 is usually enough for this flow
+          isApiKeyError = true;
+        }
       }
     }
 
