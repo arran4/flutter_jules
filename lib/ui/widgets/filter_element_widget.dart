@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../models/filter_element.dart';
 import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
@@ -678,33 +679,24 @@ class FilterElementWidget extends StatelessWidget {
     String field = tf.field.name;
     field = field[0].toUpperCase() + field.substring(1);
 
-    String typeStr;
     switch (tf.type) {
       case TimeFilterType.newerThan:
-        typeStr = 'is newer than';
-        break;
+        return '$field is newer than ${tf.range ?? tf.specificTime}';
       case TimeFilterType.olderThan:
-        typeStr = 'is older than';
-        break;
+        return '$field is older than ${tf.range ?? tf.specificTime}';
       case TimeFilterType.between:
-        typeStr = 'is between';
-        break;
       case TimeFilterType.inRange:
-        typeStr = 'is in';
-        break;
+        if (tf.specificTime != null && tf.specificTimeEnd != null) {
+          final difference = tf.specificTimeEnd!.difference(tf.specificTime!);
+          if (difference.inHours <= 24 && tf.specificTime!.day == tf.specificTimeEnd!.subtract(const Duration(seconds: 1)).day) {
+            return '$field is on ${DateFormat.yMMMd().format(tf.specificTime!)}';
+          }
+          return '$field is between ${DateFormat.yMMMd().format(tf.specificTime!)} and ${DateFormat.yMMMd().format(tf.specificTimeEnd!)}';
+        }
+        if (tf.range != null) {
+          return '$field is in ${tf.range}';
+        }
     }
-
-    if (tf.range != null) {
-      return '$field $typeStr ${tf.range}';
-    }
-
-    if (tf.specificTime != null) {
-      if (tf.type == TimeFilterType.between && tf.specificTimeEnd != null) {
-        return '$field is between ${tf.specificTime} and ${tf.specificTimeEnd}';
-      }
-      return '$field $typeStr ${tf.specificTime}';
-    }
-
     return 'Invalid Time Filter';
   }
 
