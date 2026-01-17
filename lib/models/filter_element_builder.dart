@@ -156,6 +156,9 @@ class FilterElementBuilder {
 
     // Direct match
     if (root == target) {
+      if (root is NotElement) {
+        return root.child;
+      }
       return NotElement(root);
     }
 
@@ -219,6 +222,9 @@ class FilterElementBuilder {
       return isAnd ? AndElement(flatChildren) : OrElement(flatChildren);
     } else if (root is NotElement) {
       final simplified = simplify(root.child);
+      if (simplified is NotElement) {
+        return simplified.child;
+      }
       return simplified != null ? NotElement(simplified) : null;
     } else if (root is DisabledElement) {
       final simplified = simplify(root.child);
@@ -341,6 +347,9 @@ class FilterElementBuilder {
 
     final newChildren = children.map((child) {
       if (child == target) {
+        if (child is NotElement) {
+          return child.child;
+        }
         return NotElement(child);
       }
       return toggleNot(child, target) ?? child;
