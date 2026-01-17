@@ -39,6 +39,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   List<BulkActionStep> _actions = [];
   int _parallelQueries = 1;
   Duration _waitBetween = const Duration(seconds: 2);
+  DelayUnit _waitBetweenUnit = DelayUnit.s;
   String _searchText = '';
 
   // Execution control
@@ -62,7 +63,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     final settings = context.read<SettingsProvider>();
     _actions = List<BulkActionStep>.from(settings.lastBulkActions);
     _parallelQueries = settings.lastBulkParallelQueries;
-    _waitBetween = Duration(seconds: settings.lastBulkWaitBetweenSeconds);
+    _waitBetween =
+        Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
+    _waitBetweenUnit = settings.lastBulkWaitBetweenUnit;
     _limit = settings.lastBulkLimit;
     _offset = settings.lastBulkOffset;
     _randomize = settings.lastBulkRandomize;
@@ -221,8 +224,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                           child: DelayInputWidget(
                             label: 'Wait Between',
                             initialDelay: _waitBetween,
-                            onDelayChanged: (d) =>
-                                setState(() => _waitBetween = d),
+                            initialUnit: _waitBetweenUnit,
+                            onDelayChanged: (duration, unit) => setState(() {
+                              _waitBetween = duration;
+                              _waitBetweenUnit = unit;
+                            }),
                           ),
                         ),
                       ],
@@ -594,7 +600,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     context.read<SettingsProvider>().saveBulkActionConfig(
           actions: _actions,
           parallelQueries: _parallelQueries,
-          waitBetweenSeconds: _waitBetween.inSeconds,
+          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
+          waitBetweenUnit: _waitBetweenUnit,
           limit: _limit,
           offset: _offset,
           randomize: _randomize,

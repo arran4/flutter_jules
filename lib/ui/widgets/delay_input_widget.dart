@@ -1,16 +1,18 @@
-import 'package:flutter/material.dart';
+import 'package.flutter/material.dart';
 
 enum DelayUnit { ms, s, min }
 
 class DelayInputWidget extends StatefulWidget {
   final Duration initialDelay;
-  final ValueChanged<Duration> onDelayChanged;
+  final DelayUnit initialUnit;
+  final Function(Duration, DelayUnit) onDelayChanged;
   final String? label;
   final bool isDense;
 
   const DelayInputWidget({
     super.key,
     required this.initialDelay,
+    required this.initialUnit,
     required this.onDelayChanged,
     this.label,
     this.isDense = false,
@@ -22,24 +24,26 @@ class DelayInputWidget extends StatefulWidget {
 
 class _DelayInputWidgetState extends State<DelayInputWidget> {
   final TextEditingController _controller = TextEditingController();
-  DelayUnit _unit = DelayUnit.s;
+  late DelayUnit _unit;
 
   @override
   void initState() {
     super.initState();
-    _updateStateFromDuration(widget.initialDelay);
+    _unit = widget.initialUnit;
+    _updateControllerFromDuration(widget.initialDelay, widget.initialUnit);
   }
 
-  void _updateStateFromDuration(Duration duration) {
-    if (duration.inMilliseconds % 1000 != 0) {
-      _unit = DelayUnit.ms;
-      _controller.text = duration.inMilliseconds.toString();
-    } else if (duration.inSeconds % 60 != 0) {
-      _unit = DelayUnit.s;
-      _controller.text = duration.inSeconds.toString();
-    } else {
-      _unit = DelayUnit.min;
-      _controller.text = duration.inMinutes.toString();
+  void _updateControllerFromDuration(Duration duration, DelayUnit unit) {
+    switch (unit) {
+      case DelayUnit.ms:
+        _controller.text = duration.inMilliseconds.toString();
+        break;
+      case DelayUnit.s:
+        _controller.text = duration.inSeconds.toString();
+        break;
+      case DelayUnit.min:
+        _controller.text = duration.inMinutes.toString();
+        break;
     }
   }
 
@@ -57,7 +61,7 @@ class _DelayInputWidgetState extends State<DelayInputWidget> {
         newDuration = Duration(minutes: value);
         break;
     }
-    widget.onDelayChanged(newDuration);
+    widget.onDelayChanged(newDuration, _unit);
   }
 
   @override
