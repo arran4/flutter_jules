@@ -34,6 +34,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
+import '../../intents.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -43,10 +44,6 @@ class SessionListScreen extends StatefulWidget {
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
-}
-
-class NewSessionIntent extends Intent {
-  const NewSessionIntent();
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
@@ -1628,30 +1625,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         _displayItems.sort(_compareSessions);
 
-        return Shortcuts(
-          shortcuts: <LogicalKeySet, Intent>{
-            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
-                const NewSessionIntent(),
+        return Actions(
+          actions: <Type, Action<Intent>>{
+            NewSessionIntent: CallbackAction<NewSessionIntent>(
+              onInvoke: (NewSessionIntent intent) => _createSession(),
+            ),
           },
-          child: Actions(
-            actions: <Type, Action<Intent>>{
-              NewSessionIntent: CallbackAction<NewSessionIntent>(
-                onInvoke: (NewSessionIntent intent) => _createSession(),
-              ),
-            },
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: true,
-              child: Scaffold(
-                floatingActionButton:
-                    settings.fabVisibility == FabVisibility.floating
-                        ? FloatingActionButton(
-                            onPressed: _createSession,
-                            tooltip: 'New Session',
-                            child: const Icon(Icons.add),
-                          )
-                        : null,
-                appBar: AppBar(
+          child: Focus(
+            focusNode: _focusNode,
+            autofocus: true,
+            child: Scaffold(
+              floatingActionButton:
+                  settings.fabVisibility == FabVisibility.floating
+                      ? FloatingActionButton(
+                          onPressed: _createSession,
+                          tooltip: 'New Session',
+                          child: const Icon(Icons.add),
+                        )
+                      : null,
+              appBar: AppBar(
                   title: const Text('Sessions'),
                   bottom: isLoading
                       ? const PreferredSize(

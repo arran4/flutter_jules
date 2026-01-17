@@ -23,12 +23,9 @@ import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
 
 import 'ui/widgets/notification_overlay.dart';
+import 'intents.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
-
-class ShowHelpIntent extends Intent {
-  const ShowHelpIntent();
-}
 
 void main(List<String> args) async {
   if (args.firstOrNull == 'multi_window') {
@@ -71,11 +68,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
       if (!mounted) return;
       final shortcutRegistry =
           Provider.of<ShortcutRegistry>(context, listen: false);
-      shortcutRegistry.register(Shortcut(
-          LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-              LogicalKeyboardKey.slash),
-          const ShowHelpIntent(),
-          'Show Help'));
+      shortcutRegistry.initDefaultShortcuts();
     });
   }
 
