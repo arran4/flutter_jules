@@ -3,22 +3,11 @@ import 'dart:convert';
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:provider/provider.dart';
-import 'services/activity_provider.dart';
 import 'services/auth_provider.dart';
-import 'services/dev_mode_provider.dart';
-import 'services/github_provider.dart';
 import 'services/session_provider.dart';
 import 'services/source_provider.dart';
-import 'services/filter_bookmark_provider.dart';
-import 'services/bulk_action_preset_provider.dart';
-import 'services/message_queue_provider.dart';
 import 'services/settings_provider.dart';
-import 'services/cache_service.dart';
-import 'services/refresh_service.dart';
-import 'services/bulk_action_executor.dart';
 import 'services/notification_service.dart';
-import 'services/notification_provider.dart';
-import 'services/tags_provider.dart';
 import 'package:flutter/services.dart';
 import 'package:tray_manager/tray_manager.dart';
 import 'package:window_manager/window_manager.dart';
@@ -32,7 +21,7 @@ import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
-import 'ui/session_helpers.dart';
+
 import 'ui/widgets/notification_overlay.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
@@ -44,9 +33,6 @@ class ShowHelpIntent extends Intent {
 void main(List<String> args) async {
   if (args.firstOrNull == 'multi_window') {
     final windowId = int.parse(args[1]);
-    final arguments = args[2].isEmpty
-        ? const {}
-        : jsonDecode(args[2]) as Map<String, dynamic>;
     runApp(NewSessionWindow(
       windowId: windowId,
     ));

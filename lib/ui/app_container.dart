@@ -15,7 +15,7 @@ import '../services/notification_service.dart';
 import '../services/refresh_service.dart';
 import '../services/session_provider.dart';
 import '../services/settings_provider.dart';
-import '../services/shortcut_registry.dart';
+import '../services/shortcut_registry.dart' as jules_shortcuts;
 import '../services/source_provider.dart';
 import '../services/tags_provider.dart';
 
@@ -29,15 +29,15 @@ class AppContainer extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
-        ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
+        ChangeNotifierProvider(
+            create: (_) => jules_shortcuts.ShortcutRegistry()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
         ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
-          create: (context) =>
-              GithubProvider(context.read<SettingsProvider>()),
+          create: (context) => GithubProvider(context.read<SettingsProvider>()),
           update: (context, settings, github) => github!,
         ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
