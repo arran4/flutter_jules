@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
@@ -36,10 +37,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   final Map<String, int> _usageCount = {};
   final Map<String, DateTime> _lastUsed = {};
+  Timer? _lastRefreshedTimer;
 
   @override
   void initState() {
     super.initState();
+    _lastRefreshedTimer = Timer.periodic(const Duration(minutes: 1), (timer) {
+      if (mounted) {
+        setState(() {});
+      }
+    });
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _loadInitialData();
     });
@@ -47,6 +54,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   @override
   void dispose() {
+    _lastRefreshedTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
   }
