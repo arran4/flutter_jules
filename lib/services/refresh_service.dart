@@ -64,20 +64,49 @@ class RefreshService extends ChangeNotifier {
   }
 
   void _executeSchedule(RefreshSchedule schedule) async {
+    if (_settingsProvider.notifyOnRefreshStart) {
+      _notificationService.showNotification(
+        'Refresh Started',
+        'Executing schedule: ${schedule.name}',
+      );
+    }
     schedule.lastRun = DateTime.now();
     _settingsProvider.updateSchedule(schedule);
     final client = JulesClient(accessToken: _authProvider.token);
-    switch (schedule.taskType) {
-      case RefreshTaskType.refresh:
-        _executeRefresh(schedule, client);
-        break;
-      case RefreshTaskType.sendPendingMessages:
-        _executeSendPendingMessages(schedule, client);
-        break;
+    try {
+      String summary = '';
+      switch (schedule.taskType) {
+        case RefreshTaskType.refresh:
+          summary = await _executeRefresh(schedule, client);
+          break;
+        case RefreshTaskType.sendPendingMessages:
+          await _executeSendPendingMessages(schedule, client);
+          summary = 'Sent pending messages.';
+          break;
+      }
+      if (_settingsProvider.notifyOnRefreshComplete) {
+        final actions = <NotificationAction>[];
+        if (summary != 'No new updates.') {
+          actions.add(NotificationAction.showNew);
+        }
+        _notificationService.showNotification(
+          'Refresh Complete',
+          'Finished executing schedule: ${schedule.name}. $summary',
+          actions: actions,
+        );
+      }
+    } catch (e) {
+      if (_settingsProvider.notifyOnErrors) {
+        _notificationService.showNotification(
+          'Refresh Error',
+          'Error executing schedule: ${schedule.name}: $e',
+        );
+      }
     }
   }
 
-  void _executeRefresh(RefreshSchedule schedule, JulesClient client) async {
+  Future<String> _executeRefresh(
+      RefreshSchedule schedule, JulesClient client) async {
     final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
@@ -94,12 +123,12 @@ class RefreshService extends ChangeNotifier {
         await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.none:
-        return;
+        return 'No changes';
       default:
-        return;
+        return 'No changes';
     }
     final newSessions = _sessionProvider.items.map((e) => e.data).toList();
-    compareSessions(oldSessions, newSessions);
+    return compareSessions(oldSessions, newSessions);
   }
 
   void _executeSendPendingMessages(
@@ -137,12 +166,34 @@ class RefreshService extends ChangeNotifier {
   }
 
   @visibleForTesting
-  void compareSessions(List<Session> oldSessions, List<Session> newSessions) {
+  String compareSessions(List<Session> oldSessions, List<Session> newSessions) {
     final oldSessionMap = {for (var s in oldSessions) s.name: s};
+    int newUnread = 0;
+    int newSessionsCount = 0;
+    int newWaitingApproval = 0;
+    int newWaitingFeedback = 0;
+    int prsWaiting = 0;
 
     for (final newSession in newSessions) {
       final oldSession = oldSessionMap[newSession.name];
       final isNew = oldSession == null;
+      if (isNew) {
+        newSessionsCount++;
+      }
+      if (newSession.isUnread ?? false) {
+        newUnread++;
+      }
+      if (newSession.state == SessionState.AWAITING_PLAN_APPROVAL) {
+        newWaitingApproval++;
+      }
+      if (newSession.state == SessionState.AWAITING_FEEDBACK) {
+        newWaitingFeedback++;
+      }
+      // Assuming some logic to determine if a session is a PR
+      if (newSession.outputs?.any((o) => o.pullRequest != null) ?? false) {
+        prsWaiting++;
+      }
+
       final stateChanged = !isNew && oldSession.state != newSession.state;
 
       if (isNew || stateChanged) {
@@ -177,6 +228,24 @@ class RefreshService extends ChangeNotifier {
         }
       }
     }
+    final summaryParts = <String>[];
+    if (newUnread > 0) summaryParts.add('new unread: $newUnread');
+    if (newSessionsCount > 0) summaryParts.add('new sessions: $newSessionsCount');
+    if (newWaitingApproval > 0) {
+      summaryParts.add('waiting approval: $newWaitingApproval');
+    }
+    if (newWaitingFeedback > 0) {
+      summaryParts.add('waiting feedback: $newWaitingFeedback');
+    }
+    if (prsWaiting > 0) summaryParts.add('PRs waiting: $prsWaiting');
+
+    if (summaryParts.isEmpty) {
+      return 'No new updates.';
+    }
+
+    String summary = summaryParts.join(', ');
+    summary = summary[0].toUpperCase() + summary.substring(1);
+    return summary + '.';
   }
 
   void _cancelAllTimers() {
