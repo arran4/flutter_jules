@@ -11,7 +11,14 @@ enum ListRefreshPolicy { none, dirty, watched, quick, full }
 
 enum FabVisibility { appBar, floating, off }
 
+enum ThemeSelectionMode { specific, system }
+
 class SettingsProvider extends ChangeNotifier {
+  static const String keyThemeSelectionMode = 'theme_selection_mode';
+  static const String keySelectedThemeId = 'selected_theme_id';
+  static const String keySystemLightThemeId = 'system_light_theme_id';
+  static const String keySystemDarkThemeId = 'system_dark_theme_id';
+
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';
   static const String keyRefreshOnReturn = 'refresh_on_return';
@@ -59,6 +66,12 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnFailure = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
 
+  // Theming
+  ThemeSelectionMode _themeSelectionMode = ThemeSelectionMode.system;
+  String _selectedThemeId = 'default_light';
+  String _systemLightThemeId = 'default_light';
+  String _systemDarkThemeId = 'default_dark';
+
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
   MessageSubmitAction _shiftEnterKeyAction = MessageSubmitAction.addNewLine;
@@ -81,6 +94,12 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnWatch => _notifyOnWatch;
   bool get notifyOnFailure => _notifyOnFailure;
   FabVisibility get fabVisibility => _fabVisibility;
+
+  // Theming Getters
+  ThemeSelectionMode get themeSelectionMode => _themeSelectionMode;
+  String get selectedThemeId => _selectedThemeId;
+  String get systemLightThemeId => _systemLightThemeId;
+  String get systemDarkThemeId => _systemDarkThemeId;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -139,6 +158,19 @@ class SettingsProvider extends ChangeNotifier {
       FabVisibility.values,
       FabVisibility.floating,
     );
+
+    // Theming
+    _themeSelectionMode = _loadEnum(
+      keyThemeSelectionMode,
+      ThemeSelectionMode.values,
+      ThemeSelectionMode.system,
+    );
+    _selectedThemeId =
+        _prefs!.getString(keySelectedThemeId) ?? 'default_light';
+    _systemLightThemeId =
+        _prefs!.getString(keySystemLightThemeId) ?? 'default_light';
+    _systemDarkThemeId =
+        _prefs!.getString(keySystemDarkThemeId) ?? 'default_dark';
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -328,6 +360,31 @@ class SettingsProvider extends ChangeNotifier {
     _fabVisibility = visibility;
     notifyListeners();
     await _prefs?.setInt(keyFabVisibility, visibility.index);
+  }
+
+  // Theming Setters
+  Future<void> setThemeSelectionMode(ThemeSelectionMode mode) async {
+    _themeSelectionMode = mode;
+    notifyListeners();
+    await _prefs?.setInt(keyThemeSelectionMode, mode.index);
+  }
+
+  Future<void> setSelectedThemeId(String themeId) async {
+    _selectedThemeId = themeId;
+    notifyListeners();
+    await _prefs?.setString(keySelectedThemeId, themeId);
+  }
+
+  Future<void> setSystemLightThemeId(String themeId) async {
+    _systemLightThemeId = themeId;
+    notifyListeners();
+    await _prefs?.setString(keySystemLightThemeId, themeId);
+  }
+
+  Future<void> setSystemDarkThemeId(String themeId) async {
+    _systemDarkThemeId = themeId;
+    notifyListeners();
+    await _prefs?.setString(keySystemDarkThemeId, themeId);
   }
 
   // Keybinding Setters

@@ -7,6 +7,7 @@ import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
+import '../themes.dart';
 
 class SettingsScreen extends StatefulWidget {
   const SettingsScreen({super.key});
@@ -60,6 +61,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.fabVisibility,
                 onChanged: settings.setFabVisibility,
               ),
+              _buildThemeSection(context, settings),
               const Divider(),
               _buildSectionHeader(context, 'Keybindings'),
               _buildKeybindingDropdown<MessageSubmitAction>(
@@ -682,6 +684,76 @@ class _SettingsScreenState extends State<SettingsScreen> {
       case FabVisibility.off:
         return 'Off';
     }
+  }
+
+  Widget _buildThemeSection(BuildContext context, SettingsProvider settings) {
+    return Column(
+      children: [
+        ListTile(
+          title: const Text('Theme'),
+          trailing: DropdownButton<ThemeSelectionMode>(
+            value: settings.themeSelectionMode,
+            onChanged: (newValue) {
+              if (newValue != null) {
+                settings.setThemeSelectionMode(newValue);
+              }
+            },
+            items: ThemeSelectionMode.values.map((mode) {
+              return DropdownMenuItem(
+                value: mode,
+                child: Text(mode == ThemeSelectionMode.specific
+                    ? 'Specific Theme'
+                    : 'Use System Settings'),
+              );
+            }).toList(),
+          ),
+        ),
+        if (settings.themeSelectionMode == ThemeSelectionMode.specific)
+          _buildThemeDropdown(
+            context,
+            title: 'Selected Theme',
+            value: settings.selectedThemeId,
+            onChanged: settings.setSelectedThemeId,
+          )
+        else ...[
+          _buildThemeDropdown(
+            context,
+            title: 'Light Theme',
+            value: settings.systemLightThemeId,
+            onChanged: settings.setSystemLightThemeId,
+          ),
+          _buildThemeDropdown(
+            context,
+            title: 'Dark Theme',
+            value: settings.systemDarkThemeId,
+            onChanged: settings.setSystemDarkThemeId,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildThemeDropdown(
+    BuildContext context, {
+    required String title,
+    required String value,
+    required Function(String) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<String>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: sampleThemes.map((theme) {
+          return DropdownMenuItem(
+            value: theme.id,
+            child: Text(theme.name),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   Widget _buildKeybindingDropdown<T extends Enum>(

@@ -23,6 +23,7 @@ import 'ui/screens/settings_screen.dart';
 import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
 import 'ui/widgets/notification_overlay.dart';
+import 'ui/themes.dart';
 
 class ShowHelpIntent extends Intent {
   const ShowHelpIntent();
@@ -121,43 +122,85 @@ class MyApp extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Shortcuts(
-      shortcuts: <LogicalKeySet, Intent>{
-        LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-            LogicalKeyboardKey.slash): const ShowHelpIntent(),
-      },
-      child: Actions(
-        actions: <Type, Action<Intent>>{
-          ShowHelpIntent: CallbackAction<ShowHelpIntent>(
-            onInvoke: (ShowHelpIntent intent) => showDialog(
-              context: context,
-              builder: (context) => const HelpDialog(),
+    return Consumer<SettingsProvider>(
+      builder: (context, settings, child) {
+        final theme = _getThemeData(settings);
+        final darkTheme = _getDarkThemeData(settings);
+        final themeMode = _getThemeMode(settings);
+
+        return Shortcuts(
+          shortcuts: <LogicalKeySet, Intent>{
+            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
+                LogicalKeyboardKey.slash): const ShowHelpIntent(),
+          },
+          child: Actions(
+            actions: <Type, Action<Intent>>{
+              ShowHelpIntent: CallbackAction<ShowHelpIntent>(
+                onInvoke: (ShowHelpIntent intent) => showDialog(
+                  context: context,
+                  builder: (context) => const HelpDialog(),
+                ),
+              ),
+            },
+            child: MaterialApp(
+              title: "Arran's Flutter based jules client",
+              debugShowCheckedModeBanner: false,
+              theme: theme,
+              darkTheme: darkTheme,
+              themeMode: themeMode,
+              routes: {
+                '/settings': (context) => const SettingsScreen(),
+                '/sources_raw': (context) => const SourceListScreen(),
+              },
+              home: child,
             ),
           ),
+        );
+      },
+      child: Consumer<AuthProvider>(
+        builder: (context, auth, _) {
+          if (auth.isLoading) {
+            return const Scaffold(
+              body: Center(child: CircularProgressIndicator()),
+            );
+          }
+          if (!auth.isAuthenticated) {
+            return const LoginScreen();
+          }
+          return const NotificationOverlay(child: SessionListScreen());
         },
-        child: MaterialApp(
-          title: "Arran's Flutter based jules client",
-          debugShowCheckedModeBanner: false,
-          theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-          routes: {
-            '/settings': (context) => const SettingsScreen(),
-            '/sources_raw': (context) => const SourceListScreen(),
-          },
-          home: Consumer<AuthProvider>(
-            builder: (context, auth, _) {
-              if (auth.isLoading) {
-                return const Scaffold(
-                  body: Center(child: CircularProgressIndicator()),
-                );
-              }
-              if (!auth.isAuthenticated) {
-                return const LoginScreen();
-              }
-              return const NotificationOverlay(child: SessionListScreen());
-            },
-          ),
-        ),
       ),
     );
+  }
+
+  ThemeData _getThemeData(SettingsProvider settings) {
+    if (settings.themeSelectionMode == ThemeSelectionMode.specific) {
+      return _findThemeById(settings.selectedThemeId).themeData;
+    } else {
+      return _findThemeById(settings.systemLightThemeId).themeData;
+    }
+  }
+
+  ThemeData _getDarkThemeData(SettingsProvider settings) {
+    if (settings.themeSelectionMode == ThemeSelectionMode.specific) {
+      // If a specific theme is selected, we don't need a separate dark theme
+      // unless the theme itself has a dark variant, which is not supported yet.
+      return _findThemeById(settings.selectedThemeId).themeData;
+    } else {
+      return _findThemeById(settings.systemDarkThemeId).themeData;
+    }
+  }
+
+  ThemeMode _getThemeMode(SettingsProvider settings) {
+    if (settings.themeSelectionMode == ThemeSelectionMode.specific) {
+      return ThemeMode.light; // Or based on the theme's brightness
+    } else {
+      return ThemeMode.system;
+    }
+  }
+
+  JulesTheme _findThemeById(String id) {
+    return sampleThemes.firstWhere((theme) => theme.id == id,
+        orElse: () => sampleThemes.first);
   }
 }
