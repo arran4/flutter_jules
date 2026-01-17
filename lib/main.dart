@@ -29,12 +29,9 @@ import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
 import 'ui/session_helpers.dart';
 import 'ui/widgets/notification_overlay.dart';
+import 'intents.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
-
-class ShowHelpIntent extends Intent {
-  const ShowHelpIntent();
-}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -45,7 +42,8 @@ void main() async {
     MultiProvider(
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
-        ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
+        ChangeNotifierProvider(
+            create: (_) => ShortcutRegistry()..initDefaults()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -150,17 +148,6 @@ class _MyAppState extends State<MyApp> with WindowListener {
       _onSettingsChanged();
     }
     settings.addListener(_onSettingsChanged);
-    // Register the global shortcuts here
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (!mounted) return;
-      final shortcutRegistry =
-          Provider.of<ShortcutRegistry>(context, listen: false);
-      shortcutRegistry.register(Shortcut(
-          LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-              LogicalKeyboardKey.slash),
-          const ShowHelpIntent(),
-          'Show Help'));
-    });
   }
 
   @override

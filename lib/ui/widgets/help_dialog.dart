@@ -1,15 +1,34 @@
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
+import '../../services/shortcut_registry.dart';
 
 class HelpDialog extends StatelessWidget {
   const HelpDialog({super.key});
 
+  String _formatActivator(ShortcutActivator activator) {
+    if (activator is SingleActivator) {
+      final List<String> parts = [];
+      if (activator.control) parts.add('Ctrl');
+      if (activator.meta) parts.add('Meta');
+      if (activator.alt) parts.add('Alt');
+      if (activator.shift) parts.add('Shift');
+      parts.add(activator.trigger.keyLabel);
+      return parts.join(' + ');
+    }
+    return activator.toString();
+  }
+
   @override
   Widget build(BuildContext context) {
-    // A more structured layout for shortcuts
-    final shortcuts = {
-      'New Session': 'Ctrl + N',
-      'Show Shortcuts (Global)': 'Ctrl + Shift + ?',
-    };
+    final registry = Provider.of<ShortcutRegistry>(context);
+    final shortcuts = registry.shortcuts;
+    final descriptions = registry.descriptions;
+
+    final List<MapEntry<String, String>> rows = [];
+    shortcuts.forEach((activator, intent) {
+      final description = descriptions[intent] ?? intent.toString();
+      rows.add(MapEntry(description, _formatActivator(activator)));
+    });
 
     return AlertDialog(
       title: const Text('Keyboard Shortcuts'),
@@ -21,7 +40,7 @@ class HelpDialog extends StatelessWidget {
               DataColumn(label: Text('Action')),
               DataColumn(label: Text('Shortcut')),
             ],
-            rows: shortcuts.entries.map((entry) {
+            rows: rows.map((entry) {
               return DataRow(cells: [
                 DataCell(Text(entry.key)),
                 DataCell(
