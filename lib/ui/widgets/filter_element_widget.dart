@@ -16,6 +16,7 @@ class FilterElementWidget extends StatelessWidget {
   final FilterElement? element;
   final Function(FilterElement)? onRemove;
   final Function(FilterElement)? onToggleNot;
+  final Function(FilterElement)? onToggleEnabled;
   final Function(FilterElement)? onTap;
   final Function(
     FilterElement source,
@@ -26,16 +27,19 @@ class FilterElementWidget extends StatelessWidget {
   final Function(FilterElement target, FilterElement alternative)?
       onAddAlternative;
   final bool isNegated;
+  final bool isParentDisabled;
 
   const FilterElementWidget({
     super.key,
     required this.element,
     this.onRemove,
     this.onToggleNot,
+    this.onToggleEnabled,
     this.onTap,
     this.onDrop,
     this.onAddAlternative,
     this.isNegated = false,
+    this.isParentDisabled = false,
   });
 
   @override
@@ -155,7 +159,7 @@ class FilterElementWidget extends StatelessWidget {
       if (tf.specificTime != null) {
         label = 'Time: ${tf.type.name} ${tf.specificTime}';
       } else {
-        label = 'Time: ${tf.type.name} ${tf.value} ${tf.unit.name}';
+        label = 'Time: ${tf.type.name} ${tf.range ?? ''}';
       }
       return _buildLeafElement(
         context,
@@ -192,6 +196,8 @@ class FilterElementWidget extends StatelessWidget {
         Colors.amber.shade900,
         Icons.note,
       );
+    } else if (element is DisabledElement) {
+      return _buildDisabledElement(context, element);
     }
 
     return const SizedBox.shrink();
@@ -216,6 +222,7 @@ class FilterElementWidget extends StatelessWidget {
           _handleDrop(context, details.data, element),
       builder: (context, candidateData, rejectedData) {
         final isHovered = candidateData.isNotEmpty;
+
         return Container(
           margin: const EdgeInsets.symmetric(vertical: 2),
           decoration: BoxDecoration(
@@ -290,11 +297,13 @@ class FilterElementWidget extends StatelessWidget {
                       element: child,
                       onRemove: onRemove,
                       onToggleNot: onToggleNot,
+                      onToggleEnabled: onToggleEnabled,
                       onTap: onTap,
                       onDrop: onDrop,
                       onAddAlternative: onAddAlternative,
                       // Children of composite are not negated by the composite itself
                       isNegated: false,
+                      isParentDisabled: isParentDisabled,
                     );
                   }).toList(),
                 ),
@@ -334,31 +343,35 @@ class FilterElementWidget extends StatelessWidget {
                   topRight: Radius.circular(7),
                 ),
               ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: [
-                  Icon(Icons.block, size: 14, color: Colors.red.shade700),
-                  const SizedBox(width: 4),
-                  Text(
-                    'NOT',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.red.shade700,
-                    ),
-                  ),
-                  if (onToggleNot != null) ...[
+              child: GestureDetector(
+                onSecondaryTapUp: (details) =>
+                    _showContextMenu(context, details, element),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(Icons.block, size: 14, color: Colors.red.shade700),
                     const SizedBox(width: 4),
-                    InkWell(
-                      onTap: () => onToggleNot!(element),
-                      child: Icon(
-                        Icons.undo,
-                        size: 14,
-                        color: Colors.red.shade700.withValues(alpha: 0.7),
+                    Text(
+                      'NOT',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.red.shade700,
                       ),
                     ),
+                    if (onToggleNot != null) ...[
+                      const SizedBox(width: 4),
+                      InkWell(
+                        onTap: () => onToggleNot!(element),
+                        child: Icon(
+                          Icons.undo,
+                          size: 14,
+                          color: Colors.red.shade700.withValues(alpha: 0.7),
+                        ),
+                      ),
+                    ],
                   ],
-                ],
+                ),
               ),
             ),
           ),
@@ -374,10 +387,98 @@ class FilterElementWidget extends StatelessWidget {
               element: element.child,
               onRemove: onRemove,
               onToggleNot: onToggleNot,
+              onToggleEnabled: onToggleEnabled,
               onTap: onTap,
               onDrop: onDrop,
               onAddAlternative: onAddAlternative,
               isNegated: true,
+              isParentDisabled: isParentDisabled,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDisabledElement(BuildContext context, DisabledElement element) {
+    final bgColor = Colors.grey.shade100.withValues(alpha: 0.5);
+    final borderColor = Colors.grey.shade300;
+    final headerColor = Colors.grey.shade200;
+    final headerTextColor = Colors.grey.shade500;
+    final headerIconColor = Colors.grey.shade500;
+
+    return Container(
+      margin: const EdgeInsets.symmetric(vertical: 2),
+      decoration: BoxDecoration(
+        border: Border.all(color: borderColor, width: 1.5),
+        borderRadius: BorderRadius.circular(8),
+        color: bgColor,
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // DISABLED header
+          InkWell(
+            onTap: onTap != null ? () => onTap!(element) : null,
+            borderRadius: const BorderRadius.only(
+              topLeft: Radius.circular(8),
+              topRight: Radius.circular(8),
+            ),
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: headerColor,
+                borderRadius: const BorderRadius.only(
+                  topLeft: Radius.circular(7),
+                  topRight: Radius.circular(7),
+                ),
+              ),
+              child: GestureDetector(
+                onSecondaryTapUp: (details) =>
+                    _showContextMenu(context, details, element),
+                child: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    Icon(
+                      Icons.visibility_off,
+                      size: 14,
+                      color: headerIconColor,
+                    ),
+                    const SizedBox(width: 4),
+                    Text(
+                      'DISABLED',
+                      style: TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.bold,
+                        color: headerTextColor,
+                        decoration: TextDecoration.lineThrough,
+                      ),
+                    ),
+                    // Allow toggling back to Enabled (handled via context menu mainly, but could add quick action)
+                  ],
+                ),
+              ),
+            ),
+          ),
+          // Child
+          Padding(
+            padding: const EdgeInsets.only(
+              left: 12,
+              right: 4,
+              top: 4,
+              bottom: 4,
+            ),
+            child: FilterElementWidget(
+              element: element.child,
+              onRemove: onRemove,
+              onToggleNot: onToggleNot,
+              onToggleEnabled: onToggleEnabled,
+              onTap: onTap,
+              onDrop: onDrop,
+              onAddAlternative: onAddAlternative,
+              isNegated: isNegated, // Inherit
+              isParentDisabled: true,
             ),
           ),
         ],
@@ -398,11 +499,37 @@ class FilterElementWidget extends StatelessWidget {
 
     // 1. Exclude/Include logic
     final isComposite = element is AndElement || element is OrElement;
-    final excludeText = isComposite ? "Exclude this group" : "Exclude this";
+    final isNot = element is NotElement;
+    final isDisabled = element is DisabledElement;
+
+    if (isNot) {
+      items.add(
+        const PopupMenuItem(
+          value: 3, // New value for "Remove NOT"
+          enabled: true,
+          child: Text("Remove NOT"),
+        ),
+      );
+      items.add(const PopupMenuDivider());
+    } else if (!isDisabled) {
+      final excludeText = isComposite ? "Exclude this group" : "Exclude this";
+      items.add(
+        PopupMenuItem(
+          value: 1,
+          enabled: true,
+          child: Text(isNegated ? "Include this" : excludeText),
+        ),
+      );
+      items.add(const PopupMenuDivider());
+    }
+
+    // 2. Enabled/Disabled checkbox
     items.add(
-      PopupMenuItem(
-        value: 1,
-        child: Text(isNegated ? "Include this" : excludeText),
+      CheckedPopupMenuItem(
+        value: 2,
+        checked: element is! DisabledElement && !isParentDisabled,
+        enabled: !isParentDisabled,
+        child: const Text("Enabled"),
       ),
     );
 
@@ -443,6 +570,16 @@ class FilterElementWidget extends StatelessWidget {
       if (onToggleNot != null) {
         onToggleNot!(element);
       }
+    } else if (selected == 3) {
+      // Remove NOT
+      if (onToggleNot != null) {
+        onToggleNot!(element);
+      }
+    } else if (selected == 2) {
+      // Toggle Enabled
+      if (onToggleEnabled != null) {
+        onToggleEnabled!(element);
+      }
     } else if (selected >= 100) {
       // Alternative selected
       final altIndex = selected - 100;
@@ -463,6 +600,14 @@ class FilterElementWidget extends StatelessWidget {
     Color textColor,
     IconData icon,
   ) {
+    final bool isActuallyDisabled =
+        element is DisabledElement || isParentDisabled;
+    final effectiveTextColor =
+        isActuallyDisabled ? textColor.withValues(alpha: 0.5) : textColor;
+    final effectiveBackgroundColor = isActuallyDisabled
+        ? backgroundColor.withValues(alpha: 0.5)
+        : backgroundColor;
+
     return GestureDetector(
       onSecondaryTapUp: (details) =>
           _showContextMenu(context, details, element),
@@ -470,21 +615,24 @@ class FilterElementWidget extends StatelessWidget {
       child: Container(
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
         decoration: BoxDecoration(
-          color: backgroundColor,
+          color: effectiveBackgroundColor,
           borderRadius: BorderRadius.circular(16),
           border: Border.all(color: textColor.withValues(alpha: 0.2)),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
           children: [
-            Icon(icon, size: 14, color: textColor),
+            Icon(icon, size: 14, color: effectiveTextColor),
             const SizedBox(width: 4),
             Text(
               label,
               style: TextStyle(
                 fontSize: 12,
-                color: textColor,
+                color: effectiveTextColor,
                 fontWeight: FontWeight.w500,
+                decoration: isActuallyDisabled
+                    ? TextDecoration.lineThrough
+                    : TextDecoration.none,
               ),
             ),
             if (onRemove != null) ...[
@@ -494,7 +642,7 @@ class FilterElementWidget extends StatelessWidget {
                 child: Icon(
                   Icons.close,
                   size: 14,
-                  color: textColor.withValues(alpha: 0.7),
+                  color: effectiveTextColor.withValues(alpha: 0.7),
                 ),
               ),
             ],

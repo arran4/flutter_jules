@@ -19,6 +19,7 @@ enum FilterElementType {
   time,
   tag,
   hasNotes,
+  disabled,
 }
 
 enum FilterState {
@@ -85,7 +86,6 @@ class FilterContext {
 /// Base class for all filter elements
 abstract class FilterElement {
   FilterElementType get type;
-
   Map<String, dynamic> toJson();
 
   /// The grouping type used to determine if elements should be combined with OR.
@@ -114,40 +114,60 @@ abstract class FilterElement {
   /// Factory method to create FilterElement from JSON
   static FilterElement fromJson(Map<String, dynamic> json) {
     final type = json['type'] as String;
+    FilterElement element;
     switch (type) {
       case 'and':
-        return AndElement.fromJson(json);
+        element = AndElement.fromJson(json);
+        break;
       case 'or':
-        return OrElement.fromJson(json);
+        element = OrElement.fromJson(json);
+        break;
       case 'not':
-        return NotElement.fromJson(json);
+        element = NotElement.fromJson(json);
+        break;
       case 'text':
-        return TextElement.fromJson(json);
+        element = TextElement.fromJson(json);
+        break;
       case 'label':
-        return LabelElement.fromJson(json);
+        element = LabelElement.fromJson(json);
+        break;
       case 'status':
-        return StatusElement.fromJson(json);
+        element = StatusElement.fromJson(json);
+        break;
       case 'source':
-        return SourceElement.fromJson(json);
+        element = SourceElement.fromJson(json);
+        break;
       case 'no_source':
-        return NoSourceElement.fromJson(json);
+        element = NoSourceElement.fromJson(json);
+        break;
       case 'has_pr':
-        return HasPrElement.fromJson(json);
+        element = HasPrElement.fromJson(json);
+        break;
       case 'pr_status':
-        return PrStatusElement.fromJson(json);
+        element = PrStatusElement.fromJson(json);
+        break;
       case 'ci_status':
-        return CiStatusElement.fromJson(json);
+        element = CiStatusElement.fromJson(json);
+        break;
       case 'branch':
-        return BranchElement.fromJson(json);
+        element = BranchElement.fromJson(json);
+        break;
       case 'time':
-        return TimeFilterElement.fromJson(json);
+        element = TimeFilterElement.fromJson(json);
+        break;
       case 'tag':
-        return TagElement.fromJson(json);
+        element = TagElement.fromJson(json);
+        break;
       case 'has_notes':
-        return HasNotesElement.fromJson(json);
+        element = HasNotesElement.fromJson(json);
+        break;
+      case 'disabled':
+        element = DisabledElement.fromJson(json);
+        break;
       default:
         throw Exception('Unknown filter element type: $type');
     }
+    return element;
   }
 }
 
@@ -211,10 +231,47 @@ class TimeFilterElement extends FilterElement {
 
   @override
   String toExpression() {
-    if (timeFilter.specificTime != null) {
-      return 'Time(${timeFilter.type.name} ${timeFilter.specificTime!.toIso8601String()})';
+    final fieldStr = timeFilter.field.name.toUpperCase();
+    String typeStr;
+    switch (timeFilter.type) {
+      case TimeFilterType.newerThan:
+        typeStr = 'AFTER';
+        break;
+      case TimeFilterType.olderThan:
+        typeStr = 'BEFORE';
+        break;
+      case TimeFilterType.between:
+        typeStr = 'BETWEEN';
+        break;
+      case TimeFilterType.inRange:
+        typeStr = 'IN';
+        break;
     }
-    return 'Time(${timeFilter.type.name} ${timeFilter.value} ${timeFilter.unit.name})';
+
+    if (timeFilter.range != null) {
+      if (timeFilter.type == TimeFilterType.inRange) {
+        return '${fieldStr}IN(${FilterElement._quote(timeFilter.range!)})';
+      } else {
+        return '$fieldStr$typeStr(${FilterElement._quote(timeFilter.range!)})';
+      }
+    }
+
+    if (timeFilter.specificTime != null) {
+      if (timeFilter.type == TimeFilterType.between) {
+        // Check if it's a single day
+        if (timeFilter.specificTimeEnd != null &&
+            timeFilter.specificTimeEnd!.difference(timeFilter.specificTime!) ==
+                const Duration(days: 1) &&
+            timeFilter.specificTime!.hour == 0 &&
+            timeFilter.specificTime!.minute == 0) {
+          return '${fieldStr}ON(${timeFilter.specificTime!.toIso8601String().split('T')[0]})';
+        }
+        return '${fieldStr}BETWEEN(${timeFilter.specificTime!.toIso8601String()}, ${timeFilter.specificTimeEnd!.toIso8601String()})';
+      }
+      return '$fieldStr$typeStr(${timeFilter.specificTime!.toIso8601String()})';
+    }
+
+    throw Exception('Invalid TimeFilter: missing specificTime and range');
   }
 
   @override
@@ -302,7 +359,10 @@ class NotElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'not', 'child': child.toJson()};
+  Map<String, dynamic> toJson() => {
+        'type': 'not',
+        'child': child.toJson(),
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -311,6 +371,42 @@ class NotElement extends FilterElement {
 
   factory NotElement.fromJson(Map<String, dynamic> json) {
     return NotElement(
+      FilterElement.fromJson(json['child'] as Map<String, dynamic>),
+    );
+  }
+}
+
+/// Composite element that disables its child
+class DisabledElement extends FilterElement {
+  final FilterElement child;
+
+  DisabledElement(this.child);
+
+  @override
+  FilterElementType get type => FilterElementType.disabled;
+
+  @override
+  String get groupingType => 'disabled';
+
+  @override
+  String toExpression() {
+    return 'DISABLED(${child.toExpression()})';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'disabled',
+        'child': child.toJson(),
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    // Disabled elements do not contribute to filtering -> implicitIn
+    return FilterState.implicitIn;
+  }
+
+  factory DisabledElement.fromJson(Map<String, dynamic> json) {
+    return DisabledElement(
       FilterElement.fromJson(json['child'] as Map<String, dynamic>),
     );
   }
@@ -334,7 +430,10 @@ class TextElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'text', 'text': text};
+  Map<String, dynamic> toJson() => {
+        'type': 'text',
+        'text': text,
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -670,7 +769,9 @@ class HasPrElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'has_pr'};
+  Map<String, dynamic> toJson() => {
+        'type': 'has_pr',
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
@@ -703,15 +804,19 @@ class NoSourceElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'no_source'};
+  Map<String, dynamic> toJson() => {
+        'type': 'no_source',
+      };
 
   @override
   FilterState evaluate(FilterContext context) {
-    final matches = context.session.sourceContext == null;
+    // No source means SourceContext is null
+    if (context.session.sourceContext == null) return FilterState.explicitIn;
+    // If there is a source, it doesn't match "no source"
     if (context.metadata.isHidden) {
-      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+      return FilterState.implicitOut;
     }
-    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+    return FilterState.explicitOut;
   }
 
   factory NoSourceElement.fromJson(Map<String, dynamic> json) {
@@ -818,7 +923,9 @@ class HasNotesElement extends FilterElement {
   }
 
   @override
-  Map<String, dynamic> toJson() => {'type': 'has_notes'};
+  Map<String, dynamic> toJson() => {
+        'type': 'has_notes',
+      };
 
   @override
   FilterState evaluate(FilterContext context) {

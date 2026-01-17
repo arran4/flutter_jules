@@ -5,7 +5,7 @@ import 'package:flutter/foundation.dart';
 
 import 'cache_service.dart';
 import 'jules_client.dart';
-
+import 'exceptions.dart';
 import '../models.dart';
 
 class MessageQueueProvider extends ChangeNotifier {
@@ -322,7 +322,15 @@ class MessageQueueProvider extends ChangeNotifier {
         if (index != -1) {
           final currentErrors =
               List<String>.from(_queue[index].processingErrors);
-          currentErrors.add(e.toString());
+
+          if (e is NotFoundException) {
+            // 404 Not Found. Session probably deleted or ID invalid.
+            currentErrors.add(
+                "Session not found (404). This session may have been deleted.");
+          } else {
+            currentErrors.add(e.toString());
+          }
+
           _queue[index] =
               _queue[index].copyWith(processingErrors: currentErrors);
         }

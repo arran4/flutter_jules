@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
+import '../../models.dart';
 import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
@@ -52,6 +53,66 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 onChanged: settings.setRefreshOnCreate,
               ),
               const Divider(),
+              _buildSectionHeader(context, 'Appearance'),
+              _buildFabDropdown(
+                context,
+                title: 'New Session Button',
+                value: settings.fabVisibility,
+                onChanged: settings.setFabVisibility,
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'Source List'),
+              SwitchListTile(
+                title: const Text('Hide archived and read-only sources'),
+                subtitle: const Text(
+                  'Hide sources that are marked as archived or read-only.',
+                ),
+                value: settings.hideArchivedAndReadOnly,
+                onChanged: (value) =>
+                    settings.setHideArchivedAndReadOnly(value),
+              ),
+              _buildSectionHeader(context, 'Keybindings'),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Enter',
+                value: settings.enterKeyAction,
+                onChanged: settings.setEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Shift+Enter',
+                value: settings.shiftEnterKeyAction,
+                onChanged: settings.setShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Enter',
+                value: settings.ctrlEnterKeyAction,
+                onChanged: settings.setCtrlEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<MessageSubmitAction>(
+                context,
+                title: 'Ctrl+Shift+Enter',
+                value: settings.ctrlShiftEnterKeyAction,
+                onChanged: settings.setCtrlShiftEnterKeyAction,
+                values: MessageSubmitAction.values,
+                formatter: _formatMessageSubmitAction,
+              ),
+              _buildKeybindingDropdown<EscKeyAction>(
+                context,
+                title: 'Escape',
+                value: settings.escKeyAction,
+                onChanged: settings.setEscKeyAction,
+                values: EscKeyAction.values,
+                formatter: _formatEscKeyAction,
+              ),
+              const Divider(),
               _buildAutomaticRefreshSection(context, settings),
               const Divider(),
               _buildSectionHeader(context, 'Notifications'),
@@ -86,6 +147,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 ),
                 value: settings.notifyOnFailure,
                 onChanged: (value) => settings.setNotifyOnFailure(value),
+              ),
+              SwitchListTile(
+                title: const Text('Refresh Started'),
+                subtitle: const Text(
+                  'Receive a notification when a refresh starts.',
+                ),
+                value: settings.notifyOnRefreshStart,
+                onChanged: (value) => settings.setNotifyOnRefreshStart(value),
+              ),
+              SwitchListTile(
+                title: const Text('Refresh Complete'),
+                subtitle: const Text(
+                  'Receive a notification when a refresh is complete.',
+                ),
+                value: settings.notifyOnRefreshComplete,
+                onChanged: (value) =>
+                    settings.setNotifyOnRefreshComplete(value),
+              ),
+              SwitchListTile(
+                title: const Text('Errors'),
+                subtitle: const Text(
+                  'Receive a notification when an error occurs.',
+                ),
+                value: settings.notifyOnErrors,
+                onChanged: (value) => settings.setNotifyOnErrors(value),
+              ),
+              const Divider(),
+              _buildSectionHeader(context, 'System Tray'),
+              SwitchListTile(
+                title: const Text('Enable System Tray'),
+                subtitle: const Text(
+                  'Show an icon in the system tray to manage the application.',
+                ),
+                value: settings.trayEnabled,
+                onChanged: (value) => settings.setTrayEnabled(value),
               ),
               const Divider(),
               _buildSectionHeader(context, 'Performance'),
@@ -131,19 +227,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: devMode.enableApiLogging,
                 onChanged: (value) => devMode.toggleApiLogging(value),
               ),
+              SwitchListTile(
+                title: const Text('Use Corp Jules Links'),
+                subtitle: const Text(
+                  'Use jules.corp.google.com links instead of jules.google.com for PRs.',
+                ),
+                value: settings.useCorpJulesUrl,
+                onChanged: (value) => settings.setUseCorpJulesUrl(value),
+              ),
               const Divider(),
               _buildSectionHeader(context, 'Authentication'),
               ListTile(
                 title: const Text('Current Session'),
                 subtitle: Text(
                   auth.tokenType == TokenType.apiKey
-                      ? 'API Key'
+                      ? 'Manual Access Token'
                       : 'Google Access Token',
                 ),
                 trailing: const Icon(Icons.check_circle, color: Colors.green),
               ),
               ListTile(
-                title: const Text('Update API Key'),
+                title: const Text('Update Access Token'),
                 leading: const Icon(Icons.vpn_key),
                 onTap: () => _showApiKeyDialog(context, auth),
               ),
@@ -159,14 +263,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'GitHub'),
               ListTile(
                 title: const Text('Personal Access Token'),
-                subtitle: Text(
-                  github.apiKey != null
-                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
-                      : 'Not set',
+                subtitle: github.hasBadCredentials
+                    ? Text(
+                        'Error: ${github.authError ?? "Bad credentials"}',
+                        style: const TextStyle(color: Colors.red),
+                      )
+                    : Text(
+                        github.apiKey != null && github.apiKey!.length > 4
+                            ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                            : (github.apiKey != null ? '********' : 'Not set'),
+                      ),
+                leading: Icon(
+                  Icons.code,
+                  color: github.hasBadCredentials ? Colors.red : null,
                 ),
-                leading: const Icon(Icons.code),
                 onTap: () => _showGitHubKeyDialog(context, github),
               ),
+              if (settings.githubExclusions.isNotEmpty) ...[
+                const Divider(),
+                _buildSectionHeader(context, 'GitHub Exclusions'),
+                _buildGithubExclusionsTable(context, settings),
+              ],
             ],
           );
         },
@@ -181,27 +298,95 @@ class _SettingsScreenState extends State<SettingsScreen> {
     final controller = TextEditingController();
     final newKey = await showDialog<String>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter GitHub PAT'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'Personal Access Token',
-            hintText: 'Paste your token here',
-          ),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        bool isTesting = false;
+        String? testResult;
+        Color? resultColor;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Enter GitHub PAT'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  TextField(
+                    controller: controller,
+                    decoration: const InputDecoration(
+                      labelText: 'Personal Access Token',
+                      hintText: 'Paste your token here',
+                    ),
+                    obscureText: true,
+                  ),
+                  if (isTesting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16.0),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (testResult != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(color: resultColor),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isTesting
+                      ? null
+                      : () async {
+                          final token = controller.text.trim();
+                          if (token.isEmpty) return;
+
+                          setState(() {
+                            isTesting = true;
+                            testResult = null;
+                          });
+
+                          try {
+                            final profile = await github.validateToken(token);
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                if (profile != null) {
+                                  testResult =
+                                      "Success! Logged in as ${profile['login']}";
+                                  resultColor = Colors.green;
+                                } else {
+                                  testResult = "Invalid Token or Scope";
+                                  resultColor = Colors.red;
+                                }
+                              });
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = "Error: $e";
+                                resultColor = Colors.red;
+                              });
+                            }
+                          }
+                        },
+                  child: const Text("Test"),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, controller.text),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
     if (newKey != null && newKey.isNotEmpty) {
@@ -263,7 +448,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
             return ListTile(
               title: Text(schedule.name),
               subtitle: Text(
-                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}',
+                'Every ${schedule.intervalInMinutes} mins, ${_formatTask(schedule)}\n'
+                'Last run: ${_formatLastRun(schedule.lastRun)}',
               ),
               trailing: Row(
                 mainAxisSize: MainAxisSize.min,
@@ -440,38 +626,140 @@ class _SettingsScreenState extends State<SettingsScreen> {
     AuthProvider auth,
   ) async {
     final controller = TextEditingController();
-    final newKey = await showDialog<String>(
+    TokenType tempType = auth.tokenType;
+
+    final result = await showDialog<Map<String, dynamic>>(
       context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('Enter API Key'),
-        content: TextField(
-          controller: controller,
-          decoration: const InputDecoration(
-            labelText: 'API Key',
-            hintText: 'Paste your API key here',
-          ),
-          obscureText: true,
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: const Text('Cancel'),
-          ),
-          TextButton(
-            onPressed: () => Navigator.pop(context, controller.text),
-            child: const Text('Save'),
-          ),
-        ],
-      ),
+      builder: (context) {
+        bool isTesting = false;
+        String? testResult;
+        Color? resultColor;
+
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: const Text('Authentication Credentials'),
+              content: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  InputDecorator(
+                    decoration: const InputDecoration(labelText: 'Type'),
+                    child: DropdownButtonHideUnderline(
+                      child: DropdownButton<TokenType>(
+                        value: tempType,
+                        isDense: true,
+                        items: const [
+                          DropdownMenuItem(
+                            value: TokenType.accessToken,
+                            child: Text('OAuth Access Token'),
+                          ),
+                          DropdownMenuItem(
+                            value: TokenType.apiKey,
+                            child: Text('Jules API Key'),
+                          ),
+                        ],
+                        onChanged: (val) {
+                          if (val != null) {
+                            setState(() {
+                              tempType = val;
+                            });
+                          }
+                        },
+                      ),
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  TextField(
+                    controller: controller,
+                    decoration: InputDecoration(
+                      labelText: tempType == TokenType.apiKey
+                          ? 'API Key'
+                          : 'Access Token',
+                      hintText: tempType == TokenType.apiKey
+                          ? 'Paste your API Key here'
+                          : 'Paste your OAuth2 Access Token here',
+                    ),
+                    obscureText: true,
+                  ),
+                  if (isTesting)
+                    const Padding(
+                      padding: EdgeInsets.only(top: 16.0),
+                      child: LinearProgressIndicator(),
+                    ),
+                  if (testResult != null)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 16.0),
+                      child: Text(
+                        testResult!,
+                        style: TextStyle(color: resultColor),
+                      ),
+                    ),
+                ],
+              ),
+              actions: [
+                TextButton(
+                  onPressed: isTesting
+                      ? null
+                      : () async {
+                          final token = controller.text.trim();
+                          if (token.isEmpty) return;
+
+                          setState(() {
+                            isTesting = true;
+                            testResult = null;
+                          });
+
+                          try {
+                            await auth.validateToken(token, tempType);
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = 'Success!';
+                                resultColor = Colors.green;
+                              });
+                            }
+                          } catch (e) {
+                            if (context.mounted) {
+                              setState(() {
+                                isTesting = false;
+                                testResult = 'Error: $e';
+                                resultColor = Colors.red;
+                              });
+                            }
+                          }
+                        },
+                  child: const Text('Test'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () => Navigator.pop(context, {
+                    'token': controller.text,
+                    'type': tempType,
+                  }),
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
 
-    if (newKey != null && newKey.isNotEmpty) {
-      if (!context.mounted) return;
-      await auth.setToken(newKey, TokenType.apiKey);
-      if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('API Key updated successfully')),
-        );
+    if (result != null) {
+      final newKey = result['token'] as String;
+      final type = result['type'] as TokenType;
+
+      if (newKey.isNotEmpty) {
+        if (!context.mounted) return;
+        await auth.setToken(newKey, type);
+        if (context.mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Credentials updated successfully')),
+          );
+        }
       }
     }
   }
@@ -579,6 +867,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
     }
   }
 
+  String _formatLastRun(DateTime? lastRun) {
+    if (lastRun == null) {
+      return 'Never';
+    }
+    return lastRun.toLocal().toString().substring(0, 16);
+  }
+
   String _formatTask(RefreshSchedule schedule) {
     switch (schedule.taskType) {
       case RefreshTaskType.refresh:
@@ -596,6 +891,113 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Send All Until Failure';
       default:
         return '';
+    }
+  }
+
+  Widget _buildFabDropdown(
+    BuildContext context, {
+    required String title,
+    required FabVisibility value,
+    required Function(FabVisibility) onChanged,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<FabVisibility>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: FabVisibility.values.map((v) {
+          return DropdownMenuItem(
+            value: v,
+            child: Text(v.toString().split('.').last),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildGithubExclusionsTable(
+      BuildContext context, SettingsProvider settings) {
+    return SingleChildScrollView(
+      scrollDirection: Axis.horizontal,
+      child: DataTable(
+        columns: const [
+          DataColumn(label: Text('Type')),
+          DataColumn(label: Text('Value')),
+          DataColumn(label: Text('Reason')),
+          DataColumn(label: Text('Date')),
+          DataColumn(label: Text('Action')),
+        ],
+        rows: settings.githubExclusions.map((exclusion) {
+          return DataRow(
+            cells: [
+              DataCell(Text(exclusion.type.toString().split('.').last)),
+              DataCell(Text(exclusion.value)),
+              DataCell(Text(exclusion.reason)),
+              DataCell(Text(exclusion.date.toIso8601String().split('T')[0])),
+              DataCell(
+                IconButton(
+                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
+                  onPressed: () {
+                    settings.removeGithubExclusion(
+                        exclusion.value, exclusion.type);
+                  },
+                ),
+              ),
+            ],
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildKeybindingDropdown<T extends Enum>(
+    BuildContext context, {
+    required String title,
+    required T value,
+    required List<T> values,
+    required Function(T) onChanged,
+    required String Function(T) formatter,
+  }) {
+    return ListTile(
+      title: Text(title),
+      trailing: DropdownButton<T>(
+        value: value,
+        onChanged: (newValue) {
+          if (newValue != null) onChanged(newValue);
+        },
+        items: values.map((v) {
+          return DropdownMenuItem(
+            value: v,
+            child: Text(formatter(v)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  String _formatMessageSubmitAction(MessageSubmitAction action) {
+    switch (action) {
+      case MessageSubmitAction.addNewLine:
+        return 'Adds a new line';
+      case MessageSubmitAction.submitsMessage:
+        return 'Submits message';
+      case MessageSubmitAction.submitsMessageAndGoesBack:
+        return 'Submits message and goes back';
+      case MessageSubmitAction.doesNothing:
+        return 'Does nothing';
+    }
+  }
+
+  String _formatEscKeyAction(EscKeyAction action) {
+    switch (action) {
+      case EscKeyAction.savesDraftAndGoesBack:
+        return 'Saves draft and goes back';
+      case EscKeyAction.goesBack:
+        return 'Goes back';
+      case EscKeyAction.doesNothing:
+        return 'Does nothing';
     }
   }
 }

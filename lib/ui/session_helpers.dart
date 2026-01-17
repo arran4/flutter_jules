@@ -15,7 +15,10 @@ Future<bool> resubmitSession(
 }) async {
   final NewSessionResult? result = await showDialog<NewSessionResult>(
     context: context,
-    builder: (context) => NewSessionDialog(initialSession: session),
+    builder: (context) => NewSessionDialog(
+      initialSession: session,
+      mode: SessionDialogMode.edit,
+    ),
   );
 
   if (result == null) return false;
@@ -142,8 +145,14 @@ Future<void> handleNewSessionResultInBackground({
   required AuthProvider authProvider,
   required MessageQueueProvider messageQueueProvider,
   required SettingsProvider settingsProvider,
-  required Function(String) showMessage,
+  required ScaffoldMessengerState scaffoldMessenger,
 }) async {
+  void showMessage(String message) {
+    scaffoldMessenger.showSnackBar(
+      SnackBar(content: Text(message)),
+    );
+  }
+
   if (result.isDraft) {
     for (final session in result.sessions) {
       messageQueueProvider.addCreateSessionRequest(session, isDraft: true);
@@ -203,9 +212,37 @@ Future<void> handleNewSessionResultInBackground({
   }
 
   if (hideOriginal && anySucceeded) {
-    await sessionProvider.toggleHidden(originalSession.id, authProvider.token!);
+    await sessionProvider.toggleHidden(
+      originalSession.id,
+      authProvider.token!,
+    );
     showMessage("Original session hidden.");
   } else if (anySucceeded) {
     showMessage("New session(s) created.");
   }
+}
+
+Future<void> showNewSessionDialog(BuildContext context) async {
+  final result = await showDialog<NewSessionResult>(
+    context: context,
+    builder: (context) => const NewSessionDialog(),
+  );
+
+  if (result == null || !context.mounted) return;
+
+  final sessionProvider = context.read<SessionProvider>();
+  final authProvider = context.read<AuthProvider>();
+  final messageQueueProvider = context.read<MessageQueueProvider>();
+  final settingsProvider = context.read<SettingsProvider>();
+
+  handleNewSessionResultInBackground(
+    result: result,
+    originalSession: Session(name: '', id: '', prompt: ''),
+    hideOriginal: false,
+    sessionProvider: sessionProvider,
+    authProvider: authProvider,
+    messageQueueProvider: messageQueueProvider,
+    settingsProvider: settingsProvider,
+    scaffoldMessenger: ScaffoldMessenger.of(context),
+  );
 }

@@ -7,6 +7,7 @@ import 'session_provider.dart';
 import 'jules_client.dart';
 import 'auth_provider.dart';
 import 'github_provider.dart';
+import 'settings_provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 class BulkActionExecutor extends ChangeNotifier {
@@ -14,6 +15,7 @@ class BulkActionExecutor extends ChangeNotifier {
   final JulesClient julesClient;
   final AuthProvider authProvider;
   final GithubProvider githubProvider;
+  final SettingsProvider settingsProvider;
 
   BulkJobConfig? _config;
   List<Session> _queue = [];
@@ -34,6 +36,7 @@ class BulkActionExecutor extends ChangeNotifier {
     required this.julesClient,
     required this.authProvider,
     required this.githubProvider,
+    required this.settingsProvider,
   });
 
   BulkJobConfig? get config => _config;
@@ -354,7 +357,10 @@ class BulkActionExecutor extends ChangeNotifier {
         }
         break;
       case BulkActionType.openJulesLink:
-        final url = "https://jules.corp.google.com/session/${session.id}";
+        final baseUrl = settingsProvider.useCorpJulesUrl
+            ? "https://jules.corp.google.com"
+            : "https://jules.google.com";
+        final url = "$baseUrl/session/${session.id}";
         _addLog("Opening session in Jules UI: $url", false, session.id);
         await launchUrl(Uri.parse(url));
         break;

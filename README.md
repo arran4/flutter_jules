@@ -73,6 +73,10 @@ Monitor your Pull Requests (Open, Merged, Draft) effortlessly from the session l
 Create and save filter presets to organize your workspace efficiently.
 ![Filter Presets](docs/Screenshot_20260110_200853.png)
 
+### Complex Query Visualization
+Visualize and construct intricate logical queries (AND/OR/NOT groups) to pinpoint exact sessions.
+![Complex Queries](docs/complex_query_builder.png)
+
 ### Session Creation
 Start new tasks with specific modes (Plan, Question, Automate) using the creation wizard.
 ![New Session](docs/Screenshot_20260110_201004.png)

@@ -76,9 +76,78 @@ class FilterElementBuilder {
       }
       final newChild = removeFilter(root.child, target);
       return newChild != null ? NotElement(newChild) : null;
+    } else if (root is DisabledElement) {
+      if (root.child == target) {
+        return null;
+      }
+      final newChild = removeFilter(root.child, target);
+      return newChild != null ? DisabledElement(newChild) : null;
     }
 
     return root;
+  }
+
+  /// Toggle disabled wrapper on an element
+  static FilterElement? toggleEnabled(
+      FilterElement? root, FilterElement target) {
+    if (root == null) return null;
+
+    // If target is already a DisabledElement, we want to unwrap it
+    if (target is DisabledElement) {
+      return replaceFilter(root, target, target.child);
+    }
+
+    // Check if target is wrapped by a DisabledElement in the tree (immediate parent)
+    final recursiveUnwrap = _removeImmediateDisabledParent(root, target);
+    if (recursiveUnwrap != null) {
+      return recursiveUnwrap;
+    }
+
+    // So if target is NOT disabled, we wrap it.
+    return replaceFilter(root, target, DisabledElement(target));
+  }
+
+  /// Recursively walks filter tree. If it finds DisabledElement(target), replaces it with target.
+  /// Returns the new tree if found, or null if not found.
+  static FilterElement? _removeImmediateDisabledParent(
+      FilterElement root, FilterElement target) {
+    if (root is DisabledElement && root.child == target) {
+      return target;
+    }
+
+    if (root is AndElement) {
+      final children = root.children;
+      for (int i = 0; i < children.length; i++) {
+        final res = _removeImmediateDisabledParent(children[i], target);
+        if (res != null) {
+          final newChildren = List<FilterElement>.from(children);
+          newChildren[i] = res;
+          return AndElement(newChildren);
+        }
+      }
+    } else if (root is OrElement) {
+      final children = root.children;
+      for (int i = 0; i < children.length; i++) {
+        final res = _removeImmediateDisabledParent(children[i], target);
+        if (res != null) {
+          final newChildren = List<FilterElement>.from(children);
+          newChildren[i] = res;
+          return OrElement(newChildren);
+        }
+      }
+    } else if (root is NotElement) {
+      final res = _removeImmediateDisabledParent(root.child, target);
+      if (res != null) {
+        return NotElement(res);
+      }
+    } else if (root is DisabledElement) {
+      final res = _removeImmediateDisabledParent(root.child, target);
+      if (res != null) {
+        return DisabledElement(res);
+      }
+    }
+
+    return null;
   }
 
   /// Toggle NOT wrapper on an element
@@ -111,6 +180,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final transformed = toggleNot(root.child, target);
       return transformed != null ? NotElement(transformed) : null;
+    } else if (root is DisabledElement) {
+      final transformed = toggleNot(root.child, target);
+      return transformed != null ? DisabledElement(transformed) : null;
     }
 
     return root;
@@ -148,6 +220,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final simplified = simplify(root.child);
       return simplified != null ? NotElement(simplified) : null;
+    } else if (root is DisabledElement) {
+      final simplified = simplify(root.child);
+      return simplified != null ? DisabledElement(simplified) : null;
     }
 
     return root;
@@ -158,6 +233,9 @@ class FilterElementBuilder {
   static bool _isSameFilterType(FilterElement a, FilterElement b) {
     // NOT elements should always be isolated (ANDed), never ORed
     if (a is NotElement || b is NotElement) {
+      return false;
+    }
+    if (a is DisabledElement || b is DisabledElement) {
       return false;
     }
     return a.groupingType == b.groupingType;
@@ -296,6 +374,9 @@ class FilterElementBuilder {
     } else if (root is NotElement) {
       final newChild = replaceFilter(root.child, target, replacement);
       return NotElement(newChild ?? root.child);
+    } else if (root is DisabledElement) {
+      final newChild = replaceFilter(root.child, target, replacement);
+      return DisabledElement(newChild ?? root.child);
     }
 
     return root;
@@ -419,6 +500,8 @@ class FilterElementBuilder {
   ) {
     if (element is NotElement) {
       _collectTokens(element.child, tokens, FilterMode.exclude);
+    } else if (element is DisabledElement) {
+      // Skip disabled elements
     } else if (element is AndElement || element is OrElement) {
       final children = element is AndElement
           ? element.children

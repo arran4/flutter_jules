@@ -1,20 +1,39 @@
 import 'dart:convert';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
+
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 
-class GithubProvider extends ChangeNotifier {
-  final FlutterSecureStorage _secureStorage = const FlutterSecureStorage();
-  static const String _githubApiKey = 'github_api_key';
+import 'auth_service.dart';
+import 'settings_provider.dart';
+import '../models/github_exclusion.dart';
 
-  String? _apiKey;
-  String? get apiKey => _apiKey;
+class GithubApiException implements Exception {
+  final int statusCode;
+  final String message;
+
+  GithubApiException(this.statusCode, this.message);
+
+  @override
+  String toString() => 'GithubApiException: $statusCode $message';
+}
+
+class GithubProvider extends ChangeNotifier {
+  final SettingsProvider _settingsProvider;
+  final AuthService _authService = AuthService();
+
+  String? _githubToken;
+  String? get apiKey => _githubToken;
+
   // Rate Limiting
   int? _rateLimitLimit;
   int? _rateLimitRemaining;
   DateTime? _rateLimitReset;
+
+  // Auth Status
+  bool _hasBadCredentials = false;
+  String? _authError;
 
   // Queue
   final List<GithubJob> _queue = [];
@@ -24,44 +43,193 @@ class GithubProvider extends ChangeNotifier {
   int? get rateLimitRemaining => _rateLimitRemaining;
   DateTime? get rateLimitReset => _rateLimitReset;
   List<GithubJob> get queue => List.unmodifiable(_queue);
+  bool get hasBadCredentials => _hasBadCredentials;
+  String? get authError => _authError;
 
-  GithubProvider() {
-    _loadApiKey();
+  GithubProvider(this._settingsProvider) {
+    _loadToken();
   }
 
-  Future<void> _loadApiKey() async {
-    _apiKey = await _secureStorage.read(key: _githubApiKey);
+  Future<void> _loadToken() async {
+    _githubToken = await _authService.getGithubToken();
     notifyListeners();
   }
 
-  Future<void> setApiKey(String apiKey) async {
-    await _secureStorage.write(key: _githubApiKey, value: apiKey);
-    _apiKey = apiKey;
+  Future<String?> getToken() async => apiKey;
+
+  Future<void> setApiKey(String key) async {
+    await _authService.saveGithubToken(key);
+    _githubToken = key;
+    // Reset bad credentials state when key is updated
+    _hasBadCredentials = false;
+    _authError = null;
+    notifyListeners();
+    // Retry processing queue if it was stuck
+    _processQueue();
+  }
+
+  Future<bool> _checkUserAccess() async {
+    final token = apiKey;
+    if (token == null) return false;
+    final response = await http.get(
+      Uri.parse('https://api.github.com/user'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<bool> _checkOrgAccess(String org) async {
+    final token = apiKey;
+    if (token == null) return false;
+    // Cheap call to check org membership or existence
+    // If user is not member of private org, this might fail with 404 or 403
+    final response = await http.get(
+      Uri.parse('https://api.github.com/orgs/$org'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) return true;
+
+    // Also check membership specifically if possible
+    final membershipResponse = await http.get(
+      Uri.parse('https://api.github.com/user/memberships/orgs/$org'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+    return membershipResponse.statusCode == 200;
+  }
+
+  Future<void> _analyzeFailure(String? owner, String? repo) async {
+    if (_hasBadCredentials) return;
+
+    final userOk = await _checkUserAccess();
+    if (!userOk && owner != null) {
+      // User check failed. If there was an owner context, check owner/org too.
+      // But if user check fails, likely the TOP LEVEL PAT is bad.
+      // However, per requirements: "if both fail the full PAT is disabled"
+      // So we must check org too.
+
+      bool orgOk = false;
+      orgOk = await _checkOrgAccess(owner);
+
+      if (!orgOk) {
+        // Both failed -> Full PAT Disable
+        _markBadCredentials('Access check failed for User and Org ($owner).');
+      } else {
+        // User failed (odd), Org passed (maybe fine?).
+        // Technically if /user fails, PAT is usually invalid.
+        // But let's stick to strict interpretation or logical fallback.
+        // If /user fails, it's a scope/token validity issue generally.
+        // We'll mark bad credentials to safest.
+        _markBadCredentials('Access check failed for User.');
+      }
+    } else if (userOk) {
+      // User is OK.
+      if (owner != null) {
+        final orgOk = await _checkOrgAccess(owner);
+        if (!orgOk) {
+          // User OK, Org Failed -> Disable Org
+          await _settingsProvider.addGithubExclusion(GithubExclusion(
+            type: GithubExclusionType.org,
+            value: owner,
+            reason: 'PAT access request failed for Org.',
+            date: DateTime.now(),
+          ));
+          return;
+        }
+
+        // User OK, Org OK -> Must be Repo failure
+        if (repo != null) {
+          await _settingsProvider.addGithubExclusion(GithubExclusion(
+            type: GithubExclusionType.repo,
+            value: '$owner/$repo',
+            reason: 'PAT access request failed for Repo.',
+            date: DateTime.now(),
+          ));
+        }
+      }
+    }
+  }
+
+  void _markBadCredentials(String reason) {
+    if (_hasBadCredentials) return;
+    _hasBadCredentials = true;
+    _authError = reason;
+    _cancelAllPendingJobs();
     notifyListeners();
   }
 
-  Future<String?> getToken() async => _apiKey;
+  Future<Map<String, dynamic>?> validateToken(String token) async {
+    final response = await http.get(
+      Uri.parse('https://api.github.com/user'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+
+    if (response.statusCode == 200) {
+      return jsonDecode(response.body);
+    }
+    return null;
+  }
+
+  Future<void> _handleUnauthorized(String body,
+      {String? owner, String? repo}) async {
+    // Start analysis to determine granularity of failure
+    await _analyzeFailure(owner, repo);
+  }
+
+  void _cancelAllPendingJobs() {
+    // Iterate backwards or on a copy to modify safely if needed,
+    // though we are clearing.
+    for (final job in _queue) {
+      if (job.status == GithubJobStatus.pending) {
+        job.status = GithubJobStatus.failed; // or canceled
+        job.result = null; // Return null so waiters don't crash
+        job.error = 'Bad credentials';
+        if (!job.completer.isCompleted) {
+          job.completer.complete();
+        }
+      }
+    }
+    _queue.removeWhere((job) => job.status == GithubJobStatus.failed);
+  }
 
   Future<GitHubPrResponse?> getPrStatus(
     String owner,
     String repo,
     String prNumber,
   ) async {
-    if (_apiKey == null) {
+    if (apiKey == null) {
       return null;
     }
+    if (_hasBadCredentials) {
+      return null;
+    }
+    if (_settingsProvider.isExcluded('$owner/$repo')) return null;
 
     final job = GithubJob(
       id: 'pr_status_${owner}_${repo}_$prNumber',
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
+        if (_hasBadCredentials) return null;
+
         final url = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
         );
         final response = await http.get(
           url,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
@@ -71,6 +239,14 @@ class GithubProvider extends ChangeNotifier {
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
           return GitHubPrResponse(data);
+        } else if (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404) {
+          // 404 on private repo acts like auth failure often
+          await _handleUnauthorized(response.body, owner: owner, repo: repo);
+          debugPrint(
+              'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
+          return null;
         } else {
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
@@ -90,39 +266,47 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null || _hasBadCredentials) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
     final response = await http.get(
       url,
       headers: {
-        'Authorization': 'token $_apiKey',
+        'Authorization': 'token $apiKey',
         'Accept': 'application/vnd.github.v3.diff',
       },
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
+    } else if (response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 404) {
+      await _handleUnauthorized(response.body, owner: owner, repo: repo);
     }
     return null;
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null || _hasBadCredentials) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
     final response = await http.get(
       url,
       headers: {
-        'Authorization': 'token $_apiKey',
+        'Authorization': 'token $apiKey',
         'Accept': 'application/vnd.github.v3.patch',
       },
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
       return response.body;
+    } else if (response.statusCode == 401 ||
+        response.statusCode == 403 ||
+        response.statusCode == 404) {
+      await _handleUnauthorized(response.body, owner: owner, repo: repo);
     }
     return null;
   }
@@ -132,12 +316,16 @@ class GithubProvider extends ChangeNotifier {
     String repo,
     String prNumber,
   ) async {
-    if (_apiKey == null) return null;
+    if (apiKey == null) return null;
+    if (_hasBadCredentials) return 'Unknown';
 
     final job = GithubJob(
       id: 'ci_status_${owner}_${repo}_$prNumber',
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
+        if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
+        if (_hasBadCredentials) return 'Unknown';
+
         // 1. Get the PR's head SHA
         final prUrl = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
@@ -145,18 +333,21 @@ class GithubProvider extends ChangeNotifier {
         final prResponse = await http.get(
           prUrl,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
         _updateRateLimits(prResponse.headers);
 
-        if (prResponse.statusCode != 200) {
-          debugPrint(
-            'Failed to get PR for CI status ($owner/$repo #$prNumber): ${prResponse.statusCode} ${prResponse.body}',
-          );
-          // If we can't get the PR, we can't get the status.
+        if (prResponse.statusCode == 401 ||
+            prResponse.statusCode == 403 ||
+            prResponse.statusCode == 404) {
+          await _handleUnauthorized(prResponse.body, owner: owner, repo: repo);
           return 'Unknown';
+        }
+
+        if (prResponse.statusCode != 200) {
+          throw GithubApiException(prResponse.statusCode, prResponse.body);
         }
 
         final prData = jsonDecode(prResponse.body);
@@ -173,11 +364,19 @@ class GithubProvider extends ChangeNotifier {
         final checksResponse = await http.get(
           checksUrl,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
         _updateRateLimits(checksResponse.headers);
+
+        if (checksResponse.statusCode == 401 ||
+            checksResponse.statusCode == 403 ||
+            checksResponse.statusCode == 404) {
+          await _handleUnauthorized(checksResponse.body,
+              owner: owner, repo: repo);
+          return 'Unknown';
+        }
 
         if (checksResponse.statusCode != 200) {
           debugPrint(
@@ -229,24 +428,43 @@ class GithubProvider extends ChangeNotifier {
     String owner,
     String repo,
   ) async {
-    if (_apiKey == null) {
+    if (apiKey == null) {
       return null;
     }
+    if (_hasBadCredentials) return null;
 
-    final job = GithubJob(
+    final job = createRepoDetailsJob(owner, repo);
+    if (_settingsProvider.isExcluded('$owner/$repo')) return null;
+
+    enqueue(job);
+    await job.completer.future;
+    return job.result as Map<String, dynamic>?;
+  }
+
+  GithubJob createRepoDetailsJob(String owner, String repo) {
+    return GithubJob(
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
+        if (_hasBadCredentials) throw Exception('Bad credentials');
+
         final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
         final response = await http.get(
           url,
           headers: {
-            'Authorization': 'token $_apiKey',
+            'Authorization': 'token $apiKey',
             'Accept': 'application/vnd.github.v3+json',
           },
         );
 
         _updateRateLimits(response.headers);
+
+        if (response.statusCode == 401 ||
+            response.statusCode == 403 ||
+            response.statusCode == 404) {
+          await _handleUnauthorized(response.body, owner: owner, repo: repo);
+          throw GithubApiException(response.statusCode, response.body);
+        }
 
         if (response.statusCode == 200) {
           final data = jsonDecode(response.body);
@@ -263,23 +481,25 @@ class GithubProvider extends ChangeNotifier {
             'openIssuesCount': data['open_issues_count'],
             'isFork': data['fork'],
             'forkParent': parent != null ? parent['full_name'] : null,
+            'html_url': data['html_url'],
           };
         } else {
-          debugPrint(
-            'Failed to get repo details for $owner/$repo: ${response.statusCode} ${response.body}',
-          );
-          return null;
+          throw GithubApiException(response.statusCode, response.body);
         }
       },
     );
+  }
 
+  void enqueue(GithubJob job) {
+    if (_hasBadCredentials) return; // Don't enqueue if auth is bad
+
+    // Avoid adding duplicate jobs
+    if (_queue.any((j) => j.id == job.id)) {
+      return;
+    }
     _queue.add(job);
     _processQueue();
     notifyListeners();
-
-    // Wait for job to complete
-    await job.completer.future;
-    return job.result as Map<String, dynamic>?;
   }
 
   void _updateRateLimits(Map<String, String> headers) {
@@ -312,9 +532,16 @@ class GithubProvider extends ChangeNotifier {
 
   Future<void> _processQueue() async {
     if (_isProcessingQueue) return;
+    if (_hasBadCredentials) return; // Stop processing
+
     _isProcessingQueue = true;
 
     while (_queue.isNotEmpty) {
+      // Check auth again in case it changed while processing
+      if (_hasBadCredentials) {
+        break;
+      }
+
       // Check Rate Limits
       if (_rateLimitRemaining != null && _rateLimitRemaining! <= 0) {
         if (_rateLimitReset != null &&
@@ -350,6 +577,14 @@ class GithubProvider extends ChangeNotifier {
         job.status = GithubJobStatus.completed;
         job.completer.complete();
       } catch (e) {
+        // If the job action threw an exception because of 401, we want to capture that
+        if (e.toString().contains('Bad credentials') || _hasBadCredentials) {
+          job.status = GithubJobStatus.failed;
+          job.error = 'Bad credentials';
+          job.completer.completeError(e);
+          break; // Stop queue processing
+        }
+
         job.status = GithubJobStatus.failed;
         job.error = e.toString();
         job.completer.completeError(e);
@@ -387,8 +622,10 @@ class GithubJob {
 
 class GitHubPrResponse {
   final Map<String, dynamic> _data;
+  final Map<String, dynamic> _links;
 
-  GitHubPrResponse(this._data);
+  GitHubPrResponse(this._data)
+      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
@@ -403,6 +640,16 @@ class GitHubPrResponse {
       getNumberPropOrDefault<num?>(_data, 'changed_files', null)?.toInt();
   String? get diffUrl => getStringPropOrDefault(_data, 'diff_url', null);
   String? get patchUrl => getStringPropOrDefault(_data, 'patch_url', null);
+  String? get htmlUrl =>
+      (_links['html'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get statusesUrl =>
+      (_links['statuses'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get commentsUrl =>
+      (_links['comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get reviewCommentsUrl =>
+      (_links['review_comments'] as Map<String, dynamic>?)?['href'] as String?;
+  String? get headSha =>
+      (_data['head'] as Map<String, dynamic>?)?['sha'] as String?;
 
   String get displayStatus {
     if (isMerged == true) return 'Merged';

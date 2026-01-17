@@ -10,6 +10,10 @@ import '../../services/message_queue_provider.dart';
 import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
 import 'delay_input_widget.dart';
+import 'save_bulk_action_preset_dialog.dart';
+import '../../models/bulk_action_preset.dart';
+import '../../services/bulk_action_preset_provider.dart';
+import '../../utils/action_script_builder.dart';
 
 class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;
@@ -35,6 +39,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   List<BulkActionStep> _actions = [];
   int _parallelQueries = 1;
   Duration _waitBetween = const Duration(seconds: 2);
+  DelayUnit _waitBetweenUnit = DelayUnit.s;
   String _searchText = '';
 
   // Execution control
@@ -58,7 +63,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     final settings = context.read<SettingsProvider>();
     _actions = List<BulkActionStep>.from(settings.lastBulkActions);
     _parallelQueries = settings.lastBulkParallelQueries;
-    _waitBetween = Duration(seconds: settings.lastBulkWaitBetweenSeconds);
+    _waitBetween =
+        Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
+    _waitBetweenUnit = settings.lastBulkWaitBetweenUnit;
     _limit = settings.lastBulkLimit;
     _offset = settings.lastBulkOffset;
     _randomize = settings.lastBulkRandomize;
@@ -138,11 +145,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
   @override
   Widget build(BuildContext context) {
+    final screenSize = MediaQuery.of(context).size;
+    final dialogWidth = (screenSize.width * 0.8).clamp(800.0, 1800.0);
+    final dialogHeight = (screenSize.height * 0.8).clamp(600.0, 1200.0);
+
     return AlertDialog(
       title: const Text('Bulk Actions'),
       content: SizedBox(
-        width: 900,
-        height: 700,
+        width: dialogWidth,
+        height: dialogHeight,
         child: Row(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
@@ -213,8 +224,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                           child: DelayInputWidget(
                             label: 'Wait Between',
                             initialDelay: _waitBetween,
-                            onDelayChanged: (d) =>
-                                setState(() => _waitBetween = d),
+                            initialUnit: _waitBetweenUnit,
+                            onDelayChanged: (duration, unit) => setState(() {
+                              _waitBetween = duration;
+                              _waitBetweenUnit = unit;
+                            }),
                           ),
                         ),
                       ],
@@ -365,6 +379,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         ),
       ),
       actions: [
+        TextButton(
+          onPressed: _saveAsPreset,
+          child: const Text('Save as Preset...'),
+        ),
         TextButton(
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
@@ -535,12 +553,55 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     });
   }
 
+  void _saveAsPreset() async {
+    final result = await showDialog<Map<String, String>>(
+      context: context,
+      builder: (context) => const SaveBulkActionPresetDialog(),
+    );
+
+    if (result != null && mounted) {
+      final name = result['name']!;
+      final description = result['description']!;
+
+      final filterExpression = _filterTree?.toExpression() ?? '';
+      final actionScript = buildActionScript(
+        actions: _actions,
+        parallelQueries: _parallelQueries,
+        waitBetween: _waitBetween,
+        limit: _limit,
+        offset: _offset,
+        randomize: _randomize,
+        stopOnError: _stopOnError,
+      );
+
+      final newPreset = BulkActionPreset(
+        name: name,
+        description: description,
+        filterExpression: filterExpression,
+        actionScript: actionScript,
+      );
+
+      final provider = context.read<BulkActionPresetProvider>();
+      await provider.addPreset(newPreset);
+
+      if (!mounted) return;
+
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text('Preset "$name" saved.'),
+          backgroundColor: Colors.green,
+        ),
+      );
+    }
+  }
+
   void _startJob() {
     // Save configuration
     context.read<SettingsProvider>().saveBulkActionConfig(
           actions: _actions,
           parallelQueries: _parallelQueries,
-          waitBetweenSeconds: _waitBetween.inSeconds,
+          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
+          waitBetweenUnit: _waitBetweenUnit,
           limit: _limit,
           offset: _offset,
           randomize: _randomize,

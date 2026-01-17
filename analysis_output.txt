@@ -1,0 +1,65 @@
+Analyzing flutter_jules...                                      
+
+warning • Unused import: 'services/activity_provider.dart' • lib/main.dart:6:8 • unused_import
+warning • Unused import: 'services/dev_mode_provider.dart' • lib/main.dart:8:8 • unused_import
+warning • Unused import: 'services/github_provider.dart' • lib/main.dart:9:8 • unused_import
+warning • Unused import: 'services/filter_bookmark_provider.dart' • lib/main.dart:12:8 • unused_import
+warning • Unused import: 'services/bulk_action_preset_provider.dart' • lib/main.dart:13:8 • unused_import
+warning • Unused import: 'services/message_queue_provider.dart' • lib/main.dart:14:8 • unused_import
+warning • Unused import: 'services/cache_service.dart' • lib/main.dart:16:8 • unused_import
+warning • Unused import: 'services/refresh_service.dart' • lib/main.dart:17:8 • unused_import
+warning • Unused import: 'services/bulk_action_executor.dart' • lib/main.dart:18:8 • unused_import
+warning • Unused import: 'services/notification_provider.dart' • lib/main.dart:20:8 • unused_import
+warning • Unused import: 'services/tags_provider.dart' • lib/main.dart:21:8 • unused_import
+warning • Unused import: 'ui/session_helpers.dart' • lib/main.dart:35:8 • unused_import
+warning • The value of the local variable 'arguments' isn't used • lib/main.dart:47:11 • unused_local_variable
+  error • 'ShortcutRegistry' isn't a function • lib/ui/app_container.dart:32:47 • invocation_of_non_function
+  error • The name 'ShortcutRegistry' is defined in the libraries 'package:flutter/src/widgets/shortcuts.dart (via package:flutter/material.dart)' and 'package:flutter_jules/services/shortcut_registry.dart' • lib/ui/app_container.dart:32:47 • ambiguous_import
+  error • The name 'DelayUnit' is defined in the libraries 'package:flutter_jules/services/settings_provider.dart' and 'package:flutter_jules/ui/widgets/delay_input_widget.dart' • lib/ui/widgets/bulk_action_dialog.dart:42:3 • ambiguous_import
+  error • The name 'DelayUnit' is defined in the libraries 'package:flutter_jules/services/settings_provider.dart' and 'package:flutter_jules/ui/widgets/delay_input_widget.dart' • lib/ui/widgets/bulk_action_dialog.dart:42:32 • ambiguous_import
+  error • The argument type 'DelayInputWidget' can't be assigned to the parameter type 'Widget'.  • lib/ui/widgets/bulk_action_dialog.dart:224:34 • argument_type_not_assignable
+  error • Target of URI doesn't exist: 'package.flutter/material.dart' • lib/ui/widgets/delay_input_widget.dart:1:8 • uri_does_not_exist
+  error • Classes can only extend other classes • lib/ui/widgets/delay_input_widget.dart:5:32 • extends_non_class
+  error • No associated named super constructor parameter • lib/ui/widgets/delay_input_widget.dart:13:11 • super_formal_parameter_without_associated_named
+  error • Undefined class 'State' • lib/ui/widgets/delay_input_widget.dart:22:3 • undefined_class
+warning • The method doesn't override an inherited method • lib/ui/widgets/delay_input_widget.dart:22:27 • override_on_non_overriding_member
+  error • Classes can only extend other classes • lib/ui/widgets/delay_input_widget.dart:25:38 • extends_non_class
+  error • Undefined class 'TextEditingController' • lib/ui/widgets/delay_input_widget.dart:26:9 • undefined_class
+  error • The method 'TextEditingController' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:26:45 • undefined_method
+warning • The method doesn't override an inherited method • lib/ui/widgets/delay_input_widget.dart:30:8 • override_on_non_overriding_member
+  error • The method 'initState' isn't defined in a superclass of '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:31:11 • undefined_super_member
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:32:13 • undefined_identifier
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:33:35 • undefined_identifier
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:33:56 • undefined_identifier
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:64:5 • undefined_identifier
+  error • Undefined class 'Widget' • lib/ui/widgets/delay_input_widget.dart:68:3 • undefined_class
+warning • The method doesn't override an inherited method • lib/ui/widgets/delay_input_widget.dart:68:10 • override_on_non_overriding_member
+  error • Undefined class 'BuildContext' • lib/ui/widgets/delay_input_widget.dart:68:16 • undefined_class
+  error • The method 'TextStyle' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:69:23 • undefined_method
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:69:43 • undefined_identifier
+  error • The method 'Column' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:71:12 • undefined_method
+  error • Undefined name 'CrossAxisAlignment' • lib/ui/widgets/delay_input_widget.dart:72:27 • undefined_identifier
+  error • Undefined name 'MainAxisSize' • lib/ui/widgets/delay_input_widget.dart:73:21 • undefined_identifier
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:75:13 • undefined_identifier
+  error • The method 'Text' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:76:11 • undefined_method
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:77:13 • undefined_identifier
+  error • The name 'TextStyle' isn't a class • lib/ui/widgets/delay_input_widget.dart:78:26 • creation_with_non_type
+  error • Undefined name 'Colors' • lib/ui/widgets/delay_input_widget.dart:78:57 • undefined_identifier
+  error • The method 'Row' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:80:9 • undefined_method
+  error • Undefined name 'CrossAxisAlignment' • lib/ui/widgets/delay_input_widget.dart:81:31 • undefined_identifier
+  error • The method 'SizedBox' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:83:13 • undefined_method
+  error • The method 'TextField' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:85:22 • undefined_method
+  error • The method 'InputDecoration' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:87:29 • undefined_method
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:88:28 • undefined_identifier
+  error • The name 'OutlineInputBorder' isn't a class • lib/ui/widgets/delay_input_widget.dart:89:33 • creation_with_non_type
+  error • Undefined name 'TextInputType' • lib/ui/widgets/delay_input_widget.dart:91:31 • undefined_identifier
+  error • The name 'SizedBox' isn't a class • lib/ui/widgets/delay_input_widget.dart:96:19 • creation_with_non_type
+  error • The method 'DropdownButton' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:97:13 • undefined_method
+  error • Undefined name 'widget' • lib/ui/widgets/delay_input_widget.dart:99:24 • undefined_identifier
+  error • The name 'SizedBox' isn't a class • lib/ui/widgets/delay_input_widget.dart:100:32 • creation_with_non_type
+  error • The method 'DropdownMenuItem' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:102:24 • undefined_method
+  error • The method 'Text' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:104:26 • undefined_method
+  error • The method 'setState' isn't defined for the type '_DelayInputWidgetState' • lib/ui/widgets/delay_input_widget.dart:109:19 • undefined_method
+warning • The getter doesn't override an inherited getter • test/refresh_service_test.mocks.dart:226:11 • override_on_non_overriding_member
+  error • 'MockSettingsProvider.saveBulkActionConfig' ('Future<void> Function({required List<BulkActionStep>? actions, required int? limit, required int? offset, required int? parallelQueries, required bool? randomize, required bool? stopOnError, required int? waitBetweenSeconds})') isn't a valid override of 'SettingsProvider.saveBulkActionConfig' ('Future<void> Function({required List<BulkActionStep> actions, required int? limit, required int offset, required int parallelQueries, required bool randomize, required bool stopOnError, required int waitBetweenMilliseconds, required DelayUnit waitBetweenUnit})') • test/refresh_service_test.mocks.dart:475:20 • invalid_override
+

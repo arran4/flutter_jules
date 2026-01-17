@@ -72,7 +72,7 @@ class FilterToken {
       id.hashCode ^ type.hashCode ^ value.hashCode ^ mode.hashCode;
 }
 
-enum SortField { updated, created, name, source, status }
+enum SortField { updated, created, name, source, status, count, opened }
 
 enum SortDirection { ascending, descending }
 
@@ -94,6 +94,15 @@ class SortOption {
         return "Source";
       case SortField.status:
         return "Status";
+      case SortField.count:
+        return "Count";
+      case SortField.opened:
+        return "Opened";
     }
+  }
+
+  String toExpression() {
+    final dir = direction == SortDirection.ascending ? 'asc' : 'desc';
+    return '${field.name} $dir';
   }
 }

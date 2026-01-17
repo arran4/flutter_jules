@@ -104,10 +104,13 @@ class ProgressUpdated {
 }
 
 class SessionCompleted {
-  SessionCompleted();
+  final String summary;
+  SessionCompleted({required this.summary});
   factory SessionCompleted.fromJson(Map<String, dynamic> json) =>
-      SessionCompleted();
-  Map<String, dynamic> toJson() => {};
+      SessionCompleted(
+        summary: getStringPropOrDefault(json, 'summary', 'Success'),
+      );
+  Map<String, dynamic> toJson() => {'summary': summary};
 }
 
 class SessionFailed {
