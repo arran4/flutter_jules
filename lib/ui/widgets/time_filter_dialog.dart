@@ -56,10 +56,32 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
             if (_selectedType == TimeFilterType.inRange ||
                 _selectedType == TimeFilterType.newerThan ||
                 _selectedType == TimeFilterType.olderThan)
-              TextField(
-                controller: _rangeController,
-                decoration: const InputDecoration(
-                    labelText: 'Range (e.g., "5 days", "last week")'),
+              Column(
+                children: [
+                  TextField(
+                    controller: _rangeController,
+                    decoration: const InputDecoration(
+                        labelText: 'Range (e.g., "5 days", "last week")'),
+                  ),
+                  const SizedBox(height: 8),
+                  Wrap(
+                    spacing: 8.0,
+                    children: [
+                      '15 minutes',
+                      '1 hour',
+                      '1 day',
+                      '7 days',
+                      '30 days'
+                    ]
+                        .map((range) => FilterChip(
+                              label: Text(range),
+                              onSelected: (selected) {
+                                _rangeController.text = range;
+                              },
+                            ))
+                        .toList(),
+                  ),
+                ],
               ),
             const SizedBox(height: 16),
             ElevatedButton(

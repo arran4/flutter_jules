@@ -234,6 +234,7 @@ class FilterExpressionParser {
             args, TimeFilterType.newerThan, TimeFilterField.updated);
       case 'UPDATEDON':
       case 'UPDATED_ON':
+      case 'ON':
         return _createTimeFilter(
             args, TimeFilterType.between, TimeFilterField.updated,
             isSingleDay: true);

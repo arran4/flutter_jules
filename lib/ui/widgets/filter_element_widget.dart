@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+import 'package:intl/intl.dart';
 import '../../models/filter_element.dart';
+import '../../models/time_filter.dart';
 import '../../utils/filter_utils.dart';
 
 enum FilterDropAction {
@@ -154,13 +156,7 @@ class FilterElementWidget extends StatelessWidget {
         Icons.check_circle_outline,
       );
     } else if (element is TimeFilterElement) {
-      final tf = element.timeFilter;
-      String label;
-      if (tf.specificTime != null) {
-        label = 'Time: ${tf.type.name} ${tf.specificTime}';
-      } else {
-        label = 'Time: ${tf.type.name} ${tf.range ?? ''}';
-      }
+      final label = _formatTimeFilter(element.timeFilter);
       return _buildLeafElement(
         context,
         element,
@@ -708,6 +704,31 @@ class FilterElementWidget extends StatelessWidget {
       childWhenDragging: Opacity(opacity: 0.5, child: child),
       child: child,
     );
+  }
+
+  String _formatTimeFilter(TimeFilter tf) {
+    String field = tf.field.name;
+    field = field[0].toUpperCase() + field.substring(1);
+
+    switch (tf.type) {
+      case TimeFilterType.newerThan:
+        return '$field is newer than ${tf.range ?? tf.specificTime}';
+      case TimeFilterType.olderThan:
+        return '$field is older than ${tf.range ?? tf.specificTime}';
+      case TimeFilterType.between:
+      case TimeFilterType.inRange:
+        if (tf.specificTime != null && tf.specificTimeEnd != null) {
+          final difference = tf.specificTimeEnd!.difference(tf.specificTime!);
+          if (difference.inHours <= 24 && tf.specificTime!.day == tf.specificTimeEnd!.subtract(const Duration(seconds: 1)).day) {
+            return '$field is on ${DateFormat.yMMMd().format(tf.specificTime!)}';
+          }
+          return '$field is between ${DateFormat.yMMMd().format(tf.specificTime!)} and ${DateFormat.yMMMd().format(tf.specificTimeEnd!)}';
+        }
+        if (tf.range != null) {
+          return '$field is in ${tf.range}';
+        }
+    }
+    return 'Invalid Time Filter';
   }
 
   void _handleDrop(
