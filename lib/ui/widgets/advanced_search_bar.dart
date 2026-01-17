@@ -6,6 +6,7 @@ import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'package:provider/provider.dart';
 import '../../models/filter_bookmark.dart';
+import '../../models/time_filter.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
 import '../../models/preset_state_manager.dart';
@@ -132,13 +133,62 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
+  List<FilterToken> _getTimeSuggestions() {
+    return [
+      FilterToken(
+        id: 'time_15m',
+        type: FilterType.time,
+        label: 'Last 15 minutes',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '15 minutes',
+        ),
+      ),
+      FilterToken(
+        id: 'time_1h',
+        type: FilterType.time,
+        label: 'Last 1 hour',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '1 hour',
+        ),
+      ),
+      FilterToken(
+        id: 'time_24h',
+        type: FilterType.time,
+        label: 'Last 24 hours',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '24 hours',
+        ),
+      ),
+      FilterToken(
+        id: 'time_7d',
+        type: FilterType.time,
+        label: 'Last 7 days',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '7 days',
+        ),
+      ),
+      const FilterToken(
+        id: 'time_custom',
+        type: FilterType.time,
+        label: 'Custom...',
+        value: null,
+      ),
+    ];
+  }
+
   void _tryCommitFilter(String text, int atIndex) {
     final query = text.substring(atIndex + 1).toLowerCase();
+    final timeSuggestions = _getTimeSuggestions();
+    final allSuggestions = [...widget.availableSuggestions, ...timeSuggestions];
 
     if (query.isEmpty) {
-      _filteredSuggestions = widget.availableSuggestions;
+      _filteredSuggestions = allSuggestions;
     } else {
-      _filteredSuggestions = widget.availableSuggestions.where((s) {
+      _filteredSuggestions = allSuggestions.where((s) {
         return s.label.toLowerCase().contains(query) ||
             s.id.toLowerCase().contains(query);
       }).toList();
@@ -203,12 +253,14 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final ciStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.ciStatus)
         .toList();
+    final timeSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.time).toList();
     final otherSuggestions =
         _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        width: 600, // Wider for multi-column layout
+        width: 800, // Wider for multi-column layout
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
@@ -241,7 +293,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       if (statusSuggestions.isNotEmpty &&
                           (prStatusSuggestions.isNotEmpty ||
                               flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // PR Status column
@@ -256,7 +309,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       if (prStatusSuggestions.isNotEmpty &&
                           (ciStatusSuggestions.isNotEmpty ||
                               flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // CI Status column
@@ -270,7 +324,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         ),
                       if (ciStatusSuggestions.isNotEmpty &&
                           (flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // Flags column
@@ -283,7 +338,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (flagSuggestions.isNotEmpty &&
-                          sourceSuggestions.isNotEmpty)
+                          (sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // Sources column
@@ -296,6 +352,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (sourceSuggestions.isNotEmpty &&
+                          (timeSuggestions.isNotEmpty ||
+                              otherSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // Time column
+                      if (timeSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Time',
+                            timeSuggestions,
+                            Colors.teal,
+                          ),
+                        ),
+                      if (timeSuggestions.isNotEmpty &&
                           otherSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
@@ -414,6 +484,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         // Text search is handled separately, not in tree
         return;
       case FilterType.time:
+        if (token.id == 'time_custom') {
+          _removeOverlay(); // Remove overlay before showing dialog
+          showDialog<FilterToken>(
+            context: context,
+            builder: (context) => const TimeFilterDialog(),
+          ).then((filterToken) {
+            if (filterToken != null) {
+              _selectSuggestion(filterToken);
+            } else {
+              _focusNode.requestFocus();
+            }
+          });
+          return; // Return early, dialog handles the rest
+        }
         newElement = TimeFilterElement(token.value);
         break;
       case FilterType.tag:
@@ -633,19 +717,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         tooltip: 'Filter Presets',
                         onPressed: _togglePresetMenu,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.access_time),
-                      onPressed: () async {
-                        final filterToken = await showDialog<FilterToken>(
-                          context: context,
-                          builder: (context) => const TimeFilterDialog(),
-                        );
-                        if (filterToken != null) {
-                          _selectSuggestion(filterToken);
-                        }
-                      },
-                      tooltip: 'Filter by Time',
                     ),
                   ],
                 ),
