@@ -115,5 +115,13 @@ void main() {
         DateTime.now().subtract(const Duration(hours: 24)).hour,
       );
     });
+
+    test('Should parse ON(date) filter', () {
+      final on =
+          FilterExpressionParser.parse('on(2023-10-27)') as TimeFilterElement;
+      expect(on.value.type, TimeFilterType.between);
+      expect(on.value.specificTime, DateTime(2023, 10, 27));
+      expect(on.value.specificTimeEnd, DateTime(2023, 10, 28));
+    });
   });
 }
