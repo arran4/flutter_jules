@@ -10,6 +10,7 @@ import '../../services/source_provider.dart';
 import '../../services/cache_service.dart';
 import '../../utils/time_helper.dart';
 import '../../services/dev_mode_provider.dart';
+import '../../services/timer_service.dart';
 
 import '../../models.dart';
 import '../../services/github_provider.dart';
@@ -1501,6 +1502,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to TimerService to trigger periodic rebuilds for relative time updates
+    Provider.of<TimerService>(context);
     return Consumer<SessionProvider>(
       builder: (context, sessionProvider, child) {
         final cachedItems = sessionProvider.items;
