@@ -469,6 +469,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
     var sendMessagesMode =
         schedule?.sendMessagesMode ?? SendMessagesMode.sendOne;
 
+    // Presets configuration
+    final presets = <String, int?>{
+      'Never': null,
+      'Every 15 minutes': 15,
+      'Every 30 minutes': 30,
+      'Hourly': 60,
+      'Daily': 1440,
+    };
+
+    // Determine initial preset
+    String currentPreset = 'Custom';
+    if (schedule != null) {
+      if (!schedule.isEnabled) {
+        currentPreset = 'Never';
+      } else {
+        // Find if interval matches a preset
+        final match = presets.entries.firstWhere(
+          (entry) =>
+              entry.value == schedule.intervalInMinutes && entry.key != 'Never',
+          orElse: () => const MapEntry('Custom', -1),
+        );
+        currentPreset = match.key;
+      }
+    } else {
+      // Default for new schedule
+      currentPreset = 'Hourly';
+      intervalController.text = '60';
+    }
+
     showDialog(
       context: context,
       builder: (context) {
@@ -483,13 +512,41 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     controller: nameController,
                     decoration: const InputDecoration(labelText: 'Name'),
                   ),
-                  TextField(
-                    controller: intervalController,
-                    decoration: const InputDecoration(
-                      labelText: 'Interval (minutes)',
-                    ),
-                    keyboardType: TextInputType.number,
+                  DropdownButtonFormField<String>(
+                    value: currentPreset,
+                    decoration: const InputDecoration(labelText: 'Frequency'),
+                    onChanged: (value) {
+                      if (value != null) {
+                        setState(() {
+                          currentPreset = value;
+                          if (presets.containsKey(value) &&
+                              presets[value] != null) {
+                            intervalController.text = presets[value]!.toString();
+                          }
+                        });
+                      }
+                    },
+                    items: [
+                      ...presets.keys.map((preset) {
+                        return DropdownMenuItem(
+                          value: preset,
+                          child: Text(preset),
+                        );
+                      }),
+                      const DropdownMenuItem(
+                        value: 'Custom',
+                        child: Text('Custom'),
+                      ),
+                    ],
                   ),
+                  if (currentPreset == 'Custom')
+                    TextField(
+                      controller: intervalController,
+                      decoration: const InputDecoration(
+                        labelText: 'Interval (minutes)',
+                      ),
+                      keyboardType: TextInputType.number,
+                    ),
                   DropdownButtonFormField<RefreshTaskType>(
                     // ignore: deprecated_member_use
                     value: taskType,
@@ -554,18 +611,28 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ),
             TextButton(
               onPressed: () {
-                final interval = int.tryParse(intervalController.text);
-                if (interval == null) {
-                  // Show an error message if the interval is not a valid number.
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
-                        'Please enter a valid number for the interval.',
+                // Determine enabled state and interval
+                bool isEnabled = true;
+                int? interval;
+
+                if (currentPreset == 'Never') {
+                  isEnabled = false;
+                  // Keep the existing interval or default to 60 if needed
+                  interval = int.tryParse(intervalController.text) ?? 60;
+                } else {
+                  interval = int.tryParse(intervalController.text);
+                  if (interval == null) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text(
+                          'Please enter a valid number for the interval.',
+                        ),
                       ),
-                    ),
-                  );
-                  return;
+                    );
+                    return;
+                  }
                 }
+
                 final newSchedule = RefreshSchedule(
                   id: schedule?.id,
                   name: nameController.text,
@@ -578,7 +645,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       taskType == RefreshTaskType.sendPendingMessages
                           ? sendMessagesMode
                           : null,
-                  isEnabled: schedule?.isEnabled ?? true,
+                  isEnabled: isEnabled,
                 );
 
                 if (isEditing) {
