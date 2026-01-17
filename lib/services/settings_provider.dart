@@ -1,6 +1,7 @@
 import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../ui/themes.dart';
 import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
@@ -36,6 +37,8 @@ class SettingsProvider extends ChangeNotifier {
       'hide_archived_and_read_only';
   static const String _githubExclusionsKey = 'github_exclusions';
   static const String keyUseCorpJulesUrl = 'use_corp_jules_url';
+  static const String keyThemeType = 'theme_type';
+  static const String keyThemeMode = 'theme_mode';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -77,6 +80,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
   bool _useCorpJulesUrl = false;
+  JulesThemeType _themeType = JulesThemeType.blue;
+  ThemeMode _themeMode = ThemeMode.system;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -107,6 +112,8 @@ class SettingsProvider extends ChangeNotifier {
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
   bool get useCorpJulesUrl => _useCorpJulesUrl;
+  JulesThemeType get themeType => _themeType;
+  ThemeMode get themeMode => _themeMode;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -175,6 +182,17 @@ class SettingsProvider extends ChangeNotifier {
     _hideArchivedAndReadOnly =
         _prefs!.getBool(keyHideArchivedAndReadOnly) ?? true;
     _useCorpJulesUrl = _prefs!.getBool(keyUseCorpJulesUrl) ?? false;
+
+    _themeType = _loadEnum(
+      keyThemeType,
+      JulesThemeType.values,
+      JulesThemeType.blue,
+    );
+    _themeMode = _loadEnum(
+      keyThemeMode,
+      ThemeMode.values,
+      ThemeMode.system,
+    );
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -402,6 +420,18 @@ class SettingsProvider extends ChangeNotifier {
     _useCorpJulesUrl = value;
     notifyListeners();
     await _prefs?.setBool(keyUseCorpJulesUrl, value);
+  }
+
+  Future<void> setThemeType(JulesThemeType value) async {
+    _themeType = value;
+    notifyListeners();
+    await _prefs?.setInt(keyThemeType, value.index);
+  }
+
+  Future<void> setThemeMode(ThemeMode value) async {
+    _themeMode = value;
+    notifyListeners();
+    await _prefs?.setInt(keyThemeMode, value.index);
   }
 
   // Keybinding Setters

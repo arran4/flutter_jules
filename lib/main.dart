@@ -15,6 +15,7 @@ import 'services/tray_service.dart';
 import 'services/global_shortcut_focus_manager.dart';
 import 'services/shortcut_registry.dart';
 import 'ui/app_container.dart';
+import 'ui/themes.dart';
 import 'ui/screens/new_session_window.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
@@ -165,28 +166,37 @@ class _MyAppState extends State<MyApp> with WindowListener {
             onTap: () {
               focusManager.requestFocus();
             },
-            child: MaterialApp(
-              navigatorKey: navigatorKey,
-              title: "Arran's Flutter based jules client",
-              debugShowCheckedModeBanner: false,
-              theme: ThemeData(primarySwatch: Colors.blue, useMaterial3: true),
-              routes: {
-                '/settings': (context) => const SettingsScreen(),
-                '/sources_raw': (context) => const SourceListScreen(),
+            child: Consumer<SettingsProvider>(
+              builder: (context, settings, _) {
+                return MaterialApp(
+                  navigatorKey: navigatorKey,
+                  title: "Arran's Flutter based jules client",
+                  debugShowCheckedModeBanner: false,
+                  theme:
+                      JulesTheme.getTheme(settings.themeType, Brightness.light),
+                  darkTheme:
+                      JulesTheme.getTheme(settings.themeType, Brightness.dark),
+                  themeMode: settings.themeMode,
+                  routes: {
+                    '/settings': (context) => const SettingsScreen(),
+                    '/sources_raw': (context) => const SourceListScreen(),
+                  },
+                  home: Consumer<AuthProvider>(
+                    builder: (context, auth, _) {
+                      if (auth.isLoading) {
+                        return const Scaffold(
+                          body: Center(child: CircularProgressIndicator()),
+                        );
+                      }
+                      if (!auth.isAuthenticated) {
+                        return const LoginScreen();
+                      }
+                      return const NotificationOverlay(
+                          child: SessionListScreen());
+                    },
+                  ),
+                );
               },
-              home: Consumer<AuthProvider>(
-                builder: (context, auth, _) {
-                  if (auth.isLoading) {
-                    return const Scaffold(
-                      body: Center(child: CircularProgressIndicator()),
-                    );
-                  }
-                  if (!auth.isAuthenticated) {
-                    return const LoginScreen();
-                  }
-                  return const NotificationOverlay(child: SessionListScreen());
-                },
-              ),
             ),
           ),
         ),

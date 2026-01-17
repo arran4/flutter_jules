@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
+import '../themes.dart';
 import '../../models.dart';
 import '../../models/refresh_schedule.dart';
 import '../../services/settings_provider.dart';
@@ -54,6 +55,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Divider(),
               _buildSectionHeader(context, 'Appearance'),
+              _buildThemeModeDropdown(
+                context,
+                settings,
+              ),
+              _buildThemeTypeDropdown(
+                context,
+                settings,
+              ),
               _buildFabDropdown(
                 context,
                 title: 'New Session Button',
@@ -892,6 +901,49 @@ class _SettingsScreenState extends State<SettingsScreen> {
       default:
         return '';
     }
+  }
+
+  Widget _buildThemeModeDropdown(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return ListTile(
+      title: const Text('Theme Mode'),
+      trailing: DropdownButton<ThemeMode>(
+        value: settings.themeMode,
+        onChanged: (newValue) {
+          if (newValue != null) settings.setThemeMode(newValue);
+        },
+        items: ThemeMode.values.map((mode) {
+          final text = mode.toString().split('.').last;
+          return DropdownMenuItem(
+            value: mode,
+            child: Text(text[0].toUpperCase() + text.substring(1)),
+          );
+        }).toList(),
+      ),
+    );
+  }
+
+  Widget _buildThemeTypeDropdown(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return ListTile(
+      title: const Text('Color Theme'),
+      trailing: DropdownButton<JulesThemeType>(
+        value: settings.themeType,
+        onChanged: (newValue) {
+          if (newValue != null) settings.setThemeType(newValue);
+        },
+        items: JulesThemeType.values.map((type) {
+          return DropdownMenuItem(
+            value: type,
+            child: Text(JulesTheme.getName(type)),
+          );
+        }).toList(),
+      ),
+    );
   }
 
   Widget _buildFabDropdown(
