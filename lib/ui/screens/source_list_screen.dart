@@ -13,6 +13,7 @@ import '../widgets/model_viewer.dart';
 import '../../services/message_queue_provider.dart';
 import '../widgets/source_tile.dart';
 import '../../services/settings_provider.dart';
+import '../../services/timer_service.dart';
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -260,6 +261,8 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to TimerService to trigger periodic rebuilds for relative time updates
+    Provider.of<TimerService>(context);
     return Consumer2<SourceProvider, SettingsProvider>(
       builder: (context, sourceProvider, settingsProvider, child) {
         var sources = sourceProvider.items;

@@ -12,6 +12,7 @@ import '../../utils/time_helper.dart'; // Import time helper
 import '../../services/dev_mode_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
+import '../../services/timer_service.dart';
 import '../../models.dart';
 import '../../models/api_exchange.dart';
 import '../widgets/api_viewer.dart';
@@ -862,6 +863,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    // Listen to TimerService to trigger periodic rebuilds for relative time updates
+    Provider.of<TimerService>(context);
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
     return PopScope(

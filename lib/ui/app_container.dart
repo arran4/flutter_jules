@@ -18,6 +18,7 @@ import '../services/settings_provider.dart';
 import '../services/shortcut_registry.dart';
 import '../services/source_provider.dart';
 import '../services/tags_provider.dart';
+import '../services/timer_service.dart';
 
 class AppContainer extends StatelessWidget {
   final Widget child;
@@ -30,6 +31,7 @@ class AppContainer extends StatelessWidget {
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
         ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
+        ChangeNotifierProvider(create: (_) => TimerService()),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
