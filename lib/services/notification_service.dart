@@ -53,12 +53,19 @@ class NotificationService {
     const LinuxInitializationSettings initializationSettingsLinux =
         LinuxInitializationSettings(defaultActionName: 'Open notification');
 
+    const WindowsInitializationSettings initializationSettingsWindows =
+        WindowsInitializationSettings(
+      appName: 'Jules',
+      appUserModelId: 'Jules',
+    );
+
     const InitializationSettings initializationSettings =
         InitializationSettings(
       android: initializationSettingsAndroid,
       iOS: initializationSettingsDarwin,
       macOS: initializationSettingsDarwin,
       linux: initializationSettingsLinux,
+      windows: initializationSettingsWindows,
     );
 
     await flutterLocalNotificationsPlugin.initialize(
@@ -130,11 +137,15 @@ class NotificationService {
       actions: linuxActions,
     );
 
+    const WindowsNotificationDetails windowsPlatformChannelSpecifics =
+        WindowsNotificationDetails();
+
     final NotificationDetails platformChannelSpecifics = NotificationDetails(
       android: androidPlatformChannelSpecifics,
       iOS: darwinPlatformChannelSpecifics,
       macOS: darwinPlatformChannelSpecifics,
       linux: linuxPlatformChannelSpecifics,
+      windows: windowsPlatformChannelSpecifics,
     );
 
     await flutterLocalNotificationsPlugin.show(
