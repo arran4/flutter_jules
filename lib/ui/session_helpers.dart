@@ -8,6 +8,16 @@ import '../services/session_provider.dart';
 import '../services/settings_provider.dart';
 import 'widgets/new_session_dialog.dart';
 
+class SessionDetailResult {
+  final bool markAsRead;
+  final bool openNewSessionDialog;
+
+  const SessionDetailResult({
+    this.markAsRead = true,
+    this.openNewSessionDialog = false,
+  });
+}
+
 Future<bool> resubmitSession(
   BuildContext context,
   Session session, {
