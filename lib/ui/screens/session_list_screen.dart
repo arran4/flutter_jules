@@ -2136,11 +2136,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
-                                                if ((result == true) ||
-                                                    (result
-                                                            is SessionDetailResult &&
-                                                        result
-                                                            .openNewSessionDialog)) {
+
+                                                if (result
+                                                        is SessionDetailResult &&
+                                                    result
+                                                        .openNewSessionDialog) {
                                                   if (mounted) {
                                                     _createSession();
                                                   }
