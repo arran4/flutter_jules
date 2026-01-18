@@ -156,6 +156,10 @@ class FilterElementBuilder {
 
     // Direct match
     if (root == target) {
+      // If we are toggling a NOT element directly, unwrap it
+      if (root is NotElement) {
+        return root.child;
+      }
       return NotElement(root);
     }
 
