@@ -503,7 +503,7 @@ class FilterElementWidget extends StatelessWidget {
         const PopupMenuItem(
           value: 3, // New value for "Remove NOT"
           enabled: true,
-          child: Text("Remove NOT"),
+          child: Text("Include"),
         ),
       );
       items.add(const PopupMenuDivider());
