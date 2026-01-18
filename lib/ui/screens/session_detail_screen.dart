@@ -28,6 +28,7 @@ import '../session_helpers.dart';
 import 'dart:convert';
 import 'package:collection/collection.dart';
 import '../../services/exceptions.dart';
+import '../../intents.dart';
 
 class SessionDetailScreen extends StatefulWidget {
   final Session session;
@@ -867,9 +868,21 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     Provider.of<TimerService>(context);
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
 
-    return PopScope(
-      canPop: true,
-      onPopInvokedWithResult: (bool didPop, dynamic result) async {
+    return Actions(
+      actions: <Type, Action<Intent>>{
+        SubmitIntent: CallbackAction<SubmitIntent>(
+          onInvoke: (SubmitIntent intent) {
+            if (_messageController.text.isNotEmpty && !_isSending) {
+              _sendMessage(_messageController.text);
+              return true;
+            }
+            return false;
+          },
+        ),
+      },
+      child: PopScope(
+        canPop: true,
+        onPopInvokedWithResult: (bool didPop, dynamic result) async {
         if (didPop) {
           final auth = Provider.of<AuthProvider>(context, listen: false);
           if (auth.token != null) {
@@ -885,12 +898,12 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               context,
               listen: false,
             ).saveDraft(_session.id, _messageController.text);
+            }
           }
-        }
-      },
-      child: Scaffold(
-        appBar: AppBar(
-          leading: const BackButton(),
+        },
+        child: Scaffold(
+          appBar: AppBar(
+            leading: const BackButton(),
           title: Text(
             _session.title ?? _session.name.split('/').last,
             maxLines: 1,
@@ -1270,8 +1283,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               Expanded(child: _buildActivityList(isDevMode)),
 
             // Permanent Input Footer
-            _buildInput(context),
-          ],
+              _buildInput(context),
+            ],
+          ),
         ),
       ),
     );

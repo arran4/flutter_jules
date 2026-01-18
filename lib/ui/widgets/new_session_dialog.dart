@@ -15,6 +15,7 @@ import '../../services/session_provider.dart';
 import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../models.dart';
+import '../../intents.dart';
 import 'bulk_source_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
@@ -1019,20 +1020,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ],
 
                 // Prompt
-                CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(
-                      LogicalKeyboardKey.enter,
-                      control: true,
-                    ): () {
-                      if (_promptController.text.isNotEmpty &&
-                          (_selectedSource != null ||
-                              _bulkSelections.length > 1)) {
-                        _create();
-                      } else if (_promptController.text.isNotEmpty) {
-                        _saveDraft();
-                      }
-                    },
+                Actions(
+                  actions: <Type, Action<Intent>>{
+                    SubmitIntent: CallbackAction<SubmitIntent>(
+                      onInvoke: (SubmitIntent intent) {
+                        if (_promptController.text.isNotEmpty &&
+                            (_selectedSource != null ||
+                                _bulkSelections.length > 1)) {
+                          return _create();
+                        } else if (_promptController.text.isNotEmpty) {
+                          return _saveDraft();
+                        }
+                        return null;
+                      },
+                    ),
                   },
                   child: TextField(
                     controller: _promptController,
