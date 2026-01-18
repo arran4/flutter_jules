@@ -582,6 +582,39 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       );
 
       final provider = context.read<BulkActionPresetProvider>();
+      final existingPreset = provider.getPresetByName(name);
+
+      if (existingPreset != null) {
+        final contentDiffers =
+            existingPreset.filterExpression != newPreset.filterExpression ||
+                existingPreset.actionScript != newPreset.actionScript ||
+                existingPreset.description != newPreset.description;
+
+        if (contentDiffers) {
+          final confirm = await showDialog<bool>(
+            context: context,
+            builder: (context) => AlertDialog(
+              title: const Text('Overwrite Preset?'),
+              content: Text(
+                'A preset with the name "$name" already exists with different content.\nDo you want to overwrite it?',
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context, false),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  onPressed: () => Navigator.pop(context, true),
+                  child: const Text('Overwrite'),
+                ),
+              ],
+            ),
+          );
+
+          if (confirm != true) return;
+        }
+      }
+
       await provider.addPreset(newPreset);
 
       if (!mounted) return;
