@@ -133,6 +133,8 @@ class MessageQueueProvider extends ChangeNotifier {
     String? reason,
     bool isDraft = false,
     String? requestId,
+    Map<String, dynamic>? metadata,
+    List<String>? processingErrors,
   }) {
     final message = QueuedMessage(
       id: DateTime.now().microsecondsSinceEpoch.toString(),
@@ -142,6 +144,8 @@ class MessageQueueProvider extends ChangeNotifier {
       queueReason: reason,
       isDraft: isDraft,
       requestId: requestId,
+      metadata: metadata,
+      processingErrors: processingErrors ?? [],
     );
     _queue.add(message);
     _saveQueue();
