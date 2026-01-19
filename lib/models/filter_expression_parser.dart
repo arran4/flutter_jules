@@ -179,6 +179,7 @@ class FilterExpressionParser {
         if (arg == 'PR') return HasPrElement();
         if (arg == 'NOSOURCE') return NoSourceElement();
         if (arg == 'NOTES') return HasNotesElement();
+        if (arg == 'ERRORS' || arg == 'ERROR') return HasErrorsElement();
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }

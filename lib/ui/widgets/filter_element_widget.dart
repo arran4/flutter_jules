@@ -192,6 +192,15 @@ class FilterElementWidget extends StatelessWidget {
         Colors.amber.shade900,
         Icons.note,
       );
+    } else if (element is HasErrorsElement) {
+      return _buildLeafElement(
+        context,
+        element,
+        'Has Errors',
+        Colors.red.shade100,
+        Colors.red.shade900,
+        Icons.error_outline,
+      );
     } else if (element is DisabledElement) {
       return _buildDisabledElement(context, element);
     }
