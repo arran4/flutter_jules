@@ -11,14 +11,17 @@ import '../../services/message_queue_provider.dart';
 import '../../models/filter_element.dart';
 
 class BulkActionPresetDialog extends StatelessWidget {
-  const BulkActionPresetDialog({super.key});
+  final bool isPicker;
+  const BulkActionPresetDialog({super.key, this.isPicker = false});
 
   @override
   Widget build(BuildContext context) {
     final provider = Provider.of<BulkActionPresetProvider>(context);
 
     return AlertDialog(
-      title: const Text('Run a Bulk Action Preset'),
+      title: Text(isPicker
+          ? 'Load a Bulk Action Preset'
+          : 'Run a Bulk Action Preset'),
       content: SizedBox(
         width: 500,
         height: 300,
@@ -33,7 +36,13 @@ class BulkActionPresetDialog extends StatelessWidget {
                   return ListTile(
                     title: Text(preset.name),
                     subtitle: Text(preset.description ?? 'No description'),
-                    onTap: () => _runPreset(context, preset),
+                    onTap: () {
+                      if (isPicker) {
+                        Navigator.pop(context, preset);
+                      } else {
+                        _runPreset(context, preset);
+                      }
+                    },
                   );
                 },
               ),
