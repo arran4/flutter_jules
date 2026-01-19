@@ -38,10 +38,8 @@ class PresetStateManager {
     if (bookmarkProvider.isSystemBookmark(_lastLoadedBookmark!.name)) {
       return false;
     }
-    final isModified = (_lastLoadedBookmark!.expression !=
-            (filterTree?.toExpression() ?? '')) ||
-        !const SetEquality()
-            .equals(_lastLoadedBookmark!.sorts.toSet(), activeSorts.toSet());
-    return isModified;
+    // We always pre-fill if it's a custom bookmark that is currently loaded.
+    // This facilitates updating the bookmark (e.g. description) even if the filter hasn't changed.
+    return true;
   }
 }

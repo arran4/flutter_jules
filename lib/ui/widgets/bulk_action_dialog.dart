@@ -14,6 +14,10 @@ import 'save_bulk_action_preset_dialog.dart';
 import '../../models/bulk_action_preset.dart';
 import '../../services/bulk_action_preset_provider.dart';
 import '../../utils/action_script_builder.dart';
+import '../../utils/action_script_parser.dart';
+import '../../models/filter_expression_parser.dart';
+import 'bulk_action_preset_dialog.dart';
+import '../../models/bulk_action_preset_state_manager.dart';
 import '../../models/enums.dart';
 
 class BulkActionDialog extends StatefulWidget {
@@ -21,6 +25,7 @@ class BulkActionDialog extends StatefulWidget {
   final List<SortOption> currentSorts;
   final List<FilterToken> availableSuggestions;
   final String mainSearchText;
+  final BulkActionPreset? initialPreset;
 
   const BulkActionDialog({
     super.key,
@@ -28,6 +33,7 @@ class BulkActionDialog extends StatefulWidget {
     required this.currentSorts,
     required this.availableSuggestions,
     required this.mainSearchText,
+    this.initialPreset,
   });
 
   @override
@@ -53,6 +59,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   int _totalMatches = 0;
   int _effectiveCount = 0; // After limit/offset
 
+  final BulkActionPresetStateManager _stateManager =
+      BulkActionPresetStateManager();
+
   @override
   void initState() {
     super.initState();
@@ -60,23 +69,66 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     _sorts = List.from(widget.currentSorts);
     _searchText = widget.mainSearchText;
 
-    // Load last used settings
-    final settings = context.read<SettingsProvider>();
-    _actions = List<BulkActionStep>.from(settings.lastBulkActions);
-    _parallelQueries = settings.lastBulkParallelQueries;
-    _waitBetween =
-        Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
-    _waitBetweenUnit = settings.lastBulkWaitBetweenUnit;
-    _limit = settings.lastBulkLimit;
-    _offset = settings.lastBulkOffset;
-    _randomize = settings.lastBulkRandomize;
-    _stopOnError = settings.lastBulkStopOnError;
+    if (widget.initialPreset != null) {
+      _loadPresetInternal(widget.initialPreset!);
+    } else {
+      // Load last used settings
+      final settings = context.read<SettingsProvider>();
+      _actions = List<BulkActionStep>.from(settings.lastBulkActions);
+      _parallelQueries = settings.lastBulkParallelQueries;
+      _waitBetween =
+          Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
+      _waitBetweenUnit = settings.lastBulkWaitBetweenUnit;
+      _limit = settings.lastBulkLimit;
+      _offset = settings.lastBulkOffset;
+      _randomize = settings.lastBulkRandomize;
+      _stopOnError = settings.lastBulkStopOnError;
+    }
 
     if (_actions.isEmpty) {
       _actions.add(const BulkActionStep(type: BulkActionType.refreshSession));
     }
 
     WidgetsBinding.instance.addPostFrameCallback((_) => _updatePreview());
+  }
+
+  void _loadPresetInternal(BulkActionPreset preset) {
+    _stateManager.setLastLoadedPreset(preset);
+
+    _filterTree = FilterExpressionParser.parse(preset.filterExpression);
+    final config = ActionScriptParser.parse(preset.actionScript, _filterTree);
+
+    _actions = config.actions;
+    _parallelQueries = config.parallelQueries;
+    _waitBetween = config.waitBetween;
+    // We assume unit is seconds unless we parse it properly, but Duration is absolute.
+    if (_waitBetween.inMilliseconds % 1000 == 0) {
+      _waitBetweenUnit = DelayUnit.s;
+    } else {
+      _waitBetweenUnit = DelayUnit.ms;
+    }
+
+    _limit = config.limit;
+    _offset = config.offset;
+    _randomize = config.randomize;
+    _stopOnError = config.stopOnError;
+  }
+
+  void _openLoadPresetDialog() async {
+    final preset = await showDialog<BulkActionPreset>(
+      context: context,
+      builder: (context) => const BulkActionPresetDialog(isPicker: true),
+    );
+
+    if (preset != null && mounted) {
+      setState(() {
+        _loadPresetInternal(preset);
+      });
+      _updatePreview();
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Loaded preset: ${preset.name}')),
+      );
+    }
   }
 
   void _updatePreview() {
@@ -178,6 +230,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                       filterTree: _filterTree,
                       onFilterTreeChanged: (tree) {
                         setState(() => _filterTree = tree);
+                        _stateManager.onStateChanged(tree);
                         _updatePreview();
                       },
                       searchText: _searchText,
@@ -381,6 +434,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       ),
       actions: [
         TextButton(
+          onPressed: _openLoadPresetDialog,
+          child: const Text('Load Preset...'),
+        ),
+        TextButton(
           onPressed: _saveAsPreset,
           child: const Text('Save as Preset...'),
         ),
@@ -555,9 +612,22 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   }
 
   void _saveAsPreset() async {
+    final provider = context.read<BulkActionPresetProvider>();
+    String? initialName;
+    String? initialDescription;
+
+    if (_stateManager.shouldPreFill(provider.isSystemPreset(
+        _stateManager.lastLoadedPreset?.name ?? ''))) {
+      initialName = _stateManager.lastLoadedPreset!.name;
+      initialDescription = _stateManager.lastLoadedPreset!.description;
+    }
+
     final result = await showDialog<Map<String, String>>(
       context: context,
-      builder: (context) => const SaveBulkActionPresetDialog(),
+      builder: (context) => SaveBulkActionPresetDialog(
+        initialName: initialName,
+        initialDescription: initialDescription,
+      ),
     );
 
     if (result != null && mounted) {
@@ -582,7 +652,6 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         actionScript: actionScript,
       );
 
-      final provider = context.read<BulkActionPresetProvider>();
       final existingPreset = provider.getPresetByName(name);
 
       if (existingPreset != null) {
@@ -617,6 +686,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       }
 
       await provider.addPreset(newPreset);
+      _stateManager.setLastLoadedPreset(newPreset);
 
       if (!mounted) return;
 
