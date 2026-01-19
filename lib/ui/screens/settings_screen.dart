@@ -192,6 +192,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.trayEnabled,
                 onChanged: (value) => settings.setTrayEnabled(value),
               ),
+              if (settings.trayEnabled)
+                SwitchListTile(
+                  title: const Text('Hide to tray instead of closing'),
+                  subtitle: const Text(
+                    'When the window is closed, keep the application running in the tray.',
+                  ),
+                  value: settings.hideToTray,
+                  onChanged: (value) => settings.setHideToTray(value),
+                ),
               const Divider(),
               _buildSectionHeader(context, 'Performance'),
               ListTile(

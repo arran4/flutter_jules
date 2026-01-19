@@ -137,7 +137,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
   @override
   Future<void> onWindowClose() async {
-    if (context.read<SettingsProvider>().trayEnabled) {
+    final settings = context.read<SettingsProvider>();
+    if (settings.trayEnabled && settings.hideToTray) {
       await windowManager.hide();
     } else {
       await windowManager.destroy();
