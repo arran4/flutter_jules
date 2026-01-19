@@ -17,7 +17,10 @@ class MockHttpClient extends http.BaseClient {
     logs.add('End $id');
 
     return http.StreamedResponse(
-      Stream.fromIterable(['{}'.codeUnits]),
+      Stream.fromIterable([
+        '{"name": "test_name", "id": "test_id", "prompt": "test_prompt"}'
+            .codeUnits
+      ]),
       200,
       headers: {'content-type': 'application/json'},
     );
@@ -36,8 +39,6 @@ void main() {
     final f2 = client.getSession('req2');
 
     await Future.wait([f1, f2]);
-
-    print('Logs: $logs');
 
     // Expectation for serialized requests:
     // Start req1, End req1, Start req2, End req2

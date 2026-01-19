@@ -1,5 +1,5 @@
 import 'package:flutter/material.dart';
-import 'package:flutter_jules/services/settings_provider.dart';
+import 'package:flutter_jules/models/enums.dart';
 
 class DelayInputWidget extends StatefulWidget {
   final Duration initialDelay;

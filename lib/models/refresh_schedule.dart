@@ -1,5 +1,5 @@
 import 'package:uuid/uuid.dart';
-import '../services/settings_provider.dart';
+import 'enums.dart';
 
 enum RefreshTaskType { refresh, sendPendingMessages }
 

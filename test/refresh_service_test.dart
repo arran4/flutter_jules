@@ -4,6 +4,7 @@ import 'package:fake_async/fake_async.dart';
 
 import 'package:flutter_jules/models/cache_metadata.dart';
 import 'package:flutter_jules/services/refresh_service.dart';
+import 'package:flutter_jules/services/jules_client.dart';
 import 'package:flutter_jules/services/settings_provider.dart';
 import 'package:flutter_jules/services/session_provider.dart';
 import 'package:flutter_jules/services/source_provider.dart';
@@ -27,6 +28,8 @@ import 'refresh_service_test.mocks.dart';
   MockSpec<ActivityProvider>(),
   MockSpec<MessageQueueProvider>(),
 ])
+class MockJulesClient extends Mock implements JulesClient {}
+
 void main() {
   late RefreshService refreshService;
   late MockSettingsProvider mockSettingsProvider;
@@ -46,6 +49,7 @@ void main() {
     mockActivityProvider = MockActivityProvider();
     mockMessageQueueProvider = MockMessageQueueProvider();
 
+    when(mockAuthProvider.client).thenReturn(MockJulesClient());
     when(mockSettingsProvider.schedules).thenReturn([]);
     when(mockSessionProvider.items).thenReturn([]);
 

@@ -4,6 +4,7 @@ import 'package:provider/provider.dart';
 import '../themes.dart';
 import '../../models.dart';
 import '../../models/refresh_schedule.dart';
+import '../../models/scheduler_preset.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
@@ -192,6 +193,15 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 value: settings.trayEnabled,
                 onChanged: (value) => settings.setTrayEnabled(value),
               ),
+              if (settings.trayEnabled)
+                SwitchListTile(
+                  title: const Text('Hide to tray instead of closing'),
+                  subtitle: const Text(
+                    'When the window is closed, keep the application running in the tray.',
+                  ),
+                  value: settings.hideToTray,
+                  onChanged: (value) => settings.setHideToTray(value),
+                ),
               const Divider(),
               _buildSectionHeader(context, 'Performance'),
               ListTile(
@@ -448,6 +458,32 @@ class _SettingsScreenState extends State<SettingsScreen> {
             ],
           ),
         ),
+        Padding(
+          padding: const EdgeInsets.symmetric(horizontal: 16.0),
+          child: Row(
+            children: [
+              const Text('Preset: '),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButton<SchedulerPreset>(
+                  isExpanded: true,
+                  hint: const Text('Select configuration template...'),
+                  items: SchedulerPreset.presets.map((preset) {
+                    return DropdownMenuItem(
+                      value: preset,
+                      child: Text(preset.name),
+                    );
+                  }).toList(),
+                  onChanged: (preset) {
+                    if (preset != null) {
+                      _confirmApplyPreset(context, settings, preset);
+                    }
+                  },
+                ),
+              ),
+            ],
+          ),
+        ),
         ListView.builder(
           shrinkWrap: true,
           physics: const NeverScrollableScrollPhysics(),
@@ -486,6 +522,45 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Future<void> _confirmApplyPreset(
+    BuildContext context,
+    SettingsProvider settings,
+    SchedulerPreset preset,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Apply "${preset.name}" Preset?'),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(preset.description),
+            const SizedBox(height: 16),
+            const Text(
+              'This will replace all current schedules with the selected preset configuration.',
+              style: TextStyle(color: Colors.red),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Apply'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await settings.applySchedulerPreset(preset);
+    }
   }
 
   void _showScheduleDialog(

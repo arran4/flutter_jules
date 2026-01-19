@@ -5,15 +5,8 @@ import '../ui/themes.dart';
 import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
+import '../models/scheduler_preset.dart';
 import '../models/github_exclusion.dart';
-
-enum SessionRefreshPolicy { none, shallow, full }
-
-enum ListRefreshPolicy { none, dirty, watched, quick, full }
-
-enum FabVisibility { appBar, floating, off }
-
-enum DelayUnit { ms, s, min }
 
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
@@ -32,6 +25,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyTrayEnabled = 'tray_enabled';
+  static const String keyHideToTray = 'hide_to_tray';
   static const String keyFabVisibility = 'fab_visibility';
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
@@ -76,6 +70,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnRefreshComplete = false;
   bool _notifyOnErrors = false;
   bool _trayEnabled = false;
+  bool _hideToTray = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
@@ -108,6 +103,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnRefreshComplete => _notifyOnRefreshComplete;
   bool get notifyOnErrors => _notifyOnErrors;
   bool get trayEnabled => _trayEnabled;
+  bool get hideToTray => _hideToTray;
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
@@ -173,6 +169,7 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyNotifyOnRefreshComplete) ?? false;
     _notifyOnErrors = _prefs!.getBool(keyNotifyOnErrors) ?? false;
     _trayEnabled = _prefs!.getBool(keyTrayEnabled) ?? false;
+    _hideToTray = _prefs!.getBool(keyHideToTray) ?? true;
     _fabVisibility = _loadEnum(
       keyFabVisibility,
       FabVisibility.values,
@@ -272,34 +269,13 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   List<RefreshSchedule> _defaultSchedules() {
-    return [
-      RefreshSchedule(
-        name: 'Refresh while session is open',
-        intervalInMinutes: 5,
-        refreshPolicy: ListRefreshPolicy.quick,
-      ),
-      RefreshSchedule(
-        name: 'Full Refresh',
-        intervalInMinutes: 60,
-        refreshPolicy: ListRefreshPolicy.full,
-      ),
-      RefreshSchedule(
-        name: 'Watched Refresh',
-        intervalInMinutes: 5,
-        refreshPolicy: ListRefreshPolicy.watched,
-      ),
-      RefreshSchedule(
-        name: 'Quick Refresh',
-        intervalInMinutes: 15,
-        refreshPolicy: ListRefreshPolicy.quick,
-      ),
-      RefreshSchedule(
-        name: 'Send Pending Messages',
-        intervalInMinutes: 5,
-        taskType: RefreshTaskType.sendPendingMessages,
-        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
-      ),
-    ];
+    return SchedulerPreset.presets.first.schedulesFactory();
+  }
+
+  Future<void> applySchedulerPreset(SchedulerPreset preset) async {
+    _schedules = preset.schedulesFactory();
+    await _saveSchedules();
+    notifyListeners();
   }
 
   Future<void> addSchedule(RefreshSchedule schedule) async {
@@ -401,6 +377,12 @@ class SettingsProvider extends ChangeNotifier {
     _trayEnabled = value;
     notifyListeners();
     await _prefs?.setBool(keyTrayEnabled, value);
+  }
+
+  Future<void> setHideToTray(bool value) async {
+    _hideToTray = value;
+    notifyListeners();
+    await _prefs?.setBool(keyHideToTray, value);
   }
 
   Future<void> setFabVisibility(FabVisibility visibility) async {
