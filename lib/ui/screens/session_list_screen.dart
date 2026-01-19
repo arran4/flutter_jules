@@ -2136,7 +2136,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 }
 
                                                 // Set the "Last Opened" date before navigating.
-                                                _markAsRead(session);
                                                 final result =
                                                     await Navigator.push(
                                                   context,
@@ -2147,7 +2146,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                     ),
                                                   ),
                                                 );
-                                                if (result == true) {
+
+                                                if (result
+                                                        is SessionDetailResult &&
+                                                    result
+                                                        .openNewSessionDialog) {
                                                   if (mounted) {
                                                     _createSession();
                                                   }

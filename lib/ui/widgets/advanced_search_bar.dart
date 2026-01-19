@@ -6,6 +6,7 @@ import '../../models/search_filter.dart';
 import 'filter_element_widget.dart';
 import 'package:provider/provider.dart';
 import '../../models/filter_bookmark.dart';
+import '../../models/time_filter.dart';
 import '../../services/filter_bookmark_provider.dart';
 import '../screens/bookmark_manager_screen.dart';
 import '../../models/preset_state_manager.dart';
@@ -132,13 +133,110 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
+  List<FilterToken> _getTimeSuggestions() {
+    return [
+      FilterToken(
+        id: 'time_15m',
+        type: FilterType.time,
+        label: 'Last 15 minutes',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '15 minutes',
+        ),
+      ),
+      FilterToken(
+        id: 'time_1h',
+        type: FilterType.time,
+        label: 'Last 1 hour',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '1 hour',
+        ),
+      ),
+      FilterToken(
+        id: 'time_24h',
+        type: FilterType.time,
+        label: 'Last 24 hours',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '24 hours',
+        ),
+      ),
+      FilterToken(
+        id: 'time_7d',
+        type: FilterType.time,
+        label: 'Last 7 days',
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '7 days',
+        ),
+      ),
+      const FilterToken(
+        id: 'time_updated_before',
+        type: FilterType.time,
+        label: 'Updated before...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_updated_after',
+        type: FilterType.time,
+        label: 'Updated after...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_created_before',
+        type: FilterType.time,
+        label: 'Created before...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_created_after',
+        type: FilterType.time,
+        label: 'Created after...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_updated_between',
+        type: FilterType.time,
+        label: 'Updated between...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_created_between',
+        type: FilterType.time,
+        label: 'Created between...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_updated_on',
+        type: FilterType.time,
+        label: 'Updated on...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_created_on',
+        type: FilterType.time,
+        label: 'Created on...',
+        value: null,
+      ),
+      const FilterToken(
+        id: 'time_custom',
+        type: FilterType.time,
+        label: 'Custom...',
+        value: null,
+      ),
+    ];
+  }
+
   void _tryCommitFilter(String text, int atIndex) {
     final query = text.substring(atIndex + 1).toLowerCase();
+    final timeSuggestions = _getTimeSuggestions();
+    final allSuggestions = [...widget.availableSuggestions, ...timeSuggestions];
 
     if (query.isEmpty) {
-      _filteredSuggestions = widget.availableSuggestions;
+      _filteredSuggestions = allSuggestions;
     } else {
-      _filteredSuggestions = widget.availableSuggestions.where((s) {
+      _filteredSuggestions = allSuggestions.where((s) {
         return s.label.toLowerCase().contains(query) ||
             s.id.toLowerCase().contains(query);
       }).toList();
@@ -203,12 +301,14 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     final ciStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.ciStatus)
         .toList();
+    final timeSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.time).toList();
     final otherSuggestions =
         _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
-        width: 600, // Wider for multi-column layout
+        width: 800, // Wider for multi-column layout
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
@@ -241,7 +341,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       if (statusSuggestions.isNotEmpty &&
                           (prStatusSuggestions.isNotEmpty ||
                               flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // PR Status column
@@ -256,7 +357,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       if (prStatusSuggestions.isNotEmpty &&
                           (ciStatusSuggestions.isNotEmpty ||
                               flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // CI Status column
@@ -270,7 +372,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         ),
                       if (ciStatusSuggestions.isNotEmpty &&
                           (flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty))
+                              sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // Flags column
@@ -283,7 +386,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (flagSuggestions.isNotEmpty &&
-                          sourceSuggestions.isNotEmpty)
+                          (sourceSuggestions.isNotEmpty ||
+                              timeSuggestions.isNotEmpty))
                         const VerticalDivider(width: 1),
 
                       // Sources column
@@ -296,6 +400,20 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           ),
                         ),
                       if (sourceSuggestions.isNotEmpty &&
+                          (timeSuggestions.isNotEmpty ||
+                              otherSuggestions.isNotEmpty))
+                        const VerticalDivider(width: 1),
+
+                      // Time column
+                      if (timeSuggestions.isNotEmpty)
+                        Expanded(
+                          child: _buildFilterColumn(
+                            'Time',
+                            timeSuggestions,
+                            Colors.teal,
+                          ),
+                        ),
+                      if (timeSuggestions.isNotEmpty &&
                           otherSuggestions.isNotEmpty)
                         const VerticalDivider(width: 1),
 
@@ -414,7 +532,62 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         // Text search is handled separately, not in tree
         return;
       case FilterType.time:
-        newElement = TimeFilterElement(token.value);
+        if (token.id == 'time_custom' || token.id.startsWith('time_')) {
+          // Check if it's a preset that requires dialog
+          TimeFilterType? initialType;
+          TimeFilterField? initialField;
+
+          if (token.id == 'time_updated_before') {
+            initialType = TimeFilterType.olderThan;
+            initialField = TimeFilterField.updated;
+          } else if (token.id == 'time_updated_after') {
+            initialType = TimeFilterType.newerThan;
+            initialField = TimeFilterField.updated;
+          } else if (token.id == 'time_created_before') {
+            initialType = TimeFilterType.olderThan;
+            initialField = TimeFilterField.created;
+          } else if (token.id == 'time_created_after') {
+            initialType = TimeFilterType.newerThan;
+            initialField = TimeFilterField.created;
+          } else if (token.id == 'time_updated_between') {
+            initialType = TimeFilterType.between;
+            initialField = TimeFilterField.updated;
+          } else if (token.id == 'time_created_between') {
+            initialType = TimeFilterType.between;
+            initialField = TimeFilterField.created;
+          } else if (token.id == 'time_updated_on') {
+            // "On" usually implies "Between X and X+1d" or similar, handled by 'between' with single day logic in dialog/element
+            // But for dialog init, we can start with 'between' or 'newerThan' etc.
+            // Let's use 'between' as it's the closest to 'on a specific date'.
+            initialType = TimeFilterType.between;
+            initialField = TimeFilterField.updated;
+          } else if (token.id == 'time_created_on') {
+            initialType = TimeFilterType.between;
+            initialField = TimeFilterField.created;
+          }
+
+          if (initialType != null || token.id == 'time_custom') {
+            _removeOverlay(); // Remove overlay before showing dialog
+            showDialog<FilterToken>(
+              context: context,
+              builder: (context) => TimeFilterDialog(
+                initialType: initialType,
+                initialField: initialField,
+              ),
+            ).then((filterToken) {
+              if (filterToken != null) {
+                _selectSuggestion(filterToken);
+              } else {
+                _focusNode.requestFocus();
+              }
+            });
+            return; // Return early, dialog handles the rest
+          }
+        }
+        // Fallback for standard presets like 'Last 15m' which have a value
+        if (token.value != null) {
+          newElement = TimeFilterElement(token.value);
+        }
         break;
       case FilterType.tag:
         newElement = TagElement(token.label, token.value.toString());
@@ -633,19 +806,6 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                         tooltip: 'Filter Presets',
                         onPressed: _togglePresetMenu,
                       ),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.access_time),
-                      onPressed: () async {
-                        final filterToken = await showDialog<FilterToken>(
-                          context: context,
-                          builder: (context) => const TimeFilterDialog(),
-                        );
-                        if (filterToken != null) {
-                          _selectSuggestion(filterToken);
-                        }
-                      },
-                      tooltip: 'Filter by Time',
                     ),
                   ],
                 ),
@@ -1026,112 +1186,123 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
               ),
             ],
           ),
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 4.0,
-            children: [
-              if (widget.filterTree != null)
-                FilterElementWidget(
-                  element: widget.filterTree,
-                  onAddAlternative: (target, alternative) {
-                    final newTree = FilterElementBuilder.groupFilters(
-                      widget.filterTree,
-                      target,
-                      alternative,
-                      isAnd: false,
-                    );
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onDrop: (source, target, action, isCtrlPressed) {
-                    var newTree = widget.filterTree;
-                    final sourceCopy = FilterElement.fromJson(source.toJson());
-                    final isCopy = isCtrlPressed;
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.45,
+            ),
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 8.0,
+                runSpacing: 4.0,
+                children: [
+                  if (widget.filterTree != null)
+                    FilterElementWidget(
+                      element: widget.filterTree,
+                      onAddAlternative: (target, alternative) {
+                        final newTree = FilterElementBuilder.groupFilters(
+                          widget.filterTree,
+                          target,
+                          alternative,
+                          isAnd: false,
+                        );
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onDrop: (source, target, action, isCtrlPressed) {
+                        var newTree = widget.filterTree;
+                        final sourceCopy =
+                            FilterElement.fromJson(source.toJson());
+                        final isCopy = isCtrlPressed;
 
-                    switch (action) {
-                      case FilterDropAction.groupOr:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: false);
-                        break;
-                      case FilterDropAction.groupAnd:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: true);
-                        break;
-                      case FilterDropAction.addToGroup:
-                        newTree = FilterElementBuilder.addFilterToComposite(
-                            newTree, target, sourceCopy);
-                        break;
-                      case FilterDropAction.groupAboveAnd:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: true);
-                        break;
-                      case FilterDropAction.groupAboveOr:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: false);
-                        break;
-                    }
+                        switch (action) {
+                          case FilterDropAction.groupOr:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: false);
+                            break;
+                          case FilterDropAction.groupAnd:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: true);
+                            break;
+                          case FilterDropAction.addToGroup:
+                            newTree = FilterElementBuilder.addFilterToComposite(
+                                newTree, target, sourceCopy);
+                            break;
+                          case FilterDropAction.groupAboveAnd:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: true);
+                            break;
+                          case FilterDropAction.groupAboveOr:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: false);
+                            break;
+                        }
 
-                    if (!isCopy && newTree != null) {
-                      newTree =
-                          FilterElementBuilder.removeFilter(newTree, source);
-                    }
+                        if (!isCopy && newTree != null) {
+                          newTree = FilterElementBuilder.removeFilter(
+                              newTree, source);
+                        }
 
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onRemove: (element) {
-                    final newTree = FilterElementBuilder.removeFilter(
-                        widget.filterTree, element);
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onToggleNot: (element) {
-                    final newTree = FilterElementBuilder.toggleNot(
-                        widget.filterTree!, element);
-                    widget.onFilterTreeChanged(newTree);
-                  },
-                  onToggleEnabled: (element) {
-                    final newTree = FilterElementBuilder.toggleEnabled(
-                        widget.filterTree!, element);
-                    widget.onFilterTreeChanged(newTree);
-                  },
-                  onTap: null,
-                )
-              else
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.filter_list_off,
-                          size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 6),
-                      Text(
-                        'No filters',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onRemove: (element) {
+                        final newTree = FilterElementBuilder.removeFilter(
+                            widget.filterTree, element);
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onToggleNot: (element) {
+                        final newTree = FilterElementBuilder.toggleNot(
+                            widget.filterTree!, element);
+                        widget.onFilterTreeChanged(newTree);
+                      },
+                      onToggleEnabled: (element) {
+                        final newTree = FilterElementBuilder.toggleEnabled(
+                            widget.filterTree!, element);
+                        widget.onFilterTreeChanged(newTree);
+                      },
+                      onTap: null,
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.filter_list_off,
+                              size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            'No filters',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SortPillsWidget(
+                    activeSorts: widget.activeSorts,
+                    onSortsChanged: widget.onSortsChanged,
                   ),
-                ),
-              SortPillsWidget(
-                activeSorts: widget.activeSorts,
-                onSortsChanged: widget.onSortsChanged,
+                ],
               ),
-            ],
+            ),
           ),
         ],
       );

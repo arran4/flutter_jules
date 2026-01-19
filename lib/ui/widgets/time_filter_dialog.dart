@@ -3,18 +3,33 @@ import '../../models/time_filter.dart';
 import '../../models/search_filter.dart';
 
 class TimeFilterDialog extends StatefulWidget {
-  const TimeFilterDialog({super.key});
+  final TimeFilterType? initialType;
+  final TimeFilterField? initialField;
+
+  const TimeFilterDialog({
+    super.key,
+    this.initialType,
+    this.initialField,
+  });
 
   @override
   State<TimeFilterDialog> createState() => _TimeFilterDialogState();
 }
 
 class _TimeFilterDialogState extends State<TimeFilterDialog> {
-  TimeFilterType _selectedType = TimeFilterType.newerThan;
+  late TimeFilterType _selectedType;
+  late TimeFilterField _selectedField;
   final TextEditingController _rangeController =
       TextEditingController(); // Replaces valueController
   DateTime? _selectedDateTime;
   DateTime? _selectedDateTimeEnd; // Added end date
+
+  @override
+  void initState() {
+    super.initState();
+    _selectedType = widget.initialType ?? TimeFilterType.newerThan;
+    _selectedField = widget.initialField ?? TimeFilterField.updated;
+  }
 
   String _displayStringForTimeFilterType(TimeFilterType type) {
     switch (type) {
@@ -29,6 +44,15 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
     }
   }
 
+  String _displayStringForTimeFilterField(TimeFilterField field) {
+    switch (field) {
+      case TimeFilterField.updated:
+        return 'Updated';
+      case TimeFilterField.created:
+        return 'Created';
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -37,20 +61,40 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         // Added scroll for flexibility
         child: Column(
           mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            DropdownButton<TimeFilterType>(
-              value: _selectedType,
-              onChanged: (TimeFilterType? newValue) {
-                setState(() {
-                  _selectedType = newValue!;
-                });
-              },
-              items: TimeFilterType.values.map((TimeFilterType type) {
-                return DropdownMenuItem<TimeFilterType>(
-                  value: type,
-                  child: Text(_displayStringForTimeFilterType(type)),
-                );
-              }).toList(),
+            Row(
+              children: [
+                DropdownButton<TimeFilterField>(
+                  value: _selectedField,
+                  onChanged: (TimeFilterField? newValue) {
+                    setState(() {
+                      _selectedField = newValue!;
+                    });
+                  },
+                  items: TimeFilterField.values.map((TimeFilterField field) {
+                    return DropdownMenuItem<TimeFilterField>(
+                      value: field,
+                      child: Text(_displayStringForTimeFilterField(field)),
+                    );
+                  }).toList(),
+                ),
+                const SizedBox(width: 8),
+                DropdownButton<TimeFilterType>(
+                  value: _selectedType,
+                  onChanged: (TimeFilterType? newValue) {
+                    setState(() {
+                      _selectedType = newValue!;
+                    });
+                  },
+                  items: TimeFilterType.values.map((TimeFilterType type) {
+                    return DropdownMenuItem<TimeFilterType>(
+                      value: type,
+                      child: Text(_displayStringForTimeFilterType(type)),
+                    );
+                  }).toList(),
+                ),
+              ],
             ),
             const SizedBox(height: 16),
             if (_selectedType == TimeFilterType.inRange ||
@@ -161,21 +205,23 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
               range: range,
               specificTime: _selectedDateTime,
               specificTimeEnd: _selectedDateTimeEnd,
+              field: _selectedField,
             );
 
+            String fieldLabel = _displayStringForTimeFilterField(timeFilter.field);
             String label;
             if (timeFilter.specificTime != null) {
               if (timeFilter.type == TimeFilterType.between &&
                   timeFilter.specificTimeEnd != null) {
                 label =
-                    'Time: Between ${timeFilter.specificTime} and ${timeFilter.specificTimeEnd}';
+                    '$fieldLabel: Between ${timeFilter.specificTime} and ${timeFilter.specificTimeEnd}';
               } else {
                 label =
-                    'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.specificTime}';
+                    '$fieldLabel: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.specificTime}';
               }
             } else {
               label =
-                  'Time: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.range ?? ""}';
+                  '$fieldLabel: ${_displayStringForTimeFilterType(timeFilter.type)} ${timeFilter.range ?? ""}';
             }
 
             Navigator.of(context).pop(
