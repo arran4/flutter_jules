@@ -130,9 +130,11 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse(
-      '$baseUrl/v1alpha/sessions',
-    ).replace(queryParameters: queryParams);
+    final uri = Uri.parse('$baseUrl/v1alpha/sessions');
+    final params = Map<String, dynamic>.from(uri.queryParameters);
+    params.addAll(queryParams);
+
+    final url = uri.replace(queryParameters: params);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
@@ -233,9 +235,12 @@ class JulesClient {
         queryParams['pageToken'] = nextPageToken;
       }
 
-      final url = Uri.parse(
-        '$baseUrl/v1alpha/$sessionName/activities',
-      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      final uri = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
+      final params = Map<String, dynamic>.from(uri.queryParameters);
+      if (queryParams.isNotEmpty) {
+        params.addAll(queryParams);
+      }
+      final url = uri.replace(queryParameters: params);
 
       final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -311,9 +316,11 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse(
-      '$baseUrl/v1alpha/sources',
-    ).replace(queryParameters: queryParams);
+    final uri = Uri.parse('$baseUrl/v1alpha/sources');
+    final params = Map<String, dynamic>.from(uri.queryParameters);
+    params.addAll(queryParams);
+
+    final url = uri.replace(queryParameters: params);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {

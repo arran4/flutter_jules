@@ -72,7 +72,7 @@ class RefreshService extends ChangeNotifier {
     }
     schedule.lastRun = DateTime.now();
     _settingsProvider.updateSchedule(schedule);
-    final client = JulesClient(accessToken: _authProvider.token);
+    final client = _authProvider.client;
     try {
       String summary = '';
       switch (schedule.taskType) {
