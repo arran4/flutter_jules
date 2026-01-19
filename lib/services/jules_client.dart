@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
@@ -10,6 +11,7 @@ class JulesClient {
   final String? apiKey;
   final String? accessToken;
   final http.Client _client;
+  Future<void> _lastRequest = Future.value();
 
   JulesClient({
     this.baseUrl = 'https://jules.googleapis.com',
@@ -24,6 +26,32 @@ class JulesClient {
         if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
       };
 
+  Future<T> _enqueueRequest<T>(Future<T> Function() task) {
+    final prevRequest = _lastRequest;
+    final completer = Completer<T>();
+
+    _lastRequest = completer.future.then((_) {}, onError: (_) {});
+
+    _runTask(prevRequest, task, completer);
+
+    return completer.future;
+  }
+
+  Future<void> _runTask<T>(
+    Future<void> prevRequest,
+    Future<T> Function() task,
+    Completer<T> completer,
+  ) async {
+    await prevRequest;
+
+    try {
+      final result = await task();
+      completer.complete(result);
+    } catch (e, st) {
+      completer.completeError(e, st);
+    }
+  }
+
   Future<http.Response> _performRequest(
     String method,
     Uri url, {
@@ -31,42 +59,44 @@ class JulesClient {
     Object? body,
     void Function(ApiExchange)? onDebug,
   }) async {
-    final requestHeaders = headers ?? _headers;
-    final requestBody = body != null ? jsonEncode(body) : '';
+    return _enqueueRequest(() async {
+      final requestHeaders = headers ?? _headers;
+      final requestBody = body != null ? jsonEncode(body) : '';
 
-    http.Response response;
-    try {
-      if (method == 'GET') {
-        response = await _client.get(url, headers: requestHeaders);
-      } else if (method == 'POST') {
-        response = await _client.post(
-          url,
-          headers: requestHeaders,
-          body: requestBody,
-        );
-      } else {
-        throw Exception('Unsupported method: $method');
+      http.Response response;
+      try {
+        if (method == 'GET') {
+          response = await _client.get(url, headers: requestHeaders);
+        } else if (method == 'POST') {
+          response = await _client.post(
+            url,
+            headers: requestHeaders,
+            body: requestBody,
+          );
+        } else {
+          throw Exception('Unsupported method: $method');
+        }
+      } catch (e) {
+        // In case of network error, we can't really log a response, but we rethrow
+        rethrow;
       }
-    } catch (e) {
-      // In case of network error, we can't really log a response, but we rethrow
-      rethrow;
-    }
 
-    if (onDebug != null) {
-      onDebug(
-        ApiExchange(
-          method: method,
-          url: url.toString(),
-          requestHeaders: requestHeaders,
-          requestBody: requestBody,
-          statusCode: response.statusCode,
-          responseHeaders: response.headers,
-          responseBody: response.body,
-        ),
-      );
-    }
+      if (onDebug != null) {
+        onDebug(
+          ApiExchange(
+            method: method,
+            url: url.toString(),
+            requestHeaders: requestHeaders,
+            requestBody: requestBody,
+            statusCode: response.statusCode,
+            responseHeaders: response.headers,
+            responseBody: response.body,
+          ),
+        );
+      }
 
-    return response;
+      return response;
+    });
   }
 
   void _handleError(http.Response response) {
