@@ -1,20 +1,13 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:fake_async/fake_async.dart';
-import 'package:mockito/annotations.dart';
 
 import 'package:flutter_jules/services/refresh_service.dart';
-import 'package:flutter_jules/services/settings_provider.dart';
-import 'package:flutter_jules/services/session_provider.dart';
-import 'package:flutter_jules/services/source_provider.dart';
-import 'package:flutter_jules/services/auth_provider.dart';
-import 'package:flutter_jules/services/notification_service.dart';
+
 import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/enums.dart';
-import 'package:flutter_jules/services/message_queue_provider.dart';
-import 'package:flutter_jules/services/activity_provider.dart';
+
 import 'package:flutter_jules/services/exceptions.dart';
-import 'package:flutter_jules/services/jules_client.dart';
 
 import 'refresh_service_test.mocks.dart';
 
@@ -90,11 +83,10 @@ void main() {
       async.elapse(const Duration(minutes: 1));
 
       // Verify that notification service was called with specific error message
-      verify(mockNotificationService.showNotification(
-        'Authentication Error',
-        'Invalid API token provided. Please check your settings.',
-        payload: 'auth_error'
-      )).called(1);
+      verify(mockNotificationService.showNotification('Authentication Error',
+              'Invalid API token provided. Please check your settings.',
+              payload: 'auth_error'))
+          .called(1);
     });
   });
 }

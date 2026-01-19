@@ -41,9 +41,14 @@ class PermissionDeniedException extends JulesException {
 }
 
 class NotFoundException extends JulesException {
-  NotFoundException(String responseBody)
-      : super('Resource not found.',
-            statusCode: 404, responseBody: responseBody);
+  NotFoundException(String responseBody, {String? resource})
+      : super(
+          resource != null
+              ? 'Resource not found: $resource'
+              : 'Resource not found.',
+          statusCode: 404,
+          responseBody: responseBody,
+        );
 }
 
 class ApiException extends JulesException {
@@ -60,6 +65,15 @@ class ServiceUnavailableException extends JulesException {
       : super(
           'Service unavailable.',
           statusCode: 503,
+          responseBody: responseBody,
+        );
+}
+
+class RateLimitException extends JulesException {
+  RateLimitException(String responseBody)
+      : super(
+          'Rate limit exceeded.',
+          statusCode: 429,
           responseBody: responseBody,
         );
 }

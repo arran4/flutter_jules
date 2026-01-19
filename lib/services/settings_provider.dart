@@ -8,14 +8,6 @@ import '../models/refresh_schedule.dart';
 import '../models/scheduler_preset.dart';
 import '../models/github_exclusion.dart';
 
-enum SessionRefreshPolicy { none, shallow, full }
-
-enum ListRefreshPolicy { none, dirty, watched, quick, full }
-
-enum FabVisibility { appBar, floating, off }
-
-enum DelayUnit { ms, s, min }
-
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';

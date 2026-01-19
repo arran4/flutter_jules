@@ -1,4 +1,5 @@
 import 'refresh_schedule.dart';
+import 'enums.dart';
 
 class SchedulerPreset {
   final String name;

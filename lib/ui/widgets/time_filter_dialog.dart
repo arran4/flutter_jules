@@ -208,7 +208,8 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
               field: _selectedField,
             );
 
-            String fieldLabel = _displayStringForTimeFilterField(timeFilter.field);
+            String fieldLabel =
+                _displayStringForTimeFilterField(timeFilter.field);
             String label;
             if (timeFilter.specificTime != null) {
               if (timeFilter.type == TimeFilterType.between &&
