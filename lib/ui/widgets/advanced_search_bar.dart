@@ -595,6 +595,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
 
     // Handle exclude mode
+    if (newElement == null) return;
+
+    // Handle exclude mode
     if (token.mode == FilterMode.exclude) {
       newElement = NotElement(newElement);
     }

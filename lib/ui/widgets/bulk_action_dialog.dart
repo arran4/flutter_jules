@@ -14,6 +14,7 @@ import 'save_bulk_action_preset_dialog.dart';
 import '../../models/bulk_action_preset.dart';
 import '../../services/bulk_action_preset_provider.dart';
 import '../../utils/action_script_builder.dart';
+import '../../models/enums.dart';
 
 class BulkActionDialog extends StatefulWidget {
   final FilterElement? currentFilterTree;

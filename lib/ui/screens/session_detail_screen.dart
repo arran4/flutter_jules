@@ -850,7 +850,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (result.openNewDialog) {
       // Pop the current detail screen
       navigator.pop(
-        SessionDetailResult(openNewSessionDialog: true, markAsRead: true),
+        const SessionDetailResult(openNewSessionDialog: true, markAsRead: true),
       );
     }
   }

@@ -84,3 +84,11 @@ enum EscKeyAction {
   goesBack,
   doesNothing,
 }
+
+enum SessionRefreshPolicy { none, shallow, full }
+
+enum ListRefreshPolicy { none, dirty, watched, quick, full }
+
+enum FabVisibility { appBar, floating, off }
+
+enum DelayUnit { ms, s, min }
