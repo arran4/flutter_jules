@@ -1,6 +1,7 @@
 enum GithubExclusionType {
   org,
   repo,
+  pr,
 }
 
 class GithubExclusion {

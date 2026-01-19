@@ -569,18 +569,44 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  bool isExcluded(String userOrgRepo) {
-    if (userOrgRepo.isEmpty) return false;
+  bool isExcluded(String userOrgRepoOrPr) {
+    if (userOrgRepoOrPr.isEmpty) return false;
 
-    // Check for repo exclusion
-    if (_githubExclusions.any(
-        (e) => e.type == GithubExclusionType.repo && e.value == userOrgRepo)) {
+    // Check for PR exclusion (Format: owner/repo/number)
+    // The input might be owner/repo (length 2) or owner/repo/number (length 3, no... PR number is not part of userOrgRepo usually)
+    // Actually, getPrStatus passes "$owner/$repo".
+    // If we want to check PR exclusion, we need the PR number.
+    // The caller in GithubProvider currently passes '$owner/$repo'.
+    // So this function returns false for PRs if only passed owner/repo.
+
+    // If the input matches a PR exclusion value exactly
+    if (_githubExclusions.any((e) =>
+        e.type == GithubExclusionType.pr && e.value == userOrgRepoOrPr)) {
       return true;
     }
 
+    // Check for repo exclusion (match against start if needed, but exclusions are exact usually)
+    // Repo exclusion value: "owner/repo"
+    // If input is "owner/repo/123", we should check if "owner/repo" is excluded.
+    final parts = userOrgRepoOrPr.split('/');
+
+    // Check for full match as repo
+    if (_githubExclusions.any((e) =>
+        e.type == GithubExclusionType.repo && e.value == userOrgRepoOrPr)) {
+      return true;
+    }
+
+    // If input is like owner/repo/pr, check owner/repo
+    if (parts.length >= 2) {
+      final repoId = '${parts[0]}/${parts[1]}';
+      if (_githubExclusions.any((e) =>
+          e.type == GithubExclusionType.repo && e.value == repoId)) {
+        return true;
+      }
+    }
+
     // Check for org exclusion
-    final parts = userOrgRepo.split('/');
-    if (parts.length == 2) {
+    if (parts.isNotEmpty) {
       final org = parts[0];
       if (_githubExclusions
           .any((e) => e.type == GithubExclusionType.org && e.value == org)) {

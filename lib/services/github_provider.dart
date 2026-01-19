@@ -1,9 +1,11 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
+import 'package:path_provider/path_provider.dart';
 
 import 'auth_service.dart';
 import 'settings_provider.dart';
@@ -107,7 +109,21 @@ class GithubProvider extends ChangeNotifier {
     return membershipResponse.statusCode == 200;
   }
 
-  Future<void> _analyzeFailure(String? owner, String? repo) async {
+  Future<bool> _checkRepoAccess(String owner, String repo) async {
+    final token = apiKey;
+    if (token == null) return false;
+    final response = await http.get(
+      Uri.parse('https://api.github.com/repos/$owner/$repo'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<void> _analyzeFailure(String? owner, String? repo,
+      {String? jobId}) async {
     if (_hasBadCredentials) return;
 
     final userOk = await _checkUserAccess();
@@ -146,16 +162,41 @@ class GithubProvider extends ChangeNotifier {
           return;
         }
 
-        // User OK, Org OK -> Must be Repo failure
+        // User OK, Org OK -> Check Repo access
         if (repo != null) {
-          await _settingsProvider.addGithubExclusion(GithubExclusion(
-            type: GithubExclusionType.repo,
-            value: '$owner/$repo',
-            reason: 'PAT access request failed for Repo.',
-            date: DateTime.now(),
-          ));
+          final repoOk = await _checkRepoAccess(owner, repo);
+          if (!repoOk) {
+            await _settingsProvider.addGithubExclusion(GithubExclusion(
+              type: GithubExclusionType.repo,
+              value: '$owner/$repo',
+              reason: 'PAT access request failed for Repo.',
+              date: DateTime.now(),
+            ));
+            return;
+          }
+
+          // If we reach here, User/Org/Repo are fine, but the request (PR) failed.
+          // This likely means the PR itself is missing or 404.
+          // We should exclude this specific task if possible, but GithubExclusion is granular.
+          // We will assume that if we were passed a jobId (which contains PR info usually)
+          // we can log it.
+          if (jobId != null) {
+            await _logFailedJobId(jobId);
+          }
         }
       }
+    }
+  }
+
+  Future<void> _logFailedJobId(String jobId) async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final file = File('${dir.path}/github_failed_tasks.log');
+      await file
+          .writeAsString('$jobId - ${DateTime.now().toIso8601String()}\n',
+              mode: FileMode.append);
+    } catch (e) {
+      debugPrint('Failed to log failed job ID: $e');
     }
   }
 
@@ -183,9 +224,9 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<void> _handleUnauthorized(String body,
-      {String? owner, String? repo}) async {
+      {String? owner, String? repo, String? jobId}) async {
     // Start analysis to determine granularity of failure
-    await _analyzeFailure(owner, repo);
+    await _analyzeFailure(owner, repo, jobId: jobId);
   }
 
   void _cancelAllPendingJobs() {
@@ -215,7 +256,8 @@ class GithubProvider extends ChangeNotifier {
     if (_hasBadCredentials) {
       return null;
     }
-    if (_settingsProvider.isExcluded('$owner/$repo')) return null;
+    if (_settingsProvider.isExcluded('$owner/$repo') ||
+        _settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
 
     final job = GithubJob(
       id: 'pr_status_${owner}_${repo}_$prNumber',
@@ -242,8 +284,28 @@ class GithubProvider extends ChangeNotifier {
         } else if (response.statusCode == 401 ||
             response.statusCode == 403 ||
             response.statusCode == 404) {
-          // 404 on private repo acts like auth failure often
-          await _handleUnauthorized(response.body, owner: owner, repo: repo);
+          // 404 on private repo acts like auth failure often.
+          // Check if repo is accessible.
+          bool repoAccessible = false;
+          try {
+            repoAccessible = await _checkRepoAccess(owner, repo);
+          } catch (_) {}
+
+          if (repoAccessible && response.statusCode == 404) {
+            // Repo is accessible but PR is 404 -> PR Missing.
+            // Exclude this PR specifically.
+            await _settingsProvider.addGithubExclusion(GithubExclusion(
+              type: GithubExclusionType.pr,
+              value: '$owner/$repo/$prNumber',
+              reason: 'PR not found (404).',
+              date: DateTime.now(),
+            ));
+            await _logFailedJobId(job.id);
+            return null;
+          }
+
+          await _handleUnauthorized(response.body,
+              owner: owner, repo: repo, jobId: job.id);
           debugPrint(
               'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
           return null;
@@ -323,7 +385,10 @@ class GithubProvider extends ChangeNotifier {
       id: 'ci_status_${owner}_${repo}_$prNumber',
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
-        if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
+        if (_settingsProvider.isExcluded('$owner/$repo') ||
+            _settingsProvider.isExcluded('$owner/$repo/$prNumber')) {
+          return 'Unknown';
+        }
         if (_hasBadCredentials) return 'Unknown';
 
         // 1. Get the PR's head SHA
@@ -342,7 +407,25 @@ class GithubProvider extends ChangeNotifier {
         if (prResponse.statusCode == 401 ||
             prResponse.statusCode == 403 ||
             prResponse.statusCode == 404) {
-          await _handleUnauthorized(prResponse.body, owner: owner, repo: repo);
+          // Check if repo is accessible.
+          bool repoAccessible = false;
+          try {
+            repoAccessible = await _checkRepoAccess(owner, repo);
+          } catch (_) {}
+
+          if (repoAccessible && prResponse.statusCode == 404) {
+            await _settingsProvider.addGithubExclusion(GithubExclusion(
+              type: GithubExclusionType.pr,
+              value: '$owner/$repo/$prNumber',
+              reason: 'PR not found (404) during CI check.',
+              date: DateTime.now(),
+            ));
+            await _logFailedJobId(job.id);
+            return 'Unknown';
+          }
+
+          await _handleUnauthorized(prResponse.body,
+              owner: owner, repo: repo, jobId: job.id);
           return 'Unknown';
         }
 
