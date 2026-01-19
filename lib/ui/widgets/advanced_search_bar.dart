@@ -1026,112 +1026,123 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
               ),
             ],
           ),
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 4.0,
-            children: [
-              if (widget.filterTree != null)
-                FilterElementWidget(
-                  element: widget.filterTree,
-                  onAddAlternative: (target, alternative) {
-                    final newTree = FilterElementBuilder.groupFilters(
-                      widget.filterTree,
-                      target,
-                      alternative,
-                      isAnd: false,
-                    );
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onDrop: (source, target, action, isCtrlPressed) {
-                    var newTree = widget.filterTree;
-                    final sourceCopy = FilterElement.fromJson(source.toJson());
-                    final isCopy = isCtrlPressed;
+          Container(
+            constraints: BoxConstraints(
+              maxHeight: MediaQuery.of(context).size.height * 0.45,
+            ),
+            child: SingleChildScrollView(
+              child: Wrap(
+                spacing: 8.0,
+                runSpacing: 4.0,
+                children: [
+                  if (widget.filterTree != null)
+                    FilterElementWidget(
+                      element: widget.filterTree,
+                      onAddAlternative: (target, alternative) {
+                        final newTree = FilterElementBuilder.groupFilters(
+                          widget.filterTree,
+                          target,
+                          alternative,
+                          isAnd: false,
+                        );
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onDrop: (source, target, action, isCtrlPressed) {
+                        var newTree = widget.filterTree;
+                        final sourceCopy =
+                            FilterElement.fromJson(source.toJson());
+                        final isCopy = isCtrlPressed;
 
-                    switch (action) {
-                      case FilterDropAction.groupOr:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: false);
-                        break;
-                      case FilterDropAction.groupAnd:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: true);
-                        break;
-                      case FilterDropAction.addToGroup:
-                        newTree = FilterElementBuilder.addFilterToComposite(
-                            newTree, target, sourceCopy);
-                        break;
-                      case FilterDropAction.groupAboveAnd:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: true);
-                        break;
-                      case FilterDropAction.groupAboveOr:
-                        newTree = FilterElementBuilder.groupFilters(
-                            newTree, target, sourceCopy,
-                            isAnd: false);
-                        break;
-                    }
+                        switch (action) {
+                          case FilterDropAction.groupOr:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: false);
+                            break;
+                          case FilterDropAction.groupAnd:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: true);
+                            break;
+                          case FilterDropAction.addToGroup:
+                            newTree = FilterElementBuilder.addFilterToComposite(
+                                newTree, target, sourceCopy);
+                            break;
+                          case FilterDropAction.groupAboveAnd:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: true);
+                            break;
+                          case FilterDropAction.groupAboveOr:
+                            newTree = FilterElementBuilder.groupFilters(
+                                newTree, target, sourceCopy,
+                                isAnd: false);
+                            break;
+                        }
 
-                    if (!isCopy && newTree != null) {
-                      newTree =
-                          FilterElementBuilder.removeFilter(newTree, source);
-                    }
+                        if (!isCopy && newTree != null) {
+                          newTree = FilterElementBuilder.removeFilter(
+                              newTree, source);
+                        }
 
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onRemove: (element) {
-                    final newTree = FilterElementBuilder.removeFilter(
-                        widget.filterTree, element);
-                    final simplified = FilterElementBuilder.simplify(newTree);
-                    widget.onFilterTreeChanged(simplified);
-                  },
-                  onToggleNot: (element) {
-                    final newTree = FilterElementBuilder.toggleNot(
-                        widget.filterTree!, element);
-                    widget.onFilterTreeChanged(newTree);
-                  },
-                  onToggleEnabled: (element) {
-                    final newTree = FilterElementBuilder.toggleEnabled(
-                        widget.filterTree!, element);
-                    widget.onFilterTreeChanged(newTree);
-                  },
-                  onTap: null,
-                )
-              else
-                Container(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                  decoration: BoxDecoration(
-                    color: Colors.grey.shade100,
-                    borderRadius: BorderRadius.circular(16),
-                    border: Border.all(color: Colors.grey.shade300),
-                  ),
-                  child: Row(
-                    mainAxisSize: MainAxisSize.min,
-                    children: [
-                      Icon(Icons.filter_list_off,
-                          size: 14, color: Colors.grey.shade600),
-                      const SizedBox(width: 6),
-                      Text(
-                        'No filters',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Colors.grey.shade700,
-                          fontWeight: FontWeight.w500,
-                        ),
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onRemove: (element) {
+                        final newTree = FilterElementBuilder.removeFilter(
+                            widget.filterTree, element);
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
+                        widget.onFilterTreeChanged(simplified);
+                      },
+                      onToggleNot: (element) {
+                        final newTree = FilterElementBuilder.toggleNot(
+                            widget.filterTree!, element);
+                        widget.onFilterTreeChanged(newTree);
+                      },
+                      onToggleEnabled: (element) {
+                        final newTree = FilterElementBuilder.toggleEnabled(
+                            widget.filterTree!, element);
+                        widget.onFilterTreeChanged(newTree);
+                      },
+                      onTap: null,
+                    )
+                  else
+                    Container(
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 12, vertical: 6),
+                      decoration: BoxDecoration(
+                        color: Colors.grey.shade100,
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: Colors.grey.shade300),
                       ),
-                    ],
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Icon(Icons.filter_list_off,
+                              size: 14, color: Colors.grey.shade600),
+                          const SizedBox(width: 6),
+                          Text(
+                            'No filters',
+                            style: TextStyle(
+                              fontSize: 12,
+                              color: Colors.grey.shade700,
+                              fontWeight: FontWeight.w500,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  SortPillsWidget(
+                    activeSorts: widget.activeSorts,
+                    onSortsChanged: widget.onSortsChanged,
                   ),
-                ),
-              SortPillsWidget(
-                activeSorts: widget.activeSorts,
-                onSortsChanged: widget.onSortsChanged,
+                ],
               ),
-            ],
+            ),
           ),
         ],
       );

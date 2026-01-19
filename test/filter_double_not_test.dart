@@ -51,9 +51,10 @@ void main() {
 
       final result = FilterElementBuilder.simplify(root);
 
-      expect(result, isA<AndElement>());
-      final and = result as AndElement;
-      expect(and.children[0], equals(a));
+      // Should be unwrapped completely because AND(A) -> A
+      expect(result, equals(a));
+      expect(result, isNot(isA<NotElement>()));
+      expect(result, isNot(isA<AndElement>()));
     });
   });
 }
