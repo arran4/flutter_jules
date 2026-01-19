@@ -117,10 +117,16 @@ class RefreshService extends ChangeNotifier {
         await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.watched:
-        await _sessionProvider.fetchSessions(client);
+        if (_authProvider.token != null) {
+          await _sessionProvider.refreshWatchedSessions(client,
+              authToken: _authProvider.token!);
+        }
         break;
       case ListRefreshPolicy.dirty:
-        await _sessionProvider.fetchSessions(client);
+        if (_authProvider.token != null) {
+          await _sessionProvider.refreshDirtySessions(client,
+              authToken: _authProvider.token!);
+        }
         break;
       case ListRefreshPolicy.none:
         return 'No changes';
