@@ -105,7 +105,10 @@ class JulesClient {
     } else if (response.statusCode == 403) {
       throw PermissionDeniedException(response.body);
     } else if (response.statusCode == 404) {
-      throw NotFoundException(response.body);
+      throw NotFoundException(
+        response.body,
+        resource: response.request?.url.toString(),
+      );
     } else if (response.statusCode == 503) {
       throw ServiceUnavailableException(response.body);
     } else {
