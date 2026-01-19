@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
 import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
@@ -128,6 +129,11 @@ class JulesClient {
             // Exponential backoff: 1s, 2s, 4s, 8s, 16s
             waitDuration = Duration(seconds: 1 << (retryCount - 1));
           }
+
+          developer.log(
+            'Rate limited (Status: ${response.statusCode}). Retrying in ${waitDuration.inMilliseconds}ms. (Retry count: $retryCount)',
+            name: 'JulesClient',
+          );
 
           await Future.delayed(waitDuration);
           continue;
