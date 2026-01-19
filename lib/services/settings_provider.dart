@@ -32,6 +32,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String _bulkActionConfigKey = 'bulk_action_config';
   static const String _lastFilterKey = 'last_filter';
   static const String keyTrayEnabled = 'tray_enabled';
+  static const String keyHideToTray = 'hide_to_tray';
   static const String keyFabVisibility = 'fab_visibility';
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
@@ -76,6 +77,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _notifyOnRefreshComplete = false;
   bool _notifyOnErrors = false;
   bool _trayEnabled = false;
+  bool _hideToTray = true;
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
@@ -108,6 +110,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get notifyOnRefreshComplete => _notifyOnRefreshComplete;
   bool get notifyOnErrors => _notifyOnErrors;
   bool get trayEnabled => _trayEnabled;
+  bool get hideToTray => _hideToTray;
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
@@ -173,6 +176,7 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyNotifyOnRefreshComplete) ?? false;
     _notifyOnErrors = _prefs!.getBool(keyNotifyOnErrors) ?? false;
     _trayEnabled = _prefs!.getBool(keyTrayEnabled) ?? false;
+    _hideToTray = _prefs!.getBool(keyHideToTray) ?? true;
     _fabVisibility = _loadEnum(
       keyFabVisibility,
       FabVisibility.values,
@@ -401,6 +405,12 @@ class SettingsProvider extends ChangeNotifier {
     _trayEnabled = value;
     notifyListeners();
     await _prefs?.setBool(keyTrayEnabled, value);
+  }
+
+  Future<void> setHideToTray(bool value) async {
+    _hideToTray = value;
+    notifyListeners();
+    await _prefs?.setBool(keyHideToTray, value);
   }
 
   Future<void> setFabVisibility(FabVisibility visibility) async {
