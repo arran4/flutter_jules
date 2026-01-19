@@ -1,5 +1,3 @@
-import 'package:collection/collection.dart';
-
 import 'filter_bookmark.dart';
 import 'filter_element.dart';
 import '../services/filter_bookmark_provider.dart';
@@ -38,10 +36,6 @@ class PresetStateManager {
     if (bookmarkProvider.isSystemBookmark(_lastLoadedBookmark!.name)) {
       return false;
     }
-    final isModified = (_lastLoadedBookmark!.expression !=
-            (filterTree?.toExpression() ?? '')) ||
-        !const SetEquality()
-            .equals(_lastLoadedBookmark!.sorts.toSet(), activeSorts.toSet());
-    return isModified;
+    return true;
   }
 }
