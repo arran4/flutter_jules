@@ -7,6 +7,7 @@ import 'session_provider.dart';
 import 'source_provider.dart';
 import 'auth_provider.dart';
 import 'jules_client.dart';
+import 'exceptions.dart';
 import '../models/refresh_schedule.dart';
 import 'notification_service.dart';
 import '../models/session.dart';
@@ -95,6 +96,12 @@ class RefreshService extends ChangeNotifier {
           actions: actions,
         );
       }
+    } on InvalidTokenException catch (_) {
+      _notificationService.showNotification(
+        'Authentication Error',
+        'Invalid API token provided. Please check your settings.',
+        payload: 'auth_error',
+      );
     } catch (e) {
       if (_settingsProvider.notifyOnErrors) {
         _notificationService.showNotification(

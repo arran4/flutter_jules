@@ -8,6 +8,7 @@ import 'notification_provider.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
 import 'github_provider.dart';
+import 'exceptions.dart';
 
 class SessionProvider extends ChangeNotifier {
   final GlobalKey<ScaffoldMessengerState> scaffoldKey =
@@ -223,6 +224,10 @@ class SessionProvider extends ChangeNotifier {
       _error = null;
       _progressStreamController.add('Refresh complete.');
     } catch (e) {
+      if (e is InvalidTokenException) {
+        _error = e.toString();
+        rethrow;
+      }
       _progressStreamController.add('Error: ${e.toString()}');
       if (shallow && _items.isNotEmpty) {
         final msg = "Shallow refresh failed ($e), switching to full refresh";
