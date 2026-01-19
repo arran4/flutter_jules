@@ -68,3 +68,12 @@ class ServiceUnavailableException extends JulesException {
           responseBody: responseBody,
         );
 }
+
+class RateLimitException extends JulesException {
+  RateLimitException(String responseBody)
+      : super(
+          'Rate limit exceeded.',
+          statusCode: 429,
+          responseBody: responseBody,
+        );
+}
