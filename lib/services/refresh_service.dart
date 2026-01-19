@@ -73,7 +73,7 @@ class RefreshService extends ChangeNotifier {
     }
     schedule.lastRun = DateTime.now();
     _settingsProvider.updateSchedule(schedule);
-    final client = JulesClient(accessToken: _authProvider.token);
+    final client = _authProvider.client;
     try {
       String summary = '';
       switch (schedule.taskType) {
@@ -124,10 +124,16 @@ class RefreshService extends ChangeNotifier {
         await _sessionProvider.fetchSessions(client);
         break;
       case ListRefreshPolicy.watched:
-        await _sessionProvider.fetchSessions(client);
+        if (_authProvider.token != null) {
+          await _sessionProvider.refreshWatchedSessions(client,
+              authToken: _authProvider.token!);
+        }
         break;
       case ListRefreshPolicy.dirty:
-        await _sessionProvider.fetchSessions(client);
+        if (_authProvider.token != null) {
+          await _sessionProvider.refreshDirtySessions(client,
+              authToken: _authProvider.token!);
+        }
         break;
       case ListRefreshPolicy.none:
         return 'No changes';
