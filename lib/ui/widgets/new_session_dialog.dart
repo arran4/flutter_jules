@@ -983,114 +983,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ),
                 const SizedBox(height: 16),
 
-                // Mode Selection
-                const Text(
-                  'I want to...',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _buildModeChoice(0, 'Ask a Question'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(1, 'Create a Plan'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(2, 'Start Coding'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                if (_selectedModeIndex == 2) ...[
-                  CheckboxListTile(
-                    title: const Text('Auto-create Pull Request'),
-                    subtitle: const Text(
-                      'Automatically create a PR when a final patch is generated',
-                    ),
-                    value: _autoCreatePr,
-                    onChanged: (val) {
-                      setState(() {
-                        _autoCreatePr = val ?? false;
-                      });
-                    },
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 8),
-                ],
-
-                // Prompt
-                CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(
-                      LogicalKeyboardKey.enter,
-                      control: true,
-                    ): () {
-                      if (_promptController.text.isNotEmpty &&
-                          (_selectedSource != null ||
-                              _bulkSelections.length > 1)) {
-                        _create();
-                      } else if (_promptController.text.isNotEmpty) {
-                        _saveDraft();
-                      }
-                    },
-                  },
-                  child: TextField(
-                    controller: _promptController,
-                    autofocus: true,
-                    maxLines: 6,
-                    decoration: InputDecoration(
-                      labelText: 'Prompt',
-                      hintText: 'Describe what you want to do...',
-                      border: const OutlineInputBorder(),
-                      alignLabelWithHint: true,
-                      suffixIcon: (widget.mode == SessionDialogMode.edit ||
-                              widget.mode ==
-                                  SessionDialogMode.createWithContext)
-                          ? IconButton(
-                              icon: const Icon(Icons.content_paste_go),
-                              tooltip: 'Import Prompt from Original Session',
-                              onPressed: () {
-                                if (widget.initialSession == null) return;
-                                final originalPrompt =
-                                    widget.initialSession!.prompt;
-                                final currentText = _promptController.text;
-
-                                if (currentText.trim().isNotEmpty) {
-                                  const separator =
-                                      '\n\n--- Imported Prompt ---\n';
-                                  _promptController.text =
-                                      '$currentText$separator$originalPrompt';
-                                } else {
-                                  _promptController.text = originalPrompt;
-                                }
-                                _promptController.selection =
-                                    TextSelection.fromPosition(
-                                  TextPosition(
-                                    offset: _promptController.text.length,
-                                  ),
-                                );
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (val) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(height: 16),
-
-                // Image Attachment (URL for now)
-                TextField(
-                  controller: _imageUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL (Optional)',
-                    hintText: 'https://example.com/image.png',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.image),
-                  ),
-                  onChanged: (val) => setState(() {}),
-                ),
-                const SizedBox(height: 16),
-
                 // Context (Source & Branch)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1281,7 +1173,114 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                     ],
                   ),
                 ],
+                const SizedBox(height: 16),
 
+                // Mode Selection
+                const Text(
+                  'I want to...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildModeChoice(0, 'Ask a Question'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(1, 'Create a Plan'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(2, 'Start Coding'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                if (_selectedModeIndex == 2) ...[
+                  CheckboxListTile(
+                    title: const Text('Auto-create Pull Request'),
+                    subtitle: const Text(
+                      'Automatically create a PR when a final patch is generated',
+                    ),
+                    value: _autoCreatePr,
+                    onChanged: (val) {
+                      setState(() {
+                        _autoCreatePr = val ?? false;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 8),
+                ],
+
+                // Prompt
+                CallbackShortcuts(
+                  bindings: {
+                    const SingleActivator(
+                      LogicalKeyboardKey.enter,
+                      control: true,
+                    ): () {
+                      if (_promptController.text.isNotEmpty &&
+                          (_selectedSource != null ||
+                              _bulkSelections.length > 1)) {
+                        _create();
+                      } else if (_promptController.text.isNotEmpty) {
+                        _saveDraft();
+                      }
+                    },
+                  },
+                  child: TextField(
+                    controller: _promptController,
+                    autofocus: true,
+                    maxLines: 6,
+                    decoration: InputDecoration(
+                      labelText: 'Prompt',
+                      hintText: 'Describe what you want to do...',
+                      border: const OutlineInputBorder(),
+                      alignLabelWithHint: true,
+                      suffixIcon: (widget.mode == SessionDialogMode.edit ||
+                              widget.mode ==
+                                  SessionDialogMode.createWithContext)
+                          ? IconButton(
+                              icon: const Icon(Icons.content_paste_go),
+                              tooltip: 'Import Prompt from Original Session',
+                              onPressed: () {
+                                if (widget.initialSession == null) return;
+                                final originalPrompt =
+                                    widget.initialSession!.prompt;
+                                final currentText = _promptController.text;
+
+                                if (currentText.trim().isNotEmpty) {
+                                  const separator =
+                                      '\n\n--- Imported Prompt ---\n';
+                                  _promptController.text =
+                                      '$currentText$separator$originalPrompt';
+                                } else {
+                                  _promptController.text = originalPrompt;
+                                }
+                                _promptController.selection =
+                                    TextSelection.fromPosition(
+                                  TextPosition(
+                                    offset: _promptController.text.length,
+                                  ),
+                                );
+                              },
+                            )
+                          : null,
+                    ),
+                    onChanged: (val) => setState(() {}),
+                  ),
+                ),
+                const SizedBox(height: 16),
+
+                // Image Attachment (URL for now)
+                TextField(
+                  controller: _imageUrlController,
+                  decoration: const InputDecoration(
+                    labelText: 'Image URL (Optional)',
+                    hintText: 'https://example.com/image.png',
+                    border: OutlineInputBorder(),
+                    prefixIcon: Icon(Icons.image),
+                  ),
+                  onChanged: (val) => setState(() {}),
+                ),
                 const SizedBox(height: 24),
 
                 // Actions
