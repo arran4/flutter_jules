@@ -57,24 +57,22 @@ class CacheMetadata {
 
   factory CacheMetadata.fromJson(Map<String, dynamic> json) {
     return CacheMetadata(
-      firstSeen: DateTime.parse(json['firstSeen']),
-      lastRetrieved: DateTime.parse(json['lastRetrieved']),
-      lastOpened: json['lastOpened'] != null
-          ? DateTime.parse(json['lastOpened'])
+      firstSeen: DateTime.parse(getStringPropOrThrow(json, 'firstSeen')),
+      lastRetrieved: DateTime.parse(getStringPropOrThrow(json, 'lastRetrieved')),
+      lastOpened: getStringPropOrDefault(json, 'lastOpened', null) != null
+          ? DateTime.parse(getStringPropOrThrow(json, 'lastOpened'))
           : null,
-      lastPrOpened: json['lastPrOpened'] != null
-          ? DateTime.parse(json['lastPrOpened'])
+      lastPrOpened: getStringPropOrDefault(json, 'lastPrOpened', null) != null
+          ? DateTime.parse(getStringPropOrThrow(json, 'lastPrOpened'))
           : null,
-      lastUpdated: json['lastUpdated'] != null
-          ? DateTime.parse(json['lastUpdated'])
+      lastUpdated: getStringPropOrDefault(json, 'lastUpdated', null) != null
+          ? DateTime.parse(getStringPropOrThrow(json, 'lastUpdated'))
           : null,
-      labels: (json['labels'] as List<dynamic>?)
-              ?.map((e) => e.toString())
-              .toList() ??
-          [],
-      isWatched: json['isWatched'] ?? false,
-      hasPendingUpdates: json['hasPendingUpdates'] ?? false,
-      isHidden: json['isHidden'] ?? false,
+      labels: getStringArrayPropOrDefault(json, 'labels', []),
+      isWatched: getBooleanPropOrDefault(json, 'isWatched', false),
+      hasPendingUpdates:
+          getBooleanPropOrDefault(json, 'hasPendingUpdates', false),
+      isHidden: getBooleanPropOrDefault(json, 'isHidden', false),
       pendingMessages: getObjectArrayPropOrDefaultFunction(
         json,
         'pendingMessages',

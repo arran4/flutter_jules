@@ -1,3 +1,5 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
+
 class BulkActionPreset {
   final String name;
   final String? description;
@@ -13,10 +15,10 @@ class BulkActionPreset {
 
   factory BulkActionPreset.fromJson(Map<String, dynamic> json) {
     return BulkActionPreset(
-      name: json['name'] as String,
-      description: json['description'] as String?,
-      filterExpression: json['filterExpression'] as String,
-      actionScript: json['actionScript'] as String,
+      name: getStringPropOrThrow(json, 'name'),
+      description: getStringPropOrDefault(json, 'description', null),
+      filterExpression: getStringPropOrThrow(json, 'filterExpression'),
+      actionScript: getStringPropOrThrow(json, 'actionScript'),
     );
   }
 
