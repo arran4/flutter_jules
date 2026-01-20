@@ -526,7 +526,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         await Provider.of<SessionProvider>(
           context,
           listen: false,
-        ).updateSession(updatedSession!, authToken: token);
+        ).updateSession(
+          updatedSession!,
+          authToken: token,
+          activities: activities,
+        );
       }
     }
   }
@@ -556,9 +560,23 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       _isCancelled = false;
     });
 
+    String? pendingId;
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+
     try {
-      final auth = Provider.of<AuthProvider>(context, listen: false);
       final client = auth.client;
+
+      // Optimistically add message to UI
+      if (mounted) {
+        pendingId = await sessionProvider.addPendingMessage(
+          _session.id,
+          message,
+          auth.token!,
+        );
+        _messageController.clear();
+      }
 
       // Logically cancel (ignore result) if user cancels, but we can't truly cancel the future
       await _locked(() async {
@@ -612,14 +630,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         // Given we don't 'un-send', we just proceed if not cancelled, or do nothing if cancelled.
       } else {
         if (mounted) {
-          Provider.of<SessionProvider>(
-            context,
-            listen: false,
-          ).addPendingMessage(_session.id, message, auth.token!);
-        }
-        _messageController.clear();
-
-        if (mounted) {
           // Refresh based on settings
           final settings = Provider.of<SettingsProvider>(
             context,
@@ -638,6 +648,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
       }
     } catch (e) {
+      // If failed, remove the pending message we optimistically added
+      if (pendingId != null && mounted) {
+        sessionProvider.removePendingMessage(
+          _session.id,
+          pendingId!,
+          auth.token!,
+        );
+      }
+
       if (_isCancelled) {
         return;
       }
