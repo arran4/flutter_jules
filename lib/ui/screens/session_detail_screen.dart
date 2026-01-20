@@ -842,7 +842,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (result.openNewDialog) {
       // Pop the current detail screen
       navigator.pop(
-        SessionDetailResult(openNewSessionDialog: true, markAsRead: true),
+        const SessionDetailResult(openNewSessionDialog: true, markAsRead: true),
       );
     }
   }
@@ -1602,7 +1602,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ],
                     ),
                   ),
-                  if (activity.unmappedProps.containsKey('pendingId'))
+                  if (activity.unmappedProps.containsKey('pendingId') ||
+                      (activity.unmappedProps['processingErrors'] as List?)
+                              ?.isNotEmpty ==
+                          true)
                     Container(
                       margin: const EdgeInsets.only(
                         top: 4,
@@ -1622,9 +1625,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (activity.unmappedProps['metadata'] != null &&
-                              (activity.unmappedProps['metadata']
+                              ((activity.unmappedProps['metadata']
                                       as Map<String, dynamic>)
-                                  .containsKey('responseBody'))
+                                  .containsKey('responseBody')) ||
+                              (activity.unmappedProps['metadata'] as Map)
+                                  .containsKey('failureData'))) ...[
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
@@ -1660,72 +1665,156 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               padding: const EdgeInsets.symmetric(
                                 horizontal: 8,
                               ),
+                              onPressed: () {
+                                final failureData =
+                                    (activity.unmappedProps['metadata'] as Map)[
+                                        'failureData'];
+                                final exchange = ApiExchange(
+                                  method: 'POST', // Approximate
+                                  url:
+                                      'sendMessage', // Approximate, we don't save URL
+                                  requestHeaders: {},
+                                  requestBody:
+                                      activity.userMessaged?.userMessage ?? '',
+                                  statusCode: failureData['statusCode'] ?? 0,
+                                  responseHeaders: {},
+                                  responseBody:
+                                      failureData['responseBody'] ?? '',
+                                );
+                                showDialog(
+                                  context: context,
+                                  builder: (context) =>
+                                      ApiViewer(exchange: exchange),
+                                );
+                              },
+                              child: const Text("View Response"),
                             ),
-                            onPressed: () {
-                              showDialog(
-                                context: context,
-                                builder: (context) => ModelViewer(
-                                  data: activity.toJson(),
-                                  title: 'Activity Data',
+                            const SizedBox(width: 8),
+                          ],
+                          if (activity.unmappedProps.containsKey('pendingId')) ...[
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
                                 ),
-                              );
-                            },
-                            child: const Text("View Data"),
-                          ),
-                          const SizedBox(width: 8),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
                               ),
+                              onPressed: () {
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => ModelViewer(
+                                    data: activity.toJson(),
+                                    title: 'Activity Data',
+                                  ),
+                                );
+                              },
+                              child: const Text("View Data"),
                             ),
-                            onPressed: () {
-                              final auth = Provider.of<AuthProvider>(
-                                context,
-                                listen: false,
-                              );
-                              Provider.of<SessionProvider>(
-                                context,
-                                listen: false,
-                              ).removePendingMessage(
-                                _session.id,
-                                activity.unmappedProps['pendingId'],
-                                auth.token!,
-                              );
-                            },
-                            child: const Text("Dismiss"),
-                          ),
-                          const SizedBox(width: 8),
-                          FilledButton(
-                            style: FilledButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                            const SizedBox(width: 8),
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                               ),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                Provider.of<SessionProvider>(
+                                  context,
+                                  listen: false,
+                                ).removePendingMessage(
+                                  _session.id,
+                                  activity.unmappedProps['pendingId'],
+                                  auth.token!,
+                                );
+                              },
+                              child: const Text("Dismiss"),
                             ),
-                            onPressed: () {
-                              final auth = Provider.of<AuthProvider>(
-                                context,
-                                listen: false,
-                              );
-                              final pId = activity.unmappedProps['pendingId'];
-                              final content =
-                                  activity.userMessaged!.userMessage;
-                              // Remove old one
-                              Provider.of<SessionProvider>(
-                                context,
-                                listen: false,
-                              ).removePendingMessage(
-                                _session.id,
-                                pId,
-                                auth.token!,
-                              );
-                              // Resend (which adds new pending)
-                              _sendMessage(content);
-                            },
-                            child: const Text("Resend"),
-                          ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                final pId = activity.unmappedProps['pendingId'];
+                                final content =
+                                    activity.userMessaged!.userMessage;
+                                // Remove old one
+                                Provider.of<SessionProvider>(
+                                  context,
+                                  listen: false,
+                                ).removePendingMessage(
+                                  _session.id,
+                                  pId,
+                                  auth.token!,
+                                );
+                                // Resend (which adds new pending)
+                                _sendMessage(content);
+                              },
+                              child: const Text("Resend"),
+                            ),
+                          ] else ...[
+                            // Queued message controls
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: () {
+                                // Extract ID from "queued-{id}"
+                                final id =
+                                    activity.id.replaceFirst('queued-', '');
+                                Provider.of<MessageQueueProvider>(
+                                  context,
+                                  listen: false,
+                                ).deleteMessage(id);
+                              },
+                              child: const Text("Dismiss"),
+                            ),
+                            const SizedBox(width: 8),
+                            FilledButton(
+                              style: FilledButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
+                              ),
+                              onPressed: () {
+                                final auth = Provider.of<AuthProvider>(
+                                  context,
+                                  listen: false,
+                                );
+                                Provider.of<MessageQueueProvider>(
+                                  context,
+                                  listen: false,
+                                ).sendQueue(
+                                  auth.client,
+                                  onError: (id, e) {
+                                    if (context.mounted) {
+                                      ScaffoldMessenger.of(context)
+                                          .showSnackBar(SnackBar(
+                                        content: Text("Retry failed: $e"),
+                                      ));
+                                    }
+                                  },
+                                );
+                              },
+                              child: const Text("Retry"),
+                            ),
+                          ],
                         ],
                       ),
                     ),

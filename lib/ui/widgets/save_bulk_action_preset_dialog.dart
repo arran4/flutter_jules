@@ -1,7 +1,14 @@
 import 'package:flutter/material.dart';
 
 class SaveBulkActionPresetDialog extends StatefulWidget {
-  const SaveBulkActionPresetDialog({super.key});
+  final String? initialName;
+  final String? initialDescription;
+
+  const SaveBulkActionPresetDialog({
+    super.key,
+    this.initialName,
+    this.initialDescription,
+  });
 
   @override
   State<SaveBulkActionPresetDialog> createState() =>
@@ -15,6 +22,17 @@ class _SaveBulkActionPresetDialogState
   String _description = '';
 
   @override
+  void initState() {
+    super.initState();
+    if (widget.initialName != null) {
+      _name = widget.initialName!;
+    }
+    if (widget.initialDescription != null) {
+      _description = widget.initialDescription!;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     return AlertDialog(
       title: const Text('Save Bulk Action Preset'),
@@ -24,6 +42,7 @@ class _SaveBulkActionPresetDialogState
           mainAxisSize: MainAxisSize.min,
           children: [
             TextFormField(
+              initialValue: _name,
               decoration: const InputDecoration(
                 labelText: 'Preset Name',
                 hintText: 'Enter a name for the preset',
@@ -38,6 +57,7 @@ class _SaveBulkActionPresetDialogState
             ),
             const SizedBox(height: 16),
             TextFormField(
+              initialValue: _description,
               decoration: const InputDecoration(
                 labelText: 'Description',
                 hintText: 'Enter an optional description',

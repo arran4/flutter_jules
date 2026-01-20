@@ -1,5 +1,7 @@
 import 'dart:async';
 import 'dart:convert';
+import 'dart:developer' as developer;
+import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 import '../models.dart';
@@ -63,39 +65,82 @@ class JulesClient {
       final requestHeaders = headers ?? _headers;
       final requestBody = body != null ? jsonEncode(body) : '';
 
-      http.Response response;
-      try {
-        if (method == 'GET') {
-          response = await _client.get(url, headers: requestHeaders);
-        } else if (method == 'POST') {
-          response = await _client.post(
-            url,
-            headers: requestHeaders,
-            body: requestBody,
-          );
-        } else {
-          throw Exception('Unsupported method: $method');
+      int retryCount = 0;
+      const maxRetries = 5;
+
+      while (true) {
+        http.Response response;
+        try {
+          if (method == 'GET') {
+            response = await _client.get(url, headers: requestHeaders);
+          } else if (method == 'POST') {
+            response = await _client.post(
+              url,
+              headers: requestHeaders,
+              body: requestBody,
+            );
+          } else {
+            throw Exception('Unsupported method: $method');
+          }
+        } catch (e) {
+          // In case of network error, we can't really log a response, but we rethrow
+          rethrow;
         }
-      } catch (e) {
-        // In case of network error, we can't really log a response, but we rethrow
-        rethrow;
-      }
 
-      if (onDebug != null) {
-        onDebug(
-          ApiExchange(
-            method: method,
-            url: url.toString(),
-            requestHeaders: requestHeaders,
-            requestBody: requestBody,
-            statusCode: response.statusCode,
-            responseHeaders: response.headers,
-            responseBody: response.body,
-          ),
-        );
-      }
+        if (onDebug != null) {
+          onDebug(
+            ApiExchange(
+              method: method,
+              url: url.toString(),
+              requestHeaders: requestHeaders,
+              requestBody: requestBody,
+              statusCode: response.statusCode,
+              responseHeaders: response.headers,
+              responseBody: response.body,
+            ),
+          );
+        }
 
-      return response;
+        if ((response.statusCode == 429 || response.statusCode == 503) &&
+            retryCount < maxRetries) {
+          retryCount++;
+          Duration waitDuration;
+          final retryAfter = response.headers['retry-after'];
+
+          if (retryAfter != null) {
+            final seconds = int.tryParse(retryAfter);
+            if (seconds != null) {
+              waitDuration = Duration(seconds: seconds);
+            } else {
+              try {
+                final date = HttpDate.parse(retryAfter);
+                final now = DateTime.now();
+                if (date.isAfter(now)) {
+                  waitDuration = date.difference(now);
+                } else {
+                  waitDuration = Duration.zero;
+                }
+              } catch (_) {
+                // Fallback to exponential if parsing fails
+                waitDuration = Duration(seconds: 1 << (retryCount - 1));
+              }
+            }
+          } else {
+            // Exponential backoff: 1s, 2s, 4s, 8s, 16s
+            waitDuration = Duration(seconds: 1 << (retryCount - 1));
+          }
+
+          developer.log(
+            'Rate limited (Status: ${response.statusCode}). Retrying in ${waitDuration.inMilliseconds}ms. (Retry count: $retryCount)',
+            name: 'JulesClient',
+          );
+
+          await Future.delayed(waitDuration);
+          continue;
+        }
+
+        return response;
+      }
     });
   }
 
@@ -105,7 +150,12 @@ class JulesClient {
     } else if (response.statusCode == 403) {
       throw PermissionDeniedException(response.body);
     } else if (response.statusCode == 404) {
-      throw NotFoundException(response.body);
+      throw NotFoundException(
+        response.body,
+        resource: response.request?.url.toString(),
+      );
+    } else if (response.statusCode == 429) {
+      throw RateLimitException(response.body);
     } else if (response.statusCode == 503) {
       throw ServiceUnavailableException(response.body);
     } else {
@@ -160,9 +210,11 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse(
-      '$baseUrl/v1alpha/sessions',
-    ).replace(queryParameters: queryParams);
+    final uri = Uri.parse('$baseUrl/v1alpha/sessions');
+    final params = Map<String, dynamic>.from(uri.queryParameters);
+    params.addAll(queryParams);
+
+    final url = uri.replace(queryParameters: params);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {
@@ -263,9 +315,12 @@ class JulesClient {
         queryParams['pageToken'] = nextPageToken;
       }
 
-      final url = Uri.parse(
-        '$baseUrl/v1alpha/$sessionName/activities',
-      ).replace(queryParameters: queryParams.isNotEmpty ? queryParams : null);
+      final uri = Uri.parse('$baseUrl/v1alpha/$sessionName/activities');
+      final params = Map<String, dynamic>.from(uri.queryParameters);
+      if (queryParams.isNotEmpty) {
+        params.addAll(queryParams);
+      }
+      final url = uri.replace(queryParameters: params);
 
       final response = await _performRequest('GET', url, onDebug: onDebug);
 
@@ -341,9 +396,11 @@ class JulesClient {
     if (pageSize != null) queryParams['pageSize'] = pageSize.toString();
     if (pageToken != null) queryParams['pageToken'] = pageToken;
 
-    final url = Uri.parse(
-      '$baseUrl/v1alpha/sources',
-    ).replace(queryParameters: queryParams);
+    final uri = Uri.parse('$baseUrl/v1alpha/sources');
+    final params = Map<String, dynamic>.from(uri.queryParameters);
+    params.addAll(queryParams);
+
+    final url = uri.replace(queryParameters: params);
     final response = await _performRequest('GET', url, onDebug: onDebug);
 
     if (response.statusCode == 200) {

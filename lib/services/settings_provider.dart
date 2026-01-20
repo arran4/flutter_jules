@@ -5,15 +5,8 @@ import '../ui/themes.dart';
 import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
+import '../models/scheduler_preset.dart';
 import '../models/github_exclusion.dart';
-
-enum SessionRefreshPolicy { none, shallow, full }
-
-enum ListRefreshPolicy { none, dirty, watched, quick, full }
-
-enum FabVisibility { appBar, floating, off }
-
-enum DelayUnit { ms, s, min }
 
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnOpen = 'refresh_on_open';
@@ -276,34 +269,13 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   List<RefreshSchedule> _defaultSchedules() {
-    return [
-      RefreshSchedule(
-        name: 'Refresh while session is open',
-        intervalInMinutes: 5,
-        refreshPolicy: ListRefreshPolicy.quick,
-      ),
-      RefreshSchedule(
-        name: 'Full Refresh',
-        intervalInMinutes: 60,
-        refreshPolicy: ListRefreshPolicy.full,
-      ),
-      RefreshSchedule(
-        name: 'Watched Refresh',
-        intervalInMinutes: 5,
-        refreshPolicy: ListRefreshPolicy.watched,
-      ),
-      RefreshSchedule(
-        name: 'Quick Refresh',
-        intervalInMinutes: 15,
-        refreshPolicy: ListRefreshPolicy.quick,
-      ),
-      RefreshSchedule(
-        name: 'Send Pending Messages',
-        intervalInMinutes: 5,
-        taskType: RefreshTaskType.sendPendingMessages,
-        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
-      ),
-    ];
+    return SchedulerPreset.presets.first.schedulesFactory();
+  }
+
+  Future<void> applySchedulerPreset(SchedulerPreset preset) async {
+    _schedules = preset.schedulesFactory();
+    await _saveSchedules();
+    notifyListeners();
   }
 
   Future<void> addSchedule(RefreshSchedule schedule) async {
