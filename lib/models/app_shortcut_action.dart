@@ -1,0 +1,4 @@
+enum AppShortcutAction {
+  showHelp,
+  newSession,
+}

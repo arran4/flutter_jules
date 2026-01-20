@@ -1,29 +1,55 @@
+import 'dart:async';
 import 'package:flutter/material.dart';
+import '../models/app_shortcut_action.dart';
+import '../intents.dart';
 
 class Shortcut {
-  final LogicalKeySet keys;
-  final Intent intent;
+  final ShortcutActivator activator;
+  final AppShortcutAction action;
   final String description;
 
-  Shortcut(this.keys, this.intent, this.description);
+  Shortcut(this.activator, this.action, this.description);
 }
 
 class ShortcutRegistry extends ChangeNotifier {
-  final Map<LogicalKeySet, Intent> _shortcuts = {};
-  final Map<Intent, String> _descriptions = {};
+  final Map<ShortcutActivator, AppShortcutAction> _shortcuts = {};
+  final Map<AppShortcutAction, String> _descriptions = {};
+  final StreamController<AppShortcutAction> _actionController =
+      StreamController.broadcast();
 
-  Map<LogicalKeySet, Intent> get shortcuts => Map.unmodifiable(_shortcuts);
-  Map<Intent, String> get descriptions => Map.unmodifiable(_descriptions);
+  Stream<AppShortcutAction> get onAction => _actionController.stream;
+
+  Map<ShortcutActivator, Intent> get shortcuts {
+    return _shortcuts.map((activator, action) {
+      return MapEntry(activator, GlobalActionIntent(action));
+    });
+  }
+
+  Map<ShortcutActivator, AppShortcutAction> get shortcutActions =>
+      Map.unmodifiable(_shortcuts);
+
+  Map<AppShortcutAction, String> get descriptions =>
+      Map.unmodifiable(_descriptions);
 
   void register(Shortcut shortcut) {
-    _shortcuts[shortcut.keys] = shortcut.intent;
-    _descriptions[shortcut.intent] = shortcut.description;
+    _shortcuts[shortcut.activator] = shortcut.action;
+    _descriptions[shortcut.action] = shortcut.description;
     notifyListeners();
   }
 
   void unregister(Shortcut shortcut) {
-    _shortcuts.remove(shortcut.keys);
-    _descriptions.remove(shortcut.intent);
+    _shortcuts.remove(shortcut.activator);
+    _descriptions.remove(shortcut.action);
     notifyListeners();
+  }
+
+  void dispatch(AppShortcutAction action) {
+    _actionController.add(action);
+  }
+
+  @override
+  void dispose() {
+    _actionController.close();
+    super.dispose();
   }
 }
