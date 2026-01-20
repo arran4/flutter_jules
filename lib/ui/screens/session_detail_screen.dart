@@ -652,7 +652,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (pendingId != null && mounted) {
         sessionProvider.removePendingMessage(
           _session.id,
-          pendingId!,
+          pendingId,
           auth.token!,
         );
       }

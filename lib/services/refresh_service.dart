@@ -11,7 +11,6 @@ import 'exceptions.dart';
 import '../models/refresh_schedule.dart';
 import 'notification_service.dart';
 import '../models/enums.dart';
-import '../models/session.dart';
 import 'session_comparator.dart';
 
 class RefreshService extends ChangeNotifier {

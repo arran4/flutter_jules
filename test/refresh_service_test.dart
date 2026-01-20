@@ -13,8 +13,6 @@ import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/enums.dart';
 import 'package:flutter_jules/services/message_queue_provider.dart';
 import 'package:flutter_jules/services/activity_provider.dart';
-import 'package:flutter_jules/services/cache_service.dart';
-import 'package:flutter_jules/models/session.dart';
 import 'package:mockito/annotations.dart';
 import 'refresh_service_test.mocks.dart';
 

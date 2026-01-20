@@ -872,12 +872,16 @@ class MockSessionProvider extends _i2.Mock implements _i14.SessionProvider {
   _i5.Future<void> updateSession(
     _i7.Session? session, {
     String? authToken,
+    List<_i7.Activity>? activities,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #updateSession,
           [session],
-          {#authToken: authToken},
+          {
+            #authToken: authToken,
+            #activities: activities,
+          },
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
@@ -1001,7 +1005,7 @@ class MockSessionProvider extends _i2.Mock implements _i14.SessionProvider {
       ) as _i5.Future<void>);
 
   @override
-  _i5.Future<void> addPendingMessage(
+  _i5.Future<String?> addPendingMessage(
     String? sessionId,
     String? content,
     String? authToken,
@@ -1015,9 +1019,9 @@ class MockSessionProvider extends _i2.Mock implements _i14.SessionProvider {
             authToken,
           ],
         ),
-        returnValue: _i5.Future<void>.value(),
-        returnValueForMissingStub: _i5.Future<void>.value(),
-      ) as _i5.Future<void>);
+        returnValue: _i5.Future<String?>.value(),
+        returnValueForMissingStub: _i5.Future<String?>.value(),
+      ) as _i5.Future<String?>);
 
   @override
   _i5.Future<void> removePendingMessage(
