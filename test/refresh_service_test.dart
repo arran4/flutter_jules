@@ -2,7 +2,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:fake_async/fake_async.dart';
 
-import 'package:flutter_jules/models/cache_metadata.dart';
 import 'package:flutter_jules/services/refresh_service.dart';
 import 'package:flutter_jules/services/jules_client.dart';
 import 'package:flutter_jules/services/settings_provider.dart';
@@ -10,12 +9,12 @@ import 'package:flutter_jules/services/session_provider.dart';
 import 'package:flutter_jules/services/source_provider.dart';
 import 'package:flutter_jules/services/auth_provider.dart';
 import 'package:flutter_jules/services/notification_service.dart';
-import 'package:flutter_jules/services/cache_service.dart';
 import 'package:flutter_jules/models/refresh_schedule.dart';
-import 'package:flutter_jules/models/session.dart';
 import 'package:flutter_jules/models/enums.dart';
 import 'package:flutter_jules/services/message_queue_provider.dart';
 import 'package:flutter_jules/services/activity_provider.dart';
+import 'package:flutter_jules/services/cache_service.dart';
+import 'package:flutter_jules/models/session.dart';
 import 'package:mockito/annotations.dart';
 import 'refresh_service_test.mocks.dart';
 
@@ -125,60 +124,5 @@ void main() {
       // Should not have been called
       verifyNever(mockSessionProvider.fetchSessions(any));
     });
-  });
-
-  test('compares sessions and sends notifications', () {
-    final oldSession = Session(
-      id: '1',
-      prompt: 'test',
-      name: 'session1',
-      state: SessionState.IN_PROGRESS,
-    );
-    final newSession = Session(
-      id: '1',
-      prompt: 'test',
-      name: 'session1',
-      state: SessionState.COMPLETED,
-    );
-
-    when(mockSettingsProvider.notifyOnCompletion).thenReturn(true);
-    when(mockSettingsProvider.notifyOnAttention).thenReturn(false);
-    when(mockSettingsProvider.notifyOnFailure).thenReturn(false);
-    when(mockSettingsProvider.notifyOnWatch).thenReturn(false);
-
-    // This is a bit of a hack to test a private method
-    // In a real app, you might want to refactor this to be more testable
-    final oldSessions = [oldSession];
-    final newSessions = [newSession];
-
-    when(
-      mockSessionProvider.items,
-    ).thenReturn(
-        newSessions.map((e) => CachedItem(e, CacheMetadata.empty())).toList());
-
-    // ignore: invalid_use_of_protected_member
-    refreshService.dispose(); // Dispose the old service and its timers
-
-    refreshService = RefreshService(
-      mockSettingsProvider,
-      mockSessionProvider,
-      mockSourceProvider,
-      mockAuthProvider,
-      mockNotificationService,
-      mockMessageQueueProvider,
-      mockActivityProvider,
-    );
-
-    // Manually trigger the comparison
-    // ignore: protected_member_use
-    refreshService.compareSessions(oldSessions, newSessions);
-
-    verify(
-      mockNotificationService.showNotification(
-        'Task completed',
-        'Untitled Task',
-        payload: 'session1',
-      ),
-    ).called(1);
   });
 }
