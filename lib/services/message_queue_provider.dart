@@ -323,6 +323,21 @@ class MessageQueueProvider extends ChangeNotifier {
           final currentErrors =
               List<String>.from(_queue[index].processingErrors);
 
+          Map<String, dynamic>? newMetadata = _queue[index].metadata;
+
+          if (e is JulesException) {
+            if (newMetadata == null) {
+              newMetadata = {};
+            } else {
+              newMetadata = Map<String, dynamic>.from(newMetadata);
+            }
+            newMetadata['failureData'] = {
+              'statusCode': e.statusCode,
+              'responseBody': e.responseBody,
+              'timestamp': DateTime.now().toIso8601String(),
+            };
+          }
+
           if (e is NotFoundException) {
             // 404 Not Found. Session probably deleted or ID invalid.
             currentErrors.add(
@@ -331,8 +346,10 @@ class MessageQueueProvider extends ChangeNotifier {
             currentErrors.add(e.toString());
           }
 
-          _queue[index] =
-              _queue[index].copyWith(processingErrors: currentErrors);
+          _queue[index] = _queue[index].copyWith(
+            processingErrors: currentErrors,
+            metadata: newMetadata,
+          );
         }
         // Stop on first error to preserve order
         break;
