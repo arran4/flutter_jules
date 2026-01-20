@@ -31,6 +31,11 @@ class GithubProvider extends ChangeNotifier {
   int? _rateLimitRemaining;
   DateTime? _rateLimitReset;
 
+  // Stats
+  int _errorCount = 0;
+  int _warningCount = 0;
+  Duration _totalThrottledDuration = Duration.zero;
+
   // Auth Status
   bool _hasBadCredentials = false;
   String? _authError;
@@ -42,6 +47,9 @@ class GithubProvider extends ChangeNotifier {
   int? get rateLimitLimit => _rateLimitLimit;
   int? get rateLimitRemaining => _rateLimitRemaining;
   DateTime? get rateLimitReset => _rateLimitReset;
+  int get errorCount => _errorCount;
+  int get warningCount => _warningCount;
+  Duration get totalThrottledDuration => _totalThrottledDuration;
   List<GithubJob> get queue => List.unmodifiable(_queue);
   bool get hasBadCredentials => _hasBadCredentials;
   String? get authError => _authError;
@@ -242,12 +250,14 @@ class GithubProvider extends ChangeNotifier {
         } else if (response.statusCode == 401 ||
             response.statusCode == 403 ||
             response.statusCode == 404) {
+          _warningCount++;
           // 404 on private repo acts like auth failure often
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
           debugPrint(
               'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
           return null;
         } else {
+          _warningCount++;
           debugPrint(
             'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
           );
@@ -283,7 +293,10 @@ class GithubProvider extends ChangeNotifier {
     } else if (response.statusCode == 401 ||
         response.statusCode == 403 ||
         response.statusCode == 404) {
+      _warningCount++;
       await _handleUnauthorized(response.body, owner: owner, repo: repo);
+    } else {
+      _warningCount++;
     }
     return null;
   }
@@ -306,7 +319,10 @@ class GithubProvider extends ChangeNotifier {
     } else if (response.statusCode == 401 ||
         response.statusCode == 403 ||
         response.statusCode == 404) {
+      _warningCount++;
       await _handleUnauthorized(response.body, owner: owner, repo: repo);
+    } else {
+      _warningCount++;
     }
     return null;
   }
@@ -342,6 +358,7 @@ class GithubProvider extends ChangeNotifier {
         if (prResponse.statusCode == 401 ||
             prResponse.statusCode == 403 ||
             prResponse.statusCode == 404) {
+          _warningCount++;
           await _handleUnauthorized(prResponse.body, owner: owner, repo: repo);
           return 'Unknown';
         }
@@ -354,6 +371,7 @@ class GithubProvider extends ChangeNotifier {
         final headSha = prData['head']['sha'];
 
         if (headSha == null) {
+          _warningCount++;
           return 'Unknown';
         }
 
@@ -373,12 +391,14 @@ class GithubProvider extends ChangeNotifier {
         if (checksResponse.statusCode == 401 ||
             checksResponse.statusCode == 403 ||
             checksResponse.statusCode == 404) {
+          _warningCount++;
           await _handleUnauthorized(checksResponse.body,
               owner: owner, repo: repo);
           return 'Unknown';
         }
 
         if (checksResponse.statusCode != 200) {
+          _warningCount++;
           debugPrint(
             'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
           );
@@ -548,6 +568,7 @@ class GithubProvider extends ChangeNotifier {
             _rateLimitReset!.isAfter(DateTime.now())) {
           final wait = _rateLimitReset!.difference(DateTime.now());
           // Notify listeners so UI updates status to "Waiting"
+          _totalThrottledDuration += wait;
           notifyListeners();
           // Force adherence
           await Future.delayed(wait);
@@ -577,6 +598,7 @@ class GithubProvider extends ChangeNotifier {
         job.status = GithubJobStatus.completed;
         job.completer.complete();
       } catch (e) {
+        _errorCount++;
         // If the job action threw an exception because of 401, we want to capture that
         if (e.toString().contains('Bad credentials') || _hasBadCredentials) {
           job.status = GithubJobStatus.failed;
