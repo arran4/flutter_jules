@@ -299,13 +299,16 @@ T? getEnumPropOrDefault<T>(
   List<T> values,
   T? defaultValue,
 ) {
-  if (json[key] == null) {
+  final value = getStringPropOrDefault<String?>(json, key, null);
+  if (value == null) {
     return defaultValue;
   }
-  return values.firstWhere(
-    (e) => e.toString().split('.').last == json[key],
-    orElse: () => defaultValue as T,
-  );
+  for (final element in values) {
+    if (element.toString().split('.').last == value) {
+      return element;
+    }
+  }
+  return defaultValue;
 }
 
 class ListSessionsResponse {
