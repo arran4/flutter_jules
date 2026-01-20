@@ -64,6 +64,42 @@ class GithubQueuePane extends StatelessWidget {
                     ),
                   ],
                 ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Errors",
+                        "${provider.errorCount}",
+                        Colors.red,
+                        Icons.error,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Warnings",
+                        "${provider.warningCount}",
+                        Colors.amber,
+                        Icons.warning,
+                      ),
+                    ),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: _buildStatCard(
+                        context,
+                        "Throttled",
+                        _formatDuration(provider.totalThrottledDuration),
+                        provider.totalThrottledDuration.inSeconds > 0
+                            ? Colors.red
+                            : Colors.grey,
+                        Icons.timelapse,
+                      ),
+                    ),
+                  ],
+                ),
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
