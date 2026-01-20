@@ -557,14 +557,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
         if (!handled) {
           // If bulk, we probably shouldn't show a dialog for each error.
           // Queue it and show snackbar.
-          Provider.of<MessageQueueProvider>(
+          final queueProvider = Provider.of<MessageQueueProvider>(
             context,
             listen: false,
-          ).addCreateSessionRequest(sessionToCreate, reason: 'creation_failed');
+          );
+          final msgId = queueProvider.addCreateSessionRequest(
+            sessionToCreate,
+            reason: 'creation_failed',
+          );
+
           if (sessionsToCreate.length == 1) {
             showDialog(
               context: context,
-              builder: (context) => AlertDialog(
+              builder: (dialogContext) => AlertDialog(
                 title: const Text('Error Creating Session'),
                 content: SingleChildScrollView(
                   child: Column(
@@ -592,8 +597,48 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 ),
                 actions: [
                   TextButton(
-                    onPressed: () => Navigator.pop(context),
-                    child: const Text('Close'),
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      queueProvider.deleteMessage(msgId);
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Discarded")),
+                      );
+                    },
+                    style: TextButton.styleFrom(foregroundColor: Colors.red),
+                    child: const Text('Discard'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      // Already pending/failed in queue
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Saved as Pending")),
+                      );
+                    },
+                    child: const Text('Save as Pending'),
+                  ),
+                  TextButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      queueProvider.updateCreateSessionRequest(
+                        msgId,
+                        sessionToCreate,
+                        isDraft: true,
+                        reason: 'User saved as draft',
+                      );
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("Saved as Draft")),
+                      );
+                    },
+                    child: const Text('Save as Draft'),
+                  ),
+                  FilledButton(
+                    onPressed: () {
+                      Navigator.pop(dialogContext);
+                      queueProvider.deleteMessage(msgId);
+                      performCreate(sessionToCreate);
+                    },
+                    child: const Text('Try Again'),
                   ),
                 ],
               ),
