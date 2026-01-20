@@ -698,25 +698,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         }
       } else if (e is JulesException && e.statusCode == 404) {
         // 404 Not Found.
-        // This likely means the session ID we have is invalid or deleted.
-        // We shouldn't queue a MESSAGE for a non-existent session.
-        if (mounted) {
-          _messageController.text = message; // Restore text
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: const Text(
-                  "Session not found (404). It may have been deleted."),
-              action: SnackBarAction(
-                label: 'Recreate?',
-                onPressed: () {
-                  // Offer to recreate session with this message as prompt? or original prompt?
-                  _createNewSessionFromCurrent();
-                },
-              ),
-              duration: const Duration(seconds: 10),
-            ),
-          );
-        }
+        // The session might be deleted or ID invalid.
+        // We queue this message as failed so the user can see the error and raw response.
+        queueProvider.addMessage(
+          _session.id,
+          message,
+          reason: 'resource_not_found',
+          processingErrors: [e.message],
+          metadata: e.responseBody != null
+              ? {'responseBody': e.responseBody}
+              : null,
+        );
         handled = true;
       }
 
@@ -1633,14 +1625,45 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         mainAxisSize: MainAxisSize.min,
                         children: [
                           if (activity.unmappedProps['metadata'] != null &&
+                              ((activity.unmappedProps['metadata']
+                                      as Map<String, dynamic>)
+                                  .containsKey('responseBody')) ||
                               (activity.unmappedProps['metadata'] as Map)
-                                  .containsKey('failureData')) ...[
+                                  .containsKey('failureData'))) ...[
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
                                 padding: const EdgeInsets.symmetric(
                                   horizontal: 8,
                                 ),
+                              ),
+                              onPressed: () {
+                                final metadata =
+                                    activity.unmappedProps['metadata']
+                                        as Map<String, dynamic>;
+                                showDialog(
+                                  context: context,
+                                  builder: (context) => ApiViewer(
+                                    exchange: ApiExchange(
+                                      url: '',
+                                      method: '',
+                                      requestHeaders: const {},
+                                      requestBody: '',
+                                      responseHeaders: const {},
+                                      statusCode: 0,
+                                      responseBody:
+                                          metadata['responseBody'] as String,
+                                    ),
+                                  ),
+                                );
+                              },
+                              child: const Text("View Raw Code"),
+                            ),
+                          TextButton(
+                            style: TextButton.styleFrom(
+                              visualDensity: VisualDensity.compact,
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 8,
                               ),
                               onPressed: () {
                                 final failureData =

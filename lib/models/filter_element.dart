@@ -19,6 +19,7 @@ enum FilterElementType {
   time,
   tag,
   hasNotes,
+  hasErrors,
   disabled,
 }
 
@@ -160,6 +161,9 @@ abstract class FilterElement {
         break;
       case 'has_notes':
         element = HasNotesElement.fromJson(json);
+        break;
+      case 'has_errors':
+        element = HasErrorsElement.fromJson(json);
         break;
       case 'disabled':
         element = DisabledElement.fromJson(json);
@@ -938,5 +942,56 @@ class HasNotesElement extends FilterElement {
 
   factory HasNotesElement.fromJson(Map<String, dynamic> json) {
     return HasNotesElement();
+  }
+}
+
+/// Has Errors filter element
+class HasErrorsElement extends FilterElement {
+  HasErrorsElement();
+
+  @override
+  FilterElementType get type => FilterElementType.hasErrors;
+
+  @override
+  String get groupingType => 'has_errors';
+
+  @override
+  String toExpression() {
+    return 'Has(Errors)';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'has_errors',
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final session = context.session;
+    bool matches = session.state == SessionState.FAILED;
+
+    // Also check for local queue errors
+    if (!matches && context.queueProvider != null) {
+      try {
+        final messages = context.queueProvider.queue as List<dynamic>;
+        // Assuming queueProvider.queue is List<QueuedMessage>
+        // Check for any message for this session that has errors
+        matches = messages.any((m) =>
+            m.sessionId == session.id &&
+            m.processingErrors != null &&
+            (m.processingErrors as List).isNotEmpty);
+      } catch (_) {
+        // Ignore type errors if queueProvider structure is different than expected dynamically
+      }
+    }
+
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory HasErrorsElement.fromJson(Map<String, dynamic> json) {
+    return HasErrorsElement();
   }
 }
