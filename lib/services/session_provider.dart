@@ -257,7 +257,11 @@ class SessionProvider extends ChangeNotifier {
   }
 
   // Manual update from SessionDetailScreen
-  Future<void> updateSession(Session session, {String? authToken}) async {
+  Future<void> updateSession(
+    Session session, {
+    String? authToken,
+    List<Activity>? activities,
+  }) async {
     // Determine metadata
     final index = _items.indexWhere((i) => i.data.name == session.name);
     CacheMetadata metadata;
@@ -276,6 +280,10 @@ class SessionProvider extends ChangeNotifier {
         lastRetrieved: DateTime.now(),
         lastUpdated: DateTime.now(),
       );
+    }
+
+    if (activities != null) {
+      metadata = _resolvePendingMessages(metadata, activities);
     }
 
     final cachedItem = CachedItem(session, metadata);
@@ -597,7 +605,7 @@ class SessionProvider extends ChangeNotifier {
   }
 
   // Called when sending a message
-  Future<void> addPendingMessage(
+  Future<String?> addPendingMessage(
     String sessionId,
     String content,
     String authToken,
@@ -608,9 +616,10 @@ class SessionProvider extends ChangeNotifier {
       final newPending = List<PendingMessage>.from(
         item.metadata.pendingMessages,
       );
+      final pendingId = DateTime.now().microsecondsSinceEpoch.toString();
       newPending.add(
         PendingMessage(
-          id: DateTime.now().microsecondsSinceEpoch.toString(),
+          id: pendingId,
           content: content,
           timestamp: DateTime.now(),
         ),
@@ -627,7 +636,9 @@ class SessionProvider extends ChangeNotifier {
       if (_cacheService != null) {
         await _cacheService!.saveSessions(authToken, [newItem]);
       }
+      return pendingId;
     }
+    return null;
   }
 
   Future<void> removePendingMessage(
