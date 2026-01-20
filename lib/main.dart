@@ -1,4 +1,5 @@
 import 'dart:convert';
+import 'dart:async';
 
 import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart' hide ShortcutRegistry;
@@ -25,12 +26,10 @@ import 'ui/screens/source_list_screen.dart';
 import 'ui/widgets/help_dialog.dart';
 
 import 'ui/widgets/notification_overlay.dart';
+import 'models/app_shortcut_action.dart';
+import 'intents.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
-
-class ShowHelpIntent extends Intent {
-  const ShowHelpIntent();
-}
 
 void main(List<String> args) async {
   if (args.firstOrNull == 'multi_window') {
@@ -58,6 +57,7 @@ class MyApp extends StatefulWidget {
 
 class _MyAppState extends State<MyApp> with WindowListener {
   TrayService? _trayService;
+  StreamSubscription<AppShortcutAction>? _actionSubscription;
 
   @override
   void initState() {
@@ -75,16 +75,32 @@ class _MyAppState extends State<MyApp> with WindowListener {
       if (!mounted) return;
       final shortcutRegistry =
           Provider.of<ShortcutRegistry>(context, listen: false);
+
+      _actionSubscription = shortcutRegistry.onAction.listen((action) {
+        if (action == AppShortcutAction.showHelp) {
+          final ctx = navigatorKey.currentContext ?? context;
+          showDialog(
+            context: ctx,
+            builder: (context) => const HelpDialog(),
+          );
+        }
+      });
+
       shortcutRegistry.register(Shortcut(
-          LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.shift,
-              LogicalKeyboardKey.slash),
-          const ShowHelpIntent(),
+          const SingleActivator(LogicalKeyboardKey.slash, control: true, shift: true),
+          AppShortcutAction.showHelp,
           'Show Help'));
+
+      shortcutRegistry.register(Shortcut(
+          const SingleActivator(LogicalKeyboardKey.keyN, control: true),
+          AppShortcutAction.newSession,
+          'New Session'));
     });
   }
 
   @override
   void dispose() {
+    _actionSubscription?.cancel();
     windowManager.removeListener(this);
     context.read<SettingsProvider>().removeListener(_onSettingsChanged);
     _trayService?.dispose();
@@ -157,11 +173,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
         shortcuts: shortcutRegistry.shortcuts,
         child: Actions(
           actions: <Type, Action<Intent>>{
-            ShowHelpIntent: CallbackAction<ShowHelpIntent>(
-              onInvoke: (ShowHelpIntent intent) => showDialog(
-                context: context,
-                builder: (context) => const HelpDialog(),
-              ),
+            GlobalActionIntent: CallbackAction<GlobalActionIntent>(
+              onInvoke: (GlobalActionIntent intent) => shortcutRegistry.dispatch(intent.action),
             ),
           },
           child: GestureDetector(

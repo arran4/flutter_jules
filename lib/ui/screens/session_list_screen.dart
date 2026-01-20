@@ -35,6 +35,8 @@ import 'dart:async';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
+import '../../services/shortcut_registry.dart';
+import '../../models/app_shortcut_action.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -44,10 +46,6 @@ class SessionListScreen extends StatefulWidget {
 
   @override
   State<SessionListScreen> createState() => _SessionListScreenState();
-}
-
-class NewSessionIntent extends Intent {
-  const NewSessionIntent();
 }
 
 class _SessionListScreenState extends State<SessionListScreen> {
@@ -69,6 +67,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   List<FilterToken> _availableSuggestions = [];
   late NotificationService _notificationService;
   StreamSubscription<NotificationResponse>? _notificationSubscription;
+  StreamSubscription<AppShortcutAction>? _actionSubscription;
   bool _wasBadCredentials = false;
   Timer? _lastRefreshedTimer;
 
@@ -148,6 +147,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
+      final shortcutRegistry = Provider.of<ShortcutRegistry>(context, listen: false);
+      _actionSubscription = shortcutRegistry.onAction.listen((action) {
+        if (!mounted) return;
+        // Ensure this screen is visible before acting?
+        // Since the shortcut is global, we should check if we are the active route?
+        // Or at least if we are mounted. _createSession does UI stuff.
+        // If SessionDetailScreen is on top, do we want to open a new session dialog?
+        // Yes, likely.
+
+        // However, if we have multiple listeners (e.g. if we push another instance of SessionListScreen somehow, unlikely),
+        // both would react. But here we have one SessionListScreen usually.
+
+        if (action == AppShortcutAction.newSession) {
+          _createSession();
+        }
+      });
 
       void loadFilterAndSessions() {
         // Load last used filter if no explicit filter is set
@@ -190,6 +205,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
   @override
   void dispose() {
     _lastRefreshedTimer?.cancel();
+    _actionSubscription?.cancel();
     // Check mounted because provider usage in dispose can be tricky if widget is unmounted
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
     githubProvider.removeListener(_onGithubError);
@@ -1683,32 +1699,21 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         _displayItems.sort(_compareSessions);
 
-        return Shortcuts(
-          shortcuts: <LogicalKeySet, Intent>{
-            LogicalKeySet(LogicalKeyboardKey.control, LogicalKeyboardKey.keyN):
-                const NewSessionIntent(),
-          },
-          child: Actions(
-            actions: <Type, Action<Intent>>{
-              NewSessionIntent: CallbackAction<NewSessionIntent>(
-                onInvoke: (NewSessionIntent intent) => _createSession(),
-              ),
-            },
-            child: Focus(
-              focusNode: _focusNode,
-              autofocus: true,
-              child: Scaffold(
-                floatingActionButton:
-                    settings.fabVisibility == FabVisibility.floating
+        return Focus(
+          focusNode: _focusNode,
+          autofocus: true,
+          child: Scaffold(
+            floatingActionButton:
+                settings.fabVisibility == FabVisibility.floating
                         ? FloatingActionButton(
                             onPressed: _createSession,
                             tooltip: 'New Session',
                             child: const Icon(Icons.add),
                           )
-                        : null,
-                appBar: AppBar(
-                  title: const Text('Sessions'),
-                  bottom: isLoading
+                    : null,
+            appBar: AppBar(
+              title: const Text('Sessions'),
+              bottom: isLoading
                       ? const PreferredSize(
                           preferredSize: Size.fromHeight(4.0),
                           child: LinearProgressIndicator(),
@@ -2934,8 +2939,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   },
                 ),
               ),
-            ),
-          ),
         );
       },
     );
