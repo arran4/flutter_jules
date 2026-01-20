@@ -616,8 +616,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     String? initialName;
     String? initialDescription;
 
-    if (_stateManager.shouldPreFill(provider.isSystemPreset(
-        _stateManager.lastLoadedPreset?.name ?? ''))) {
+    if (_stateManager.shouldPreFill(
+        provider.isSystemPreset(_stateManager.lastLoadedPreset?.name ?? ''))) {
       initialName = _stateManager.lastLoadedPreset!.name;
       initialDescription = _stateManager.lastLoadedPreset!.description;
     }

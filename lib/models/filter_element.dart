@@ -1,6 +1,7 @@
 import 'session.dart';
 import 'cache_metadata.dart';
 import 'time_filter.dart';
+import 'enums.dart';
 import '../utils/time_helper.dart';
 
 enum FilterElementType {

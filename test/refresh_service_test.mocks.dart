@@ -1698,6 +1698,8 @@ class MockMessageQueueProvider extends _i2.Mock
     String? reason,
     bool? isDraft = false,
     String? requestId,
+    Map<String, dynamic>? metadata,
+    List<String>? processingErrors,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
@@ -1710,6 +1712,8 @@ class MockMessageQueueProvider extends _i2.Mock
             #reason: reason,
             #isDraft: isDraft,
             #requestId: requestId,
+            #metadata: metadata,
+            #processingErrors: processingErrors,
           },
         ),
         returnValue: _i24.dummyValue<String>(
@@ -1724,6 +1728,8 @@ class MockMessageQueueProvider extends _i2.Mock
               #reason: reason,
               #isDraft: isDraft,
               #requestId: requestId,
+              #metadata: metadata,
+              #processingErrors: processingErrors,
             },
           ),
         ),
@@ -1739,6 +1745,8 @@ class MockMessageQueueProvider extends _i2.Mock
               #reason: reason,
               #isDraft: isDraft,
               #requestId: requestId,
+              #metadata: metadata,
+              #processingErrors: processingErrors,
             },
           ),
         ),

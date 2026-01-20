@@ -138,6 +138,12 @@ void main() {
         expect(find.text('Disabled'), findsOneWidget);
         // We can't easily test opacity, but we can verify text presence
       },
+      FilterElementType.hasErrors: (tester) async {
+        // HasErrorsElement
+        await pumpElement(tester, HasErrorsElement());
+        expect(find.text('Has Errors'), findsOneWidget);
+        expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      },
     };
 
     // 1. SAFETY NET TEST: Ensures no FilterElementType is left behind.

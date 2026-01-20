@@ -724,9 +724,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           message,
           reason: 'resource_not_found',
           processingErrors: [e.message],
-          metadata: e.responseBody != null
-              ? {'responseBody': e.responseBody}
-              : null,
+          metadata:
+              e.responseBody != null ? {'responseBody': e.responseBody} : null,
         );
         handled = true;
       }
@@ -1645,10 +1644,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                         children: [
                           if (activity.unmappedProps['metadata'] != null &&
                               ((activity.unmappedProps['metadata']
-                                      as Map<String, dynamic>)
-                                  .containsKey('responseBody')) ||
-                              (activity.unmappedProps['metadata'] as Map)
-                                  .containsKey('failureData'))) ...[
+                                          as Map<String, dynamic>)
+                                      .containsKey('responseBody') ||
+                                  (activity.unmappedProps['metadata'] as Map)
+                                      .containsKey('failureData'))) ...[
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,
@@ -1678,16 +1677,17 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                               },
                               child: const Text("View Raw Code"),
                             ),
-                          TextButton(
-                            style: TextButton.styleFrom(
-                              visualDensity: VisualDensity.compact,
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 8,
+                            TextButton(
+                              style: TextButton.styleFrom(
+                                visualDensity: VisualDensity.compact,
+                                padding: const EdgeInsets.symmetric(
+                                  horizontal: 8,
+                                ),
                               ),
                               onPressed: () {
                                 final failureData =
-                                    (activity.unmappedProps['metadata'] as Map)[
-                                        'failureData'];
+                                    (activity.unmappedProps['metadata']
+                                        as Map)['failureData'];
                                 final exchange = ApiExchange(
                                   method: 'POST', // Approximate
                                   url:
@@ -1710,7 +1710,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                             ),
                             const SizedBox(width: 8),
                           ],
-                          if (activity.unmappedProps.containsKey('pendingId')) ...[
+                          if (activity.unmappedProps
+                              .containsKey('pendingId')) ...[
                             TextButton(
                               style: TextButton.styleFrom(
                                 visualDensity: VisualDensity.compact,

@@ -19,9 +19,8 @@ class BulkActionPresetDialog extends StatelessWidget {
     final provider = Provider.of<BulkActionPresetProvider>(context);
 
     return AlertDialog(
-      title: Text(isPicker
-          ? 'Load a Bulk Action Preset'
-          : 'Run a Bulk Action Preset'),
+      title: Text(
+          isPicker ? 'Load a Bulk Action Preset' : 'Run a Bulk Action Preset'),
       content: SizedBox(
         width: 500,
         height: 300,
