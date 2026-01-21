@@ -35,7 +35,7 @@ import 'dart:async';
 import 'dart:convert';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
-import '../../services/shortcut_registry.dart';
+import '../../services/shortcut_registry.dart' as custom_shortcuts;
 import '../../models/app_shortcut_action.dart';
 
 class SessionListScreen extends StatefulWidget {
@@ -147,7 +147,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
-      final shortcutRegistry = Provider.of<ShortcutRegistry>(context, listen: false);
+      final shortcutRegistry = Provider.of<custom_shortcuts.ShortcutRegistry>(
+          context,
+          listen: false);
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
         if (!mounted) return;
         // Ensure this screen is visible before acting?
