@@ -58,15 +58,16 @@ class CacheMetadata {
   factory CacheMetadata.fromJson(Map<String, dynamic> json) {
     return CacheMetadata(
       firstSeen: DateTime.parse(getStringPropOrThrow(json, 'firstSeen')),
-      lastRetrieved: DateTime.parse(getStringPropOrThrow(json, 'lastRetrieved')),
-      lastOpened: getStringPropOrDefault(json, 'lastOpened', null) != null
-          ? DateTime.parse(getStringPropOrThrow(json, 'lastOpened'))
+      lastRetrieved:
+          DateTime.parse(getStringPropOrThrow(json, 'lastRetrieved')),
+      lastOpened: json['lastOpened'] != null
+          ? DateTime.parse(json['lastOpened'] as String)
           : null,
-      lastPrOpened: getStringPropOrDefault(json, 'lastPrOpened', null) != null
-          ? DateTime.parse(getStringPropOrThrow(json, 'lastPrOpened'))
+      lastPrOpened: json['lastPrOpened'] != null
+          ? DateTime.parse(json['lastPrOpened'] as String)
           : null,
-      lastUpdated: getStringPropOrDefault(json, 'lastUpdated', null) != null
-          ? DateTime.parse(getStringPropOrThrow(json, 'lastUpdated'))
+      lastUpdated: json['lastUpdated'] != null
+          ? DateTime.parse(json['lastUpdated'] as String)
           : null,
       labels: getStringArrayPropOrDefault(json, 'labels', []),
       isWatched: getBooleanPropOrDefault(json, 'isWatched', false),

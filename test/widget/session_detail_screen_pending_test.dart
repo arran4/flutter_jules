@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_jules/models.dart';
+import 'package:flutter_jules/models/api_exchange.dart';
 import 'package:flutter_jules/ui/screens/session_detail_screen.dart';
 import 'package:flutter_jules/services/auth_provider.dart';
 import 'package:flutter_jules/services/session_provider.dart';
@@ -16,27 +17,41 @@ import 'package:flutter_jules/services/jules_client.dart';
 // Mocks
 class MockJulesClient extends Mock implements JulesClient {
   @override
-  Future<void> sendMessage(String? sessionName, String? message) {
+  Future<void> sendMessage(String? sessionName, String? message,
+      {void Function(ApiExchange)? onDebug}) {
     return super.noSuchMethod(
-      Invocation.method(#sendMessage, [sessionName, message]),
+      Invocation.method(
+          #sendMessage, [sessionName, message], {#onDebug: onDebug}),
       returnValue: Future.value(),
       returnValueForMissingStub: Future.value(),
     );
   }
 
   @override
-  Future<Session> getSession(String? name) {
+  Future<Session> getSession(String? name,
+      {void Function(ApiExchange)? onDebug}) {
     return super.noSuchMethod(
-      Invocation.method(#getSession, [name]),
-      returnValue: Future.value(Session(id: '1', name: 'sessions/1', prompt: '')),
-      returnValueForMissingStub: Future.value(Session(id: '1', name: 'sessions/1', prompt: '')),
+      Invocation.method(#getSession, [name], {#onDebug: onDebug}),
+      returnValue:
+          Future.value(Session(id: '1', name: 'sessions/1', prompt: '')),
+      returnValueForMissingStub:
+          Future.value(Session(id: '1', name: 'sessions/1', prompt: '')),
     );
   }
 
   @override
-  Future<List<Activity>> listActivities(String? session, {void Function(dynamic)? onDebug, void Function(int)? onProgress, bool Function(Session)? shouldStop}) {
-     return super.noSuchMethod(
-      Invocation.method(#listActivities, [session], {#onDebug: onDebug, #onProgress: onProgress, #shouldStop: shouldStop}),
+  Future<List<Activity>> listActivities(String? session,
+      {void Function(ApiExchange)? onDebug,
+      void Function(int)? onProgress,
+      bool Function(Activity)? shouldStop}) {
+    return super.noSuchMethod(
+      Invocation.method(#listActivities, [
+        session
+      ], {
+        #onDebug: onDebug,
+        #onProgress: onProgress,
+        #shouldStop: shouldStop
+      }),
       returnValue: Future.value(<Activity>[]),
       returnValueForMissingStub: Future.value(<Activity>[]),
     );
@@ -59,33 +74,39 @@ class MockSessionProvider extends Mock implements SessionProvider {
   List<CachedItem<Session>> get items => [];
 
   @override
-  Future<void> addPendingMessage(String? sessionId, String? content, String? authToken) {
-      return super.noSuchMethod(
+  @override
+  Future<String?> addPendingMessage(
+      String? sessionId, String? content, String? authToken) {
+    return super.noSuchMethod(
       Invocation.method(#addPendingMessage, [sessionId, content, authToken]),
-      returnValue: Future.value(),
-      returnValueForMissingStub: Future.value(),
+      returnValue: Future.value(''),
+      returnValueForMissingStub: Future.value(''),
     );
   }
 
   @override
-  Future<void> updateSession(Session? session, {String? authToken}) {
-     return Future.value();
+  Future<void> updateSession(Session? session,
+      {List<Activity>? activities, String? authToken}) {
+    return Future.value();
   }
 }
 
 class MockMessageQueueProvider extends Mock implements MessageQueueProvider {
+  List<QueuedMessage> _queue = [];
+  bool _isOffline = false;
+
   @override
-  List<QueuedMessage> get queue => super.noSuchMethod(
-        Invocation.getter(#queue),
-        returnValue: <QueuedMessage>[],
-        returnValueForMissingStub: <QueuedMessage>[],
-      ) as List<QueuedMessage>;
+  List<QueuedMessage> get queue => _queue;
+
+  set queue(List<QueuedMessage> value) => _queue = value;
 
   @override
   List<QueuedMessage> getDrafts(String? sessionId) => [];
 
   @override
-  bool get isOffline => false;
+  bool get isOffline => _isOffline;
+
+  set isOffline(bool value) => _isOffline = value;
 }
 
 class MockSettingsProvider extends Mock implements SettingsProvider {
@@ -104,7 +125,9 @@ class MockSettingsProvider extends Mock implements SettingsProvider {
 
 class MockCacheService extends Mock implements CacheService {
   @override
-  Future<CachedSessionDetails?> loadSessionDetails(String? token, String? sessionId) async => null;
+  Future<CachedSessionDetails?> loadSessionDetails(
+          String? token, String? sessionId) async =>
+      null;
 }
 
 class MockTimerService extends Mock implements TimerService {}
@@ -135,7 +158,8 @@ void main() {
     mockDevMode = MockDevModeProvider();
   });
 
-  testWidgets('Established session bypasses pending check and sends message', (WidgetTester tester) async {
+  testWidgets('Established session bypasses pending check and sends message',
+      (WidgetTester tester) async {
     // 1. Setup Session
     final session = Session(
       id: '123',
@@ -153,20 +177,20 @@ void main() {
       metadata: session.toJson(),
     );
 
-    when(mockQueue.queue).thenReturn([queuedMsg]);
-    when(mockQueue.isOffline).thenReturn(false);
+    mockQueue.queue = [queuedMsg];
+    mockQueue.isOffline = false;
 
     // 3. Pump Widget
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          Provider<AuthProvider>.value(value: mockAuth),
-          Provider<SessionProvider>.value(value: mockSession),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuth),
+          ChangeNotifierProvider<SessionProvider>.value(value: mockSession),
           ChangeNotifierProvider<MessageQueueProvider>.value(value: mockQueue),
-          Provider<SettingsProvider>.value(value: mockSettings),
+          ChangeNotifierProvider<SettingsProvider>.value(value: mockSettings),
           Provider<CacheService>.value(value: mockCache),
-          Provider<TimerService>.value(value: mockTimer),
-          Provider<DevModeProvider>.value(value: mockDevMode),
+          ChangeNotifierProvider<TimerService>.value(value: mockTimer),
+          ChangeNotifierProvider<DevModeProvider>.value(value: mockDevMode),
         ],
         child: MaterialApp(
           home: SessionDetailScreen(session: session),
@@ -176,14 +200,22 @@ void main() {
 
     // 4. Enter message and send
     await tester.enterText(find.byType(TextField), 'Hello');
+    await tester.pump(); // Rebuild to enable button
     await tester.tap(find.byIcon(Icons.send));
-    await tester.pump();
+    await tester.pumpAndSettle();
 
-    // 5. Verify sendMessage was called
-    verify(mockClient.sendMessage('sessions/123', 'Hello')).called(1);
+    // Verify no error first
+    expect(find.textContaining("Error:"), findsNothing);
+
+    // 5. Verify addPendingMessage was called first
+    verify(mockSession.addPendingMessage(any, any, any)).called(1);
+
+    // 6. Verify sendMessage was called
+    verify(mockClient.sendMessage('sessions/1', 'Hello')).called(1);
   });
 
-  testWidgets('Pending session respects pending check', (WidgetTester tester) async {
+  testWidgets('Pending session respects pending check',
+      (WidgetTester tester) async {
     // 1. Setup Session
     final session = Session(
       id: 'new_session',
@@ -201,20 +233,22 @@ void main() {
       metadata: session.toJson(),
     );
 
-    when(mockQueue.queue).thenReturn([queuedMsg]);
-    when(mockQueue.isOffline).thenReturn(false);
+    mockQueue.queue = [queuedMsg];
+    mockQueue.isOffline = false;
+
+    when(mockClient.getSession('new_session')).thenAnswer((_) async => session);
 
     // 3. Pump Widget
     await tester.pumpWidget(
       MultiProvider(
         providers: [
-          Provider<AuthProvider>.value(value: mockAuth),
-          Provider<SessionProvider>.value(value: mockSession),
+          ChangeNotifierProvider<AuthProvider>.value(value: mockAuth),
+          ChangeNotifierProvider<SessionProvider>.value(value: mockSession),
           ChangeNotifierProvider<MessageQueueProvider>.value(value: mockQueue),
-          Provider<SettingsProvider>.value(value: mockSettings),
+          ChangeNotifierProvider<SettingsProvider>.value(value: mockSettings),
           Provider<CacheService>.value(value: mockCache),
-          Provider<TimerService>.value(value: mockTimer),
-          Provider<DevModeProvider>.value(value: mockDevMode),
+          ChangeNotifierProvider<TimerService>.value(value: mockTimer),
+          ChangeNotifierProvider<DevModeProvider>.value(value: mockDevMode),
         ],
         child: MaterialApp(
           home: SessionDetailScreen(session: session),
@@ -224,9 +258,13 @@ void main() {
 
     // 4. Enter message and send
     await tester.enterText(find.byType(TextField), 'Hello');
+    await tester.pump(); // Rebuild to enable button
     await tester.tap(find.byIcon(Icons.send));
-    await tester.pump(); // Handle async
-    await tester.pump(const Duration(milliseconds: 100)); // Wait for async logic
+    // Wait for async logic and snackbar
+    await tester.pump(const Duration(seconds: 1)); // Wait for async logic
+    // We cannot use pumpAndSettle safely if the snackbar persists or other animations loop,
+    // but try pumpAndSettle for this case.
+    await tester.pumpAndSettle();
 
     // 5. Verify sendMessage was NOT called
     verifyNever(mockClient.sendMessage(any, any));

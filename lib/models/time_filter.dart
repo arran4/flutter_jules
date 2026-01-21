@@ -23,7 +23,7 @@ class TimeFilter {
     String? range = getStringPropOrDefault(json, 'range', null);
     if (json.containsKey('value') && json.containsKey('unit')) {
       // This is the old format. Convert it to a relative time string.
-      final unit = getStringPropOrThrow(json, 'unit').replaceAll('s', '');
+      final unit = getStringPropOrThrow(json, 'unit')!.replaceAll('s', '');
       final value = json['value'];
       range = 'last $value $unit';
     }

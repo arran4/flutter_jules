@@ -30,8 +30,7 @@ class HelpDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final registry =
-        Provider.of<custom_shortcuts.ShortcutRegistry>(context);
+    final registry = Provider.of<custom_shortcuts.ShortcutRegistry>(context);
     final shortcutActions = registry.shortcutActions;
     final descriptions = registry.descriptions;
 

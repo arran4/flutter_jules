@@ -92,7 +92,8 @@ class BulkActionStep {
   Map<String, dynamic> toJson() => {'type': type.index, 'message': message};
 
   factory BulkActionStep.fromJson(Map<String, dynamic> json) => BulkActionStep(
-        type: BulkActionType.values[getNumberPropOrThrow(json, 'type').toInt()],
+        type: BulkActionType
+            .values[(getNumberPropOrThrow(json, 'type') as num).toInt()],
         message: getStringPropOrDefault(json, 'message', null),
       );
 }

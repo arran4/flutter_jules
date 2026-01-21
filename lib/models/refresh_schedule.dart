@@ -37,19 +37,19 @@ class RefreshSchedule {
       id: getStringPropOrDefault(json, 'id', null),
       name: getStringPropOrThrow(json, 'name'),
       intervalInMinutes:
-          getNumberPropOrThrow(json, 'intervalInMinutes').toInt(),
+          (getNumberPropOrThrow(json, 'intervalInMinutes') as num).toInt(),
       isEnabled: getBooleanPropOrDefault(json, 'isEnabled', true),
-      taskType: RefreshTaskType.values[
-          getNumberPropOrDefault(json, 'taskType', RefreshTaskType.refresh.index)
-              .toInt()],
+      taskType: RefreshTaskType.values[getNumberPropOrDefault(
+              json, 'taskType', RefreshTaskType.refresh.index)
+          .toInt()],
       refreshPolicy: refreshPolicyIndex != null
           ? ListRefreshPolicy.values[refreshPolicyIndex]
           : null,
       sendMessagesMode: sendMessagesModeIndex != null
           ? SendMessagesMode.values[sendMessagesModeIndex]
           : null,
-      lastRun: getStringPropOrDefault(json, 'lastRun', null) != null
-          ? DateTime.tryParse(getStringPropOrThrow(json, 'lastRun'))
+      lastRun: json['lastRun'] != null
+          ? DateTime.tryParse(json['lastRun'] as String)
           : null,
     );
   }

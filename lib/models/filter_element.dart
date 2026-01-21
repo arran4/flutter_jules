@@ -386,7 +386,8 @@ class NotElement extends FilterElement {
 
   factory NotElement.fromJson(Map<String, dynamic> json) {
     return NotElement(
-      getObjectFunctionPropOrDefault(json, 'child', FilterElement.fromJson, null)!,
+      getObjectFunctionPropOrDefault(
+          json, 'child', FilterElement.fromJson, null)!,
     );
   }
 }
@@ -422,7 +423,8 @@ class DisabledElement extends FilterElement {
 
   factory DisabledElement.fromJson(Map<String, dynamic> json) {
     return DisabledElement(
-      getObjectFunctionPropOrDefault(json, 'child', FilterElement.fromJson, null)!,
+      getObjectFunctionPropOrDefault(
+          json, 'child', FilterElement.fromJson, null)!,
     );
   }
 }

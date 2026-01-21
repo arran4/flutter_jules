@@ -348,14 +348,13 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     try {
       // Add timeout to prevent indefinite hanging
-      await Future.any([
-        _performFetchActivities(force: force, shallow: shallow),
-        Future.delayed(const Duration(seconds: 30)).then((_) {
-          throw Exception(
-            'Request timed out after 30 seconds. Please check your connection and try again.',
-          );
-        }),
-      ]);
+      // Add timeout to prevent indefinite hanging
+      await _performFetchActivities(force: force, shallow: shallow)
+          .timeout(const Duration(seconds: 30), onTimeout: () {
+        throw Exception(
+          'Request timed out after 30 seconds. Please check your connection and try again.',
+        );
+      });
     } catch (e) {
       if (shallow && _activities.isNotEmpty) {
         if (mounted) {
