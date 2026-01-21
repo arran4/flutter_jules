@@ -116,6 +116,12 @@ class _MyAppState extends State<MyApp> with WindowListener {
       _trayService = null;
       trayManager.destroy();
     }
+
+    if (settings.trayEnabled && settings.hideToTray) {
+      windowManager.setPreventClose(true);
+    } else {
+      windowManager.setPreventClose(false);
+    }
   }
 
   void _initTrayService() {
