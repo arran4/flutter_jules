@@ -533,7 +533,6 @@ class FilterElementWidget extends StatelessWidget {
       CheckedPopupMenuItem(
         value: 2,
         checked: element is! DisabledElement && !isParentDisabled,
-        enabled: !isParentDisabled,
         child: const Text("Enabled"),
       ),
     );
