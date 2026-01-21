@@ -178,6 +178,7 @@ class BulkActionExecutor extends ChangeNotifier {
           session = Session(
             id: sessionId,
             name: '', // Empty name might fail actions that require it
+            prompt: '',
             state: SessionState.STATE_UNSPECIFIED,
           );
         }
@@ -189,7 +190,7 @@ class BulkActionExecutor extends ChangeNotifier {
     _addLog("Undoing action for session...", false, sessionId);
 
     try {
-      await _executeStep(session!, step, authToken);
+      await _executeStep(session, step, authToken);
     } catch (e) {
       _addLog("Failed to undo: $e", true, sessionId);
     }
