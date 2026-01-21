@@ -161,7 +161,16 @@ class NotificationService {
       }
 
       if (_notificationQueue.isNotEmpty) {
-        await Future.delayed(_notificationDelay);
+        if (_lastShownTime != null) {
+          final elapsed = DateTime.now().difference(_lastShownTime!);
+          final remaining = _notificationDelay - elapsed;
+          if (remaining > Duration.zero) {
+            await Future.delayed(remaining);
+          }
+        } else {
+          // If we haven't shown any yet (or failed), use default delay to be safe
+          await Future.delayed(_notificationDelay);
+        }
       }
     }
 
