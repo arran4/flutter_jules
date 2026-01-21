@@ -591,7 +591,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
         // Check if there is a pending creation request for this session in the queue
         // This heuristic matches how we identify pending sessions in the list
-        bool isPendingCreation = _session.name == 'new_session' ||
+        bool isTempId = !_session.name.startsWith('sessions/');
+        bool isPendingCreation = isTempId ||
+            _session.name == 'new_session' ||
             queueProvider.queue.any((m) =>
                 m.type == QueuedMessageType.sessionCreation &&
                 (m.sessionId == 'new_session' ||

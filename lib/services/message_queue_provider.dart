@@ -312,6 +312,13 @@ class MessageQueueProvider extends ChangeNotifier {
             throw Exception(
                 "Orphaned message for a new session. No creation request found.");
           }
+
+          // Check for temporary/invalid session IDs (numeric timestamps or missing prefix)
+          if (!msg.sessionId.startsWith('sessions/')) {
+            throw Exception(
+                "Invalid Session ID: ${msg.sessionId}. Pending session creation not found or failed.");
+          }
+
           await client.sendMessage(msg.sessionId, msg.content);
           _queue.removeWhere((m) => m.id == msg.id);
           onMessageSent?.call(msg.id);
