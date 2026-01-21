@@ -1,5 +1,6 @@
 import '../models/search_filter.dart';
 import '../models/filter_element.dart';
+import 'package:dartobjectutils/dartobjectutils.dart';
 
 enum BulkActionType {
   openPrInBrowser,
@@ -91,8 +92,8 @@ class BulkActionStep {
   Map<String, dynamic> toJson() => {'type': type.index, 'message': message};
 
   factory BulkActionStep.fromJson(Map<String, dynamic> json) => BulkActionStep(
-        type: BulkActionType.values[json['type']],
-        message: json['message'],
+        type: BulkActionType.values[getNumberPropOrThrow(json, 'type').toInt()],
+        message: getStringPropOrDefault(json, 'message', null),
       );
 }
 

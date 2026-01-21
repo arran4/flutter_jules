@@ -1,3 +1,5 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
+
 enum TimeFilterField { created, updated }
 
 enum TimeFilterType { newerThan, olderThan, between, inRange }
@@ -18,24 +20,29 @@ class TimeFilter {
   });
 
   factory TimeFilter.fromJson(Map<String, dynamic> json) {
-    String? range = json['range'];
+    String? range = getStringPropOrDefault(json, 'range', null);
     if (json.containsKey('value') && json.containsKey('unit')) {
       // This is the old format. Convert it to a relative time string.
-      final unit = (json['unit'] as String).replaceAll('s', '');
-      range = 'last ${json['value']} $unit';
+      final unit = getStringPropOrThrow(json, 'unit').replaceAll('s', '');
+      final value = json['value'];
+      range = 'last $value $unit';
     }
 
+    final specificTimeStr = getStringPropOrDefault(json, 'specificTime', null);
+    final specificTimeEndStr =
+        getStringPropOrDefault(json, 'specificTimeEnd', null);
+    final fieldStr = getStringPropOrDefault(json, 'field', null);
+
     return TimeFilter(
-      type: TimeFilterType.values.byName(json['type']),
-      specificTime: json['specificTime'] != null
-          ? DateTime.parse(json['specificTime'])
-          : null,
-      specificTimeEnd: json['specificTimeEnd'] != null
-          ? DateTime.parse(json['specificTimeEnd'])
+      type: TimeFilterType.values.byName(getStringPropOrThrow(json, 'type')),
+      specificTime:
+          specificTimeStr != null ? DateTime.parse(specificTimeStr) : null,
+      specificTimeEnd: specificTimeEndStr != null
+          ? DateTime.parse(specificTimeEndStr)
           : null,
       range: range,
-      field: json['field'] != null
-          ? TimeFilterField.values.byName(json['field'])
+      field: fieldStr != null
+          ? TimeFilterField.values.byName(fieldStr)
           : TimeFilterField.updated,
     );
   }

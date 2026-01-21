@@ -131,7 +131,8 @@ class GitHubRepo {
       // Enriched fields
       repoName: getStringPropOrDefault(json, 'repoName', null),
       repoId: getNumberPropOrDefault<num?>(json, 'repoId', null)?.toInt(),
-      isPrivateGithub: json['isPrivateGithub'] as bool?,
+      isPrivateGithub:
+          getBooleanPropOrDefault<bool?>(json, 'isPrivateGithub', null),
       description: getStringPropOrDefault(json, 'description', null),
       primaryLanguage: getStringPropOrDefault(json, 'primaryLanguage', null),
       license: getStringPropOrDefault(json, 'license', null),
@@ -140,7 +141,7 @@ class GitHubRepo {
         'openIssuesCount',
         null,
       )?.toInt(),
-      isFork: json['isFork'] as bool?,
+      isFork: getBooleanPropOrDefault<bool?>(json, 'isFork', null),
       forkParent: getStringPropOrDefault(json, 'forkParent', null),
       htmlUrl: getStringPropOrDefault(json, 'html_url', null),
     );

@@ -1,3 +1,4 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
 import 'search_filter.dart';
 import 'filter_element.dart';
 import 'filter_expression_parser.dart';
@@ -22,12 +23,12 @@ class FilterBookmark {
   }
 
   factory FilterBookmark.fromJson(Map<String, dynamic> json) {
-    String expression = '';
+    String expression = getStringPropOrDefault(json, 'expression', '');
 
     // Support new 'expression' key
-    if (json.containsKey('expression')) {
-      expression = json['expression'] as String;
-    } else if (json.containsKey('filterTree') && json['filterTree'] != null) {
+    if (expression.isEmpty &&
+        json.containsKey('filterTree') &&
+        json['filterTree'] != null) {
       // Temporary backward compatibility during migration if json is still on disk
       try {
         final tree = FilterElement.fromJson(
@@ -37,25 +38,16 @@ class FilterBookmark {
       } catch (_) {}
     }
 
-    // Parse sorts
-    final sortsList = json['sorts'] as List<dynamic>? ?? [];
-    final parsedSorts = sortsList
-        .map((s) {
-          try {
-            return _sortOptionFromJson(s as Map<String, dynamic>);
-          } catch (e) {
-            return null;
-          }
-        })
-        .where((s) => s != null)
-        .cast<SortOption>()
-        .toList();
-
     return FilterBookmark(
-      name: json['name'] as String,
-      description: json['description'] as String?,
+      name: getStringPropOrThrow(json, 'name'),
+      description: getStringPropOrDefault(json, 'description', null),
       expression: expression,
-      sorts: parsedSorts,
+      sorts: getObjectArrayPropOrDefaultFunction(
+        json,
+        'sorts',
+        _sortOptionFromJson,
+        () => [],
+      ),
     );
   }
 
@@ -89,10 +81,10 @@ Map<String, dynamic> _sortOptionToJson(SortOption option) {
 }
 
 SortOption _sortOptionFromJson(Map<String, dynamic> json) {
-  final fieldName = json['field'] as String;
+  final fieldName = getStringPropOrThrow(json, 'field');
   final field = SortField.values.firstWhere((e) => e.name == fieldName);
 
-  final directionName = json['direction'] as String;
+  final directionName = getStringPropOrThrow(json, 'direction');
   final direction = SortDirection.values.firstWhere(
     (e) => e.name == directionName,
   );
