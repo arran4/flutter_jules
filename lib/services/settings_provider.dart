@@ -572,15 +572,28 @@ class SettingsProvider extends ChangeNotifier {
   bool isExcluded(String userOrgRepo) {
     if (userOrgRepo.isEmpty) return false;
 
-    // Check for repo exclusion
-    if (_githubExclusions.any(
-        (e) => e.type == GithubExclusionType.repo && e.value == userOrgRepo)) {
-      return true;
+    final parts = userOrgRepo.split('/');
+
+    // Check for PR exclusion
+    if (parts.length == 3) {
+      if (_githubExclusions.any((e) =>
+          e.type == GithubExclusionType.pullRequest &&
+          e.value == userOrgRepo)) {
+        return true;
+      }
     }
 
-    // Check for org exclusion
-    final parts = userOrgRepo.split('/');
-    if (parts.length == 2) {
+    // Check for Repo exclusion
+    if (parts.length >= 2) {
+      final repo = '${parts[0]}/${parts[1]}';
+      if (_githubExclusions.any(
+          (e) => e.type == GithubExclusionType.repo && e.value == repo)) {
+        return true;
+      }
+    }
+
+    // Check for Org exclusion
+    if (parts.isNotEmpty) {
       final org = parts[0];
       if (_githubExclusions
           .any((e) => e.type == GithubExclusionType.org && e.value == org)) {

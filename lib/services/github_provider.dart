@@ -1,11 +1,13 @@
 import 'dart:convert';
 import 'dart:async';
+import 'dart:io';
 import 'package:flutter/material.dart';
 
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 
 import 'auth_service.dart';
+import 'cache_service.dart';
 import 'settings_provider.dart';
 import '../models/github_exclusion.dart';
 
@@ -21,6 +23,7 @@ class GithubApiException implements Exception {
 
 class GithubProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
+  final CacheService _cacheService;
   final AuthService _authService = AuthService();
 
   String? _githubToken;
@@ -54,7 +57,7 @@ class GithubProvider extends ChangeNotifier {
   bool get hasBadCredentials => _hasBadCredentials;
   String? get authError => _authError;
 
-  GithubProvider(this._settingsProvider) {
+  GithubProvider(this._settingsProvider, this._cacheService) {
     _loadToken();
   }
 
@@ -115,7 +118,35 @@ class GithubProvider extends ChangeNotifier {
     return membershipResponse.statusCode == 200;
   }
 
-  Future<void> _analyzeFailure(String? owner, String? repo) async {
+  Future<bool> _checkRepoAccess(String owner, String repo) async {
+    final token = apiKey;
+    if (token == null) return false;
+    final response = await http.get(
+      Uri.parse('https://api.github.com/repos/$owner/$repo'),
+      headers: {
+        'Authorization': 'token $token',
+        'Accept': 'application/vnd.github.v3+json',
+      },
+    );
+    return response.statusCode == 200;
+  }
+
+  Future<void> _logFailure(String jobId, String message) async {
+    try {
+      final file = await _cacheService.getGithubFailuresLogFile(apiKey ?? '');
+      final entry = '${DateTime.now().toIso8601String()} [$jobId] $message\n';
+      await file.writeAsString(entry, mode: FileMode.append);
+    } catch (e) {
+      debugPrint('Failed to log failure: $e');
+    }
+  }
+
+  Future<void> _analyzeFailure(
+    String? owner,
+    String? repo,
+    String? prNumber,
+    String? jobId,
+  ) async {
     if (_hasBadCredentials) return;
 
     final userOk = await _checkUserAccess();
@@ -154,14 +185,34 @@ class GithubProvider extends ChangeNotifier {
           return;
         }
 
-        // User OK, Org OK -> Must be Repo failure
+        // User OK, Org OK
         if (repo != null) {
-          await _settingsProvider.addGithubExclusion(GithubExclusion(
-            type: GithubExclusionType.repo,
-            value: '$owner/$repo',
-            reason: 'PAT access request failed for Repo.',
-            date: DateTime.now(),
-          ));
+          final repoOk = await _checkRepoAccess(owner, repo);
+          if (!repoOk) {
+            // Repo failure -> Disable Repo
+            await _settingsProvider.addGithubExclusion(GithubExclusion(
+              type: GithubExclusionType.repo,
+              value: '$owner/$repo',
+              reason: 'PAT access request failed for Repo.',
+              date: DateTime.now(),
+            ));
+            return;
+          }
+
+          // Repo OK -> Must be PR failure
+          if (prNumber != null) {
+            await _settingsProvider.addGithubExclusion(GithubExclusion(
+              type: GithubExclusionType.pullRequest,
+              value: '$owner/$repo/$prNumber',
+              reason: 'PAT access request failed for PR.',
+              date: DateTime.now(),
+            ));
+
+            if (jobId != null) {
+              await _logFailure(jobId,
+                  'GitHub Unauthorized/Error: 404 for PR $owner/$repo/$prNumber');
+            }
+          }
         }
       }
     }
@@ -190,10 +241,15 @@ class GithubProvider extends ChangeNotifier {
     return null;
   }
 
-  Future<void> _handleUnauthorized(String body,
-      {String? owner, String? repo}) async {
+  Future<void> _handleUnauthorized(
+    String body, {
+    String? owner,
+    String? repo,
+    String? prNumber,
+    String? jobId,
+  }) async {
     // Start analysis to determine granularity of failure
-    await _analyzeFailure(owner, repo);
+    await _analyzeFailure(owner, repo, prNumber, jobId);
   }
 
   void _cancelAllPendingJobs() {
@@ -252,7 +308,13 @@ class GithubProvider extends ChangeNotifier {
             response.statusCode == 404) {
           _warningCount++;
           // 404 on private repo acts like auth failure often
-          await _handleUnauthorized(response.body, owner: owner, repo: repo);
+          await _handleUnauthorized(
+            response.body,
+            owner: owner,
+            repo: repo,
+            prNumber: prNumber,
+            jobId: job.id,
+          );
           debugPrint(
               'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
           return null;
@@ -294,7 +356,13 @@ class GithubProvider extends ChangeNotifier {
         response.statusCode == 403 ||
         response.statusCode == 404) {
       _warningCount++;
-      await _handleUnauthorized(response.body, owner: owner, repo: repo);
+      await _handleUnauthorized(
+        response.body,
+        owner: owner,
+        repo: repo,
+        prNumber: prNumber,
+        jobId: 'diff_${owner}_${repo}_$prNumber',
+      );
     } else {
       _warningCount++;
     }
@@ -320,7 +388,13 @@ class GithubProvider extends ChangeNotifier {
         response.statusCode == 403 ||
         response.statusCode == 404) {
       _warningCount++;
-      await _handleUnauthorized(response.body, owner: owner, repo: repo);
+      await _handleUnauthorized(
+        response.body,
+        owner: owner,
+        repo: repo,
+        prNumber: prNumber,
+        jobId: 'patch_${owner}_${repo}_$prNumber',
+      );
     } else {
       _warningCount++;
     }
@@ -359,7 +433,13 @@ class GithubProvider extends ChangeNotifier {
             prResponse.statusCode == 403 ||
             prResponse.statusCode == 404) {
           _warningCount++;
-          await _handleUnauthorized(prResponse.body, owner: owner, repo: repo);
+          await _handleUnauthorized(
+            prResponse.body,
+            owner: owner,
+            repo: repo,
+            prNumber: prNumber,
+            jobId: job.id,
+          );
           return 'Unknown';
         }
 
@@ -392,8 +472,13 @@ class GithubProvider extends ChangeNotifier {
             checksResponse.statusCode == 403 ||
             checksResponse.statusCode == 404) {
           _warningCount++;
-          await _handleUnauthorized(checksResponse.body,
-              owner: owner, repo: repo);
+          await _handleUnauthorized(
+            checksResponse.body,
+            owner: owner,
+            repo: repo,
+            prNumber: prNumber,
+            jobId: job.id,
+          );
           return 'Unknown';
         }
 

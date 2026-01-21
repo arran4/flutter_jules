@@ -74,6 +74,11 @@ class CacheService {
     return File(path.join(dir.path, 'message_queue.json'));
   }
 
+  Future<File> getGithubFailuresLogFile(String token) async {
+    final dir = await _getCacheDirectory(token);
+    return File(path.join(dir.path, 'github_failures.log'));
+  }
+
   Future<void> saveSessions(
     String token,
     List<CachedItem<Session>> items,
