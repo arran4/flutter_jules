@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/shortcut_registry.dart';
@@ -25,7 +25,7 @@ class HelpDialog extends StatelessWidget {
       parts.add(keyLabel.toUpperCase());
       return parts.join(' + ');
     }
-    return activator.debugName ?? activator.toString();
+    return activator.toString();
   }
 
   @override

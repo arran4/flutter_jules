@@ -73,11 +73,14 @@ class _MyAppState extends State<MyApp> with WindowListener {
     // Register the global shortcuts here
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
+      // ignore: use_build_context_synchronously
       final shortcutRegistry =
           Provider.of<ShortcutRegistry>(context, listen: false);
 
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
+        if (!mounted) return;
         if (action == AppShortcutAction.showHelp) {
+          // ignore: use_build_context_synchronously
           final ctx = navigatorKey.currentContext ?? context;
           showDialog(
             context: ctx,

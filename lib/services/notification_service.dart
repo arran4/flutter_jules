@@ -156,7 +156,6 @@ class NotificationService {
       } catch (e) {
         // If showing fails, we just continue to the next one
         // In a real app we might want to log this
-        print('Error showing notification: $e');
       } finally {
         _currentNotification = null;
       }
