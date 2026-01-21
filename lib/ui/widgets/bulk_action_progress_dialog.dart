@@ -285,12 +285,34 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                       ),
                       const SizedBox(width: 8),
                       Expanded(
-                        child: Text(
-                          log.message,
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: log.isError ? Colors.red : Colors.black87,
-                          ),
+                        child: Row(
+                          children: [
+                            Expanded(
+                              child: Text(
+                                log.message,
+                                style: TextStyle(
+                                  fontSize: 11,
+                                  color:
+                                      log.isError ? Colors.red : Colors.black87,
+                                ),
+                              ),
+                            ),
+                            if (log.undoActionType != null)
+                              SizedBox(
+                                height: 20,
+                                child: TextButton(
+                                  onPressed: () => executor.undoLogEntry(log),
+                                  style: TextButton.styleFrom(
+                                    padding: EdgeInsets.zero,
+                                    visualDensity: VisualDensity.compact,
+                                  ),
+                                  child: const Text(
+                                    "Undo",
+                                    style: TextStyle(fontSize: 10),
+                                  ),
+                                ),
+                              ),
+                          ],
                         ),
                       ),
                     ],
