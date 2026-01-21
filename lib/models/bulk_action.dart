@@ -61,6 +61,25 @@ extension BulkActionTypeExtension on BulkActionType {
   bool get requiresMessage {
     return this == BulkActionType.quickReply || this == BulkActionType.sleep;
   }
+
+  BulkActionType? get undoAction {
+    switch (this) {
+      case BulkActionType.markAsRead:
+        return BulkActionType.markAsUnread;
+      case BulkActionType.markAsUnread:
+        return BulkActionType.markAsRead;
+      case BulkActionType.hide:
+        return BulkActionType.unhide;
+      case BulkActionType.unhide:
+        return BulkActionType.hide;
+      case BulkActionType.watchSession:
+        return BulkActionType.unwatchSession;
+      case BulkActionType.unwatchSession:
+        return BulkActionType.watchSession;
+      default:
+        return null;
+    }
+  }
 }
 
 class BulkActionStep {
@@ -114,11 +133,13 @@ class BulkLogEntry {
   final String message;
   final bool isError;
   final String? sessionId;
+  final BulkActionType? undoActionType;
 
   const BulkLogEntry({
     required this.message,
     required this.timestamp,
     this.isError = false,
     this.sessionId,
+    this.undoActionType,
   });
 }
