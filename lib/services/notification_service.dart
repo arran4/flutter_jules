@@ -1,10 +1,25 @@
 import 'dart:async';
+import 'dart:collection';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 enum NotificationAction {
   showTask,
   openPr,
   showNew,
+}
+
+class _QueuedNotification {
+  final String title;
+  final String body;
+  final String? payload;
+  final List<NotificationAction>? actions;
+
+  _QueuedNotification({
+    required this.title,
+    required this.body,
+    this.payload,
+    this.actions,
+  });
 }
 
 class NotificationService {
@@ -21,6 +36,15 @@ class NotificationService {
       FlutterLocalNotificationsPlugin();
   final StreamController<NotificationResponse> onNotificationResponse =
       StreamController<NotificationResponse>.broadcast();
+
+  final Queue<_QueuedNotification> _notificationQueue = Queue();
+  bool _isProcessing = false;
+  _QueuedNotification? _currentNotification;
+  _QueuedNotification? _lastShownNotification;
+  DateTime? _lastShownTime;
+
+  static const Duration _notificationDelay = Duration(milliseconds: 2500);
+  static const Duration _debounceTime = Duration(seconds: 5);
 
   Stream<NotificationResponse> get onNotificationResponseStream =>
       onNotificationResponse.stream;
@@ -84,7 +108,69 @@ class NotificationService {
     String? payload,
     List<NotificationAction>? actions,
   }) async {
-    final androidActions = actions?.map((action) {
+    // Debounce check against queue
+    final isDuplicateInQueue =
+        _notificationQueue.any((n) => n.title == title && n.body == body);
+    if (isDuplicateInQueue) return;
+
+    // Debounce check against currently processing
+    if (_currentNotification != null &&
+        _currentNotification!.title == title &&
+        _currentNotification!.body == body) {
+      return;
+    }
+
+    // Debounce check against last shown
+    if (_lastShownNotification != null &&
+        _lastShownNotification!.title == title &&
+        _lastShownNotification!.body == body &&
+        _lastShownTime != null &&
+        DateTime.now().difference(_lastShownTime!) < _debounceTime) {
+      return;
+    }
+
+    _notificationQueue.add(_QueuedNotification(
+      title: title,
+      body: body,
+      payload: payload,
+      actions: actions,
+    ));
+
+    if (!_isProcessing) {
+      // Don't await the processing, let it run in background
+      unawaited(_processQueue());
+    }
+  }
+
+  Future<void> _processQueue() async {
+    if (_isProcessing) return;
+    _isProcessing = true;
+
+    while (_notificationQueue.isNotEmpty) {
+      _currentNotification = _notificationQueue.removeFirst();
+
+      try {
+        await _show(_currentNotification!);
+        _lastShownNotification = _currentNotification;
+        _lastShownTime = DateTime.now();
+      } catch (e) {
+        // If showing fails, we just continue to the next one
+        // In a real app we might want to log this
+        print('Error showing notification: $e');
+      } finally {
+        _currentNotification = null;
+      }
+
+      if (_notificationQueue.isNotEmpty) {
+        await Future.delayed(_notificationDelay);
+      }
+    }
+
+    _isProcessing = false;
+  }
+
+  Future<void> _show(_QueuedNotification notification) async {
+    final androidActions = notification.actions?.map((action) {
       switch (action) {
         case NotificationAction.showTask:
           return const AndroidNotificationAction('show_task', 'Show Task');
@@ -106,7 +192,7 @@ class NotificationService {
       actions: androidActions,
     );
 
-    final linuxActions = actions?.map((action) {
+    final linuxActions = notification.actions?.map((action) {
       switch (action) {
         case NotificationAction.showTask:
           return const LinuxNotificationAction(
@@ -146,10 +232,10 @@ class NotificationService {
 
     await flutterLocalNotificationsPlugin.show(
       0,
-      title,
-      body,
+      notification.title,
+      notification.body,
       platformChannelSpecifics,
-      payload: payload,
+      payload: notification.payload,
     );
   }
 }
