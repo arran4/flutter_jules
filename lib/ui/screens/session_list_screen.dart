@@ -27,6 +27,7 @@ import '../widgets/metadata_viewer.dart';
 import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
+import '../../services/refresh_service.dart';
 import '../session_helpers.dart';
 import '../widgets/tag_management_dialog.dart';
 import '../widgets/note_dialog.dart';
@@ -276,6 +277,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
 
       if (mounted) {
+        // Notify RefreshService of manual run
+        Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+          RefreshTaskType.refresh,
+          refreshPolicy: (force && !shallow)
+              ? ListRefreshPolicy.full
+              : ListRefreshPolicy.quick,
+        );
+
         if (sessionProvider.error != null) {
           // Naive offline detection: if error occurs, assume offline?
           // Or just let user see error.
@@ -388,6 +397,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
               context,
               listen: false,
             ).refreshDirtySessions(client, authToken: auth.token!);
+            Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+              RefreshTaskType.refresh,
+              refreshPolicy: ListRefreshPolicy.dirty,
+            );
             break;
           case ListRefreshPolicy.watched:
             final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -395,6 +408,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
               context,
               listen: false,
             ).refreshWatchedSessions(client, authToken: auth.token!);
+            Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+              RefreshTaskType.refresh,
+              refreshPolicy: ListRefreshPolicy.watched,
+            );
             break;
           case ListRefreshPolicy.quick:
             _fetchSessions(force: true, shallow: true);
@@ -1857,6 +1874,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         auth.client,
                         authToken: auth.token!,
                       );
+                      Provider.of<RefreshService>(
+                        context,
+                        listen: false,
+                      ).notifyManualRun(
+                        RefreshTaskType.refresh,
+                        refreshPolicy: ListRefreshPolicy.dirty,
+                      );
                     } else if (value == 'open_by_id') {
                       _openSessionById();
                     } else if (value == 'github_status') {
@@ -2221,6 +2245,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                   auth.client,
                                                   authToken: auth.token!,
                                                 );
+                                                Provider.of<RefreshService>(
+                                                  context,
+                                                  listen: false,
+                                                ).notifyManualRun(
+                                                  RefreshTaskType.refresh,
+                                                  refreshPolicy:
+                                                      ListRefreshPolicy.dirty,
+                                                );
                                                 break;
                                               case ListRefreshPolicy.watched:
                                                 final auth =
@@ -2234,6 +2266,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 ).refreshWatchedSessions(
                                                   auth.client,
                                                   authToken: auth.token!,
+                                                );
+                                                Provider.of<RefreshService>(
+                                                  context,
+                                                  listen: false,
+                                                ).notifyManualRun(
+                                                  RefreshTaskType.refresh,
+                                                  refreshPolicy:
+                                                      ListRefreshPolicy.watched,
                                                 );
                                                 break;
                                               case ListRefreshPolicy.quick:

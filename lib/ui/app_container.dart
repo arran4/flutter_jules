@@ -83,6 +83,7 @@ class AppContainer extends StatelessWidget {
             context.read<NotificationService>(),
             context.read<MessageQueueProvider>(),
             context.read<ActivityProvider>(),
+            context.read<TimerService>(),
           ),
           update: (
             _,

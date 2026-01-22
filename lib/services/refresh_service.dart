@@ -12,6 +12,7 @@ import '../models/refresh_schedule.dart';
 import 'notification_service.dart';
 import '../models/enums.dart';
 import 'session_comparator.dart';
+import 'timer_service.dart';
 
 class RefreshService extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
@@ -21,9 +22,8 @@ class RefreshService extends ChangeNotifier {
   final NotificationService _notificationService;
   final MessageQueueProvider _messageQueueProvider;
   final ActivityProvider _activityProvider;
+  final TimerService _timerService;
   final SessionComparator _sessionComparator;
-
-  final Map<String, Timer> _timers = {};
 
   RefreshService(
     this._settingsProvider,
@@ -32,39 +32,73 @@ class RefreshService extends ChangeNotifier {
     this._authProvider,
     this._notificationService,
     this._messageQueueProvider,
-    this._activityProvider, {
+    this._activityProvider,
+    this._timerService, {
     @visibleForTesting SessionComparator? sessionComparator,
   }) : _sessionComparator = sessionComparator ??
             SessionComparator(_settingsProvider, _notificationService) {
-    _settingsProvider.addListener(_onSettingsChanged);
-    _initializeTimers();
+    _timerService.addListener(_onTick);
   }
 
   @override
   void dispose() {
-    _settingsProvider.removeListener(_onSettingsChanged);
-    _cancelAllTimers();
+    _timerService.removeListener(_onTick);
     super.dispose();
   }
 
-  void _onSettingsChanged() {
-    _cancelAllTimers();
-    _initializeTimers();
-  }
-
-  void _initializeTimers() {
-    for (final schedule in _settingsProvider.schedules) {
+  void _onTick() {
+    final now = DateTime.now();
+    final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
+    for (final schedule in schedules) {
       if (schedule.isEnabled) {
-        _startTimer(schedule);
+        if (schedule.lastRun == null ||
+            now.difference(schedule.lastRun!).inMinutes >=
+                schedule.intervalInMinutes) {
+          schedule.lastRun = now;
+          _settingsProvider.updateSchedule(schedule);
+          _executeSchedule(schedule);
+        }
       }
     }
   }
 
-  void _startTimer(RefreshSchedule schedule) {
-    _timers[schedule.id] = Timer.periodic(
-      Duration(minutes: schedule.intervalInMinutes),
-      (timer) => _executeSchedule(schedule),
-    );
+  void notifyManualRun(RefreshTaskType type,
+      {ListRefreshPolicy? refreshPolicy, SendMessagesMode? sendMessagesMode}) {
+    final now = DateTime.now();
+    // Create a copy of the list to avoid concurrent modification issues if updateSchedule modifies the list
+    final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
+    for (final schedule in schedules) {
+      if (!schedule.isEnabled) continue;
+      if (schedule.taskType != type) continue;
+
+      bool matches = false;
+      if (type == RefreshTaskType.refresh) {
+        if (refreshPolicy == ListRefreshPolicy.full) {
+          // Full satisfies Full and Quick
+          if (schedule.refreshPolicy == ListRefreshPolicy.full ||
+              schedule.refreshPolicy == ListRefreshPolicy.quick) {
+            matches = true;
+          }
+        } else if (refreshPolicy == schedule.refreshPolicy) {
+          matches = true;
+        }
+      } else if (type == RefreshTaskType.sendPendingMessages) {
+        if (sendMessagesMode == SendMessagesMode.sendAllUntilFailure) {
+          if (schedule.sendMessagesMode ==
+                  SendMessagesMode.sendAllUntilFailure ||
+              schedule.sendMessagesMode == SendMessagesMode.sendOne) {
+            matches = true;
+          }
+        } else if (sendMessagesMode == schedule.sendMessagesMode) {
+          matches = true;
+        }
+      }
+
+      if (matches) {
+        schedule.lastRun = now;
+        _settingsProvider.updateSchedule(schedule);
+      }
+    }
   }
 
   void _executeSchedule(RefreshSchedule schedule) async {
@@ -74,8 +108,6 @@ class RefreshService extends ChangeNotifier {
         'Executing schedule: ${schedule.name}',
       );
     }
-    schedule.lastRun = DateTime.now();
-    _settingsProvider.updateSchedule(schedule);
     final client = _authProvider.client;
     try {
       String summary = '';
@@ -179,12 +211,5 @@ class RefreshService extends ChangeNotifier {
       default:
         return;
     }
-  }
-
-  void _cancelAllTimers() {
-    for (final timer in _timers.values) {
-      timer.cancel();
-    }
-    _timers.clear();
   }
 }
