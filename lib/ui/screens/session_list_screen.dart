@@ -477,6 +477,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         isDraft: true,
                         reason: 'User saved as draft after auth error',
                       );
+                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Saved as draft")),
                       );
@@ -507,6 +508,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             );
           } else {
             // For bulk or background, just notify once? or rely on queue indicators.
+            ScaffoldMessenger.of(context).removeCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text("Authentication failed. Items queued.")),
@@ -532,6 +534,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   );
                   // Don't spam snackbars for bulk
                   if (sessionsToCreate.length == 1 && !isBackground) {
+                    ScaffoldMessenger.of(context).removeCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
@@ -552,6 +555,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     reason: 'service_unavailable',
                   );
                   if (sessionsToCreate.length == 1 && !isBackground) {
+                    ScaffoldMessenger.of(context).removeCurrentSnackBar();
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(
                         content: Text(
@@ -613,6 +617,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     onPressed: () {
                       Navigator.pop(dialogContext);
                       queueProvider.deleteMessage(msgId);
+                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Discarded")),
                       );
@@ -624,6 +629,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     onPressed: () {
                       Navigator.pop(dialogContext);
                       // Already pending/failed in queue
+                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Saved as Pending")),
                       );
@@ -639,6 +645,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         isDraft: true,
                         reason: 'User saved as draft',
                       );
+                      ScaffoldMessenger.of(context).removeCurrentSnackBar();
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Saved as Draft")),
                       );
@@ -657,6 +664,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               ),
             );
           } else {
+            ScaffoldMessenger.of(context).removeCurrentSnackBar();
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(content: Text("Session creation failed (queued)")),
             );
