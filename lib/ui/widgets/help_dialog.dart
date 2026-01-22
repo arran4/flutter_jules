@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
-import '../../services/shortcut_registry.dart';
+import '../../services/shortcut_registry.dart' as custom_shortcuts;
 
 class HelpDialog extends StatelessWidget {
   const HelpDialog({super.key});
@@ -25,12 +25,12 @@ class HelpDialog extends StatelessWidget {
       parts.add(keyLabel.toUpperCase());
       return parts.join(' + ');
     }
-    return activator.debugName ?? activator.toString();
+    return activator.toString();
   }
 
   @override
   Widget build(BuildContext context) {
-    final registry = Provider.of<ShortcutRegistry>(context);
+    final registry = Provider.of<custom_shortcuts.ShortcutRegistry>(context);
     final shortcutActions = registry.shortcutActions;
     final descriptions = registry.descriptions;
 

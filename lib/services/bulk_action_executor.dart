@@ -137,7 +137,8 @@ class BulkActionExecutor extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _addLog(String message, bool isError, [String? sessionId]) {
+  void _addLog(String message, bool isError,
+      [String? sessionId, BulkActionType? undoActionType]) {
     _logs.insert(
       0,
       BulkLogEntry(
@@ -145,10 +146,54 @@ class BulkActionExecutor extends ChangeNotifier {
         isError: isError,
         sessionId: sessionId,
         timestamp: DateTime.now(),
+        undoActionType: undoActionType,
       ),
     );
     if (_logs.length > 500) _logs.removeLast();
     notifyListeners();
+  }
+
+  Future<void> undoLogEntry(BulkLogEntry entry) async {
+    if (entry.undoActionType == null || entry.sessionId == null) return;
+
+    final sessionId = entry.sessionId!;
+    final authToken = authProvider.token;
+
+    // Find session or fallback
+    Session? session;
+    try {
+      final item = sessionProvider.items.firstWhere(
+        (i) => i.data.id == sessionId,
+      );
+      session = item.data;
+    } catch (_) {
+      // Try to find in internal lists
+      try {
+        session = _completed.firstWhere((s) => s.id == sessionId);
+      } catch (_) {
+        try {
+          session = _queue.firstWhere((s) => s.id == sessionId);
+        } catch (_) {
+          // Fallback session object if not found anywhere (needed for executeStep signature)
+          session = Session(
+            id: sessionId,
+            name: '', // Empty name might fail actions that require it
+            prompt: '',
+            state: SessionState.STATE_UNSPECIFIED,
+          );
+        }
+      }
+    }
+
+    final step = BulkActionStep(type: entry.undoActionType!);
+
+    _addLog("Undoing action for session...", false, sessionId);
+
+    try {
+      await _executeStep(session, step, authToken);
+    } catch (e) {
+      _addLog("Failed to undo: $e", true, sessionId);
+    }
   }
 
   Future<void> _processNext() async {
@@ -273,25 +318,45 @@ class BulkActionExecutor extends ChangeNotifier {
       case BulkActionType.markAsRead:
         if (authToken != null) {
           await sessionProvider.markAsRead(session.id, authToken);
-          _addLog("Marked session as read.", false, session.id);
+          _addLog(
+            "Marked session as read.",
+            false,
+            session.id,
+            BulkActionType.markAsRead.undoAction,
+          );
         }
         break;
       case BulkActionType.markAsUnread:
         if (authToken != null) {
           await sessionProvider.markAsUnread(session.id, authToken);
-          _addLog("Marked session as unread.", false, session.id);
+          _addLog(
+            "Marked session as unread.",
+            false,
+            session.id,
+            BulkActionType.markAsUnread.undoAction,
+          );
         }
         break;
       case BulkActionType.hide:
         if (authToken != null) {
           await sessionProvider.toggleHidden(session.id, authToken);
-          _addLog("Toggled visibility to hidden.", false, session.id);
+          _addLog(
+            "Toggled visibility to hidden.",
+            false,
+            session.id,
+            BulkActionType.hide.undoAction,
+          );
         }
         break;
       case BulkActionType.unhide:
         if (authToken != null) {
           await sessionProvider.toggleHidden(session.id, authToken);
-          _addLog("Toggled visibility to unhidden.", false, session.id);
+          _addLog(
+            "Toggled visibility to unhidden.",
+            false,
+            session.id,
+            BulkActionType.unhide.undoAction,
+          );
         }
         break;
       case BulkActionType.refreshSession:
@@ -327,7 +392,12 @@ class BulkActionExecutor extends ChangeNotifier {
           );
           if (!item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
-            _addLog("Enabled watching for this session.", false, session.id);
+            _addLog(
+              "Enabled watching for this session.",
+              false,
+              session.id,
+              BulkActionType.watchSession.undoAction,
+            );
           } else {
             _addLog(
               "Session was already being watched. No action taken.",
@@ -346,7 +416,12 @@ class BulkActionExecutor extends ChangeNotifier {
           );
           if (item.metadata.isWatched) {
             await sessionProvider.toggleWatch(session.id, authToken);
-            _addLog("Disabled watching for this session.", false, session.id);
+            _addLog(
+              "Disabled watching for this session.",
+              false,
+              session.id,
+              BulkActionType.unwatchSession.undoAction,
+            );
           } else {
             _addLog(
               "Session was not being watched. No action taken.",

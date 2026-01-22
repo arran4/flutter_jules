@@ -3,6 +3,7 @@ import 'cache_metadata.dart';
 import 'time_filter.dart';
 import 'enums.dart';
 import '../utils/time_helper.dart';
+import 'package:dartobjectutils/dartobjectutils.dart';
 
 enum FilterElementType {
   and,
@@ -115,7 +116,7 @@ abstract class FilterElement {
 
   /// Factory method to create FilterElement from JSON
   static FilterElement fromJson(Map<String, dynamic> json) {
-    final type = json['type'] as String;
+    final type = getStringPropOrThrow(json, 'type');
     FilterElement element;
     switch (type) {
       case 'and':
@@ -213,11 +214,13 @@ class AndElement extends FilterElement {
 
   /// Factory to create from JSON
   factory AndElement.fromJson(Map<String, dynamic> json) {
-    final childrenJson = json['children'] as List<dynamic>;
     return AndElement(
-      childrenJson
-          .map((c) => FilterElement.fromJson(c as Map<String, dynamic>))
-          .toList(),
+      getObjectArrayPropOrDefaultFunction(
+        json,
+        'children',
+        FilterElement.fromJson,
+        () => [],
+      ),
     );
   }
 }
@@ -296,7 +299,12 @@ class TimeFilterElement extends FilterElement {
 
   factory TimeFilterElement.fromJson(Map<String, dynamic> json) {
     return TimeFilterElement(
-      TimeFilter.fromJson(json['timeFilter'] as Map<String, dynamic>),
+      getObjectFunctionPropOrDefault(
+        json,
+        'timeFilter',
+        TimeFilter.fromJson,
+        null,
+      )!,
     );
   }
 }
@@ -337,11 +345,13 @@ class OrElement extends FilterElement {
   }
 
   factory OrElement.fromJson(Map<String, dynamic> json) {
-    final childrenJson = json['children'] as List<dynamic>;
     return OrElement(
-      childrenJson
-          .map((c) => FilterElement.fromJson(c as Map<String, dynamic>))
-          .toList(),
+      getObjectArrayPropOrDefaultFunction(
+        json,
+        'children',
+        FilterElement.fromJson,
+        () => [],
+      ),
     );
   }
 }
@@ -376,7 +386,8 @@ class NotElement extends FilterElement {
 
   factory NotElement.fromJson(Map<String, dynamic> json) {
     return NotElement(
-      FilterElement.fromJson(json['child'] as Map<String, dynamic>),
+      getObjectFunctionPropOrDefault(
+          json, 'child', FilterElement.fromJson, null)!,
     );
   }
 }
@@ -412,7 +423,8 @@ class DisabledElement extends FilterElement {
 
   factory DisabledElement.fromJson(Map<String, dynamic> json) {
     return DisabledElement(
-      FilterElement.fromJson(json['child'] as Map<String, dynamic>),
+      getObjectFunctionPropOrDefault(
+          json, 'child', FilterElement.fromJson, null)!,
     );
   }
 }
@@ -458,7 +470,7 @@ class TextElement extends FilterElement {
   }
 
   factory TextElement.fromJson(Map<String, dynamic> json) {
-    return TextElement(json['text'] as String);
+    return TextElement(getStringPropOrThrow(json, 'text'));
   }
 }
 
@@ -496,7 +508,10 @@ class PrStatusElement extends FilterElement {
   }
 
   factory PrStatusElement.fromJson(Map<String, dynamic> json) {
-    return PrStatusElement(json['label'] as String, json['value'] as String);
+    return PrStatusElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -534,7 +549,10 @@ class CiStatusElement extends FilterElement {
   }
 
   factory CiStatusElement.fromJson(Map<String, dynamic> json) {
-    return CiStatusElement(json['label'] as String, json['value'] as String);
+    return CiStatusElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -653,7 +671,10 @@ class LabelElement extends FilterElement {
   }
 
   factory LabelElement.fromJson(Map<String, dynamic> json) {
-    return LabelElement(json['label'] as String, json['value'] as String);
+    return LabelElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -714,7 +735,10 @@ class StatusElement extends FilterElement {
   }
 
   factory StatusElement.fromJson(Map<String, dynamic> json) {
-    return StatusElement(json['label'] as String, json['value'] as String);
+    return StatusElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -754,7 +778,10 @@ class SourceElement extends FilterElement {
   }
 
   factory SourceElement.fromJson(Map<String, dynamic> json) {
-    return SourceElement(json['label'] as String, json['value'] as String);
+    return SourceElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -867,7 +894,10 @@ class BranchElement extends FilterElement {
   }
 
   factory BranchElement.fromJson(Map<String, dynamic> json) {
-    return BranchElement(json['label'] as String, json['value'] as String);
+    return BranchElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 
@@ -908,7 +938,10 @@ class TagElement extends FilterElement {
   }
 
   factory TagElement.fromJson(Map<String, dynamic> json) {
-    return TagElement(json['label'] as String, json['value'] as String);
+    return TagElement(
+      getStringPropOrThrow(json, 'label'),
+      getStringPropOrThrow(json, 'value'),
+    );
   }
 }
 

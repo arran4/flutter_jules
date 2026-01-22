@@ -39,16 +39,18 @@ class AppContainer extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthProvider()),
         ChangeNotifierProvider(create: (_) => DevModeProvider()),
         ChangeNotifierProvider(create: (_) => SettingsProvider()..init()),
-        ChangeNotifierProxyProvider<SettingsProvider, GithubProvider>(
-          create: (context) => GithubProvider(context.read<SettingsProvider>()),
-          update: (context, settings, github) => github!,
-        ),
-        ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
-        ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
         ProxyProvider<DevModeProvider, CacheService>(
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
+        ChangeNotifierProxyProvider2<SettingsProvider, CacheService,
+            GithubProvider>(
+          create: (context) => GithubProvider(
+              context.read<SettingsProvider>(), context.read<CacheService>()),
+          update: (context, settings, cache, github) => github!,
+        ),
+        ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
+        ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
         ChangeNotifierProxyProvider3<CacheService, GithubProvider,
             NotificationProvider, SessionProvider>(
           create: (_) => SessionProvider(),
@@ -83,6 +85,7 @@ class AppContainer extends StatelessWidget {
             context.read<NotificationService>(),
             context.read<MessageQueueProvider>(),
             context.read<ActivityProvider>(),
+            context.read<TimerService>(),
           ),
           update: (
             _,

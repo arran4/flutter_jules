@@ -77,17 +77,21 @@ class _MyAppState extends State<MyApp> with WindowListener {
           Provider.of<ShortcutRegistry>(context, listen: false);
 
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
+        if (!mounted) return;
         if (action == AppShortcutAction.showHelp) {
-          final ctx = navigatorKey.currentContext ?? context;
-          showDialog(
-            context: ctx,
-            builder: (context) => const HelpDialog(),
-          );
+          final ctx = navigatorKey.currentContext;
+          if (ctx != null) {
+            showDialog(
+              context: ctx, // ignore: use_build_context_synchronously
+              builder: (context) => const HelpDialog(),
+            );
+          }
         }
       });
 
       shortcutRegistry.register(Shortcut(
-          const SingleActivator(LogicalKeyboardKey.slash, control: true, shift: true),
+          const SingleActivator(LogicalKeyboardKey.slash,
+              control: true, shift: true),
           AppShortcutAction.showHelp,
           'Show Help'));
 
@@ -115,6 +119,12 @@ class _MyAppState extends State<MyApp> with WindowListener {
       _trayService?.dispose();
       _trayService = null;
       trayManager.destroy();
+    }
+
+    if (settings.trayEnabled && settings.hideToTray) {
+      windowManager.setPreventClose(true);
+    } else {
+      windowManager.setPreventClose(false);
     }
   }
 
@@ -174,7 +184,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
         child: Actions(
           actions: <Type, Action<Intent>>{
             GlobalActionIntent: CallbackAction<GlobalActionIntent>(
-              onInvoke: (GlobalActionIntent intent) => shortcutRegistry.dispatch(intent.action),
+              onInvoke: (GlobalActionIntent intent) =>
+                  shortcutRegistry.dispatch(intent.action),
             ),
           },
           child: GestureDetector(

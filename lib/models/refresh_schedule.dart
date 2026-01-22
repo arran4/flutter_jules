@@ -1,5 +1,6 @@
 import 'package:uuid/uuid.dart';
 import 'enums.dart';
+import 'package:dartobjectutils/dartobjectutils.dart';
 
 enum RefreshTaskType { refresh, sendPendingMessages }
 
@@ -27,20 +28,29 @@ class RefreshSchedule {
   }) : id = id ?? const Uuid().v4();
 
   factory RefreshSchedule.fromJson(Map<String, dynamic> json) {
+    final refreshPolicyIndex =
+        getNumberPropOrDefault<num?>(json, 'refreshPolicy', null)?.toInt();
+    final sendMessagesModeIndex =
+        getNumberPropOrDefault<num?>(json, 'sendMessagesMode', null)?.toInt();
+
     return RefreshSchedule(
-      id: json['id'],
-      name: json['name'],
-      intervalInMinutes: json['intervalInMinutes'],
-      isEnabled: json['isEnabled'],
-      taskType: RefreshTaskType.values[json['taskType']],
-      refreshPolicy: json['refreshPolicy'] != null
-          ? ListRefreshPolicy.values[json['refreshPolicy']]
+      id: getStringPropOrDefault(json, 'id', null),
+      name: getStringPropOrThrow(json, 'name'),
+      intervalInMinutes:
+          (getNumberPropOrThrow(json, 'intervalInMinutes') as num).toInt(),
+      isEnabled: getBooleanPropOrDefault(json, 'isEnabled', true),
+      taskType: RefreshTaskType.values[getNumberPropOrDefault(
+              json, 'taskType', RefreshTaskType.refresh.index)
+          .toInt()],
+      refreshPolicy: refreshPolicyIndex != null
+          ? ListRefreshPolicy.values[refreshPolicyIndex]
           : null,
-      sendMessagesMode: json['sendMessagesMode'] != null
-          ? SendMessagesMode.values[json['sendMessagesMode']]
+      sendMessagesMode: sendMessagesModeIndex != null
+          ? SendMessagesMode.values[sendMessagesModeIndex]
           : null,
-      lastRun:
-          json['lastRun'] != null ? DateTime.tryParse(json['lastRun']) : null,
+      lastRun: json['lastRun'] != null
+          ? DateTime.tryParse(json['lastRun'] as String)
+          : null,
     );
   }
 

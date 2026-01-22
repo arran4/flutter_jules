@@ -1,6 +1,9 @@
+import 'package:dartobjectutils/dartobjectutils.dart';
+
 enum GithubExclusionType {
   org,
   repo,
+  pullRequest,
 }
 
 class GithubExclusion {
@@ -26,12 +29,14 @@ class GithubExclusion {
   factory GithubExclusion.fromJson(Map<String, dynamic> json) {
     return GithubExclusion(
       type: GithubExclusionType.values.firstWhere(
-        (e) => e.toString().split('.').last == json['type'],
+        (e) =>
+            e.toString().split('.').last ==
+            getStringPropOrDefault(json, 'type', null),
         orElse: () => GithubExclusionType.repo,
       ),
-      value: json['value'] as String,
-      reason: json['reason'] as String,
-      date: DateTime.parse(json['date'] as String),
+      value: getStringPropOrThrow(json, 'value'),
+      reason: getStringPropOrThrow(json, 'reason'),
+      date: DateTime.parse(getStringPropOrThrow(json, 'date')),
     );
   }
 }
