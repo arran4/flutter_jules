@@ -11,3 +11,4 @@ export 'models/cache_metadata.dart';
 export 'models/filter_element.dart';
 export 'models/filter_element_builder.dart';
 export 'models/filter_bookmark.dart';
+export 'models/virtual_activity.dart';
