@@ -629,6 +629,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         await client.sendMessage(_session.name, message);
       });
 
+      if (pendingId != null && mounted) {
+        await sessionProvider.markMessageAsSent(
+          _session.id,
+          pendingId!,
+          auth.token!,
+        );
+      }
+
       if (_isCancelled) {
         // User cancelled, but it succeeded. Logic handled by potential earlier queueing if desired,
         // but here we just ignore success if we wanted to 'cancel'.
@@ -1351,22 +1359,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     final queuedMessages =
         queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
 
-    final queuedActivities = queuedMessages.map(
-      (m) => Activity(
-        name: "queued/${m.id}",
-        id: "queued-${m.id}",
-        createTime: m.createdAt.toIso8601String(),
-        userMessaged: UserMessaged(userMessage: m.content),
-        description: "Queued Message",
-        unmappedProps: {
-          'isQueued': true,
-          'queueReason': m.queueReason,
-          'processingErrors': m.processingErrors,
-          'metadata': m.metadata,
-        },
-      ),
-    );
-
     // Merge pending messages (Optimistic updates)
     final sessionProvider = Provider.of<SessionProvider>(context);
     final sessionItem = sessionProvider.items.firstWhere(
@@ -1381,44 +1373,48 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // If session is FAILED, pending messages are effectively failed/queued
     final isSessionFailed = _session.state == SessionState.FAILED;
 
-    final pendingActivities = pendingMessages.map((m) {
-      if (isSessionFailed) {
-        return Activity(
-          name: "pending/${m.id}",
-          id: "pending-${m.id}",
-          createTime: m.timestamp.toIso8601String(),
-          userMessaged: UserMessaged(userMessage: m.content),
-          description: "Sending Failed",
-          unmappedProps: {
-            'isQueued': true,
-            'queueReason': 'Session is in FAILED state',
-            'pendingId': m.id,
-          },
-        );
-      }
-      return Activity(
-        name: "pending/${m.id}",
-        id: "pending-${m.id}",
-        createTime: m.timestamp.toIso8601String(),
-        userMessaged: UserMessaged(userMessage: m.content),
-        description: "Sending...",
-        unmappedProps: {
-          'isPending': true,
-          'hasMismatch': m.hasMismatch,
-          'pendingId': m.id,
-        },
-      );
-    });
+    final virtualActivities = <VirtualActivity>[];
 
-    final allActivities = [
-      ..._activities,
-      ...queuedActivities,
-      ...pendingActivities,
-    ];
-    allActivities.sort(
-      (a, b) =>
-          DateTime.parse(a.createTime).compareTo(DateTime.parse(b.createTime)),
-    );
+    // Server activities
+    for (var a in _activities) {
+      virtualActivities.add(VirtualActivity.fromActivity(a));
+    }
+    // Queued
+    for (var m in queuedMessages) {
+      virtualActivities.add(VirtualActivity.fromQueued(m));
+    }
+    // Pending
+    for (var m in pendingMessages) {
+      if (isSessionFailed) {
+        // Special case: Session failed, treat pending as queued/failed
+        // Manually construct failed activity or queue object
+        // For now, let's just make a manual failed VirtualActivity logic
+        // But VirtualActivity.fromQueued expects QueuedMessage.
+        // Let's rely on fallback logic or just queue it properly?
+        // Actually, let's keep the manual Activity construction for this edge case
+        // since VirtualActivity doesn't strictly support "Pending but failed because session failed"
+        // without a QueuedMessage object.
+        // Or we can just pretend it's a queued message.
+        virtualActivities.add(
+          VirtualActivity.fromQueued(
+            QueuedMessage(
+              id: m.id,
+              sessionId: _session.id,
+              content: m.content,
+              createdAt: m.timestamp,
+              queueReason: 'Session is in FAILED state',
+              processingErrors: [],
+            ),
+          ),
+        );
+      } else {
+        virtualActivities.add(VirtualActivity.fromPending(m));
+      }
+    }
+
+    virtualActivities.sort((a, b) => a.timestamp.compareTo(b.timestamp));
+
+    final allActivities = virtualActivities.map((v) => v.toActivity()).toList();
 
     for (var activity in allActivities) {
       final info = ActivityDisplayInfo.fromActivity(activity);

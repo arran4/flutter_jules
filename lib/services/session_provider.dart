@@ -430,7 +430,9 @@ class SessionProvider extends ChangeNotifier {
         // Not matched. Check for mismatch/stale.
         // If we have newer activities than pending, and it's not matched -> Mismatch
         bool mismatch = pending.hasMismatch;
-        if (!mismatch && latestServerActivityTime != null) {
+        if (!mismatch &&
+            latestServerActivityTime != null &&
+            pending.status != PendingMessageStatus.sent) {
           if (latestServerActivityTime.isAfter(pending.timestamp)) {
             mismatch = true;
             changed = true;
@@ -622,6 +624,7 @@ class SessionProvider extends ChangeNotifier {
           id: pendingId,
           content: content,
           timestamp: DateTime.now(),
+          status: PendingMessageStatus.sending,
         ),
       );
 
@@ -664,6 +667,38 @@ class SessionProvider extends ChangeNotifier {
 
       if (_cacheService != null) {
         await _cacheService!.saveSessions(authToken, [newItem]);
+      }
+    }
+  }
+
+  Future<void> markMessageAsSent(
+    String sessionId,
+    String pendingId,
+    String authToken,
+  ) async {
+    final index = _items.indexWhere((item) => item.data.id == sessionId);
+    if (index != -1) {
+      final item = _items[index];
+      final newPending = List<PendingMessage>.from(
+        item.metadata.pendingMessages,
+      );
+      final pendingIndex = newPending.indexWhere((p) => p.id == pendingId);
+
+      if (pendingIndex != -1) {
+        newPending[pendingIndex] = newPending[pendingIndex].copyWith(
+          status: PendingMessageStatus.sent,
+        );
+
+        final newMetadata = item.metadata.copyWith(
+          pendingMessages: newPending,
+        );
+        final newItem = CachedItem(item.data, newMetadata);
+        _items[index] = newItem;
+        notifyListeners();
+
+        if (_cacheService != null) {
+          await _cacheService!.saveSessions(authToken, [newItem]);
+        }
       }
     }
   }
