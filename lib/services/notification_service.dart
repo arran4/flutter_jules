@@ -46,7 +46,6 @@ class NotificationService {
   SettingsProvider? settings;
 
   static const Duration _notificationDelay = Duration(milliseconds: 2500);
-  static const Duration _debounceTime = Duration(seconds: 5);
 
   Stream<NotificationResponse> get onNotificationResponseStream =>
       onNotificationResponse.stream;
@@ -127,9 +126,12 @@ class NotificationService {
       if (_lastShownNotification != null &&
           _lastShownNotification!.title == title &&
           _lastShownNotification!.body == body &&
-          _lastShownTime != null &&
-          DateTime.now().difference(_lastShownTime!) < _debounceTime) {
-        return;
+          _lastShownTime != null) {
+        final debounceDuration = Duration(
+            milliseconds: settings?.debounceDuration ?? 5000);
+        if (DateTime.now().difference(_lastShownTime!) < debounceDuration) {
+          return;
+        }
       }
     }
 
