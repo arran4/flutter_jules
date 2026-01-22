@@ -38,6 +38,7 @@ import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
 import '../../services/shortcut_registry.dart' as custom_shortcuts;
 import '../../models/app_shortcut_action.dart';
+import '../../utils/api_error_utils.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -537,56 +538,47 @@ class _SessionListScreenState extends State<SessionListScreen> {
         }
 
         if (!handled && e is JulesException && e.responseBody != null) {
-          try {
-            final body = jsonDecode(e.responseBody!);
-            if (body is Map && body.containsKey('error')) {
-              final error = body['error'];
-              if (error is Map) {
-                if (error['code'] == 429 ||
-                    error['status'] == 'RESOURCE_EXHAUSTED') {
-                  // Queue automatically
-                  Provider.of<MessageQueueProvider>(
-                    context,
-                    listen: false,
-                  ).addCreateSessionRequest(
-                    sessionToCreate,
-                    reason: 'resource_exhausted',
-                  );
-                  // Don't spam snackbars for bulk
-                  if (sessionsToCreate.length == 1) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "API Quota Exhausted. Session creation queued.",
-                        ),
-                      ),
-                    );
-                  }
-                  handled = true;
-                } else if (error['code'] == 503 ||
-                    error['status'] == 'UNAVAILABLE') {
-                  // Queue automatically
-                  Provider.of<MessageQueueProvider>(
-                    context,
-                    listen: false,
-                  ).addCreateSessionRequest(
-                    sessionToCreate,
-                    reason: 'service_unavailable',
-                  );
-                  if (sessionsToCreate.length == 1) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(
-                        content: Text(
-                          "Service Unavailable. Session creation queued.",
-                        ),
-                      ),
-                    );
-                  }
-                  handled = true;
-                }
+          final errorType = ApiErrorUtils.parseError(e.responseBody);
+          if (errorType != ApiErrorType.unknown) {
+            handled = true;
+            String reason = 'creation_failed';
+            String message = 'Session creation failed';
+
+            switch (errorType) {
+              case ApiErrorType.rateLimit:
+                reason = 'resource_exhausted';
+                message = 'API Rate Limit Exceeded. Session creation queued.';
+                break;
+              case ApiErrorType.dailyQuotaExceeded:
+                reason = 'resource_exhausted';
+                message =
+                    'Daily session quota exceeded. Session creation queued.';
+                break;
+              case ApiErrorType.serviceUnavailable:
+                reason = 'service_unavailable';
+                message = 'Service Unavailable. Session creation queued.';
+                break;
+              default:
+                handled = false;
+            }
+
+            if (handled) {
+              Provider.of<MessageQueueProvider>(
+                context,
+                listen: false,
+              ).addCreateSessionRequest(
+                sessionToCreate,
+                reason: reason,
+              );
+              if (sessionsToCreate.length == 1) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                  ),
+                );
               }
             }
-          } catch (_) {}
+          }
         }
 
         if (!handled) {
