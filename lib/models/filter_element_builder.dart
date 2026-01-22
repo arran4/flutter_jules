@@ -2,6 +2,14 @@ import 'filter_element.dart';
 import 'search_filter.dart';
 import 'time_filter.dart';
 
+class _EnableResult {
+  final FilterElement? element;
+  final bool unwrapped;
+  final bool found;
+
+  _EnableResult(this.element, this.unwrapped, this.found);
+}
+
 /// Builder class for intelligently constructing filter trees
 class FilterElementBuilder {
   /// Adds a new filter element to the tree using smart nesting rules
@@ -92,62 +100,106 @@ class FilterElementBuilder {
       FilterElement? root, FilterElement target) {
     if (root == null) return null;
 
-    // If target is already a DisabledElement, we want to unwrap it
-    if (target is DisabledElement) {
-      return replaceFilter(root, target, target.child);
+    final result = _attemptEnable(root, target);
+
+    if (result.found) {
+      if (result.unwrapped) {
+        return result.element;
+      } else {
+        // Found but not disabled (not unwrapped). So we disable it.
+        return replaceFilter(root, target, DisabledElement(target));
+      }
     }
 
-    // Check if target is wrapped by a DisabledElement in the tree (immediate parent)
-    final recursiveUnwrap = _removeImmediateDisabledParent(root, target);
-    if (recursiveUnwrap != null) {
-      return recursiveUnwrap;
-    }
-
-    // So if target is NOT disabled, we wrap it.
-    return replaceFilter(root, target, DisabledElement(target));
+    // Target not found in tree (should not happen if logic matches UI)
+    return root;
   }
 
-  /// Recursively walks filter tree. If it finds DisabledElement(target), replaces it with target.
-  /// Returns the new tree if found, or null if not found.
-  static FilterElement? _removeImmediateDisabledParent(
-      FilterElement root, FilterElement target) {
-    if (root is DisabledElement && root.child == target) {
-      return target;
+  static _EnableResult _attemptEnable(
+      FilterElement node, FilterElement target) {
+    // 1. Check current node
+    if (node == target) {
+      if (node is DisabledElement) {
+        return _EnableResult(node.child, true, true);
+      }
+      return _EnableResult(node, false, true);
     }
 
-    if (root is AndElement) {
-      final children = root.children;
-      for (int i = 0; i < children.length; i++) {
-        final res = _removeImmediateDisabledParent(children[i], target);
-        if (res != null) {
-          final newChildren = List<FilterElement>.from(children);
-          newChildren[i] = res;
-          return AndElement(newChildren);
+    // 2. Recurse children
+    if (node is AndElement) {
+      return _attemptEnableComposite(
+          node, node.children, (c) => AndElement(c), target);
+    } else if (node is OrElement) {
+      return _attemptEnableComposite(
+          node, node.children, (c) => OrElement(c), target);
+    } else if (node is NotElement) {
+      final res = _attemptEnable(node.child, target);
+      if (res.found) {
+        if (res.unwrapped) {
+          return _EnableResult(
+              res.element != null ? NotElement(res.element!) : null,
+              true,
+              true);
+        } else {
+          // Found deeper but not disabled yet.
+          return _EnableResult(
+              NotElement(res.element ?? node.child), false, true);
         }
       }
-    } else if (root is OrElement) {
-      final children = root.children;
-      for (int i = 0; i < children.length; i++) {
-        final res = _removeImmediateDisabledParent(children[i], target);
-        if (res != null) {
-          final newChildren = List<FilterElement>.from(children);
-          newChildren[i] = res;
-          return OrElement(newChildren);
+    } else if (node is DisabledElement) {
+      final res = _attemptEnable(node.child, target);
+      if (res.found) {
+        if (res.unwrapped) {
+          // Already unwrapped deeper. Just bubble up.
+          return _EnableResult(
+              res.element != null ? DisabledElement(res.element!) : null,
+              true,
+              true);
+        } else {
+          // Found deeper, but NOT unwrapped yet.
+          // This is the closest disabled ancestor! Unwrap it.
+          // node.child contains the target (it's res.element).
+          // We return res.element (the child tree) effectively removing 'node'.
+          return _EnableResult(res.element, true, true);
         }
-      }
-    } else if (root is NotElement) {
-      final res = _removeImmediateDisabledParent(root.child, target);
-      if (res != null) {
-        return NotElement(res);
-      }
-    } else if (root is DisabledElement) {
-      final res = _removeImmediateDisabledParent(root.child, target);
-      if (res != null) {
-        return DisabledElement(res);
       }
     }
 
-    return null;
+    // Not found
+    return _EnableResult(node, false, false);
+  }
+
+  static _EnableResult _attemptEnableComposite(
+      FilterElement node,
+      List<FilterElement> children,
+      FilterElement Function(List<FilterElement>) constructor,
+      FilterElement target) {
+    for (int i = 0; i < children.length; i++) {
+      final res = _attemptEnable(children[i], target);
+      if (res.found) {
+        // Found in this child.
+        if (res.unwrapped) {
+          // Child changed (unwrapped something). Reconstruct this node.
+          final newChildren = List<FilterElement>.from(children);
+          if (res.element != null) {
+            newChildren[i] = res.element!;
+          } else {
+            // If element became null, remove it.
+            newChildren.removeAt(i);
+          }
+          if (newChildren.isEmpty) return _EnableResult(null, true, true);
+          return _EnableResult(constructor(newChildren), true, true);
+        } else {
+          // Found but not unwrapped. Bubble up found signal.
+          final newChildren = List<FilterElement>.from(children);
+          if (res.element != null) {
+            newChildren[i] = res.element!;
+          }
+          return _EnableResult(constructor(newChildren), false, true);
+        }
+      }
+    }
+    return _EnableResult(node, false, false);
   }
 
   /// Toggle NOT wrapper on an element
@@ -249,22 +301,6 @@ class FilterElementBuilder {
   }
 
   static FilterElement _addToAndElement(
-    AndElement root,
-    FilterElement newElement,
-  ) {
-    // ... existing implementation
-    // Wait, I should probably copy the existing implementation to be safe since I'm targeting a large block or keep it separate?
-    // I can just include _addToAndElement as is if I target around it or reuse the logic.
-    // For simplicity, I'll just skip modifying _addToAndElement if I don't need to change it,
-    // but the regex replace might be tricky if I don't include enough context.
-    // Actually, I can target specific method bodies if I break it into chunks.
-    // But let's try to fit _isSameFilterType + _elementsEqual in one chunk.
-    // And fromFilterTokens + _collectTokens in another.
-    // This tool call handles _isSameFilterType and _elementsEqual.
-    return _addToAndElementInternal(root, newElement);
-  }
-
-  static FilterElement _addToAndElementInternal(
     AndElement root,
     FilterElement newElement,
   ) {
