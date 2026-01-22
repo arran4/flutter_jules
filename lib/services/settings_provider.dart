@@ -33,6 +33,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyUseCorpJulesUrl = 'use_corp_jules_url';
   static const String keyThemeType = 'theme_type';
   static const String keyThemeMode = 'theme_mode';
+  static const String keyEnableDebounce = 'enable_debounce';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -77,6 +78,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _useCorpJulesUrl = false;
   JulesThemeType _themeType = JulesThemeType.blue;
   ThemeMode _themeMode = ThemeMode.system;
+  bool _enableDebounce = true;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -110,6 +112,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get useCorpJulesUrl => _useCorpJulesUrl;
   JulesThemeType get themeType => _themeType;
   ThemeMode get themeMode => _themeMode;
+  bool get enableDebounce => _enableDebounce;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -189,6 +192,7 @@ class SettingsProvider extends ChangeNotifier {
       ThemeMode.values,
       ThemeMode.system,
     );
+    _enableDebounce = _prefs!.getBool(keyEnableDebounce) ?? true;
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -413,6 +417,12 @@ class SettingsProvider extends ChangeNotifier {
     _themeMode = value;
     notifyListeners();
     await _prefs?.setInt(keyThemeMode, value.index);
+  }
+
+  Future<void> setEnableDebounce(bool value) async {
+    _enableDebounce = value;
+    notifyListeners();
+    await _prefs?.setBool(keyEnableDebounce, value);
   }
 
   // Keybinding Setters

@@ -66,6 +66,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
     // Initialize services
     context.read<RefreshService>();
     final settings = context.read<SettingsProvider>();
+    NotificationService().settings = settings;
     if (settings.isInitialized) {
       _onSettingsChanged();
     }

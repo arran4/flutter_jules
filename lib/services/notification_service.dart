@@ -1,5 +1,6 @@
 import 'dart:async';
 import 'dart:collection';
+import 'package:flutter_jules/services/settings_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
 enum NotificationAction {
@@ -42,6 +43,7 @@ class NotificationService {
   _QueuedNotification? _currentNotification;
   _QueuedNotification? _lastShownNotification;
   DateTime? _lastShownTime;
+  SettingsProvider? settings;
 
   static const Duration _notificationDelay = Duration(milliseconds: 2500);
   static const Duration _debounceTime = Duration(seconds: 5);
@@ -108,25 +110,27 @@ class NotificationService {
     String? payload,
     List<NotificationAction>? actions,
   }) async {
-    // Debounce check against queue
-    final isDuplicateInQueue =
-        _notificationQueue.any((n) => n.title == title && n.body == body);
-    if (isDuplicateInQueue) return;
+    if (settings?.enableDebounce ?? true) {
+      // Debounce check against queue
+      final isDuplicateInQueue =
+          _notificationQueue.any((n) => n.title == title && n.body == body);
+      if (isDuplicateInQueue) return;
 
-    // Debounce check against currently processing
-    if (_currentNotification != null &&
-        _currentNotification!.title == title &&
-        _currentNotification!.body == body) {
-      return;
-    }
+      // Debounce check against currently processing
+      if (_currentNotification != null &&
+          _currentNotification!.title == title &&
+          _currentNotification!.body == body) {
+        return;
+      }
 
-    // Debounce check against last shown
-    if (_lastShownNotification != null &&
-        _lastShownNotification!.title == title &&
-        _lastShownNotification!.body == body &&
-        _lastShownTime != null &&
-        DateTime.now().difference(_lastShownTime!) < _debounceTime) {
-      return;
+      // Debounce check against last shown
+      if (_lastShownNotification != null &&
+          _lastShownNotification!.title == title &&
+          _lastShownNotification!.body == body &&
+          _lastShownTime != null &&
+          DateTime.now().difference(_lastShownTime!) < _debounceTime) {
+        return;
+      }
     }
 
     _notificationQueue.add(_QueuedNotification(
