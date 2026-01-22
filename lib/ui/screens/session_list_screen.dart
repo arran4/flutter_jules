@@ -380,7 +380,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
     final sessionsToCreate = result.sessions;
 
-    Future<void> performCreate(Session sessionToCreate) async {
+    Future<void> performCreate(Session sessionToCreate,
+        {bool isSilent = false}) async {
       try {
         final client = Provider.of<AuthProvider>(context, listen: false).client;
         await client.createSession(sessionToCreate);
@@ -442,7 +443,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             reason: 'auth_failed',
           );
 
-          if (sessionsToCreate.length == 1) {
+          if (!isSilent && sessionsToCreate.length == 1) {
             showDialog(
               context: context,
               builder: (context) => AlertDialog(
@@ -475,18 +476,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     onPressed: () {
                       Navigator.pop(context); // Close dialog
                       // Retry the operation
-                      // Remove the previous failed request from queue to avoid duplicates if retry succeeds
-                      // (Actually, performCreate will add a NEW request if it fails, so we should arguably
-                      // clean up the old one or just let performCreate handle it.
-                      // Since we are "Retrying", let's clear the specific failed one we just added?
-                      // Or better: The msgId we have is for the failure record.
-                      // If we retry and succeed, we probably want to delete this failure record.
-                      // If we retry and fail, we get a new failure record (and dialog).
-                      // So deleting the current failure record before retrying seems appropriate to avoid clutter,
-                      // OR we keep it until success.
-                      // Let's delete it for now as "Retry" implies handling this instance.
                       queueProvider.deleteMessage(msgId);
-                      performCreate(sessionToCreate);
+                      performCreate(sessionToCreate, isSilent: isSilent);
                     },
                     child: const Text('Retry'),
                   ),
@@ -529,7 +520,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               ),
             );
           } else {
-            // For bulk, just notify once? or rely on queue indicators.
+            // For bulk or silent, just notify once? or rely on queue indicators.
             ScaffoldMessenger.of(context).showSnackBar(
               const SnackBar(
                   content: Text("Authentication failed. Items queued.")),
@@ -570,7 +561,13 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 sessionToCreate,
                 reason: reason,
               );
-              if (sessionsToCreate.length == 1) {
+              if (!isSilent && sessionsToCreate.length == 1) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  SnackBar(
+                    content: Text(message),
+                  ),
+                );
+              } else if (isSilent) {
                 ScaffoldMessenger.of(context).showSnackBar(
                   SnackBar(
                     content: Text(message),
@@ -590,10 +587,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
           final msgId = queueProvider.addCreateSessionRequest(
             sessionToCreate,
-            reason: 'creation_failed',
+            reason: 'Creation failed: $e',
+            isDraft:
+                isSilent, // If silent, mark as draft (with error) to prevent loop
           );
 
-          if (sessionsToCreate.length == 1) {
+          if (!isSilent && sessionsToCreate.length == 1) {
             showDialog(
               context: context,
               builder: (dialogContext) => AlertDialog(
@@ -663,19 +662,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     onPressed: () {
                       Navigator.pop(dialogContext);
                       queueProvider.deleteMessage(msgId);
-                      performCreate(sessionToCreate);
+                      performCreate(sessionToCreate, isSilent: isSilent);
                     },
                     child: const Text('Try Again'),
                   ),
                 ],
               ),
             );
+          } else {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(content: Text("Session creation failed: $e")),
+            );
           }
         }
       }
     }
 
-    if (sessionsToCreate.length > 1) {
+    if (sessionsToCreate.length > 1 && !result.openNewDialog) {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -685,25 +688,31 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
     }
 
-    for (final session in sessionsToCreate) {
-      await performCreate(session);
-    }
-
-    if (sessionsToCreate.length > 1) {
-      // Final feedback
-      // We could check if any are queued and report.
-      // This check is a bit loose, but good enough for UI feedback
-      // Ideally performCreate would return status.
-    }
-
-    // If requested, open a new dialog immediately
     if (result.openNewDialog) {
-      // Use a short delay to allow the UI to settle before opening a new dialog
+      // Background execution
+      for (final session in sessionsToCreate) {
+        // Fire and forget, suppress dialogs
+        performCreate(session, isSilent: true);
+      }
+
+      // Immediately open new dialog
       Future.delayed(const Duration(milliseconds: 100), () {
         if (mounted) {
           _createSession();
         }
       });
+    } else {
+      // Blocking execution
+      for (final session in sessionsToCreate) {
+        await performCreate(session);
+      }
+    }
+
+    if (sessionsToCreate.length > 1 && !result.openNewDialog) {
+      // Final feedback
+      // We could check if any are queued and report.
+      // This check is a bit loose, but good enough for UI feedback
+      // Ideally performCreate would return status.
     }
   }
 
