@@ -3,6 +3,7 @@ import 'package:dartobjectutils/dartobjectutils.dart';
 enum GithubExclusionType {
   org,
   repo,
+  pullRequest,
 }
 
 class GithubExclusion {
