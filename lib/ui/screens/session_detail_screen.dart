@@ -590,19 +590,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
         // Check if there is a pending creation request for this session in the queue
         // This heuristic matches how we identify pending sessions in the list
-        bool isPendingCreation = false;
-
-        // Only check for pending creation if the session doesn't look like a real one yet.
-        // Established sessions have names like 'sessions/UUID'.
-        if (!_session.name.startsWith('sessions/')) {
-          isPendingCreation = _session.name == 'new_session' ||
-              queueProvider.queue.any((m) =>
-                  m.type == QueuedMessageType.sessionCreation &&
-                  (m.sessionId == 'new_session' ||
-                      (m.metadata != null &&
-                          Session.fromJson(m.metadata!).prompt ==
-                              _session.prompt))); // Rough match
-        }
+        bool isTempId = !_session.name.startsWith('sessions/');
+        bool isPendingCreation = isTempId ||
+            _session.name == 'new_session' ||
+            queueProvider.queue.any((m) =>
+                m.type == QueuedMessageType.sessionCreation &&
+                (m.sessionId == 'new_session' ||
+                    (m.metadata != null &&
+                        Session.fromJson(m.metadata!).prompt ==
+                            _session.prompt))); // Rough match
 
         if (isPendingCreation) {
           // Instead of sending a message, we should probably APPEND this message to the draft
