@@ -13,6 +13,7 @@ import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/enums.dart';
 import 'package:flutter_jules/services/message_queue_provider.dart';
 import 'package:flutter_jules/services/activity_provider.dart';
+import 'package:flutter_jules/services/timer_service.dart';
 import 'package:mockito/annotations.dart';
 import 'refresh_service_test.mocks.dart';
 
@@ -36,6 +37,7 @@ void main() {
   late MockNotificationService mockNotificationService;
   late MockActivityProvider mockActivityProvider;
   late MockMessageQueueProvider mockMessageQueueProvider;
+  late TimerService timerService;
 
   setUp(() {
     mockSettingsProvider = MockSettingsProvider();
@@ -45,6 +47,7 @@ void main() {
     mockNotificationService = MockNotificationService();
     mockActivityProvider = MockActivityProvider();
     mockMessageQueueProvider = MockMessageQueueProvider();
+    timerService = TimerService();
 
     when(mockAuthProvider.client).thenReturn(MockJulesClient());
     when(mockSettingsProvider.schedules).thenReturn([]);
@@ -58,6 +61,7 @@ void main() {
       mockNotificationService,
       mockMessageQueueProvider,
       mockActivityProvider,
+      timerService,
     );
   });
 
@@ -73,6 +77,8 @@ void main() {
 
     fakeAsync((async) {
       refreshService.dispose(); // Dispose the old service
+      timerService.dispose();
+      timerService = TimerService();
       refreshService = RefreshService(
         mockSettingsProvider,
         mockSessionProvider,
@@ -81,6 +87,7 @@ void main() {
         mockNotificationService,
         mockMessageQueueProvider,
         mockActivityProvider,
+        timerService,
       );
 
       // Should not have been called yet
@@ -106,6 +113,8 @@ void main() {
 
     fakeAsync((async) {
       refreshService.dispose(); // Dispose the old service
+      timerService.dispose();
+      timerService = TimerService();
       refreshService = RefreshService(
         mockSettingsProvider,
         mockSessionProvider,
@@ -114,6 +123,7 @@ void main() {
         mockNotificationService,
         mockMessageQueueProvider,
         mockActivityProvider,
+        timerService,
       );
 
       // Advance the timer by the interval

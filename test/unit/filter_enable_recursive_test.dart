@@ -46,19 +46,21 @@ void main() {
       expect(resOr.children[1], equals(b));
     });
 
-    test('Should unwrap closest disabled ancestor when target is the disabled element', () {
-       final a = TextElement('A');
-       final b = TextElement('B');
+    test(
+        'Should unwrap closest disabled ancestor when target is the disabled element',
+        () {
+      final a = TextElement('A');
+      final b = TextElement('B');
 
-       // Structure: DISABLED(AND(A, B))
-       // Target: The root DisabledElement
-       // Expected: AND(A, B)
+      // Structure: DISABLED(AND(A, B))
+      // Target: The root DisabledElement
+      // Expected: AND(A, B)
 
-       final and = AndElement([a, b]);
-       final root = DisabledElement(and);
+      final and = AndElement([a, b]);
+      final root = DisabledElement(and);
 
-       final result = FilterElementBuilder.toggleEnabled(root, root);
-       expect(result, isA<AndElement>());
+      final result = FilterElementBuilder.toggleEnabled(root, root);
+      expect(result, isA<AndElement>());
     });
 
     test('Should unwrap closest ancestor even if distant', () {

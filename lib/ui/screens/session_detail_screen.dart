@@ -583,22 +583,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         // If we are in "Pending Session" mode, _session.name might be 'new_session' or a queue ID
         // OR if the session state is technically valid but 404s, we need to handle that.
         // But first, explicit check for known pending states.
-        final queueProvider = Provider.of<MessageQueueProvider>(
-          context,
-          listen: false,
-        );
 
         // Check if there is a pending creation request for this session in the queue
         // This heuristic matches how we identify pending sessions in the list
         bool isTempId = !_session.name.startsWith('sessions/');
-        bool isPendingCreation = isTempId ||
-            _session.name == 'new_session' ||
-            queueProvider.queue.any((m) =>
-                m.type == QueuedMessageType.sessionCreation &&
-                (m.sessionId == 'new_session' ||
-                    (m.metadata != null &&
-                        Session.fromJson(m.metadata!).prompt ==
-                            _session.prompt))); // Rough match
+        bool isPendingCreation = isTempId || _session.name == 'new_session';
 
         if (isPendingCreation) {
           // Instead of sending a message, we should probably APPEND this message to the draft
@@ -628,7 +617,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (pendingId != null && mounted) {
         await sessionProvider.markMessageAsSent(
           _session.id,
-          pendingId!,
+          pendingId,
           auth.token!,
         );
       }

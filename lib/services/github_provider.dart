@@ -281,8 +281,9 @@ class GithubProvider extends ChangeNotifier {
     }
     if (_settingsProvider.isExcluded('$owner/$repo')) return null;
 
+    final jobId = 'pr_status_${owner}_${repo}_$prNumber';
     final job = GithubJob(
-      id: 'pr_status_${owner}_${repo}_$prNumber',
+      id: jobId,
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
         if (_hasBadCredentials) return null;
@@ -313,7 +314,7 @@ class GithubProvider extends ChangeNotifier {
             owner: owner,
             repo: repo,
             prNumber: prNumber,
-            jobId: job.id,
+            jobId: jobId,
           );
           debugPrint(
               'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
@@ -409,8 +410,9 @@ class GithubProvider extends ChangeNotifier {
     if (apiKey == null) return null;
     if (_hasBadCredentials) return 'Unknown';
 
+    final jobId = 'ci_status_${owner}_${repo}_$prNumber';
     final job = GithubJob(
-      id: 'ci_status_${owner}_${repo}_$prNumber',
+      id: jobId,
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
         if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
@@ -438,7 +440,7 @@ class GithubProvider extends ChangeNotifier {
             owner: owner,
             repo: repo,
             prNumber: prNumber,
-            jobId: job.id,
+            jobId: jobId,
           );
           return 'Unknown';
         }
@@ -477,7 +479,7 @@ class GithubProvider extends ChangeNotifier {
             owner: owner,
             repo: repo,
             prNumber: prNumber,
-            jobId: job.id,
+            jobId: jobId,
           );
           return 'Unknown';
         }

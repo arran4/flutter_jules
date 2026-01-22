@@ -1,6 +1,5 @@
-
 import 'dart:convert';
-import 'package:test/test.dart';
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/utils/api_error_utils.dart';
 
 void main() {
@@ -16,7 +15,8 @@ void main() {
       expect(ApiErrorUtils.parseError(json), ApiErrorType.rateLimit);
     });
 
-    test('Identifies new 400 FAILED_PRECONDITION error as dailyQuotaExceeded', () {
+    test('Identifies new 400 FAILED_PRECONDITION error as dailyQuotaExceeded',
+        () {
       final json = jsonEncode({
         "error": {
           "code": 400,

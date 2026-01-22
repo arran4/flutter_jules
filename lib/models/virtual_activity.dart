@@ -75,7 +75,9 @@ class VirtualActivity {
       id: "queued-${queued.id}",
       content: queued.content,
       timestamp: queued.createdAt,
-      status: queued.isDraft ? VirtualActivityStatus.draft : VirtualActivityStatus.failed,
+      status: queued.isDraft
+          ? VirtualActivityStatus.draft
+          : VirtualActivityStatus.failed,
       originalQueued: queued,
     );
   }
@@ -117,7 +119,8 @@ class VirtualActivity {
         break;
     }
 
-    if (originalPending?.hasMismatch == true && status != VirtualActivityStatus.sent) {
+    if (originalPending?.hasMismatch == true &&
+        status != VirtualActivityStatus.sent) {
       unmappedProps['hasMismatch'] = true;
     }
 

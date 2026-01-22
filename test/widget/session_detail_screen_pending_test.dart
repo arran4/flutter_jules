@@ -89,6 +89,18 @@ class MockSessionProvider extends Mock implements SessionProvider {
       {List<Activity>? activities, String? authToken}) {
     return Future.value();
   }
+
+  @override
+  Future<void> removePendingMessage(
+      String? sessionId, String? pendingId, String? authToken) {
+    return Future.value();
+  }
+
+  @override
+  Future<void> markMessageAsSent(
+      String? sessionId, String? pendingId, String? authToken) {
+    return Future.value();
+  }
 }
 
 class MockMessageQueueProvider extends Mock implements MessageQueueProvider {

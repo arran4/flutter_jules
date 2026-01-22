@@ -173,25 +173,6 @@ class _ActivityItemState extends State<ActivityItem> {
                               ),
                             ],
                           ),
-                        if (activity.unmappedProps['isSent'] == true)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.check,
-                                size: 14,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Sent",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
                         );
                       },
                     );

@@ -8,6 +8,7 @@ import 'package:flutter_jules/models/refresh_schedule.dart';
 import 'package:flutter_jules/models/enums.dart';
 
 import 'package:flutter_jules/services/exceptions.dart';
+import 'package:flutter_jules/services/timer_service.dart';
 
 import 'refresh_service_test.mocks.dart';
 
@@ -20,6 +21,7 @@ void main() {
   late MockNotificationService mockNotificationService;
   late MockActivityProvider mockActivityProvider;
   late MockMessageQueueProvider mockMessageQueueProvider;
+  late TimerService timerService;
 
   setUp(() {
     mockSettingsProvider = MockSettingsProvider();
@@ -29,6 +31,7 @@ void main() {
     mockNotificationService = MockNotificationService();
     mockActivityProvider = MockActivityProvider();
     mockMessageQueueProvider = MockMessageQueueProvider();
+    timerService = TimerService();
 
     when(mockSettingsProvider.schedules).thenReturn([]);
     when(mockSessionProvider.items).thenReturn([]);
@@ -44,6 +47,7 @@ void main() {
       mockNotificationService,
       mockMessageQueueProvider,
       mockActivityProvider,
+      timerService,
     );
   });
 
@@ -69,6 +73,8 @@ void main() {
 
     fakeAsync((async) {
       refreshService.dispose();
+      timerService.dispose();
+      timerService = TimerService();
       refreshService = RefreshService(
         mockSettingsProvider,
         mockSessionProvider,
@@ -77,6 +83,7 @@ void main() {
         mockNotificationService,
         mockMessageQueueProvider,
         mockActivityProvider,
+        timerService,
       );
 
       // Advance timer

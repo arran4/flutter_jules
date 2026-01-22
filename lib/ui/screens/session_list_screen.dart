@@ -13,6 +13,7 @@ import '../../services/dev_mode_provider.dart';
 import '../../services/timer_service.dart';
 
 import '../../models.dart';
+import '../../models/refresh_schedule.dart';
 import '../../services/github_provider.dart';
 import 'settings_screen.dart';
 import '../widgets/new_session_dialog.dart';

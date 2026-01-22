@@ -586,8 +586,8 @@ class SettingsProvider extends ChangeNotifier {
     // Check for Repo exclusion
     if (parts.length >= 2) {
       final repo = '${parts[0]}/${parts[1]}';
-      if (_githubExclusions.any(
-          (e) => e.type == GithubExclusionType.repo && e.value == repo)) {
+      if (_githubExclusions
+          .any((e) => e.type == GithubExclusionType.repo && e.value == repo)) {
         return true;
       }
     }

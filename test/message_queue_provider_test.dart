@@ -143,15 +143,15 @@ void main() {
     });
 
     test('sendQueue sends messages and removes them', () async {
-      provider.addMessage('session-1', 'Msg 1');
-      provider.addMessage('session-2', 'Msg 2');
+      provider.addMessage('sessions/session-1', 'Msg 1');
+      provider.addMessage('sessions/session-2', 'Msg 2');
 
       when(mockClient.sendMessage(any, any)).thenAnswer((_) => Future.value());
 
       await provider.sendQueue(mockClient);
 
-      verify(mockClient.sendMessage('session-1', 'Msg 1')).called(1);
-      verify(mockClient.sendMessage('session-2', 'Msg 2')).called(1);
+      verify(mockClient.sendMessage('sessions/session-1', 'Msg 1')).called(1);
+      verify(mockClient.sendMessage('sessions/session-2', 'Msg 2')).called(1);
       expect(provider.queue, isEmpty);
       verify(
         mockCacheService.saveMessageQueue(any, any),
@@ -159,18 +159,16 @@ void main() {
     });
 
     test('sendQueue stops on error', () async {
-      provider.addMessage('s1', 'Good');
-      provider.addMessage('s2', 'Bad');
-      provider.addMessage('s3', 'Pending');
-
-      // Ensure specific order by mocking 'addMessage' timestamps if needed,
-      // but here they are added in order so likely sorted by default (list order).
-      // Actually provider sorts by createdAt. sequential adds should be fine.
+      provider.addMessage('sessions/s1', 'Good');
+      provider.addMessage('sessions/s2', 'Bad');
+      provider.addMessage('sessions/s3', 'Pending');
 
       when(
-        mockClient.sendMessage('s1', 'Good'),
+        mockClient.sendMessage('sessions/s1', 'Good'),
       ).thenAnswer((_) => Future.value());
-      when(mockClient.sendMessage('s2', 'Bad')).thenThrow(Exception('Fail'));
+      when(mockClient.sendMessage('sessions/s2', 'Bad')).thenThrow(
+        Exception('Fail'),
+      );
 
       bool errorCalled = false;
       await provider.sendQueue(
@@ -180,9 +178,9 @@ void main() {
         },
       );
 
-      verify(mockClient.sendMessage('s1', 'Good')).called(1);
-      verify(mockClient.sendMessage('s2', 'Bad')).called(1);
-      verifyNever(mockClient.sendMessage('s3', any));
+      verify(mockClient.sendMessage('sessions/s1', 'Good')).called(1);
+      verify(mockClient.sendMessage('sessions/s2', 'Bad')).called(1);
+      verifyNever(mockClient.sendMessage('sessions/s3', any));
 
       expect(errorCalled, true);
       expect(provider.queue.length, 2); // s2 and s3 remain

@@ -1043,6 +1043,25 @@ class MockSessionProvider extends _i2.Mock implements _i14.SessionProvider {
       ) as _i5.Future<void>);
 
   @override
+  _i5.Future<void> markMessageAsSent(
+    String? sessionId,
+    String? pendingId,
+    String? authToken,
+  ) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #markMessageAsSent,
+          [
+            sessionId,
+            pendingId,
+            authToken,
+          ],
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
+
+  @override
   _i5.Future<void> markAsPendingUpdate(
     String? sessionId,
     String? authToken,
