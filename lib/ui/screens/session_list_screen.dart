@@ -2971,6 +2971,22 @@ class _SessionListScreenState extends State<SessionListScreen> {
           PopupMenuItem(
             child: const Row(
               children: [
+                Icon(Icons.open_in_new),
+                SizedBox(width: 8),
+                Text('Open & Mark Read'),
+              ],
+            ),
+            onTap: () async {
+              if (await launchUrl(Uri.parse(session.url!))) {
+                if (context.mounted) {
+                  _markAsRead(session);
+                }
+              }
+            },
+          ),
+          PopupMenuItem(
+            child: const Row(
+              children: [
                 Icon(Icons.link),
                 SizedBox(width: 8),
                 Text('Copy Session URL'),
