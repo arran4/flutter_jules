@@ -15,6 +15,7 @@ import '../../services/message_queue_provider.dart';
 import '../widgets/source_tile.dart';
 import '../../services/settings_provider.dart';
 import '../../services/timer_service.dart';
+import '../widgets/group_management_dialog.dart';
 
 class SourceListScreen extends StatefulWidget {
   const SourceListScreen({super.key});
@@ -355,6 +356,16 @@ class _SourceListScreenState extends State<SourceListScreen> {
                 icon: const Icon(Icons.refresh),
                 tooltip: 'Refresh',
                 onPressed: _refreshData,
+              ),
+              IconButton(
+                icon: const Icon(Icons.groups),
+                tooltip: 'Manage Groups',
+                onPressed: () {
+                  showDialog(
+                    context: context,
+                    builder: (context) => const GroupManagementDialog(),
+                  );
+                },
               ),
               IconButton(
                 icon: const Icon(Icons.settings),
