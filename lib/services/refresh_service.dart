@@ -68,33 +68,9 @@ class RefreshService extends ChangeNotifier {
     // Create a copy of the list to avoid concurrent modification issues if updateSchedule modifies the list
     final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
     for (final schedule in schedules) {
-      if (!schedule.isEnabled) continue;
-      if (schedule.taskType != type) continue;
-
-      bool matches = false;
-      if (type == RefreshTaskType.refresh) {
-        if (refreshPolicy == ListRefreshPolicy.full) {
-          // Full satisfies Full and Quick
-          if (schedule.refreshPolicy == ListRefreshPolicy.full ||
-              schedule.refreshPolicy == ListRefreshPolicy.quick) {
-            matches = true;
-          }
-        } else if (refreshPolicy == schedule.refreshPolicy) {
-          matches = true;
-        }
-      } else if (type == RefreshTaskType.sendPendingMessages) {
-        if (sendMessagesMode == SendMessagesMode.sendAllUntilFailure) {
-          if (schedule.sendMessagesMode ==
-                  SendMessagesMode.sendAllUntilFailure ||
-              schedule.sendMessagesMode == SendMessagesMode.sendOne) {
-            matches = true;
-          }
-        } else if (sendMessagesMode == schedule.sendMessagesMode) {
-          matches = true;
-        }
-      }
-
-      if (matches) {
+      if (_matchesManualRun(schedule, type,
+          refreshPolicy: refreshPolicy,
+          sendMessagesMode: sendMessagesMode)) {
         schedule.lastRun = now;
         _settingsProvider.updateSchedule(schedule);
       }
@@ -102,24 +78,56 @@ class RefreshService extends ChangeNotifier {
   }
 
   void _executeSchedule(RefreshSchedule schedule) async {
+    final handler = _scheduleHandlers[schedule.taskType];
+    if (handler == null) {
+      return;
+    }
+    final client = _authProvider.client;
+    await _runWithNotifications(
+        schedule, () => handler(schedule, client));
+  }
+
+  bool _matchesManualRun(
+    RefreshSchedule schedule,
+    RefreshTaskType type, {
+    ListRefreshPolicy? refreshPolicy,
+    SendMessagesMode? sendMessagesMode,
+  }) {
+    if (!schedule.isEnabled) return false;
+    if (schedule.taskType != type) return false;
+
+    if (type == RefreshTaskType.refresh) {
+      if (refreshPolicy == ListRefreshPolicy.full) {
+        return schedule.refreshPolicy == ListRefreshPolicy.full ||
+            schedule.refreshPolicy == ListRefreshPolicy.quick;
+      }
+      return refreshPolicy == schedule.refreshPolicy;
+    }
+
+    if (type == RefreshTaskType.sendPendingMessages) {
+      if (sendMessagesMode == SendMessagesMode.sendAllUntilFailure) {
+        return schedule.sendMessagesMode ==
+                SendMessagesMode.sendAllUntilFailure ||
+            schedule.sendMessagesMode == SendMessagesMode.sendOne;
+      }
+      return sendMessagesMode == schedule.sendMessagesMode;
+    }
+
+    return false;
+  }
+
+  Future<void> _runWithNotifications(
+    RefreshSchedule schedule,
+    Future<String> Function() task,
+  ) async {
     if (_settingsProvider.notifyOnRefreshStart) {
       _notificationService.showNotification(
         'Refresh Started',
         'Executing schedule: ${schedule.name}',
       );
     }
-    final client = _authProvider.client;
     try {
-      String summary = '';
-      switch (schedule.taskType) {
-        case RefreshTaskType.refresh:
-          summary = await _executeRefresh(schedule, client);
-          break;
-        case RefreshTaskType.sendPendingMessages:
-          await _executeSendPendingMessages(schedule, client);
-          summary = 'Sent pending messages.';
-          break;
-      }
+      final summary = await task();
       if (_settingsProvider.notifyOnRefreshComplete) {
         final actions = <NotificationAction>[];
         if (summary != 'No new updates.') {
@@ -146,6 +154,12 @@ class RefreshService extends ChangeNotifier {
       }
     }
   }
+
+  late final Map<RefreshTaskType,
+      Future<String> Function(RefreshSchedule, JulesClient)> _scheduleHandlers = {
+    RefreshTaskType.refresh: _executeRefresh,
+    RefreshTaskType.sendPendingMessages: _executeSendPendingMessages,
+  };
 
   Future<String> _executeRefresh(
       RefreshSchedule schedule, JulesClient client) async {
@@ -179,12 +193,12 @@ class RefreshService extends ChangeNotifier {
     return _sessionComparator.compare(oldSessions, newSessions);
   }
 
-  Future<void> _executeSendPendingMessages(
+  Future<String> _executeSendPendingMessages(
       RefreshSchedule schedule, JulesClient client) async {
     if (_messageQueueProvider.queue.isEmpty) {
       _activityProvider
           .addLog('No pending messages to send for schedule ${schedule.name}');
-      return;
+      return 'No pending messages.';
     }
 
     switch (schedule.sendMessagesMode) {
@@ -193,23 +207,25 @@ class RefreshService extends ChangeNotifier {
           await _messageQueueProvider.sendQueue(client, limit: 1);
           _activityProvider
               .addLog('Successfully sent one message for ${schedule.name}');
+          return 'Sent one pending message.';
         } catch (e) {
           _activityProvider
               .addLog('Failed to send message for ${schedule.name}: $e');
+          return 'Failed to send pending messages.';
         }
-        break;
       case SendMessagesMode.sendAllUntilFailure:
         try {
           await _messageQueueProvider.sendQueue(client);
           _activityProvider.addLog(
               'Successfully sent all pending messages for ${schedule.name}');
+          return 'Sent pending messages.';
         } catch (e) {
           _activityProvider.addLog(
               'Failed to send all pending messages for ${schedule.name}: $e');
+          return 'Failed to send pending messages.';
         }
-        break;
       default:
-        return;
+        return 'No pending messages.';
     }
   }
 }
