@@ -9,7 +9,7 @@ class SourceGroup {
   factory SourceGroup.fromJson(Map<String, dynamic> json) {
     return SourceGroup(
       name: getStringPropOrThrow(json, 'name'),
-      sourceNames: getStringListPropOrEmpty(json, 'sourceNames'),
+      sourceNames: getStringArrayPropOrDefault(json, 'sourceNames', <String>[]) ?? <String>[],
     );
   }
 
