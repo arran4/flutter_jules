@@ -21,6 +21,8 @@ class GithubApiException implements Exception {
   String toString() => 'GithubApiException: $statusCode $message';
 }
 
+enum AccessCheckResult { userOk, orgOk, repoOk, prOk, badCredentials }
+
 class GithubProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final CacheService _cacheService;
@@ -150,72 +152,95 @@ class GithubProvider extends ChangeNotifier {
     if (_hasBadCredentials) return;
 
     final userOk = await _checkUserAccess();
-    if (!userOk && owner != null) {
-      // User check failed. If there was an owner context, check owner/org too.
-      // But if user check fails, likely the TOP LEVEL PAT is bad.
-      // However, per requirements: "if both fail the full PAT is disabled"
-      // So we must check org too.
-
-      bool orgOk = false;
-      orgOk = await _checkOrgAccess(owner);
-
-      if (!orgOk) {
-        // Both failed -> Full PAT Disable
-        _markBadCredentials('Access check failed for User and Org ($owner).');
-      } else {
-        // User failed (odd), Org passed (maybe fine?).
-        // Technically if /user fails, PAT is usually invalid.
-        // But let's stick to strict interpretation or logical fallback.
-        // If /user fails, it's a scope/token validity issue generally.
-        // We'll mark bad credentials to safest.
-        _markBadCredentials('Access check failed for User.');
-      }
-    } else if (userOk) {
-      // User is OK.
-      if (owner != null) {
-        final orgOk = await _checkOrgAccess(owner);
-        if (!orgOk) {
-          // User OK, Org Failed -> Disable Org
-          await _settingsProvider.addGithubExclusion(GithubExclusion(
-            type: GithubExclusionType.org,
-            value: owner,
-            reason: 'PAT access request failed for Org.',
-            date: DateTime.now(),
-          ));
-          return;
-        }
-
-        // User OK, Org OK
-        if (repo != null) {
-          final repoOk = await _checkRepoAccess(owner, repo);
-          if (!repoOk) {
-            // Repo failure -> Disable Repo
-            await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.repo,
-              value: '$owner/$repo',
-              reason: 'PAT access request failed for Repo.',
-              date: DateTime.now(),
-            ));
-            return;
-          }
-
-          // Repo OK -> Must be PR failure
-          if (prNumber != null) {
-            await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.pullRequest,
-              value: '$owner/$repo/$prNumber',
-              reason: 'PAT access request failed for PR.',
-              date: DateTime.now(),
-            ));
-
-            if (jobId != null) {
-              await _logFailure(jobId,
-                  'GitHub Unauthorized/Error: 404 for PR $owner/$repo/$prNumber');
-            }
-          }
-        }
-      }
+    if (!userOk) {
+      await _handleUserFailure(owner);
+      return;
     }
+
+    if (owner == null) {
+      return;
+    }
+
+    final orgOk = await _checkOrgAccess(owner);
+    if (!orgOk) {
+      await _handleOrgFailure(owner);
+      return;
+    }
+
+    if (repo == null) {
+      return;
+    }
+
+    final repoOk = await _checkRepoAccess(owner, repo);
+    if (!repoOk) {
+      await _handleRepoFailure(owner, repo);
+      return;
+    }
+
+    if (prNumber == null) {
+      return;
+    }
+
+    await _handlePrFailure(owner, repo, prNumber, jobId);
+  }
+
+  Future<AccessCheckResult> _handleUserFailure(String? owner) async {
+    if (owner == null) {
+      _markBadCredentials('Access check failed for User.');
+      return AccessCheckResult.badCredentials;
+    }
+
+    final orgOk = await _checkOrgAccess(owner);
+    if (!orgOk) {
+      _markBadCredentials('Access check failed for User and Org ($owner).');
+      return AccessCheckResult.badCredentials;
+    }
+
+    _markBadCredentials('Access check failed for User.');
+    return AccessCheckResult.badCredentials;
+  }
+
+  Future<AccessCheckResult> _handleOrgFailure(String owner) async {
+    await _settingsProvider.addGithubExclusion(GithubExclusion(
+      type: GithubExclusionType.org,
+      value: owner,
+      reason: 'PAT access request failed for Org.',
+      date: DateTime.now(),
+    ));
+    return AccessCheckResult.userOk;
+  }
+
+  Future<AccessCheckResult> _handleRepoFailure(String owner, String repo) async {
+    await _settingsProvider.addGithubExclusion(GithubExclusion(
+      type: GithubExclusionType.repo,
+      value: '$owner/$repo',
+      reason: 'PAT access request failed for Repo.',
+      date: DateTime.now(),
+    ));
+    return AccessCheckResult.orgOk;
+  }
+
+  Future<AccessCheckResult> _handlePrFailure(
+    String owner,
+    String repo,
+    String prNumber,
+    String? jobId,
+  ) async {
+    await _settingsProvider.addGithubExclusion(GithubExclusion(
+      type: GithubExclusionType.pullRequest,
+      value: '$owner/$repo/$prNumber',
+      reason: 'PAT access request failed for PR.',
+      date: DateTime.now(),
+    ));
+
+    if (jobId != null) {
+      await _logFailure(
+        jobId,
+        'GitHub Unauthorized/Error: 404 for PR $owner/$repo/$prNumber',
+      );
+    }
+
+    return AccessCheckResult.repoOk;
   }
 
   void _markBadCredentials(String reason) {
