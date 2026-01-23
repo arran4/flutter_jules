@@ -1940,17 +1940,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ],
                         ),
                       ),
-                      if (_displayItems.isNotEmpty)
-                        const PopupMenuItem(
-                          value: 'bulk_actions',
-                          child: Row(
-                            children: [
-                              Icon(Icons.checklist),
-                              SizedBox(width: 8),
-                              Text('Bulk Actions...'),
-                            ],
-                          ),
+                      const PopupMenuItem(
+                        value: 'bulk_actions',
+                        child: Row(
+                          children: [
+                            Icon(Icons.checklist),
+                            SizedBox(width: 8),
+                            Text('Bulk Actions...'),
+                          ],
                         ),
+                      ),
                       const PopupMenuItem(
                         value: 'open_by_id',
                         child: Row(
