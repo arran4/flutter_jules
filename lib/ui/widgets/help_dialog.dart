@@ -1,4 +1,4 @@
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:flutter/services.dart';
 import 'package:provider/provider.dart';
 import '../../services/shortcut_registry.dart' as custom_shortcuts;

@@ -66,6 +66,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
     // Initialize services
     context.read<RefreshService>();
     final settings = context.read<SettingsProvider>();
+    NotificationService().settings = settings;
     if (settings.isInitialized) {
       _onSettingsChanged();
     }
@@ -73,8 +74,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
     // Register the global shortcuts here
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (!mounted) return;
-      final shortcutRegistry =
-          Provider.of<ShortcutRegistry>(context, listen: false);
+      final shortcutRegistry = context.read<ShortcutRegistry>();
 
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
         if (!mounted) return;

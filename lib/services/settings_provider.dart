@@ -33,6 +33,10 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyUseCorpJulesUrl = 'use_corp_jules_url';
   static const String keyThemeType = 'theme_type';
   static const String keyThemeMode = 'theme_mode';
+  static const String keyEnableNotificationDebounce =
+      'enable_notification_debounce';
+  static const String keyNotificationDebounceDuration =
+      'notification_debounce_duration';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -77,6 +81,8 @@ class SettingsProvider extends ChangeNotifier {
   bool _useCorpJulesUrl = false;
   JulesThemeType _themeType = JulesThemeType.blue;
   ThemeMode _themeMode = ThemeMode.system;
+  bool _enableNotificationDebounce = false;
+  int _notificationDebounceDuration = 5000;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -110,6 +116,8 @@ class SettingsProvider extends ChangeNotifier {
   bool get useCorpJulesUrl => _useCorpJulesUrl;
   JulesThemeType get themeType => _themeType;
   ThemeMode get themeMode => _themeMode;
+  bool get enableNotificationDebounce => _enableNotificationDebounce;
+  int get notificationDebounceDuration => _notificationDebounceDuration;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -189,6 +197,10 @@ class SettingsProvider extends ChangeNotifier {
       ThemeMode.values,
       ThemeMode.system,
     );
+    _enableNotificationDebounce =
+        _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
+    _notificationDebounceDuration =
+        _prefs!.getInt(keyNotificationDebounceDuration) ?? 5000;
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -413,6 +425,18 @@ class SettingsProvider extends ChangeNotifier {
     _themeMode = value;
     notifyListeners();
     await _prefs?.setInt(keyThemeMode, value.index);
+  }
+
+  Future<void> setEnableNotificationDebounce(bool value) async {
+    _enableNotificationDebounce = value;
+    notifyListeners();
+    await _prefs?.setBool(keyEnableNotificationDebounce, value);
+  }
+
+  Future<void> setNotificationDebounceDuration(int value) async {
+    _notificationDebounceDuration = value;
+    notifyListeners();
+    await _prefs?.setInt(keyNotificationDebounceDuration, value);
   }
 
   // Keybinding Setters
