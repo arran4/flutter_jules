@@ -1017,13 +1017,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             builder:
                                                 (context, queueProvider, _) {
                                               try {
-                                                final errorMsg =
-                                                    queueProvider.queue
-                                                        .firstWhere(
+                                                final errorMsg = queueProvider
+                                                    .queue
+                                                    .firstWhere(
                                                   (m) =>
-                                                      m.type ==
-                                                          QueuedMessageType
-                                                              .sessionCreation &&
+                                                      m.type == QueuedMessageType.sessionCreation &&
                                                       m.content ==
                                                           widget.initialSession!
                                                               .prompt &&
@@ -1045,8 +1043,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                           (e) => Text(
                                                             "• $e",
                                                             style: TextStyle(
-                                                              color: Colors.red
-                                                                  .shade900,
+                                                              color: Colors
+                                                                  .red.shade900,
                                                               fontSize: 11,
                                                               fontFamily:
                                                                   'monospace',
@@ -1127,8 +1125,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                           ),
                                           TextButton.icon(
                                             style: TextButton.styleFrom(
-                                              textStyle: const TextStyle(
-                                                  fontSize: 12),
+                                              textStyle:
+                                                  const TextStyle(fontSize: 12),
                                               tapTargetSize:
                                                   MaterialTapTargetSize
                                                       .shrinkWrap,
@@ -1174,8 +1172,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                               .contains(selection.branch)) {
                                             branches.add(selection.branch);
                                           }
-                                          if (branches.isEmpty)
+                                          if (branches.isEmpty) {
                                             branches.add('main');
+                                          }
 
                                           return ListTile(
                                             dense: true,
@@ -1188,8 +1187,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             subtitle: Row(
                                               children: [
                                                 Expanded(
-                                                  child: DropdownButtonFormField<
-                                                      String>(
+                                                  child:
+                                                      DropdownButtonFormField<
+                                                          String>(
                                                     isExpanded: true,
                                                     decoration:
                                                         const InputDecoration(
@@ -1277,9 +1277,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                     border:
                                                         const OutlineInputBorder(),
                                                     prefixIcon: (_selectedSource
-                                                                    ?.githubRepo
-                                                                    ?.isPrivate ==
-                                                                true)
+                                                                ?.githubRepo
+                                                                ?.isPrivate ==
+                                                            true)
                                                         ? const Icon(Icons.lock,
                                                             size: 16)
                                                         : const Icon(
@@ -1309,8 +1309,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         const SizedBox(width: 16),
                                         Expanded(
                                           flex: 1,
-                                          child: DropdownButtonFormField<
-                                              String>(
+                                          child:
+                                              DropdownButtonFormField<String>(
                                             isExpanded: true,
                                             decoration: const InputDecoration(
                                               labelText: 'Branch',
@@ -1344,8 +1344,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   // Prompt
                                   Expanded(
                                     child: Container(
-                                      constraints: const BoxConstraints(
-                                          minHeight: 200),
+                                      constraints:
+                                          const BoxConstraints(minHeight: 200),
                                       child: CallbackShortcuts(
                                         bindings: {
                                           const SingleActivator(
@@ -1383,13 +1383,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                         SessionDialogMode
                                                             .createWithContext)
                                                 ? IconButton(
-                                                    icon: const Icon(Icons
-                                                        .content_paste_go),
+                                                    icon: const Icon(
+                                                        Icons.content_paste_go),
                                                     tooltip:
                                                         'Import Prompt from Original Session',
                                                     onPressed: () {
-                                                      if (widget.initialSession ==
-                                                          null) return;
+                                                      if (widget
+                                                              .initialSession ==
+                                                          null) {
+                                                        return;
+                                                      }
                                                       final originalPrompt =
                                                           widget.initialSession!
                                                               .prompt;
@@ -1434,8 +1437,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                     controller: _imageUrlController,
                                     decoration: const InputDecoration(
                                       labelText: 'Image URL (Optional)',
-                                      hintText:
-                                          'https://example.com/image.png',
+                                      hintText: 'https://example.com/image.png',
                                       border: OutlineInputBorder(),
                                       prefixIcon: Icon(Icons.image),
                                     ),

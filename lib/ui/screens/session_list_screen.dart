@@ -2896,7 +2896,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                                 "sources/github/",
                                                               )) {
                                                                 final parts =
-                                                                    source.split(
+                                                                    source
+                                                                        .split(
                                                                   '/',
                                                                 );
                                                                 if (parts

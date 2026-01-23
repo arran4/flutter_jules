@@ -174,11 +174,13 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                       onChanged: (_) => _toggleGroup(group),
                       title: Text(group.name),
                       secondary: const Icon(Icons.group, size: 16),
-                      subtitle: Text('${group.sourceNames.length} repositories'),
+                      subtitle:
+                          Text('${group.sourceNames.length} repositories'),
                     );
                   }
 
-                  final source = _filteredSources[index - _filteredGroups.length];
+                  final source =
+                      _filteredSources[index - _filteredGroups.length];
                   final isSelected = _isSelected(source);
                   final isPrivate = source.githubRepo?.isPrivate ?? false;
 

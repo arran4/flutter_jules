@@ -192,6 +192,15 @@ class FilterElementWidget extends StatelessWidget {
         Colors.amber.shade900,
         Icons.note,
       );
+    } else if (element is HasCreatePrElement) {
+      return _buildLeafElement(
+        context,
+        element,
+        'Create PR',
+        Colors.green.shade100,
+        Colors.green.shade900,
+        Icons.add_box,
+      );
     } else if (element is HasErrorsElement) {
       return _buildLeafElement(
         context,

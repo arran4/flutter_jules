@@ -141,8 +141,13 @@ void main() {
       FilterElementType.hasErrors: (tester) async {
         // HasErrorsElement
         await pumpElement(tester, HasErrorsElement());
-        expect(find.text('Has Errors'), findsOneWidget);
         expect(find.byIcon(Icons.error_outline), findsOneWidget);
+      },
+      FilterElementType.hasCreatePr: (tester) async {
+        // HasCreatePrElement
+        await pumpElement(tester, HasCreatePrElement());
+        expect(find.text('Create PR'), findsOneWidget);
+        expect(find.byIcon(Icons.add_box), findsOneWidget);
       },
     };
 
