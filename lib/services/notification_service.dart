@@ -109,7 +109,7 @@ class NotificationService {
     String? payload,
     List<NotificationAction>? actions,
   }) async {
-    if (settings?.enableDebounce ?? true) {
+    if (settings?.enableNotificationDebounce ?? false) {
       // Debounce check against queue
       final isDuplicateInQueue =
           _notificationQueue.any((n) => n.title == title && n.body == body);
@@ -128,7 +128,7 @@ class NotificationService {
           _lastShownNotification!.body == body &&
           _lastShownTime != null) {
         final debounceDuration = Duration(
-            milliseconds: settings?.debounceDuration ?? 5000);
+            milliseconds: settings?.notificationDebounceDuration ?? 5000);
         if (DateTime.now().difference(_lastShownTime!) < debounceDuration) {
           return;
         }
