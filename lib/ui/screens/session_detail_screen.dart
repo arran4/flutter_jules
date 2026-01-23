@@ -1080,6 +1080,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   }
                 } else if (value == 'open_browser') {
                   if (_session.url != null) launchUrl(Uri.parse(_session.url!));
+                } else if (value == 'open_diff_url') {
+                  if (_session.diffUrl != null) {
+                    launchUrl(Uri.parse(_session.diffUrl!));
+                  }
                 } else if (value == 'copy_jules_url') {
                   if (_session.url != null) {
                     await Clipboard.setData(ClipboardData(text: _session.url!));
@@ -1197,6 +1201,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           Icon(Icons.open_in_browser, color: Colors.grey),
                           SizedBox(width: 8),
                           Text('Open in Browser')
+                        ])),
+                  if (_session.diffUrl != null)
+                    const PopupMenuItem(
+                        value: 'open_diff_url',
+                        child: Row(children: [
+                          Icon(Icons.difference, color: Colors.grey),
+                          SizedBox(width: 8),
+                          Text('Open Diff URL')
                         ])),
                   if (_session.url != null)
                     const PopupMenuItem(
