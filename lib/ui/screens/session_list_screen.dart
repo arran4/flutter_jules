@@ -3063,6 +3063,24 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ),
             onTap: () => _openSessionUrl(session),
           ),
+          if (session.url != null)
+            PopupMenuItem(
+              child: const Row(
+                children: [
+                  Icon(Icons.open_in_new),
+                  SizedBox(width: 8),
+                  Text('Open & Mark Read'),
+                ],
+              ),
+              onTap: () async {
+                if (session.url != null &&
+                    await launchUrl(Uri.parse(session.url!))) {
+                  if (context.mounted) {
+                    _markAsRead(session);
+                  }
+                }
+              },
+            ),
           PopupMenuItem(
             child: const Row(
               children: [
