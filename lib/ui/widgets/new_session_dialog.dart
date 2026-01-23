@@ -882,447 +882,562 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         }
         if (branches.isEmpty) branches.add('main');
 
-        return AlertDialog(
-          title: Text(
-            widget.mode == SessionDialogMode.edit
-                ? "Pending Session"
-                : "New Session",
-          ),
-          content: SizedBox(
-            width: MediaQuery.of(context).size.width * 0.8,
+        return Dialog(
+          insetPadding: const EdgeInsets.all(20),
+          child: Container(
+            constraints: const BoxConstraints(maxWidth: 1200),
+            width: double.infinity,
+            height: double.infinity,
             child: Column(
-              mainAxisSize: MainAxisSize.min,
               children: [
-                if (widget.initialSession != null &&
-                    widget.initialSession!.state == SessionState.FAILED &&
-                    widget.initialSession!.currentAction != null)
-                  Container(
-                    margin: const EdgeInsets.only(bottom: 16),
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(8),
-                    decoration: BoxDecoration(
-                      color: Colors.red.shade50,
-                      borderRadius: BorderRadius.circular(8),
-                      border: Border.all(color: Colors.red.shade200),
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            const Icon(Icons.error_outline, color: Colors.red),
-                            const SizedBox(width: 8),
-                            Expanded(
-                              child: Text(
-                                "Last Send Failed: ${widget.initialSession!.currentAction}",
-                                style: TextStyle(
-                                  color: Colors.red.shade800,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                        // Attempt to extract processingErrors from stashed metadata if available.
-                        // Since 'images' field is List<Media>, we can't easily stow List<String> there.
-                        // However, Session has a 'currentAction' which we already displayed.
-                        // If we want detailed logs, they would need to be passed explicitly or
-                        // retrieved from the queue now.
-                        Consumer<MessageQueueProvider>(
-                          builder: (context, queueProvider, _) {
-                            // Find the queued message that corresponds to this session creation attempt
-                            // This is heuristic: match by content/prompt if ID is empty/new_session
-                            // OR rely on how the session was passed to us.
-                            //
-                            // Better: We look for ANY pending item in the queue that matches this content/prompt
-                            // and has errors.
-                            try {
-                              final errorMsg = queueProvider.queue.firstWhere(
-                                (m) =>
-                                    m.type ==
-                                        QueuedMessageType.sessionCreation &&
-                                    m.content ==
-                                        widget.initialSession!.prompt &&
-                                    m.processingErrors.isNotEmpty,
-                              );
-
-                              return Padding(
-                                padding: const EdgeInsets.only(top: 8.0),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: errorMsg.processingErrors
-                                      .map<Widget>(
-                                        (e) => Text(
-                                          "• $e",
-                                          style: TextStyle(
-                                            color: Colors.red.shade900,
-                                            fontSize: 11,
-                                            fontFamily: 'monospace',
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                ),
-                              );
-                            } catch (_) {
-                              // No matching detailed logs found in queue
-                              return const SizedBox.shrink();
-                            }
-                          },
-                        ),
-                      ],
-                    ),
-                  ),
-
-                Text(
-                  widget.mode == SessionDialogMode.edit
-                      ? "Pending Session"
-                      : "New Session",
-                  style: const TextStyle(
-                      fontSize: 24, fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 16),
-
-                // Context (Source & Branch)
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Context',
-                      style: TextStyle(fontWeight: FontWeight.bold),
-                    ),
-                    Row(
-                      children: [
-                        // Multi Button
-                        IconButton(
-                          icon: const Icon(Icons.library_add),
-                          tooltip: 'Select Multiple Repositories',
-                          onPressed: () => _showBulkDialog(sources),
-                        ),
-                        TextButton.icon(
-                          style: TextButton.styleFrom(
-                            textStyle: const TextStyle(fontSize: 12),
-                            tapTargetSize: MaterialTapTargetSize.shrinkWrap,
-                          ),
-                          onPressed: _isRefreshing
-                              ? null
-                              : () => _fetchSources(force: true),
-                          icon: _isRefreshing
-                              ? const SizedBox(
-                                  width: 16,
-                                  height: 16,
-                                  child: CircularProgressIndicator(
-                                    strokeWidth: 2,
-                                  ),
-                                )
-                              : const Icon(Icons.refresh, size: 20),
-                          label: Text(_refreshStatus),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 8),
-
-                if (_bulkSelections.length > 1) ...[
-                  SizedBox(
-                    height: 150, // Constrain height
-                    child: ListView.builder(
-                      itemCount: _bulkSelections.length,
-                      itemBuilder: (context, index) {
-                        final selection = _bulkSelections[index];
-                        final source = selection.source;
-                        final repo = source.githubRepo;
-                        List<String> branches = repo?.branches
-                                ?.map((b) => b.displayName)
-                                .toList() ??
-                            [];
-                        if (!branches.contains(selection.branch)) {
-                          branches.add(selection.branch);
-                        }
-                        if (branches.isEmpty) branches.add('main');
-
-                        return ListTile(
-                          dense: true,
-                          leading: (repo?.isPrivate == true)
-                              ? const Icon(Icons.lock, size: 16)
-                              : null,
-                          title: Text(_getSourceDisplayLabel(source)),
-                          subtitle: Row(
-                            children: [
-                              Expanded(
-                                child: DropdownButtonFormField<String>(
-                                  isExpanded: true,
-                                  decoration: const InputDecoration(
-                                    labelText: 'Branch',
-                                    border: OutlineInputBorder(),
-                                  ),
-                                  value: selection.branch,
-                                  items: branches
-                                      .map(
-                                        (b) => DropdownMenuItem(
-                                          value: b,
-                                          child: Text(
-                                            b,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ),
-                                      )
-                                      .toList(),
-                                  onChanged: (val) {
-                                    if (val != null) {
-                                      setState(() {
-                                        selection.branch = val;
-                                      });
-                                    }
-                                  },
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              IconButton(
-                                icon: const Icon(Icons.close, size: 16),
-                                onPressed: () {
-                                  setState(() {
-                                    _bulkSelections.removeAt(index);
-                                    if (_bulkSelections.length <= 1) {
-                                      if (_bulkSelections.isNotEmpty) {
-                                        _selectSource(
-                                            _bulkSelections.first.source);
-                                      } else {
-                                        _selectedSource = null;
-                                        _sourceController.clear();
-                                      }
-                                      _bulkSelections = [];
-                                    }
-                                  });
-                                },
-                              ),
-                            ],
-                          ),
-                        );
-                      },
-                    ),
-                  ),
-                ] else ...[
-                  // Standard Single Selection
-                  Row(
+                // Header
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
                     children: [
-                      Expanded(
-                        flex: 3,
-                        child: LayoutBuilder(
-                          builder: (context, constraints) {
-                            // Correctly capture width for overlay
-                            _dropdownWidth = constraints.maxWidth;
-                            return CompositedTransformTarget(
-                              link: _sourceLayerLink,
-                              child: TextField(
-                                controller: _sourceController,
-                                focusNode: _sourceFocusNode,
-                                decoration: InputDecoration(
-                                  labelText: 'Repository',
-                                  border: const OutlineInputBorder(),
-                                  prefixIcon:
-                                      (_selectedSource?.githubRepo?.isPrivate ==
-                                              true)
-                                          ? const Icon(Icons.lock, size: 16)
-                                          : const Icon(Icons.source, size: 16),
-                                  suffixIcon: IconButton(
-                                    icon: const Icon(Icons.close, size: 16),
-                                    onPressed: () {
-                                      _sourceController.clear();
-                                      _sourceFocusNode.requestFocus();
-                                      _onSourceTextChanged('');
-                                    },
-                                  ),
-                                ),
-                                onChanged: _onSourceTextChanged,
-                              ),
-                            );
-                          },
-                        ),
-                      ),
-                      const SizedBox(width: 16),
-                      Expanded(
-                        flex: 1,
-                        child: DropdownButtonFormField<String>(
-                          isExpanded: true,
-                          decoration: const InputDecoration(
-                            labelText: 'Branch',
-                            border: OutlineInputBorder(),
-                          ),
-                          value: _selectedBranch,
-                          items: branches
-                              .map(
-                                (b) => DropdownMenuItem(
-                                  value: b,
-                                  child: Text(
-                                    b,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-                              )
-                              .toList(),
-                          onChanged: (val) {
-                            setState(() {
-                              _selectedBranch = val;
-                            });
-                          },
-                        ),
+                      Text(
+                        widget.mode == SessionDialogMode.edit
+                            ? "Pending Session"
+                            : "New Session",
+                        style: Theme.of(context).textTheme.titleLarge,
                       ),
                     ],
                   ),
-                ],
-                const SizedBox(height: 16),
-
-                // Mode Selection
-                const Text(
-                  'I want to...',
-                  style: TextStyle(fontWeight: FontWeight.bold),
                 ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _buildModeChoice(0, 'Ask a Question'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(1, 'Create a Plan'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(2, 'Start Coding'),
-                  ],
-                ),
-                const SizedBox(height: 16),
 
-                if (_selectedModeIndex == 2) ...[
-                  CheckboxListTile(
-                    title: const Text('Auto-create Pull Request'),
-                    subtitle: const Text(
-                      'Automatically create a PR when a final patch is generated',
-                    ),
-                    value: _autoCreatePr,
-                    onChanged: (val) {
-                      setState(() {
-                        _autoCreatePr = val ?? false;
-                      });
-                    },
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 8),
-                ],
+                // Body
+                Expanded(
+                  child: LayoutBuilder(
+                    builder: (context, constraints) {
+                      return SingleChildScrollView(
+                        child: ConstrainedBox(
+                          constraints:
+                              BoxConstraints(minHeight: constraints.maxHeight),
+                          child: IntrinsicHeight(
+                            child: Padding(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 24.0,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  if (widget.initialSession != null &&
+                                      widget.initialSession!.state ==
+                                          SessionState.FAILED &&
+                                      widget.initialSession!.currentAction !=
+                                          null)
+                                    Container(
+                                      margin: const EdgeInsets.only(bottom: 16),
+                                      width: double.infinity,
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.red.shade50,
+                                        borderRadius: BorderRadius.circular(8),
+                                        border: Border.all(
+                                            color: Colors.red.shade200),
+                                      ),
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Row(
+                                            children: [
+                                              const Icon(Icons.error_outline,
+                                                  color: Colors.red),
+                                              const SizedBox(width: 8),
+                                              Expanded(
+                                                child: Text(
+                                                  "Last Send Failed: ${widget.initialSession!.currentAction}",
+                                                  style: TextStyle(
+                                                    color: Colors.red.shade800,
+                                                    fontWeight: FontWeight.bold,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                          Consumer<MessageQueueProvider>(
+                                            builder:
+                                                (context, queueProvider, _) {
+                                              try {
+                                                final errorMsg =
+                                                    queueProvider.queue
+                                                        .firstWhere(
+                                                  (m) =>
+                                                      m.type ==
+                                                          QueuedMessageType
+                                                              .sessionCreation &&
+                                                      m.content ==
+                                                          widget.initialSession!
+                                                              .prompt &&
+                                                      m.processingErrors
+                                                          .isNotEmpty,
+                                                );
 
-                // Prompt
-                CallbackShortcuts(
-                  bindings: {
-                    const SingleActivator(
-                      LogicalKeyboardKey.enter,
-                      control: true,
-                    ): () {
-                      if (_promptController.text.isNotEmpty &&
-                          (_selectedSource != null ||
-                              _bulkSelections.length > 1)) {
-                        _create();
-                      } else if (_promptController.text.isNotEmpty) {
-                        _saveDraft();
-                      }
-                    },
-                  },
-                  child: TextField(
-                    controller: _promptController,
-                    autofocus: true,
-                    maxLines: 6,
-                    decoration: InputDecoration(
-                      labelText: 'Prompt',
-                      hintText: 'Describe what you want to do...',
-                      border: const OutlineInputBorder(),
-                      alignLabelWithHint: true,
-                      suffixIcon: (widget.mode == SessionDialogMode.edit ||
-                              widget.mode ==
-                                  SessionDialogMode.createWithContext)
-                          ? IconButton(
-                              icon: const Icon(Icons.content_paste_go),
-                              tooltip: 'Import Prompt from Original Session',
-                              onPressed: () {
-                                if (widget.initialSession == null) return;
-                                final originalPrompt =
-                                    widget.initialSession!.prompt;
-                                final currentText = _promptController.text;
+                                                return Padding(
+                                                  padding:
+                                                      const EdgeInsets.only(
+                                                          top: 8.0),
+                                                  child: Column(
+                                                    crossAxisAlignment:
+                                                        CrossAxisAlignment
+                                                            .start,
+                                                    children: errorMsg
+                                                        .processingErrors
+                                                        .map<Widget>(
+                                                          (e) => Text(
+                                                            "• $e",
+                                                            style: TextStyle(
+                                                              color: Colors.red
+                                                                  .shade900,
+                                                              fontSize: 11,
+                                                              fontFamily:
+                                                                  'monospace',
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                  ),
+                                                );
+                                              } catch (_) {
+                                                return const SizedBox.shrink();
+                                              }
+                                            },
+                                          ),
+                                        ],
+                                      ),
+                                    ),
 
-                                if (currentText.trim().isNotEmpty) {
-                                  const separator =
-                                      '\n\n--- Imported Prompt ---\n';
-                                  _promptController.text =
-                                      '$currentText$separator$originalPrompt';
-                                } else {
-                                  _promptController.text = originalPrompt;
-                                }
-                                _promptController.selection =
-                                    TextSelection.fromPosition(
-                                  TextPosition(
-                                    offset: _promptController.text.length,
+                                  // Context (Source & Branch)
+                                  Row(
+                                    mainAxisAlignment:
+                                        MainAxisAlignment.spaceBetween,
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.center,
+                                    children: [
+                                      const Text(
+                                        'Context',
+                                        style: TextStyle(
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Row(
+                                        children: [
+                                          // Multi Button
+                                          IconButton(
+                                            icon: const Icon(Icons.library_add),
+                                            tooltip:
+                                                'Select Multiple Repositories',
+                                            onPressed: () =>
+                                                _showBulkDialog(sources),
+                                          ),
+                                          TextButton.icon(
+                                            style: TextButton.styleFrom(
+                                              textStyle: const TextStyle(
+                                                  fontSize: 12),
+                                              tapTargetSize:
+                                                  MaterialTapTargetSize
+                                                      .shrinkWrap,
+                                            ),
+                                            onPressed: _isRefreshing
+                                                ? null
+                                                : () =>
+                                                    _fetchSources(force: true),
+                                            icon: _isRefreshing
+                                                ? const SizedBox(
+                                                    width: 16,
+                                                    height: 16,
+                                                    child:
+                                                        CircularProgressIndicator(
+                                                      strokeWidth: 2,
+                                                    ),
+                                                  )
+                                                : const Icon(Icons.refresh,
+                                                    size: 20),
+                                            label: Text(_refreshStatus),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
                                   ),
-                                );
-                              },
-                            )
-                          : null,
-                    ),
-                    onChanged: (val) => setState(() {}),
-                  ),
-                ),
-                const SizedBox(height: 16),
+                                  const SizedBox(height: 8),
 
-                // Image Attachment (URL for now)
-                TextField(
-                  controller: _imageUrlController,
-                  decoration: const InputDecoration(
-                    labelText: 'Image URL (Optional)',
-                    hintText: 'https://example.com/image.png',
-                    border: OutlineInputBorder(),
-                    prefixIcon: Icon(Icons.image),
+                                  if (_bulkSelections.length > 1) ...[
+                                    SizedBox(
+                                      height: 150, // Constrain height
+                                      child: ListView.builder(
+                                        itemCount: _bulkSelections.length,
+                                        itemBuilder: (context, index) {
+                                          final selection =
+                                              _bulkSelections[index];
+                                          final source = selection.source;
+                                          final repo = source.githubRepo;
+                                          List<String> branches = repo?.branches
+                                                  ?.map((b) => b.displayName)
+                                                  .toList() ??
+                                              [];
+                                          if (!branches
+                                              .contains(selection.branch)) {
+                                            branches.add(selection.branch);
+                                          }
+                                          if (branches.isEmpty)
+                                            branches.add('main');
+
+                                          return ListTile(
+                                            dense: true,
+                                            leading: (repo?.isPrivate == true)
+                                                ? const Icon(Icons.lock,
+                                                    size: 16)
+                                                : null,
+                                            title: Text(
+                                                _getSourceDisplayLabel(source)),
+                                            subtitle: Row(
+                                              children: [
+                                                Expanded(
+                                                  child: DropdownButtonFormField<
+                                                      String>(
+                                                    isExpanded: true,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                      labelText: 'Branch',
+                                                      border:
+                                                          OutlineInputBorder(),
+                                                    ),
+                                                    value: selection.branch,
+                                                    items: branches
+                                                        .map(
+                                                          (b) =>
+                                                              DropdownMenuItem(
+                                                            value: b,
+                                                            child: Text(
+                                                              b,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                    onChanged: (val) {
+                                                      if (val != null) {
+                                                        setState(() {
+                                                          selection.branch =
+                                                              val;
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
+                                                ),
+                                                const SizedBox(width: 8),
+                                                IconButton(
+                                                  icon: const Icon(Icons.close,
+                                                      size: 16),
+                                                  onPressed: () {
+                                                    setState(() {
+                                                      _bulkSelections
+                                                          .removeAt(index);
+                                                      if (_bulkSelections
+                                                              .length <=
+                                                          1) {
+                                                        if (_bulkSelections
+                                                            .isNotEmpty) {
+                                                          _selectSource(
+                                                              _bulkSelections
+                                                                  .first
+                                                                  .source);
+                                                        } else {
+                                                          _selectedSource =
+                                                              null;
+                                                          _sourceController
+                                                              .clear();
+                                                        }
+                                                        _bulkSelections = [];
+                                                      }
+                                                    });
+                                                  },
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        },
+                                      ),
+                                    ),
+                                  ] else ...[
+                                    // Standard Single Selection
+                                    Row(
+                                      children: [
+                                        Expanded(
+                                          flex: 3,
+                                          child: LayoutBuilder(
+                                            builder: (context, constraints) {
+                                              // Correctly capture width for overlay
+                                              _dropdownWidth =
+                                                  constraints.maxWidth;
+                                              return CompositedTransformTarget(
+                                                link: _sourceLayerLink,
+                                                child: TextField(
+                                                  controller: _sourceController,
+                                                  focusNode: _sourceFocusNode,
+                                                  decoration: InputDecoration(
+                                                    labelText: 'Repository',
+                                                    border:
+                                                        const OutlineInputBorder(),
+                                                    prefixIcon: (_selectedSource
+                                                                    ?.githubRepo
+                                                                    ?.isPrivate ==
+                                                                true)
+                                                        ? const Icon(Icons.lock,
+                                                            size: 16)
+                                                        : const Icon(
+                                                            Icons.source,
+                                                            size: 16),
+                                                    suffixIcon: IconButton(
+                                                      icon: const Icon(
+                                                          Icons.close,
+                                                          size: 16),
+                                                      onPressed: () {
+                                                        _sourceController
+                                                            .clear();
+                                                        _sourceFocusNode
+                                                            .requestFocus();
+                                                        _onSourceTextChanged(
+                                                            '');
+                                                      },
+                                                    ),
+                                                  ),
+                                                  onChanged:
+                                                      _onSourceTextChanged,
+                                                ),
+                                              );
+                                            },
+                                          ),
+                                        ),
+                                        const SizedBox(width: 16),
+                                        Expanded(
+                                          flex: 1,
+                                          child: DropdownButtonFormField<
+                                              String>(
+                                            isExpanded: true,
+                                            decoration: const InputDecoration(
+                                              labelText: 'Branch',
+                                              border: OutlineInputBorder(),
+                                            ),
+                                            value: _selectedBranch,
+                                            items: branches
+                                                .map(
+                                                  (b) => DropdownMenuItem(
+                                                    value: b,
+                                                    child: Text(
+                                                      b,
+                                                      overflow:
+                                                          TextOverflow.ellipsis,
+                                                    ),
+                                                  ),
+                                                )
+                                                .toList(),
+                                            onChanged: (val) {
+                                              setState(() {
+                                                _selectedBranch = val;
+                                              });
+                                            },
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ],
+                                  const SizedBox(height: 16),
+
+                                  // Mode Selection
+                                  const Text(
+                                    'I want to...',
+                                    style:
+                                        TextStyle(fontWeight: FontWeight.bold),
+                                  ),
+                                  const SizedBox(height: 8),
+                                  Row(
+                                    children: [
+                                      _buildModeChoice(0, 'Ask a Question'),
+                                      const SizedBox(width: 8),
+                                      _buildModeChoice(1, 'Create a Plan'),
+                                      const SizedBox(width: 8),
+                                      _buildModeChoice(2, 'Start Coding'),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  if (_selectedModeIndex == 2) ...[
+                                    CheckboxListTile(
+                                      title: const Text(
+                                          'Auto-create Pull Request'),
+                                      subtitle: const Text(
+                                        'Automatically create a PR when a final patch is generated',
+                                      ),
+                                      value: _autoCreatePr,
+                                      onChanged: (val) {
+                                        setState(() {
+                                          _autoCreatePr = val ?? false;
+                                        });
+                                      },
+                                      contentPadding: EdgeInsets.zero,
+                                      controlAffinity:
+                                          ListTileControlAffinity.leading,
+                                    ),
+                                    const SizedBox(height: 8),
+                                  ],
+
+                                  // Prompt
+                                  Expanded(
+                                    child: Container(
+                                      constraints: const BoxConstraints(
+                                          minHeight: 200),
+                                      child: CallbackShortcuts(
+                                        bindings: {
+                                          const SingleActivator(
+                                            LogicalKeyboardKey.enter,
+                                            control: true,
+                                          ): () {
+                                            if (_promptController
+                                                    .text.isNotEmpty &&
+                                                (_selectedSource != null ||
+                                                    _bulkSelections.length >
+                                                        1)) {
+                                              _create();
+                                            } else if (_promptController
+                                                .text.isNotEmpty) {
+                                              _saveDraft();
+                                            }
+                                          },
+                                        },
+                                        child: TextField(
+                                          controller: _promptController,
+                                          autofocus: true,
+                                          maxLines: null,
+                                          minLines: null,
+                                          expands: true,
+                                          decoration: InputDecoration(
+                                            labelText: 'Prompt',
+                                            hintText:
+                                                'Describe what you want to do...',
+                                            border: const OutlineInputBorder(),
+                                            alignLabelWithHint: true,
+                                            suffixIcon: (widget.mode ==
+                                                        SessionDialogMode
+                                                            .edit ||
+                                                    widget.mode ==
+                                                        SessionDialogMode
+                                                            .createWithContext)
+                                                ? IconButton(
+                                                    icon: const Icon(Icons
+                                                        .content_paste_go),
+                                                    tooltip:
+                                                        'Import Prompt from Original Session',
+                                                    onPressed: () {
+                                                      if (widget.initialSession ==
+                                                          null) return;
+                                                      final originalPrompt =
+                                                          widget.initialSession!
+                                                              .prompt;
+                                                      final currentText =
+                                                          _promptController
+                                                              .text;
+
+                                                      if (currentText
+                                                          .trim()
+                                                          .isNotEmpty) {
+                                                        const separator =
+                                                            '\n\n--- Imported Prompt ---\n';
+                                                        _promptController.text =
+                                                            '$currentText$separator$originalPrompt';
+                                                      } else {
+                                                        _promptController.text =
+                                                            originalPrompt;
+                                                      }
+                                                      _promptController
+                                                              .selection =
+                                                          TextSelection
+                                                              .fromPosition(
+                                                        TextPosition(
+                                                          offset:
+                                                              _promptController
+                                                                  .text.length,
+                                                        ),
+                                                      );
+                                                    },
+                                                  )
+                                                : null,
+                                          ),
+                                          onChanged: (val) => setState(() {}),
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 16),
+
+                                  // Image Attachment (URL for now)
+                                  TextField(
+                                    controller: _imageUrlController,
+                                    decoration: const InputDecoration(
+                                      labelText: 'Image URL (Optional)',
+                                      hintText:
+                                          'https://example.com/image.png',
+                                      border: OutlineInputBorder(),
+                                      prefixIcon: Icon(Icons.image),
+                                    ),
+                                    onChanged: (val) => setState(() {}),
+                                  ),
+                                  const SizedBox(height: 24),
+                                ],
+                              ),
+                            ),
+                          ),
+                        ),
+                      );
+                    },
                   ),
-                  onChanged: (val) => setState(() {}),
                 ),
-                const SizedBox(height: 24),
 
                 // Actions
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.end,
-                  children: [
-                    if (widget.initialSession != null)
-                      TextButton(
-                        onPressed: _deleteDraft,
-                        style: TextButton.styleFrom(
-                          foregroundColor: Colors.red,
+                Padding(
+                  padding: const EdgeInsets.all(24.0),
+                  child: Row(
+                    mainAxisAlignment: MainAxisAlignment.end,
+                    children: [
+                      if (widget.initialSession != null)
+                        TextButton(
+                          onPressed: _deleteDraft,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.red,
+                          ),
+                          child: const Text('Delete'),
                         ),
-                        child: const Text('Delete'),
+                      const Spacer(),
+                      TextButton(
+                        onPressed: (_promptController.text.isNotEmpty)
+                            ? _saveDraft
+                            : null,
+                        child: const Text('Save as Draft'),
                       ),
-                    const Spacer(),
-                    TextButton(
-                      onPressed: (_promptController.text.isNotEmpty)
-                          ? _saveDraft
-                          : null,
-                      child: const Text('Save as Draft'),
-                    ),
-                    const SizedBox(width: 8),
-                    // Cancel acts as close without saving changes if not explicitly saving draft
-                    TextButton(
-                      onPressed: () => Navigator.pop(context),
-                      child: const Text('Cancel'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton.tonal(
-                      onPressed: (_promptController.text.isNotEmpty)
-                          ? () => _create(openNewDialog: true)
-                          : null,
-                      child: const Text('Send & New'),
-                    ),
-                    const SizedBox(width: 8),
-                    FilledButton(
-                      onPressed: (_promptController.text.isNotEmpty)
-                          ? () => _create(openNewDialog: false)
-                          : null,
-                      child: const Text('Send Now'),
-                    ),
-                  ],
+                      const SizedBox(width: 8),
+                      // Cancel acts as close without saving changes if not explicitly saving draft
+                      TextButton(
+                        onPressed: () => Navigator.pop(context),
+                        child: const Text('Cancel'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton.tonal(
+                        onPressed: (_promptController.text.isNotEmpty)
+                            ? () => _create(openNewDialog: true)
+                            : null,
+                        child: const Text('Send & New'),
+                      ),
+                      const SizedBox(width: 8),
+                      FilledButton(
+                        onPressed: (_promptController.text.isNotEmpty)
+                            ? () => _create(openNewDialog: false)
+                            : null,
+                        child: const Text('Send Now'),
+                      ),
+                    ],
+                  ),
                 ),
               ],
             ),
