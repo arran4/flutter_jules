@@ -3099,6 +3099,19 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
+        if (session.diffUrl != null)
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.difference),
+                SizedBox(width: 8),
+                Text('Open Diff URL'),
+              ],
+            ),
+            onTap: () {
+              launchUrl(Uri.parse(session.diffUrl!));
+            },
+          ),
         if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
           PopupMenuItem(
             child: const Row(
