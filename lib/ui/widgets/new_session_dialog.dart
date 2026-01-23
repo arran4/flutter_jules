@@ -983,6 +983,41 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ),
                 const SizedBox(height: 16),
 
+                // Mode Selection
+                const Text(
+                  'I want to...',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                const SizedBox(height: 8),
+                Row(
+                  children: [
+                    _buildModeChoice(0, 'Ask a Question'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(1, 'Create a Plan'),
+                    const SizedBox(width: 8),
+                    _buildModeChoice(2, 'Start Coding'),
+                  ],
+                ),
+                const SizedBox(height: 16),
+
+                if (_selectedModeIndex == 2) ...[
+                  CheckboxListTile(
+                    title: const Text('Auto-create Pull Request'),
+                    subtitle: const Text(
+                      'Automatically create a PR when a final patch is generated',
+                    ),
+                    value: _autoCreatePr,
+                    onChanged: (val) {
+                      setState(() {
+                        _autoCreatePr = val ?? false;
+                      });
+                    },
+                    contentPadding: EdgeInsets.zero,
+                    controlAffinity: ListTileControlAffinity.leading,
+                  ),
+                  const SizedBox(height: 16),
+                ],
+
                 // Context (Source & Branch)
                 Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -1175,40 +1210,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ],
                 const SizedBox(height: 16),
 
-                // Mode Selection
-                const Text(
-                  'I want to...',
-                  style: TextStyle(fontWeight: FontWeight.bold),
-                ),
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    _buildModeChoice(0, 'Ask a Question'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(1, 'Create a Plan'),
-                    const SizedBox(width: 8),
-                    _buildModeChoice(2, 'Start Coding'),
-                  ],
-                ),
-                const SizedBox(height: 16),
-
-                if (_selectedModeIndex == 2) ...[
-                  CheckboxListTile(
-                    title: const Text('Auto-create Pull Request'),
-                    subtitle: const Text(
-                      'Automatically create a PR when a final patch is generated',
-                    ),
-                    value: _autoCreatePr,
-                    onChanged: (val) {
-                      setState(() {
-                        _autoCreatePr = val ?? false;
-                      });
-                    },
-                    contentPadding: EdgeInsets.zero,
-                    controlAffinity: ListTileControlAffinity.leading,
-                  ),
-                  const SizedBox(height: 8),
-                ],
 
                 // Prompt
                 CallbackShortcuts(
