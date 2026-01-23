@@ -1108,6 +1108,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
     suggestions.add(
       const FilterToken(
+        id: 'flag:create_pr',
+        type: FilterType.flag,
+        label: 'Ready for PR',
+        value: 'create_pr',
+      ),
+    );
+    suggestions.add(
+      const FilterToken(
         id: 'flag:draft',
         type: FilterType.flag,
         label: 'Has Drafts',
@@ -1268,6 +1276,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
       case FilterType.flag:
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
           element = HasPrElement();
+        } else if (token.value.toString() == 'create_pr' ||
+            token.id == 'flag:create_pr') {
+          element = HasCreatePrElement();
         } else {
           element = LabelElement(token.label, token.value.toString());
         }
@@ -1350,6 +1361,14 @@ class _SessionListScreenState extends State<SessionListScreen> {
           'label': 'Has PR',
           'value': 'has_pr',
           'active': hasPr,
+        },
+        {
+          'id': 'flag:create_pr',
+          'label': 'Ready for PR',
+          'value': 'create_pr',
+          'active': (session.prStatus == null || session.prStatus!.isEmpty) &&
+              (session.diffUrl != null ||
+                  (session.changedFiles != null && session.changedFiles! > 0)),
         },
       ];
 
@@ -2830,6 +2849,73 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                               );
                                                             },
                                                           ),
+                                                        ),
+                                                      ),
+                                                    if ((session.prStatus ==
+                                                                null ||
+                                                            session.prStatus!
+                                                                .isEmpty) &&
+                                                        (session.diffUrl !=
+                                                                null ||
+                                                            (session.changedFiles !=
+                                                                    null &&
+                                                                session.changedFiles! >
+                                                                    0)))
+                                                      Padding(
+                                                        padding:
+                                                            const EdgeInsets
+                                                                .symmetric(
+                                                          horizontal: 4.0,
+                                                        ),
+                                                        child: IconButton(
+                                                          icon: const Icon(
+                                                            Icons
+                                                                .add_box_outlined,
+                                                            color: Colors.green,
+                                                          ),
+                                                          tooltip:
+                                                              'Create PR & Mark Read',
+                                                          onPressed: () {
+                                                            _markAsRead(
+                                                              session,
+                                                            );
+                                                            if (session.url !=
+                                                                null) {
+                                                              launchUrl(
+                                                                Uri.parse(
+                                                                  session.url!,
+                                                                ),
+                                                              );
+                                                            } else if (session
+                                                                    .sourceContext !=
+                                                                null) {
+                                                              final source = session
+                                                                  .sourceContext!
+                                                                  .source;
+                                                              if (source
+                                                                  .startsWith(
+                                                                "sources/github/",
+                                                              )) {
+                                                                final parts =
+                                                                    source.split(
+                                                                  '/',
+                                                                );
+                                                                if (parts
+                                                                        .length >=
+                                                                    4) {
+                                                                  final owner =
+                                                                      parts[2];
+                                                                  final repo =
+                                                                      parts[3];
+                                                                  launchUrl(
+                                                                    Uri.parse(
+                                                                      "https://github.com/$owner/$repo/pulls",
+                                                                    ),
+                                                                  );
+                                                                }
+                                                              }
+                                                            }
+                                                          },
                                                         ),
                                                       ),
                                                   ],
