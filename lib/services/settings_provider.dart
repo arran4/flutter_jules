@@ -30,6 +30,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyHideArchivedAndReadOnly =
       'hide_archived_and_read_only';
   static const String _githubExclusionsKey = 'github_exclusions';
+  static const String _sourceGroupsKey = 'source_groups';
   static const String keyUseCorpJulesUrl = 'use_corp_jules_url';
   static const String keyThemeType = 'theme_type';
   static const String keyThemeMode = 'theme_mode';
@@ -78,6 +79,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility _fabVisibility = FabVisibility.floating;
   bool _hideArchivedAndReadOnly = true;
   List<GithubExclusion> _githubExclusions = [];
+  List<SourceGroup> _sourceGroups = [];
   bool _useCorpJulesUrl = false;
   JulesThemeType _themeType = JulesThemeType.blue;
   ThemeMode _themeMode = ThemeMode.system;
@@ -113,6 +115,7 @@ class SettingsProvider extends ChangeNotifier {
   FabVisibility get fabVisibility => _fabVisibility;
   bool get hideArchivedAndReadOnly => _hideArchivedAndReadOnly;
   List<GithubExclusion> get githubExclusions => _githubExclusions;
+  List<SourceGroup> get sourceGroups => _sourceGroups;
   bool get useCorpJulesUrl => _useCorpJulesUrl;
   JulesThemeType get themeType => _themeType;
   ThemeMode get themeMode => _themeMode;
@@ -233,6 +236,7 @@ class SettingsProvider extends ChangeNotifier {
     _loadSchedules();
     _loadBulkActionConfig();
     _loadGithubExclusions();
+    _loadSourceGroups();
 
     // Load last filter
     final lastFilterJson = _prefs!.getString(_lastFilterKey);
@@ -626,5 +630,47 @@ class SettingsProvider extends ChangeNotifier {
     }
 
     return false;
+  }
+
+  void _loadSourceGroups() {
+    final jsonString = _prefs?.getString(_sourceGroupsKey);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(jsonString);
+        _sourceGroups =
+            decodedList.map((json) => SourceGroup.fromJson(json)).toList();
+      } catch (e) {
+        _sourceGroups = [];
+      }
+    } else {
+      _sourceGroups = [];
+    }
+  }
+
+  Future<void> _saveSourceGroups() async {
+    final jsonString =
+        jsonEncode(_sourceGroups.map((g) => g.toJson()).toList());
+    await _prefs?.setString(_sourceGroupsKey, jsonString);
+  }
+
+  Future<void> addSourceGroup(SourceGroup group) async {
+    _sourceGroups.add(group);
+    await _saveSourceGroups();
+    notifyListeners();
+  }
+
+  Future<void> updateSourceGroup(SourceGroup group) async {
+    final index = _sourceGroups.indexWhere((g) => g.name == group.name);
+    if (index != -1) {
+      _sourceGroups[index] = group;
+      await _saveSourceGroups();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteSourceGroup(String groupName) async {
+    _sourceGroups.removeWhere((g) => g.name == groupName);
+    await _saveSourceGroups();
+    notifyListeners();
   }
 }

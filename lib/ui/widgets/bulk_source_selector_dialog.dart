@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
-import '../../models/source.dart';
+import 'package:provider/provider.dart';
+import '../../services/settings_provider.dart';
+import '../../models.dart';
 
 class BulkSourceSelectorDialog extends StatefulWidget {
   final List<Source> availableSources;
@@ -19,6 +21,7 @@ class BulkSourceSelectorDialog extends StatefulWidget {
 class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
   late List<Source> _selectedSources;
   late List<Source> _filteredSources;
+  List<SourceGroup> _filteredGroups = [];
   final TextEditingController _searchController = TextEditingController();
 
   @override
@@ -28,6 +31,20 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
     _filteredSources = List.from(widget.availableSources);
     _sortSources();
     _searchController.addListener(_onSearchChanged);
+  }
+
+  @override
+  void didChangeDependencies() {
+    super.didChangeDependencies();
+    _updateGroups();
+  }
+
+  void _updateGroups() {
+    final settings = Provider.of<SettingsProvider>(context);
+    final query = _searchController.text.toLowerCase();
+    _filteredGroups = settings.sourceGroups.where((g) {
+      return query.isEmpty || g.name.toLowerCase().contains(query);
+    }).toList();
   }
 
   @override
@@ -44,6 +61,7 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
         return label.contains(query);
       }).toList();
       _sortSources();
+      _updateGroups();
     });
   }
 
@@ -90,6 +108,41 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
     return s.name;
   }
 
+  bool? _isGroupSelected(SourceGroup g) {
+    final groupSources = widget.availableSources
+        .where((s) => g.sourceNames.contains(s.name))
+        .toList();
+    if (groupSources.isEmpty) return false;
+
+    final selectedCount = groupSources.where((s) => _isSelected(s)).length;
+    if (selectedCount == groupSources.length) return true;
+    if (selectedCount > 0) return null; // tristate
+    return false;
+  }
+
+  void _toggleGroup(SourceGroup g) {
+    final groupSources = widget.availableSources
+        .where((s) => g.sourceNames.contains(s.name))
+        .toList();
+    final allSelected = groupSources.every((s) => _isSelected(s));
+
+    setState(() {
+      if (allSelected) {
+        // Deselect all
+        for (final s in groupSources) {
+          _selectedSources.removeWhere((selected) => selected.name == s.name);
+        }
+      } else {
+        // Select all
+        for (final s in groupSources) {
+          if (!_isSelected(s)) {
+            _selectedSources.add(s);
+          }
+        }
+      }
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -110,9 +163,22 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
             const SizedBox(height: 8),
             Expanded(
               child: ListView.builder(
-                itemCount: _filteredSources.length,
+                itemCount: _filteredGroups.length + _filteredSources.length,
                 itemBuilder: (context, index) {
-                  final source = _filteredSources[index];
+                  if (index < _filteredGroups.length) {
+                    final group = _filteredGroups[index];
+                    final groupSelected = _isGroupSelected(group);
+                    return CheckboxListTile(
+                      value: groupSelected,
+                      tristate: true,
+                      onChanged: (_) => _toggleGroup(group),
+                      title: Text(group.name),
+                      secondary: const Icon(Icons.group, size: 16),
+                      subtitle: Text('${group.sourceNames.length} repositories'),
+                    );
+                  }
+
+                  final source = _filteredSources[index - _filteredGroups.length];
                   final isSelected = _isSelected(source);
                   final isPrivate = source.githubRepo?.isPrivate ?? false;
 

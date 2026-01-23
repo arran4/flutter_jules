@@ -97,6 +97,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   final LayerLink _sourceLayerLink = LayerLink();
   OverlayEntry? _sourceOverlayEntry;
   List<Source> _filteredSources = [];
+  List<SourceGroup> _filteredGroups = [];
   int _highlightedSourceIndex = 0;
   // Size of the text field to match overlay
   double? _dropdownWidth;
@@ -165,28 +166,32 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   KeyEventResult _handleSourceFocusKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
-    if (_sourceOverlayEntry != null && _filteredSources.isNotEmpty) {
+    final totalCount = _filteredGroups.length + _filteredSources.length;
+    if (_sourceOverlayEntry != null && totalCount > 0) {
       if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
         setState(() {
-          _highlightedSourceIndex =
-              (_highlightedSourceIndex + 1) % _filteredSources.length;
+          _highlightedSourceIndex = (_highlightedSourceIndex + 1) % totalCount;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
         setState(() {
           _highlightedSourceIndex =
-              (_highlightedSourceIndex - 1 + _filteredSources.length) %
-                  _filteredSources.length;
+              (_highlightedSourceIndex - 1 + totalCount) % totalCount;
           _showSourceOverlay();
         });
         return KeyEventResult.handled;
       } else if (event.logicalKey == LogicalKeyboardKey.enter ||
           event.logicalKey == LogicalKeyboardKey.tab) {
-        if (_filteredSources.isNotEmpty) {
-          _selectSource(_filteredSources[_highlightedSourceIndex]);
-          return KeyEventResult.handled;
+        if (_highlightedSourceIndex < _filteredGroups.length) {
+          _selectGroup(_filteredGroups[_highlightedSourceIndex]);
+        } else {
+          final sourceIndex = _highlightedSourceIndex - _filteredGroups.length;
+          if (sourceIndex < _filteredSources.length) {
+            _selectSource(_filteredSources[sourceIndex]);
+          }
         }
+        return KeyEventResult.handled;
       }
     }
     return KeyEventResult.ignored;
@@ -421,10 +426,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         final label = _getSourceDisplayLabel(s).toLowerCase();
         return label.contains(query);
       }).toList();
+
+      if (query.isNotEmpty) {
+        _filteredGroups = settingsProvider.sourceGroups.where((g) {
+          return g.name.toLowerCase().contains(query);
+        }).toList();
+      } else {
+        _filteredGroups = [];
+      }
+
       _highlightedSourceIndex = 0;
     });
 
-    if (_filteredSources.isNotEmpty) {
+    if (_filteredSources.isNotEmpty || _filteredGroups.isNotEmpty) {
       _showSourceOverlay();
     } else {
       _removeSourceOverlay();
@@ -453,24 +467,43 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 child: ListView.builder(
                   padding: EdgeInsets.zero,
                   shrinkWrap: true,
-                  itemCount: _filteredSources.length,
+                  itemCount: _filteredGroups.length + _filteredSources.length,
                   itemBuilder: (context, index) {
-                    final source = _filteredSources[index];
                     final isHighlighted = index == _highlightedSourceIndex;
-                    final isPrivate = source.githubRepo?.isPrivate ?? false;
+                    if (index < _filteredGroups.length) {
+                      final group = _filteredGroups[index];
+                      return Container(
+                        color: isHighlighted
+                            ? Theme.of(context).highlightColor
+                            : null,
+                        child: ListTile(
+                          dense: true,
+                          leading: const Icon(Icons.group, size: 16),
+                          title: Text(group.name),
+                          subtitle:
+                              Text('${group.sourceNames.length} repositories'),
+                          onTap: () => _selectGroup(group),
+                        ),
+                      );
+                    } else {
+                      final source =
+                          _filteredSources[index - _filteredGroups.length];
+                      final isPrivate = source.githubRepo?.isPrivate ?? false;
 
-                    return Container(
-                      color: isHighlighted
-                          ? Theme.of(context).highlightColor
-                          : null,
-                      child: ListTile(
-                        dense: true,
-                        leading:
-                            isPrivate ? const Icon(Icons.lock, size: 16) : null,
-                        title: Text(_getSourceDisplayLabel(source)),
-                        onTap: () => _selectSource(source),
-                      ),
-                    );
+                      return Container(
+                        color: isHighlighted
+                            ? Theme.of(context).highlightColor
+                            : null,
+                        child: ListTile(
+                          dense: true,
+                          leading: isPrivate
+                              ? const Icon(Icons.lock, size: 16)
+                              : null,
+                          title: Text(_getSourceDisplayLabel(source)),
+                          onTap: () => _selectSource(source),
+                        ),
+                      );
+                    }
                   },
                 ),
               ),
@@ -495,6 +528,30 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _sourceController.text = _getSourceDisplayLabel(source);
       _updateBranchFromSource();
     });
+    _removeSourceOverlay();
+    _sourceFocusNode.unfocus();
+  }
+
+  void _selectGroup(SourceGroup group) {
+    final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
+    final allSources = sourceProvider.items.map((i) => i.data).toList();
+
+    // Map group members to Source objects
+    final sources =
+        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+
+    setState(() {
+      _bulkSelections = sources
+          .map((s) => BulkSelection(
+                source: s,
+                branch: _getBranchLabelForSource(s),
+              ))
+          .toList();
+
+      _selectedSource = null;
+      _sourceController.clear();
+    });
+
     _removeSourceOverlay();
     _sourceFocusNode.unfocus();
   }
