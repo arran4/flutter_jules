@@ -183,6 +183,12 @@ class FilterExpressionParser {
         if (arg == 'DRAFTS' || arg == 'DRAFT') {
           return LabelElement('Draft', 'draft');
         }
+        if (arg == 'CREATEPR' ||
+            arg == 'CREATE_PR' ||
+            arg == 'PRREADY' ||
+            arg == 'PR_READY') {
+          return HasCreatePrElement();
+        }
         return LabelElement(args[0], args[0]);
       case 'HAS_PR':
         return HasPrElement();

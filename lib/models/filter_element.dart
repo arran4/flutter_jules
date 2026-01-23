@@ -22,6 +22,7 @@ enum FilterElementType {
   tag,
   hasNotes,
   hasErrors,
+  hasCreatePr,
   disabled,
 }
 
@@ -166,6 +167,9 @@ abstract class FilterElement {
         break;
       case 'has_errors':
         element = HasErrorsElement.fromJson(json);
+        break;
+      case 'has_create_pr':
+        element = HasCreatePrElement.fromJson(json);
         break;
       case 'disabled':
         element = DisabledElement.fromJson(json);
@@ -1027,5 +1031,43 @@ class HasErrorsElement extends FilterElement {
 
   factory HasErrorsElement.fromJson(Map<String, dynamic> json) {
     return HasErrorsElement();
+  }
+}
+
+/// Has Create PR filter element
+class HasCreatePrElement extends FilterElement {
+  HasCreatePrElement();
+
+  @override
+  FilterElementType get type => FilterElementType.hasCreatePr;
+
+  @override
+  String get groupingType => 'has_create_pr';
+
+  @override
+  String toExpression() {
+    return 'Has(CreatePR)';
+  }
+
+  @override
+  Map<String, dynamic> toJson() => {
+        'type': 'has_create_pr',
+      };
+
+  @override
+  FilterState evaluate(FilterContext context) {
+    final session = context.session;
+    final matches = (session.prStatus == null || session.prStatus!.isEmpty) &&
+        (session.diffUrl != null ||
+            (session.changedFiles != null && session.changedFiles! > 0));
+
+    if (context.metadata.isHidden) {
+      return matches ? FilterState.implicitOut : FilterState.explicitOut;
+    }
+    return matches ? FilterState.explicitIn : FilterState.explicitOut;
+  }
+
+  factory HasCreatePrElement.fromJson(Map<String, dynamic> json) {
+    return HasCreatePrElement();
   }
 }
