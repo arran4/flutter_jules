@@ -1088,6 +1088,20 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           const SnackBar(content: Text('Jules Link copied')));
                     }
                   }
+                } else if (value == 'open_read_close') {
+                  if (_session.url != null) {
+                    if (await launchUrl(Uri.parse(_session.url!))) {
+                      if (context.mounted) {
+                        await sessionProvider.markAsRead(
+                          _session.id,
+                          auth.token!,
+                        );
+                        if (context.mounted) {
+                          Navigator.pop(context);
+                        }
+                      }
+                    }
+                  }
                 } else if (value == 'edit_session') {
                   final result = await showDialog<NewSessionResult>(
                     context: context,
@@ -1206,6 +1220,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           SizedBox(width: 8),
                           Text('Copy Jules Link')
                         ])),
+                  if (_session.url != null)
+                    const PopupMenuItem(
+                      value: 'open_read_close',
+                      child: Row(children: [
+                        Icon(Icons.open_in_new, color: Colors.grey),
+                        SizedBox(width: 8),
+                        Text('Open, Read & Close')
+                      ]),
+                    ),
                   const PopupMenuItem(
                       value: 'edit_session',
                       child: Row(children: [
