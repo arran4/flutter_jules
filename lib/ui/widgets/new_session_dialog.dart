@@ -1,9 +1,7 @@
 // ignore_for_file: deprecated_member_use
 
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
-import 'package:http/http.dart' as http;
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
@@ -75,7 +73,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   late final TextEditingController _promptController;
   Source? _selectedSource;
   String? _selectedBranch;
-  late final TextEditingController _imageUrlController;
 
   // Bulk Selection State
   List<BulkSelection> _bulkSelections = [];
@@ -106,7 +103,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   void initState() {
     super.initState();
     _promptController = TextEditingController();
-    _imageUrlController = TextEditingController();
 
     if (widget.mode == SessionDialogMode.edit &&
         widget.initialSession != null) {
@@ -159,7 +155,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _sourceController.dispose();
     _sourceFocusNode.dispose();
     _promptController.dispose();
-    _imageUrlController.dispose();
     super.dispose();
   }
 
@@ -644,38 +639,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _create({bool openNewDialog = false}) async {
-    // Handle Image
-    final imageUrl = _imageUrlController.text.trim();
-    List<Media>? images;
-    if (imageUrl.isNotEmpty) {
-      try {
-        final response = await http.get(Uri.parse(imageUrl));
-        if (response.statusCode == 200) {
-          final bytes = response.bodyBytes;
-          final base64Image = base64Encode(bytes);
-          final mimeType = response.headers['content-type'] ?? 'image/png';
-
-          images = [Media(data: base64Image, mimeType: mimeType)];
-        } else {
-          if (mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text('Failed to load image: ${response.statusCode}'),
-              ),
-            );
-            return;
-          }
-        }
-      } catch (e) {
-        if (mounted) {
-          ScaffoldMessenger.of(
-            context,
-          ).showSnackBar(SnackBar(content: Text('Failed to load image: $e')));
-          return;
-        }
-      }
-    }
-
     // Map Mode to API fields
     bool requirePlanApproval = false;
     AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
@@ -714,7 +677,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
-            images: images,
           ),
         );
       }
@@ -763,7 +725,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 ),
           requirePlanApproval: requirePlanApproval,
           automationMode: automationMode,
-          images: images,
         ),
       );
     }
@@ -1360,19 +1321,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                             ),
                           ),
 
-                          const SizedBox(height: 16),
-
-                          // Image Attachment (URL for now)
-                          TextField(
-                            controller: _imageUrlController,
-                            decoration: const InputDecoration(
-                              labelText: 'Image URL (Optional)',
-                              hintText: 'https://example.com/image.png',
-                              border: OutlineInputBorder(),
-                              prefixIcon: Icon(Icons.image),
-                            ),
-                            onChanged: (val) => setState(() {}),
-                          ),
                           const SizedBox(height: 24),
                         ],
                       ),
