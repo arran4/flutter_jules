@@ -50,7 +50,7 @@ void main() {
     });
 
     test('copyWith preserves reasonForLastUnread if not provided', () {
-       final now = DateTime.now();
+      final now = DateTime.now();
       final metadata = CacheMetadata(
         firstSeen: now,
         lastRetrieved: now,

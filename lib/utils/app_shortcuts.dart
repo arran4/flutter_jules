@@ -3,7 +3,8 @@ import 'package:flutter/widgets.dart' hide ShortcutRegistry;
 import '../services/shortcut_registry.dart';
 import '../models/app_shortcut_action.dart';
 
-void registerGlobalShortcuts(ShortcutRegistry registry, {bool isMacOS = false}) {
+void registerGlobalShortcuts(ShortcutRegistry registry,
+    {bool isMacOS = false}) {
   // Help: Ctrl+? (Windows/Linux) or Cmd+? (macOS)
   registry.register(Shortcut(
       SingleActivator(LogicalKeyboardKey.slash,

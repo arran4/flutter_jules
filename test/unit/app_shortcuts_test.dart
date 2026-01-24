@@ -1,6 +1,8 @@
-import 'package:flutter_test/flutter_test.dart' hide ShortcutRegistry;
+import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter/services.dart';
-import 'package:flutter/widgets.dart' hide ShortcutRegistry; // Explicitly import widgets just in case, but hide ShortcutRegistry
+import 'package:flutter/widgets.dart'
+    hide
+        ShortcutRegistry; // Explicitly import widgets just in case, but hide ShortcutRegistry
 import 'package:flutter_jules/services/shortcut_registry.dart';
 import 'package:flutter_jules/utils/app_shortcuts.dart';
 import 'package:flutter_jules/models/app_shortcut_action.dart';
@@ -20,7 +22,8 @@ void main() {
         final single = activator as SingleActivator;
         expect(single.trigger, LogicalKeyboardKey.slash);
         expect(single.meta, isTrue, reason: 'Should use Meta on macOS');
-        expect(single.control, isFalse, reason: 'Should not use Control on macOS');
+        expect(single.control, isFalse,
+            reason: 'Should not use Control on macOS');
         expect(single.shift, isTrue);
         helpFound = true;
       }
@@ -38,7 +41,8 @@ void main() {
         newSessionFound = true;
       }
     });
-    expect(newSessionFound, isTrue, reason: 'New Session shortcut not found for macOS');
+    expect(newSessionFound, isTrue,
+        reason: 'New Session shortcut not found for macOS');
   });
 
   test('registerGlobalShortcuts registers correct shortcuts for non-macOS', () {
@@ -54,7 +58,8 @@ void main() {
         final single = activator as SingleActivator;
         expect(single.trigger, LogicalKeyboardKey.slash);
         expect(single.meta, isFalse);
-        expect(single.control, isTrue, reason: 'Should use Control on non-macOS');
+        expect(single.control, isTrue,
+            reason: 'Should use Control on non-macOS');
         expect(single.shift, isTrue);
         helpFound = true;
       }
@@ -72,6 +77,7 @@ void main() {
         newSessionFound = true;
       }
     });
-    expect(newSessionFound, isTrue, reason: 'New Session shortcut not found for non-macOS');
+    expect(newSessionFound, isTrue,
+        reason: 'New Session shortcut not found for non-macOS');
   });
 }
