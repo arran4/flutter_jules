@@ -853,6 +853,24 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     Navigator.pop(context, NewSessionResult(dummy, isDelete: true));
   }
 
+  void _handleSend() {
+    if (_promptController.text.isNotEmpty &&
+        (_selectedSource != null || _bulkSelections.length > 1)) {
+      _create(openNewDialog: false);
+    } else if (_promptController.text.isNotEmpty) {
+      _saveDraft();
+    }
+  }
+
+  void _handleSendAndNew() {
+    if (_promptController.text.isNotEmpty &&
+        (_selectedSource != null || _bulkSelections.length > 1)) {
+      _create(openNewDialog: true);
+    } else if (_promptController.text.isNotEmpty) {
+      _saveDraft();
+    }
+  }
+
   String _getSourceDisplayLabel(Source s) {
     if (s.githubRepo != null) {
       return '${s.githubRepo!.owner}/${s.githubRepo!.repo}';
@@ -1295,16 +1313,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 const SingleActivator(
                                   LogicalKeyboardKey.enter,
                                   control: true,
-                                ): () {
-                                  if (_promptController.text.isNotEmpty &&
-                                      (_selectedSource != null ||
-                                          _bulkSelections.length > 1)) {
-                                    _create();
-                                  } else if (_promptController
-                                      .text.isNotEmpty) {
-                                    _saveDraft();
-                                  }
-                                },
+                                ): _handleSend,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                  meta: true,
+                                ): _handleSend,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                  control: true,
+                                  shift: true,
+                                ): _handleSendAndNew,
+                                const SingleActivator(
+                                  LogicalKeyboardKey.enter,
+                                  meta: true,
+                                  shift: true,
+                                ): _handleSendAndNew,
                               },
                               child: TextField(
                                 controller: _promptController,
