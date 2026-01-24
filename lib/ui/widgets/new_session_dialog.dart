@@ -831,6 +831,24 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     return 'main';
   }
 
+  void _handleSend() {
+    if (_promptController.text.isNotEmpty &&
+        (_selectedSource != null || _bulkSelections.length > 1)) {
+      _create(openNewDialog: false);
+    } else if (_promptController.text.isNotEmpty) {
+      _saveDraft();
+    }
+  }
+
+  void _handleSendAndNew() {
+    if (_promptController.text.isNotEmpty &&
+        (_selectedSource != null || _bulkSelections.length > 1)) {
+      _create(openNewDialog: true);
+    } else if (_promptController.text.isNotEmpty) {
+      _saveDraft();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer2<SourceProvider, SettingsProvider>(
@@ -1294,17 +1312,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         const SingleActivator(
                                           LogicalKeyboardKey.enter,
                                           control: true,
-                                        ): () {
-                                          if (_promptController
-                                                  .text.isNotEmpty &&
-                                              (_selectedSource != null ||
-                                                  _bulkSelections.length > 1)) {
-                                            _create();
-                                          } else if (_promptController
-                                              .text.isNotEmpty) {
-                                            _saveDraft();
-                                          }
-                                        },
+                                        ): _handleSend,
+                                        const SingleActivator(
+                                          LogicalKeyboardKey.enter,
+                                          meta: true,
+                                        ): _handleSend,
+                                        const SingleActivator(
+                                          LogicalKeyboardKey.enter,
+                                          control: true,
+                                          shift: true,
+                                        ): _handleSendAndNew,
+                                        const SingleActivator(
+                                          LogicalKeyboardKey.enter,
+                                          meta: true,
+                                          shift: true,
+                                        ): _handleSendAndNew,
                                       },
                                       child: TextField(
                                         controller: _promptController,
