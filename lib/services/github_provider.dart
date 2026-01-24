@@ -209,8 +209,10 @@ class GithubProvider extends ChangeNotifier {
             ));
 
             if (jobId != null) {
-              await _logFailure(jobId,
-                  'GitHub Unauthorized/Error: 404 for PR $owner/$repo/$prNumber');
+              final msg =
+                  'GITHUB_API_ERROR: 404 for PR $owner/$repo/$prNumber';
+              debugPrint(msg);
+              await _logFailure(jobId, msg);
             }
           }
         }
@@ -317,12 +319,12 @@ class GithubProvider extends ChangeNotifier {
             jobId: jobId,
           );
           debugPrint(
-              'GitHub Unauthorized/Error for $url: ${response.statusCode} ${response.body}');
+              'GITHUB_API_ERROR for $url: ${response.statusCode} ${response.body}');
           return null;
         } else {
           _warningCount++;
           debugPrint(
-            'Failed to get PR status for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}',
+            'GITHUB_API_ERROR: Failed to get PR status for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}',
           );
           return null;
         }
@@ -366,11 +368,11 @@ class GithubProvider extends ChangeNotifier {
         jobId: 'diff_${owner}_${repo}_$prNumber',
       );
       debugPrint(
-          'GitHub Unauthorized/Error (Diff) for $url: ${response.statusCode} ${response.body}');
+          'GITHUB_API_ERROR (Diff) for $url: ${response.statusCode} ${response.body}');
     } else {
       _warningCount++;
       debugPrint(
-          'Failed to get PR Diff for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
+          'GITHUB_API_ERROR: Failed to get PR Diff for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
     }
     return null;
   }
@@ -402,11 +404,11 @@ class GithubProvider extends ChangeNotifier {
         prNumber: prNumber,
       );
       debugPrint(
-          'GitHub Unauthorized/Error (Patch) for $url: ${response.statusCode} ${response.body}');
+          'GITHUB_API_ERROR (Patch) for $url: ${response.statusCode} ${response.body}');
     } else {
       _warningCount++;
       debugPrint(
-          'Failed to get PR Patch for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
+          'GITHUB_API_ERROR: Failed to get PR Patch for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
     }
     return null;
   }
@@ -580,6 +582,8 @@ class GithubProvider extends ChangeNotifier {
         if (response.statusCode == 401 ||
             response.statusCode == 403 ||
             response.statusCode == 404) {
+          debugPrint(
+              'GITHUB_API_ERROR (RepoDetails) for $url: ${response.statusCode} ${response.body}');
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
           throw GithubApiException(response.statusCode, response.body);
         }
