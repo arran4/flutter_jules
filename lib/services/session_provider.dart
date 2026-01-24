@@ -120,8 +120,9 @@ class SessionProvider extends ChangeNotifier {
 
       // Merge logic
       if (newSessions.isNotEmpty) {
-        _progressStreamController
-            .add('Merging ${newSessions.length} sessions...');
+        _progressStreamController.add(
+          'Merging ${newSessions.length} sessions...',
+        );
         for (var session in newSessions) {
           final index = _items.indexWhere((i) => i.data.id == session.id);
           final oldItem = index != -1 ? _items[index] : null;
@@ -146,13 +147,15 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed = (oldSession!.updateTime != session.updateTime) ||
+            final changed =
+                (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated:
-                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+              lastUpdated: changed
+                  ? DateTime.now()
+                  : oldItem.metadata.lastUpdated,
             );
           } else {
             metadata = CacheMetadata(
@@ -170,8 +173,9 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl =
-                  oldSession != null ? _getPrUrl(oldSession) : null;
+              final oldPrUrl = oldSession != null
+                  ? _getPrUrl(oldSession)
+                  : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
@@ -192,7 +196,8 @@ class SessionProvider extends ChangeNotifier {
 
               if (shouldRefresh) {
                 _progressStreamController.add(
-                    'Refreshing Git status for ${session.title ?? session.id}');
+                  'Refreshing Git status for ${session.title ?? session.id}',
+                );
                 _refreshGitStatusInBackground(session.id, prUrl, authToken);
               }
             }
@@ -268,7 +273,8 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed = (oldItem.data.updateTime != session.updateTime) ||
+      final changed =
+          (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
@@ -327,7 +333,7 @@ class SessionProvider extends ChangeNotifier {
         final oldItem = _items[index];
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
-                (oldItem.data.state != updatedSession.state);
+            (oldItem.data.state != updatedSession.state);
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
@@ -370,7 +376,8 @@ class SessionProvider extends ChangeNotifier {
         final prUrl = _getPrUrl(updatedSession);
         if (prUrl != null) {
           _progressStreamController.add(
-              'Refreshing Git status for ${updatedSession.title ?? updatedSession.id}');
+            'Refreshing Git status for ${updatedSession.title ?? updatedSession.id}',
+          );
           _refreshGitStatusInBackground(updatedSession.id, prUrl, authToken);
         }
       }
@@ -521,8 +528,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -689,9 +697,7 @@ class SessionProvider extends ChangeNotifier {
           status: PendingMessageStatus.sent,
         );
 
-        final newMetadata = item.metadata.copyWith(
-          pendingMessages: newPending,
-        );
+        final newMetadata = item.metadata.copyWith(pendingMessages: newPending);
         final newItem = CachedItem(item.data, newMetadata);
         _items[index] = newItem;
         notifyListeners();
@@ -799,8 +805,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
@@ -878,7 +885,9 @@ class SessionProvider extends ChangeNotifier {
 
       if (_cacheService != null) {
         await _cacheService!.updateSession(
-            (await _githubProvider!.getToken())!, updatedSession);
+          (await _githubProvider!.getToken())!,
+          updatedSession,
+        );
       }
     }
   }
@@ -1035,8 +1044,10 @@ class SessionProvider extends ChangeNotifier {
       }
 
       await Future.wait(
-        sourceSessions.map((item) =>
-            refreshSession(client, item.data.name, authToken: authToken)),
+        sourceSessions.map(
+          (item) =>
+              refreshSession(client, item.data.name, authToken: authToken),
+        ),
       );
     } catch (e) {
       debugPrint("Failed to refresh sessions for source $sourceName: $e");

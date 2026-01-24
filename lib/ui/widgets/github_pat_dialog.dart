@@ -58,8 +58,10 @@ class _GithubPatDialogState extends State<GithubPatDialog> {
     });
 
     try {
-      final githubProvider =
-          Provider.of<GithubProvider>(context, listen: false);
+      final githubProvider = Provider.of<GithubProvider>(
+        context,
+        listen: false,
+      );
       await githubProvider.setApiKey(_controller.text);
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
@@ -69,9 +71,9 @@ class _GithubPatDialogState extends State<GithubPatDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to update PAT: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to update PAT: $e')));
       }
     } finally {
       if (mounted) {

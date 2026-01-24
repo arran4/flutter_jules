@@ -2,13 +2,7 @@ import 'activity.dart';
 import 'pending_message.dart';
 import 'queued_message.dart';
 
-enum VirtualActivityStatus {
-  sending,
-  sent,
-  failed,
-  draft,
-  serverConfirmed,
-}
+enum VirtualActivityStatus { sending, sent, failed, draft, serverConfirmed }
 
 /// A unified model representing a message/activity in the timeline,
 /// handling both server-side activities and local transient states.

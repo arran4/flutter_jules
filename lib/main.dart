@@ -34,17 +34,15 @@ final navigatorKey = GlobalKey<NavigatorState>();
 void main(List<String> args) async {
   if (args.firstOrNull == 'multi_window') {
     final windowId = int.parse(args[1]);
-    runApp(NewSessionWindow(
-      windowId: windowId,
-    ));
+    runApp(NewSessionWindow(windowId: windowId));
   } else {
     WidgetsFlutterBinding.ensureInitialized();
     await windowManager.ensureInitialized();
     await NotificationService().init();
 
-    runApp(const AppContainer(
-      child: GlobalShortcutFocusManager(child: MyApp()),
-    ));
+    runApp(
+      const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())),
+    );
   }
 }
 
@@ -89,16 +87,25 @@ class _MyAppState extends State<MyApp> with WindowListener {
         }
       });
 
-      shortcutRegistry.register(Shortcut(
-          const SingleActivator(LogicalKeyboardKey.slash,
-              control: true, shift: true),
+      shortcutRegistry.register(
+        Shortcut(
+          const SingleActivator(
+            LogicalKeyboardKey.slash,
+            control: true,
+            shift: true,
+          ),
           AppShortcutAction.showHelp,
-          'Show Help'));
+          'Show Help',
+        ),
+      );
 
-      shortcutRegistry.register(Shortcut(
+      shortcutRegistry.register(
+        Shortcut(
           const SingleActivator(LogicalKeyboardKey.keyN, control: true),
           AppShortcutAction.newSession,
-          'New Session'));
+          'New Session',
+        ),
+      );
     });
   }
 
@@ -132,9 +139,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
     _trayService = TrayService(
       onNewSession: () async {
         final window = await DesktopMultiWindow.createWindow(
-          jsonEncode({
-            'type': 'new_session',
-          }),
+          jsonEncode({'type': 'new_session'}),
         );
         window
           ..setFrame(const Offset(0, 0) & const Size(800, 600))
@@ -146,15 +151,15 @@ class _MyAppState extends State<MyApp> with WindowListener {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
           context.read<SourceProvider>().fetchSources(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
         }
       },
     );
@@ -198,10 +203,14 @@ class _MyAppState extends State<MyApp> with WindowListener {
                   navigatorKey: navigatorKey,
                   title: "Arran's Flutter based jules client",
                   debugShowCheckedModeBanner: false,
-                  theme:
-                      JulesTheme.getTheme(settings.themeType, Brightness.light),
-                  darkTheme:
-                      JulesTheme.getTheme(settings.themeType, Brightness.dark),
+                  theme: JulesTheme.getTheme(
+                    settings.themeType,
+                    Brightness.light,
+                  ),
+                  darkTheme: JulesTheme.getTheme(
+                    settings.themeType,
+                    Brightness.dark,
+                  ),
                   themeMode: settings.themeMode,
                   routes: {
                     '/settings': (context) => const SettingsScreen(),
@@ -218,7 +227,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
                         return const LoginScreen();
                       }
                       return const NotificationOverlay(
-                          child: SessionListScreen());
+                        child: SessionListScreen(),
+                      );
                     },
                   ),
                 );

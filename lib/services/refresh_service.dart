@@ -35,8 +35,9 @@ class RefreshService extends ChangeNotifier {
     this._activityProvider,
     this._timerService, {
     @visibleForTesting SessionComparator? sessionComparator,
-  }) : _sessionComparator = sessionComparator ??
-            SessionComparator(_settingsProvider, _notificationService) {
+  }) : _sessionComparator =
+           sessionComparator ??
+           SessionComparator(_settingsProvider, _notificationService) {
     _timerService.addListener(_onTick);
   }
 
@@ -62,8 +63,11 @@ class RefreshService extends ChangeNotifier {
     }
   }
 
-  void notifyManualRun(RefreshTaskType type,
-      {ListRefreshPolicy? refreshPolicy, SendMessagesMode? sendMessagesMode}) {
+  void notifyManualRun(
+    RefreshTaskType type, {
+    ListRefreshPolicy? refreshPolicy,
+    SendMessagesMode? sendMessagesMode,
+  }) {
     final now = DateTime.now();
     // Create a copy of the list to avoid concurrent modification issues if updateSchedule modifies the list
     final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
@@ -148,7 +152,9 @@ class RefreshService extends ChangeNotifier {
   }
 
   Future<String> _executeRefresh(
-      RefreshSchedule schedule, JulesClient client) async {
+    RefreshSchedule schedule,
+    JulesClient client,
+  ) async {
     final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
@@ -160,14 +166,18 @@ class RefreshService extends ChangeNotifier {
         break;
       case ListRefreshPolicy.watched:
         if (_authProvider.token != null) {
-          await _sessionProvider.refreshWatchedSessions(client,
-              authToken: _authProvider.token!);
+          await _sessionProvider.refreshWatchedSessions(
+            client,
+            authToken: _authProvider.token!,
+          );
         }
         break;
       case ListRefreshPolicy.dirty:
         if (_authProvider.token != null) {
-          await _sessionProvider.refreshDirtySessions(client,
-              authToken: _authProvider.token!);
+          await _sessionProvider.refreshDirtySessions(
+            client,
+            authToken: _authProvider.token!,
+          );
         }
         break;
       case ListRefreshPolicy.none:
@@ -180,10 +190,13 @@ class RefreshService extends ChangeNotifier {
   }
 
   Future<void> _executeSendPendingMessages(
-      RefreshSchedule schedule, JulesClient client) async {
+    RefreshSchedule schedule,
+    JulesClient client,
+  ) async {
     if (_messageQueueProvider.queue.isEmpty) {
-      _activityProvider
-          .addLog('No pending messages to send for schedule ${schedule.name}');
+      _activityProvider.addLog(
+        'No pending messages to send for schedule ${schedule.name}',
+      );
       return;
     }
 
@@ -191,21 +204,25 @@ class RefreshService extends ChangeNotifier {
       case SendMessagesMode.sendOne:
         try {
           await _messageQueueProvider.sendQueue(client, limit: 1);
-          _activityProvider
-              .addLog('Successfully sent one message for ${schedule.name}');
+          _activityProvider.addLog(
+            'Successfully sent one message for ${schedule.name}',
+          );
         } catch (e) {
-          _activityProvider
-              .addLog('Failed to send message for ${schedule.name}: $e');
+          _activityProvider.addLog(
+            'Failed to send message for ${schedule.name}: $e',
+          );
         }
         break;
       case SendMessagesMode.sendAllUntilFailure:
         try {
           await _messageQueueProvider.sendQueue(client);
           _activityProvider.addLog(
-              'Successfully sent all pending messages for ${schedule.name}');
+            'Successfully sent all pending messages for ${schedule.name}',
+          );
         } catch (e) {
           _activityProvider.addLog(
-              'Failed to send all pending messages for ${schedule.name}: $e');
+            'Failed to send all pending messages for ${schedule.name}: $e',
+          );
         }
         break;
       default:

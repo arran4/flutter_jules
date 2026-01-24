@@ -174,8 +174,9 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                       onChanged: (_) => _toggleGroup(group),
                       title: Text(group.name),
                       secondary: const Icon(Icons.group, size: 16),
-                      subtitle:
-                          Text('${group.sourceNames.length} repositories'),
+                      subtitle: Text(
+                        '${group.sourceNames.length} repositories',
+                      ),
                     );
                   }
 
@@ -188,8 +189,9 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                     value: isSelected,
                     onChanged: (_) => _toggleSelection(source),
                     title: Text(_getSourceDisplayLabel(source)),
-                    secondary:
-                        isPrivate ? const Icon(Icons.lock, size: 16) : null,
+                    secondary: isPrivate
+                        ? const Icon(Icons.lock, size: 16)
+                        : null,
                   );
                 },
               ),

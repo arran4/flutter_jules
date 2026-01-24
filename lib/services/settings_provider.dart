@@ -195,11 +195,7 @@ class SettingsProvider extends ChangeNotifier {
       JulesThemeType.values,
       JulesThemeType.blue,
     );
-    _themeMode = _loadEnum(
-      keyThemeMode,
-      ThemeMode.values,
-      ThemeMode.system,
-    );
+    _themeMode = _loadEnum(keyThemeMode, ThemeMode.values, ThemeMode.system);
     _enableNotificationDebounce =
         _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
     _notificationDebounceDuration =
@@ -269,8 +265,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules =
-            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
+        _schedules = decodedList
+            .map((json) => RefreshSchedule.fromJson(json))
+            .toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }
@@ -563,8 +560,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _githubExclusions =
-            decodedList.map((json) => GithubExclusion.fromJson(json)).toList();
+        _githubExclusions = decodedList
+            .map((json) => GithubExclusion.fromJson(json))
+            .toList();
       } catch (e) {
         _githubExclusions = [];
       }
@@ -574,15 +572,17 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> _saveGithubExclusions() async {
-    final jsonString =
-        jsonEncode(_githubExclusions.map((e) => e.toJson()).toList());
+    final jsonString = jsonEncode(
+      _githubExclusions.map((e) => e.toJson()).toList(),
+    );
     await _prefs?.setString(_githubExclusionsKey, jsonString);
   }
 
   Future<void> addGithubExclusion(GithubExclusion exclusion) async {
     // Avoid duplicates
-    if (_githubExclusions
-        .any((e) => e.type == exclusion.type && e.value == exclusion.value)) {
+    if (_githubExclusions.any(
+      (e) => e.type == exclusion.type && e.value == exclusion.value,
+    )) {
       return;
     }
     _githubExclusions.add(exclusion);
@@ -591,7 +591,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> removeGithubExclusion(
-      String value, GithubExclusionType type) async {
+    String value,
+    GithubExclusionType type,
+  ) async {
     _githubExclusions.removeWhere((e) => e.value == value && e.type == type);
     await _saveGithubExclusions();
     notifyListeners();
@@ -604,9 +606,10 @@ class SettingsProvider extends ChangeNotifier {
 
     // Check for PR exclusion
     if (parts.length == 3) {
-      if (_githubExclusions.any((e) =>
-          e.type == GithubExclusionType.pullRequest &&
-          e.value == userOrgRepo)) {
+      if (_githubExclusions.any(
+        (e) =>
+            e.type == GithubExclusionType.pullRequest && e.value == userOrgRepo,
+      )) {
         return true;
       }
     }
@@ -614,8 +617,9 @@ class SettingsProvider extends ChangeNotifier {
     // Check for Repo exclusion
     if (parts.length >= 2) {
       final repo = '${parts[0]}/${parts[1]}';
-      if (_githubExclusions
-          .any((e) => e.type == GithubExclusionType.repo && e.value == repo)) {
+      if (_githubExclusions.any(
+        (e) => e.type == GithubExclusionType.repo && e.value == repo,
+      )) {
         return true;
       }
     }
@@ -623,8 +627,9 @@ class SettingsProvider extends ChangeNotifier {
     // Check for Org exclusion
     if (parts.isNotEmpty) {
       final org = parts[0];
-      if (_githubExclusions
-          .any((e) => e.type == GithubExclusionType.org && e.value == org)) {
+      if (_githubExclusions.any(
+        (e) => e.type == GithubExclusionType.org && e.value == org,
+      )) {
         return true;
       }
     }
@@ -637,8 +642,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _sourceGroups =
-            decodedList.map((json) => SourceGroup.fromJson(json)).toList();
+        _sourceGroups = decodedList
+            .map((json) => SourceGroup.fromJson(json))
+            .toList();
       } catch (e) {
         _sourceGroups = [];
       }
@@ -648,8 +654,9 @@ class SettingsProvider extends ChangeNotifier {
   }
 
   Future<void> _saveSourceGroups() async {
-    final jsonString =
-        jsonEncode(_sourceGroups.map((g) => g.toJson()).toList());
+    final jsonString = jsonEncode(
+      _sourceGroups.map((g) => g.toJson()).toList(),
+    );
     await _prefs?.setString(_sourceGroupsKey, jsonString);
   }
 

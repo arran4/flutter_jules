@@ -115,7 +115,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -205,7 +206,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // check if we can infer a more specific mode.
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -271,12 +273,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       if (mounted) {
-        final settingsProvider =
-            Provider.of<SettingsProvider>(context, listen: false);
+        final settingsProvider = Provider.of<SettingsProvider>(
+          context,
+          listen: false,
+        );
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
         _initializeSelection(sources);
         if (force) {
@@ -388,7 +393,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext!
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -402,13 +410,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final settingsProvider =
-        Provider.of<SettingsProvider>(context, listen: false);
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources =
-          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
     }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
@@ -480,8 +491,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           dense: true,
                           leading: const Icon(Icons.group, size: 16),
                           title: Text(group.name),
-                          subtitle:
-                              Text('${group.sourceNames.length} repositories'),
+                          subtitle: Text(
+                            '${group.sourceNames.length} repositories',
+                          ),
                           onTap: () => _selectGroup(group),
                         ),
                       );
@@ -529,7 +541,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _updateBranchFromSource();
     });
     _removeSourceOverlay();
-    _sourceFocusNode.unfocus();
+    _sourceFocusNode.requestFocus();
   }
 
   void _selectGroup(SourceGroup group) {
@@ -537,15 +549,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map group members to Source objects
-    final sources =
-        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+    final sources = allSources
+        .where((s) => group.sourceNames.contains(s.name))
+        .toList();
 
     setState(() {
       _bulkSelections = sources
-          .map((s) => BulkSelection(
-                source: s,
-                branch: _getBranchLabelForSource(s),
-              ))
+          .map(
+            (s) =>
+                BulkSelection(source: s, branch: _getBranchLabelForSource(s)),
+          )
           .toList();
 
       _selectedSource = null;
@@ -599,8 +612,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
     // Convert existing BulkSelection to simple Source list for the dialog
-    List<Source> initialSelection =
-        _bulkSelections.map((bs) => bs.source).toList();
+    List<Source> initialSelection = _bulkSelections
+        .map((bs) => bs.source)
+        .toList();
     if (initialSelection.isEmpty && _selectedSource != null) {
       initialSelection.add(_selectedSource!);
     }
@@ -709,8 +723,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             prompt: _promptController.text,
             sourceContext: SourceContext(
               source: selection.source.name,
-              githubRepoContext:
-                  GitHubRepoContext(startingBranch: selection.branch),
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: selection.branch,
+              ),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -771,8 +786,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (mounted) {
       Navigator.pop(
         context,
-        NewSessionResult.multiple(sessionsToCreate,
-            isDraft: false, openNewDialog: openNewDialog),
+        NewSessionResult.multiple(
+          sessionsToCreate,
+          isDraft: false,
+          openNewDialog: openNewDialog,
+        ),
       );
     }
   }
@@ -811,8 +829,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             prompt: _promptController.text,
             sourceContext: SourceContext(
               source: selection.source.name,
-              githubRepoContext:
-                  GitHubRepoContext(startingBranch: selection.branch),
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: selection.branch,
+              ),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -876,8 +895,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
 
         // Sort sources
@@ -966,9 +986,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                 Expanded(
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 24.0,
-                      ),
+                      padding: const EdgeInsets.symmetric(horizontal: 24.0),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
@@ -990,8 +1008,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 children: [
                                   Row(
                                     children: [
-                                      const Icon(Icons.error_outline,
-                                          color: Colors.red),
+                                      const Icon(
+                                        Icons.error_outline,
+                                        color: Colors.red,
+                                      ),
                                       const SizedBox(width: 8),
                                       Expanded(
                                         child: Text(
@@ -1007,21 +1027,23 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   Consumer<MessageQueueProvider>(
                                     builder: (context, queueProvider, _) {
                                       try {
-                                        final errorMsg =
-                                            queueProvider.queue.firstWhere(
-                                          (m) =>
-                                              m.type ==
-                                                  QueuedMessageType
-                                                      .sessionCreation &&
-                                              m.content ==
-                                                  widget
-                                                      .initialSession!.prompt &&
-                                              m.processingErrors.isNotEmpty,
-                                        );
+                                        final errorMsg = queueProvider.queue
+                                            .firstWhere(
+                                              (m) =>
+                                                  m.type ==
+                                                      QueuedMessageType
+                                                          .sessionCreation &&
+                                                  m.content ==
+                                                      widget
+                                                          .initialSession!
+                                                          .prompt &&
+                                                  m.processingErrors.isNotEmpty,
+                                            );
 
                                         return Padding(
-                                          padding:
-                                              const EdgeInsets.only(top: 8.0),
+                                          padding: const EdgeInsets.only(
+                                            top: 8.0,
+                                          ),
                                           child: Column(
                                             crossAxisAlignment:
                                                 CrossAxisAlignment.start,
@@ -1136,7 +1158,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   final selection = _bulkSelections[index];
                                   final source = selection.source;
                                   final repo = source.githubRepo;
-                                  List<String> branches = repo?.branches
+                                  List<String> branches =
+                                      repo?.branches
                                           ?.map((b) => b.displayName)
                                           .toList() ??
                                       [];
@@ -1158,45 +1181,52 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         Expanded(
                                           child:
                                               DropdownButtonFormField<String>(
-                                            isExpanded: true,
-                                            decoration: const InputDecoration(
-                                              labelText: 'Branch',
-                                              border: OutlineInputBorder(),
-                                            ),
-                                            value: selection.branch,
-                                            items: branches
-                                                .map(
-                                                  (b) => DropdownMenuItem(
-                                                    value: b,
-                                                    child: Text(
-                                                      b,
-                                                      overflow:
-                                                          TextOverflow.ellipsis,
+                                                isExpanded: true,
+                                                decoration:
+                                                    const InputDecoration(
+                                                      labelText: 'Branch',
+                                                      border:
+                                                          OutlineInputBorder(),
                                                     ),
-                                                  ),
-                                                )
-                                                .toList(),
-                                            onChanged: (val) {
-                                              if (val != null) {
-                                                setState(() {
-                                                  selection.branch = val;
-                                                });
-                                              }
-                                            },
-                                          ),
+                                                value: selection.branch,
+                                                items: branches
+                                                    .map(
+                                                      (b) => DropdownMenuItem(
+                                                        value: b,
+                                                        child: Text(
+                                                          b,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
+                                                onChanged: (val) {
+                                                  if (val != null) {
+                                                    setState(() {
+                                                      selection.branch = val;
+                                                    });
+                                                  }
+                                                },
+                                              ),
                                         ),
                                         const SizedBox(width: 8),
                                         IconButton(
-                                          icon:
-                                              const Icon(Icons.close, size: 16),
+                                          icon: const Icon(
+                                            Icons.close,
+                                            size: 16,
+                                          ),
                                           onPressed: () {
                                             setState(() {
                                               _bulkSelections.removeAt(index);
                                               if (_bulkSelections.length <= 1) {
                                                 if (_bulkSelections
                                                     .isNotEmpty) {
-                                                  _selectSource(_bulkSelections
-                                                      .first.source);
+                                                  _selectSource(
+                                                    _bulkSelections
+                                                        .first
+                                                        .source,
+                                                  );
                                                 } else {
                                                   _selectedSource = null;
                                                   _sourceController.clear();
@@ -1230,17 +1260,24 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                           decoration: InputDecoration(
                                             labelText: 'Repository',
                                             border: const OutlineInputBorder(),
-                                            prefixIcon: (_selectedSource
+                                            prefixIcon:
+                                                (_selectedSource
                                                         ?.githubRepo
                                                         ?.isPrivate ==
                                                     true)
-                                                ? const Icon(Icons.lock,
-                                                    size: 16)
-                                                : const Icon(Icons.source,
-                                                    size: 16),
+                                                ? const Icon(
+                                                    Icons.lock,
+                                                    size: 16,
+                                                  )
+                                                : const Icon(
+                                                    Icons.source,
+                                                    size: 16,
+                                                  ),
                                             suffixIcon: IconButton(
-                                              icon: const Icon(Icons.close,
-                                                  size: 16),
+                                              icon: const Icon(
+                                                Icons.close,
+                                                size: 16,
+                                              ),
                                               onPressed: () {
                                                 _sourceController.clear();
                                                 _sourceFocusNode.requestFocus();
@@ -1301,7 +1338,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                           _bulkSelections.length > 1)) {
                                     _create();
                                   } else if (_promptController
-                                      .text.isNotEmpty) {
+                                      .text
+                                      .isNotEmpty) {
                                     _saveDraft();
                                   }
                                 },
@@ -1316,14 +1354,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   hintText: 'Describe what you want to do...',
                                   border: const OutlineInputBorder(),
                                   alignLabelWithHint: true,
-                                  suffixIcon: (widget.mode ==
-                                              SessionDialogMode.edit ||
+                                  suffixIcon:
+                                      (widget.mode == SessionDialogMode.edit ||
                                           widget.mode ==
                                               SessionDialogMode
                                                   .createWithContext)
                                       ? IconButton(
                                           icon: const Icon(
-                                              Icons.content_paste_go),
+                                            Icons.content_paste_go,
+                                          ),
                                           tooltip:
                                               'Import Prompt from Original Session',
                                           onPressed: () {
@@ -1346,11 +1385,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             }
                                             _promptController.selection =
                                                 TextSelection.fromPosition(
-                                              TextPosition(
-                                                offset: _promptController
-                                                    .text.length,
-                                              ),
-                                            );
+                                                  TextPosition(
+                                                    offset: _promptController
+                                                        .text
+                                                        .length,
+                                                  ),
+                                                );
                                           },
                                         )
                                       : null,

@@ -95,10 +95,7 @@ class _ActivityListView extends StatelessWidget {
             subtitle: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                Text(
-                  activity.createTime,
-                  style: const TextStyle(fontSize: 12),
-                ),
+                Text(activity.createTime, style: const TextStyle(fontSize: 12)),
                 if (activity.description.isNotEmpty)
                   Text(
                     activity.description,
@@ -109,9 +106,7 @@ class _ActivityListView extends StatelessWidget {
                   ),
               ],
             ),
-            children: [
-              _JsonView(data: activity.toJson()),
-            ],
+            children: [_JsonView(data: activity.toJson())],
           ),
         );
       },

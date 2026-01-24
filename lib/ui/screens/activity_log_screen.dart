@@ -10,9 +10,7 @@ class ActivityLogScreen extends StatelessWidget {
     final activityProvider = Provider.of<ActivityProvider>(context);
 
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Activity Log'),
-      ),
+      appBar: AppBar(title: const Text('Activity Log')),
       body: ListView.builder(
         itemCount: activityProvider.logs.length,
         itemBuilder: (context, index) {

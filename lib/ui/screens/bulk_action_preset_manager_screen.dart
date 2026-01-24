@@ -42,11 +42,12 @@ class _BulkActionPresetManagerScreenState
                 (p.description?.toLowerCase().contains(_searchQuery) ?? false);
           }).toList();
 
-          final restorablePresets =
-              provider.getRestorableSystemPresets().where((p) {
-            if (_searchQuery.isEmpty) return true;
-            return p.name.toLowerCase().contains(_searchQuery);
-          }).toList();
+          final restorablePresets = provider.getRestorableSystemPresets().where(
+            (p) {
+              if (_searchQuery.isEmpty) return true;
+              return p.name.toLowerCase().contains(_searchQuery);
+            },
+          ).toList();
 
           return Column(
             children: [
@@ -199,15 +200,14 @@ class _BulkActionPresetManagerScreenState
   }
 
   void _showPresetEditor(BuildContext context, BulkActionPreset? existing) {
-    final isSystem = existing != null &&
+    final isSystem =
+        existing != null &&
         context.read<BulkActionPresetProvider>().isSystemPreset(existing.name);
 
     showDialog(
       context: context,
-      builder: (dialogContext) => _PresetEditorDialog(
-        existing: existing,
-        isReadOnly: isSystem,
-      ),
+      builder: (dialogContext) =>
+          _PresetEditorDialog(existing: existing, isReadOnly: isSystem),
     );
   }
 
@@ -226,8 +226,8 @@ class _BulkActionPresetManagerScreenState
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               context.read<BulkActionPresetProvider>().deletePreset(
-                    preset.name,
-                  );
+                preset.name,
+              );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Preset "${preset.name}" deleted')),
@@ -363,9 +363,9 @@ class _BulkActionPresetManagerScreenState
 
                 try {
                   await context.read<BulkActionPresetProvider>().importFromJson(
-                        jsonString,
-                        merge: merge,
-                      );
+                    jsonString,
+                    merge: merge,
+                  );
 
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext);
@@ -402,10 +402,7 @@ class _PresetEditorDialog extends StatefulWidget {
   final BulkActionPreset? existing;
   final bool isReadOnly;
 
-  const _PresetEditorDialog({
-    required this.existing,
-    required this.isReadOnly,
-  });
+  const _PresetEditorDialog({required this.existing, required this.isReadOnly});
 
   @override
   State<_PresetEditorDialog> createState() => _PresetEditorDialogState();
@@ -421,12 +418,15 @@ class _PresetEditorDialogState extends State<_PresetEditorDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(text: widget.existing?.name ?? '');
-    _descController =
-        TextEditingController(text: widget.existing?.description ?? '');
-    _filterController =
-        TextEditingController(text: widget.existing?.filterExpression ?? '');
-    _scriptController =
-        TextEditingController(text: widget.existing?.actionScript ?? '');
+    _descController = TextEditingController(
+      text: widget.existing?.description ?? '',
+    );
+    _filterController = TextEditingController(
+      text: widget.existing?.filterExpression ?? '',
+    );
+    _scriptController = TextEditingController(
+      text: widget.existing?.actionScript ?? '',
+    );
   }
 
   @override

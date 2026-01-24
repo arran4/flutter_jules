@@ -79,10 +79,7 @@ void main() {
       },
       FilterElementType.time: (tester) async {
         // TimeFilterElement
-        final tf = TimeFilter(
-          type: TimeFilterType.newerThan,
-          range: '5 days',
-        );
+        final tf = TimeFilter(type: TimeFilterType.newerThan, range: '5 days');
         await pumpElement(tester, TimeFilterElement(tf));
         expect(find.byIcon(Icons.access_time), findsOneWidget);
         expect(find.text('Updated is newer than 5 days'), findsOneWidget);

@@ -19,10 +19,7 @@ class MetadataViewer extends StatelessWidget {
           rows: metadata
               .map(
                 (m) => DataRow(
-                  cells: [
-                    DataCell(Text(m.key)),
-                    DataCell(Text(m.value)),
-                  ],
+                  cells: [DataCell(Text(m.key)), DataCell(Text(m.value))],
                 ),
               )
               .toList(),

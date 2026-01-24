@@ -47,28 +47,14 @@ class TrayService with TrayListener {
   }
 
   Future<void> setTrayIcon() async {
-    await trayManager.setIcon(
-      'assets/icon/app_icon.png',
-    );
+    await trayManager.setIcon('assets/icon/app_icon.png');
     final menu = Menu(
       items: [
-        MenuItem(
-          key: 'new_session',
-          label: 'New Session',
-        ),
-        MenuItem(
-          key: 'show_hide',
-          label: 'Show/Hide',
-        ),
-        MenuItem(
-          key: 'refresh',
-          label: 'Refresh',
-        ),
+        MenuItem(key: 'new_session', label: 'New Session'),
+        MenuItem(key: 'show_hide', label: 'Show/Hide'),
+        MenuItem(key: 'refresh', label: 'Refresh'),
         MenuItem.separator(),
-        MenuItem(
-          key: 'exit',
-          label: 'Exit',
-        ),
+        MenuItem(key: 'exit', label: 'Exit'),
       ],
     );
     await trayManager.setContextMenu(menu);

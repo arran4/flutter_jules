@@ -29,14 +29,18 @@ class TimeFilter {
     }
 
     final specificTimeStr = getStringPropOrDefault(json, 'specificTime', null);
-    final specificTimeEndStr =
-        getStringPropOrDefault(json, 'specificTimeEnd', null);
+    final specificTimeEndStr = getStringPropOrDefault(
+      json,
+      'specificTimeEnd',
+      null,
+    );
     final fieldStr = getStringPropOrDefault(json, 'field', null);
 
     return TimeFilter(
       type: TimeFilterType.values.byName(getStringPropOrThrow(json, 'type')),
-      specificTime:
-          specificTimeStr != null ? DateTime.parse(specificTimeStr) : null,
+      specificTime: specificTimeStr != null
+          ? DateTime.parse(specificTimeStr)
+          : null,
       specificTimeEnd: specificTimeEndStr != null
           ? DateTime.parse(specificTimeEndStr)
           : null,

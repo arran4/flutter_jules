@@ -10,8 +10,10 @@ class SourceStatsDialog extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final sessionProvider =
-        Provider.of<SessionProvider>(context, listen: false);
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
     final allSessions = sessionProvider.items;
 
     final sourceSessions = allSessions
@@ -34,8 +36,10 @@ class SourceStatsDialog extends StatelessWidget {
           children: <Widget>[
             Text('Total Sessions: ${sourceSessions.length}'),
             const SizedBox(height: 16),
-            const Text('Sessions by Status:',
-                style: TextStyle(fontWeight: FontWeight.bold)),
+            const Text(
+              'Sessions by Status:',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
             ...sortedStatuses.map((status) {
               return Padding(
                 padding: const EdgeInsets.only(top: 8.0),
