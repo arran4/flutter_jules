@@ -19,7 +19,7 @@ class MockHttpClient extends http.BaseClient {
     return http.StreamedResponse(
       Stream.fromIterable([
         '{"name": "test_name", "id": "test_id", "prompt": "test_prompt"}'
-            .codeUnits,
+            .codeUnits
       ]),
       200,
       headers: {'content-type': 'application/json'},
@@ -44,6 +44,11 @@ void main() {
     // Start req1, End req1, Start req2, End req2
     // If they are concurrent, we'd likely see Start req1, Start req2...
 
-    expect(logs, ['Start req1', 'End req1', 'Start req2', 'End req2']);
+    expect(logs, [
+      'Start req1',
+      'End req1',
+      'Start req2',
+      'End req2',
+    ]);
   });
 }

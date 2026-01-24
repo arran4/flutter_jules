@@ -76,9 +76,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       final settings = context.read<SettingsProvider>();
       _actions = List<BulkActionStep>.from(settings.lastBulkActions);
       _parallelQueries = settings.lastBulkParallelQueries;
-      _waitBetween = Duration(
-        milliseconds: settings.lastBulkWaitBetweenMilliseconds,
-      );
+      _waitBetween =
+          Duration(milliseconds: settings.lastBulkWaitBetweenMilliseconds);
       _waitBetweenUnit = settings.lastBulkWaitBetweenUnit;
       _limit = settings.lastBulkLimit;
       _offset = settings.lastBulkOffset;
@@ -126,9 +125,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         _loadPresetInternal(preset);
       });
       _updatePreview();
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(SnackBar(content: Text('Loaded preset: ${preset.name}')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Loaded preset: ${preset.name}')),
+      );
     }
   }
 
@@ -146,10 +145,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final titleMatches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                (session.name.toLowerCase().contains(query)) ||
-                (session.id.toLowerCase().contains(query)) ||
-                (session.state?.displayName.toLowerCase().contains(query) ??
-                    false);
+                    (session.name.toLowerCase().contains(query)) ||
+                    (session.id.toLowerCase().contains(query)) ||
+                    (session.state?.displayName.toLowerCase().contains(query) ??
+                        false);
             if (!titleMatches) return false;
           }
 
@@ -310,9 +309,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 ),
                                 onChanged: (val) {
                                   setState(() {
-                                    _limit = val.isEmpty
-                                        ? null
-                                        : int.tryParse(val);
+                                    _limit =
+                                        val.isEmpty ? null : int.tryParse(val);
                                   });
                                   _updatePreview();
                                 },
@@ -448,9 +446,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed: _totalMatches > 0 && _actions.isNotEmpty
-              ? _startJob
-              : null,
+          onPressed:
+              _totalMatches > 0 && _actions.isNotEmpty ? _startJob : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Run Bulk Actions'),
         ),
@@ -620,8 +617,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     String? initialDescription;
 
     if (_stateManager.shouldPreFill(
-      provider.isSystemPreset(_stateManager.lastLoadedPreset?.name ?? ''),
-    )) {
+        provider.isSystemPreset(_stateManager.lastLoadedPreset?.name ?? ''))) {
       initialName = _stateManager.lastLoadedPreset!.name;
       initialDescription = _stateManager.lastLoadedPreset!.description;
     }
@@ -661,8 +657,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       if (existingPreset != null) {
         final contentDiffers =
             existingPreset.filterExpression != newPreset.filterExpression ||
-            existingPreset.actionScript != newPreset.actionScript ||
-            existingPreset.description != newPreset.description;
+                existingPreset.actionScript != newPreset.actionScript ||
+                existingPreset.description != newPreset.description;
 
         if (contentDiffers) {
           final confirm = await showDialog<bool>(
@@ -706,15 +702,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   void _startJob() {
     // Save configuration
     context.read<SettingsProvider>().saveBulkActionConfig(
-      actions: _actions,
-      parallelQueries: _parallelQueries,
-      waitBetweenMilliseconds: _waitBetween.inMilliseconds,
-      waitBetweenUnit: _waitBetweenUnit,
-      limit: _limit,
-      offset: _offset,
-      randomize: _randomize,
-      stopOnError: _stopOnError,
-    );
+          actions: _actions,
+          parallelQueries: _parallelQueries,
+          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
+          waitBetweenUnit: _waitBetweenUnit,
+          limit: _limit,
+          offset: _offset,
+          randomize: _randomize,
+          stopOnError: _stopOnError,
+        );
 
     final config = BulkJobConfig(
       targetType: BulkTargetType.filtered,
@@ -742,9 +738,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final matches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                (session.name.toLowerCase().contains(query)) ||
-                (session.id.toLowerCase().contains(query)) ||
-                (session.state.toString().toLowerCase().contains(query));
+                    (session.name.toLowerCase().contains(query)) ||
+                    (session.id.toLowerCase().contains(query)) ||
+                    (session.state.toString().toLowerCase().contains(query));
             if (!matches) return false;
           }
 

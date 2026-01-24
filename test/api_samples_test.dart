@@ -46,9 +46,8 @@ void main() {
       // But Activity.fromJson exists.
 
       final activitiesList = json['activities'] as List;
-      final activities = activitiesList
-          .map((e) => Activity.fromJson(e))
-          .toList();
+      final activities =
+          activitiesList.map((e) => Activity.fromJson(e)).toList();
 
       expect(activities.length, 1);
       final activity = activities.first;

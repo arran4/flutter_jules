@@ -16,9 +16,8 @@ class _NoteDialogState extends State<NoteDialog> {
   @override
   void initState() {
     super.initState();
-    _contentController = TextEditingController(
-      text: widget.note?.content ?? '',
-    );
+    _contentController =
+        TextEditingController(text: widget.note?.content ?? '');
   }
 
   @override

@@ -286,11 +286,10 @@ class MessageQueueProvider extends ChangeNotifier {
             sessionToCreate = Session.fromJson(msg.metadata!);
           } else {
             sessionToCreate = Session(
-              id: '',
-              name: '',
-              prompt: msg.content,
-              sourceContext: SourceContext(source: ''),
-            );
+                id: '',
+                name: '',
+                prompt: msg.content,
+                sourceContext: SourceContext(source: ''));
           }
 
           final createdSession = await client.createSession(sessionToCreate);
@@ -311,15 +310,13 @@ class MessageQueueProvider extends ChangeNotifier {
           // it's an orphan. We should probably mark it as an error.
           if (msg.sessionId == 'new_session') {
             throw Exception(
-              "Orphaned message for a new session. No creation request found.",
-            );
+                "Orphaned message for a new session. No creation request found.");
           }
 
           // Check for temporary/invalid session IDs (numeric timestamps or missing prefix)
           if (!msg.sessionId.startsWith('sessions/')) {
             throw Exception(
-              "Invalid Session ID: ${msg.sessionId}. Pending session creation not found or failed.",
-            );
+                "Invalid Session ID: ${msg.sessionId}. Pending session creation not found or failed.");
           }
 
           await client.sendMessage(msg.sessionId, msg.content);
@@ -334,9 +331,8 @@ class MessageQueueProvider extends ChangeNotifier {
 
         final index = _queue.indexWhere((m) => m.id == msg.id);
         if (index != -1) {
-          final currentErrors = List<String>.from(
-            _queue[index].processingErrors,
-          );
+          final currentErrors =
+              List<String>.from(_queue[index].processingErrors);
 
           Map<String, dynamic>? newMetadata = _queue[index].metadata;
 
@@ -356,8 +352,7 @@ class MessageQueueProvider extends ChangeNotifier {
           if (e is NotFoundException) {
             // 404 Not Found. Session probably deleted or ID invalid.
             currentErrors.add(
-              "Session not found (404). This session may have been deleted.",
-            );
+                "Session not found (404). This session may have been deleted.");
           } else {
             currentErrors.add(e.toString());
           }

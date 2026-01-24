@@ -25,7 +25,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
 
   final List<FilterToken>
-  availableSuggestions; // All possible filters for autocomplete
+      availableSuggestions; // All possible filters for autocomplete
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -110,9 +110,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _updateFormulaText() {
     final filterExpression = widget.filterTree?.toExpression() ?? '';
-    final sortExpression = widget.activeSorts
-        .map((s) => s.toExpression())
-        .join(', ');
+    final sortExpression =
+        widget.activeSorts.map((s) => s.toExpression()).join(', ');
     final fullExpression =
         '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
             .trim();
@@ -140,25 +139,37 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         id: 'time_15m',
         type: FilterType.time,
         label: 'Last 15 minutes',
-        value: TimeFilter(type: TimeFilterType.newerThan, range: '15 minutes'),
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '15 minutes',
+        ),
       ),
       FilterToken(
         id: 'time_1h',
         type: FilterType.time,
         label: 'Last 1 hour',
-        value: TimeFilter(type: TimeFilterType.newerThan, range: '1 hour'),
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '1 hour',
+        ),
       ),
       FilterToken(
         id: 'time_24h',
         type: FilterType.time,
         label: 'Last 24 hours',
-        value: TimeFilter(type: TimeFilterType.newerThan, range: '24 hours'),
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '24 hours',
+        ),
       ),
       FilterToken(
         id: 'time_7d',
         type: FilterType.time,
         label: 'Last 7 days',
-        value: TimeFilter(type: TimeFilterType.newerThan, range: '7 days'),
+        value: TimeFilter(
+          type: TimeFilterType.newerThan,
+          range: '7 days',
+        ),
       ),
       const FilterToken(
         id: 'time_updated_before',
@@ -278,27 +289,22 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     _removeOverlay();
 
     // Group suggestions by type
-    final flagSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.flag)
-        .toList();
-    final statusSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.status)
-        .toList();
-    final sourceSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.source)
-        .toList();
+    final flagSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.flag).toList();
+    final statusSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.status).toList();
+    final sourceSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.source).toList();
     final prStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.prStatus)
         .toList();
     final ciStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.ciStatus)
         .toList();
-    final timeSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.time)
-        .toList();
-    final otherSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.text)
-        .toList();
+    final timeSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.time).toList();
+    final otherSuggestions =
+        _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -644,16 +650,11 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   Future<void> _saveCurrentFilters(BuildContext context) async {
     final nameController = TextEditingController();
     final descController = TextEditingController();
-    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-      context,
-      listen: false,
-    );
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
 
     if (_presetStateManager.shouldPreFill(
-      widget.filterTree,
-      widget.activeSorts,
-      bookmarkProvider,
-    )) {
+        widget.filterTree, widget.activeSorts, bookmarkProvider)) {
       nameController.text = _presetStateManager.lastLoadedBookmark!.name;
       descController.text =
           _presetStateManager.lastLoadedBookmark!.description ?? '';
@@ -843,10 +844,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   void _showPresetOverlay() {
     _removeOverlay(); // Close search autocomplete if open
 
-    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-      context,
-      listen: false,
-    );
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
 
     final RenderBox? buttonBox =
         _presetButtonKey.currentContext?.findRenderObject() as RenderBox?;
@@ -957,11 +956,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                 context,
                                 'My Presets',
                                 bookmarkProvider.bookmarks
-                                    .where(
-                                      (b) => !bookmarkProvider.isSystemBookmark(
-                                        b.name,
-                                      ),
-                                    )
+                                    .where((b) => !bookmarkProvider
+                                        .isSystemBookmark(b.name))
                                     .toList(),
                                 isSystem: false,
                               ),
@@ -971,11 +967,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                 context,
                                 'System Presets',
                                 bookmarkProvider.bookmarks
-                                    .where(
-                                      (b) => bookmarkProvider.isSystemBookmark(
-                                        b.name,
-                                      ),
-                                    )
+                                    .where((b) => bookmarkProvider
+                                        .isSystemBookmark(b.name))
                                     .toList(),
                                 isSystem: true,
                               ),
@@ -1004,21 +997,19 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                               onPressed: () {
                                 _removePresetOverlay();
                                 Future.delayed(
-                                  const Duration(milliseconds: 100),
-                                  () {
-                                    if (context.mounted) {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              BookmarkManagerScreen(
-                                                availableSuggestions:
-                                                    widget.availableSuggestions,
-                                              ),
+                                    const Duration(milliseconds: 100), () {
+                                  if (context.mounted) {
+                                    Navigator.of(context).push(
+                                      MaterialPageRoute(
+                                        builder: (context) =>
+                                            BookmarkManagerScreen(
+                                          availableSuggestions:
+                                              widget.availableSuggestions,
                                         ),
-                                      );
-                                    }
-                                  },
-                                );
+                                      ),
+                                    );
+                                  }
+                                });
                               },
                               icon: const Icon(Icons.settings, size: 16),
                               label: const Text('Manage'),
@@ -1040,11 +1031,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   }
 
   Widget _buildPresetSection(
-    BuildContext context,
-    String title,
-    List<FilterBookmark> bookmarks, {
-    required bool isSystem,
-  }) {
+      BuildContext context, String title, List<FilterBookmark> bookmarks,
+      {required bool isSystem}) {
     if (bookmarks.isEmpty) return const SizedBox.shrink();
 
     return Column(
@@ -1132,11 +1120,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             children: [
                               Row(
                                 children: [
-                                  Icon(
-                                    Icons.filter_alt_outlined,
-                                    size: 12,
-                                    color: Colors.grey.shade500,
-                                  ),
+                                  Icon(Icons.filter_alt_outlined,
+                                      size: 12, color: Colors.grey.shade500),
                                   const SizedBox(width: 4),
                                   Expanded(
                                     child: Text(
@@ -1158,11 +1143,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                 const SizedBox(height: 2),
                                 Row(
                                   children: [
-                                    Icon(
-                                      Icons.sort,
-                                      size: 12,
-                                      color: Colors.grey.shade500,
-                                    ),
+                                    Icon(Icons.sort,
+                                        size: 12, color: Colors.grey.shade500),
                                     const SizedBox(width: 4),
                                     Expanded(
                                       child: Text(
@@ -1226,94 +1208,67 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                           alternative,
                           isAnd: false,
                         );
-                        final simplified = FilterElementBuilder.simplify(
-                          newTree,
-                        );
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
                         widget.onFilterTreeChanged(simplified);
                       },
                       onDrop: (source, target, action, isCtrlPressed) {
                         var newTree = widget.filterTree;
-                        final sourceCopy = FilterElement.fromJson(
-                          source.toJson(),
-                        );
+                        final sourceCopy =
+                            FilterElement.fromJson(source.toJson());
                         final isCopy = isCtrlPressed;
 
                         switch (action) {
                           case FilterDropAction.groupOr:
                             newTree = FilterElementBuilder.groupFilters(
-                              newTree,
-                              target,
-                              sourceCopy,
-                              isAnd: false,
-                            );
+                                newTree, target, sourceCopy,
+                                isAnd: false);
                             break;
                           case FilterDropAction.groupAnd:
                             newTree = FilterElementBuilder.groupFilters(
-                              newTree,
-                              target,
-                              sourceCopy,
-                              isAnd: true,
-                            );
+                                newTree, target, sourceCopy,
+                                isAnd: true);
                             break;
                           case FilterDropAction.addToGroup:
                             newTree = FilterElementBuilder.addFilterToComposite(
-                              newTree,
-                              target,
-                              sourceCopy,
-                            );
+                                newTree, target, sourceCopy);
                             break;
                           case FilterDropAction.groupAboveAnd:
                             newTree = FilterElementBuilder.groupFilters(
-                              newTree,
-                              target,
-                              sourceCopy,
-                              isAnd: true,
-                            );
+                                newTree, target, sourceCopy,
+                                isAnd: true);
                             break;
                           case FilterDropAction.groupAboveOr:
                             newTree = FilterElementBuilder.groupFilters(
-                              newTree,
-                              target,
-                              sourceCopy,
-                              isAnd: false,
-                            );
+                                newTree, target, sourceCopy,
+                                isAnd: false);
                             break;
                         }
 
                         if (!isCopy && newTree != null) {
                           newTree = FilterElementBuilder.removeFilter(
-                            newTree,
-                            source,
-                          );
+                              newTree, source);
                         }
 
-                        final simplified = FilterElementBuilder.simplify(
-                          newTree,
-                        );
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
                         widget.onFilterTreeChanged(simplified);
                       },
                       onRemove: (element) {
                         final newTree = FilterElementBuilder.removeFilter(
-                          widget.filterTree,
-                          element,
-                        );
-                        final simplified = FilterElementBuilder.simplify(
-                          newTree,
-                        );
+                            widget.filterTree, element);
+                        final simplified =
+                            FilterElementBuilder.simplify(newTree);
                         widget.onFilterTreeChanged(simplified);
                       },
                       onToggleNot: (element) {
                         final newTree = FilterElementBuilder.toggleNot(
-                          widget.filterTree!,
-                          element,
-                        );
+                            widget.filterTree!, element);
                         widget.onFilterTreeChanged(newTree);
                       },
                       onToggleEnabled: (element) {
                         final newTree = FilterElementBuilder.toggleEnabled(
-                          widget.filterTree!,
-                          element,
-                        );
+                            widget.filterTree!, element);
                         widget.onFilterTreeChanged(newTree);
                       },
                       onTap: null,
@@ -1321,9 +1276,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   else
                     Container(
                       padding: const EdgeInsets.symmetric(
-                        horizontal: 12,
-                        vertical: 6,
-                      ),
+                          horizontal: 12, vertical: 6),
                       decoration: BoxDecoration(
                         color: Colors.grey.shade100,
                         borderRadius: BorderRadius.circular(16),
@@ -1332,11 +1285,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                       child: Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [
-                          Icon(
-                            Icons.filter_list_off,
-                            size: 14,
-                            color: Colors.grey.shade600,
-                          ),
+                          Icon(Icons.filter_list_off,
+                              size: 14, color: Colors.grey.shade600),
                           const SizedBox(width: 6),
                           Text(
                             'No filters',
@@ -1404,19 +1354,21 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 }
 
 class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
-  const PopupMenuHeader({super.key, required super.child})
-    : super(enabled: false, height: 32);
+  const PopupMenuHeader({
+    super.key,
+    required super.child,
+  }) : super(enabled: false, height: 32);
 
   @override
   Widget? get child => MouseRegion(
-    cursor: SystemMouseCursors.basic,
-    child: DefaultTextStyle(
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey,
-      ),
-      child: super.child!,
-    ),
-  );
+        cursor: SystemMouseCursors.basic,
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+          child: super.child!,
+        ),
+      );
 }

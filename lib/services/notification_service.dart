@@ -3,7 +3,11 @@ import 'dart:collection';
 import 'package:flutter_jules/services/settings_provider.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
-enum NotificationAction { showTask, openPr, showNew }
+enum NotificationAction {
+  showTask,
+  openPr,
+  showNew,
+}
 
 class _QueuedNotification {
   final String title;
@@ -56,25 +60,25 @@ class NotificationService {
 
     final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-          notificationCategories: [
-            DarwinNotificationCategory(
-              'jules_category',
-              actions: [
-                DarwinNotificationAction.plain('show_task', 'Show Task'),
-                DarwinNotificationAction.plain('open_pr', 'Open PR'),
-                DarwinNotificationAction.plain('show_new', 'Show New'),
-              ],
-            ),
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'jules_category',
+          actions: [
+            DarwinNotificationAction.plain('show_task', 'Show Task'),
+            DarwinNotificationAction.plain('open_pr', 'Open PR'),
+            DarwinNotificationAction.plain('show_new', 'Show New'),
           ],
-        );
+        ),
+      ],
+    );
 
     const LinuxInitializationSettings initializationSettingsLinux =
         LinuxInitializationSettings(defaultActionName: 'Open notification');
 
-    /*
+/*
     const WindowsInitializationSettings initializationSettingsWindows =
         WindowsInitializationSettings(
       appName: 'Jules',
@@ -84,12 +88,12 @@ class NotificationService {
 
     final InitializationSettings initializationSettings =
         InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsDarwin,
-          macOS: initializationSettingsDarwin,
-          linux: initializationSettingsLinux,
-          // windows: initializationSettingsWindows,
-        );
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+      macOS: initializationSettingsDarwin,
+      linux: initializationSettingsLinux,
+      // windows: initializationSettingsWindows,
+    );
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
@@ -107,9 +111,8 @@ class NotificationService {
   }) async {
     if (settings?.enableNotificationDebounce ?? false) {
       // Debounce check against queue
-      final isDuplicateInQueue = _notificationQueue.any(
-        (n) => n.title == title && n.body == body,
-      );
+      final isDuplicateInQueue =
+          _notificationQueue.any((n) => n.title == title && n.body == body);
       if (isDuplicateInQueue) return;
 
       // Debounce check against currently processing
@@ -125,22 +128,19 @@ class NotificationService {
           _lastShownNotification!.body == body &&
           _lastShownTime != null) {
         final debounceDuration = Duration(
-          milliseconds: settings?.notificationDebounceDuration ?? 5000,
-        );
+            milliseconds: settings?.notificationDebounceDuration ?? 5000);
         if (DateTime.now().difference(_lastShownTime!) < debounceDuration) {
           return;
         }
       }
     }
 
-    _notificationQueue.add(
-      _QueuedNotification(
-        title: title,
-        body: body,
-        payload: payload,
-        actions: actions,
-      ),
-    );
+    _notificationQueue.add(_QueuedNotification(
+      title: title,
+      body: body,
+      payload: payload,
+      actions: actions,
+    ));
 
     if (!_isProcessing) {
       // Don't await the processing, let it run in background
@@ -197,45 +197,41 @@ class NotificationService {
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-          'jules_channel_id',
-          'Jules Notifications',
-          channelDescription: 'Notifications for Jules task updates',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: false,
-          actions: androidActions,
-        );
+      'jules_channel_id',
+      'Jules Notifications',
+      channelDescription: 'Notifications for Jules task updates',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+      actions: androidActions,
+    );
 
     final linuxActions = notification.actions?.map((action) {
       switch (action) {
         case NotificationAction.showTask:
           return const LinuxNotificationAction(
-            key: 'show_task',
-            label: 'Show Task',
-          );
+              key: 'show_task', label: 'Show Task');
         case NotificationAction.openPr:
           return const LinuxNotificationAction(
-            key: 'open_pr',
-            label: 'Open PR',
-          );
+              key: 'open_pr', label: 'Open PR');
         case NotificationAction.showNew:
           return const LinuxNotificationAction(
-            key: 'show_new',
-            label: 'Show New',
-          );
+              key: 'show_new', label: 'Show New');
       }
     }).toList();
 
     const DarwinNotificationDetails darwinPlatformChannelSpecifics =
         DarwinNotificationDetails(
-          categoryIdentifier: 'jules_category',
-          attachments: [],
-        );
+      categoryIdentifier: 'jules_category',
+      attachments: [],
+    );
 
     final LinuxNotificationDetails linuxPlatformChannelSpecifics =
-        LinuxNotificationDetails(actions: linuxActions ?? []);
+        LinuxNotificationDetails(
+      actions: linuxActions ?? [],
+    );
 
-    /*
+/*
     const WindowsNotificationDetails windowsPlatformChannelSpecifics =
         WindowsNotificationDetails();
 */

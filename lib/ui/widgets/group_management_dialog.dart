@@ -33,10 +33,8 @@ class _GroupManagementDialogState extends State<GroupManagementDialog> {
           ),
           TextButton(
             onPressed: () {
-              Provider.of<SettingsProvider>(
-                context,
-                listen: false,
-              ).deleteSourceGroup(group.name);
+              Provider.of<SettingsProvider>(context, listen: false)
+                  .deleteSourceGroup(group.name);
               Navigator.pop(context);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
@@ -66,9 +64,8 @@ class _GroupManagementDialogState extends State<GroupManagementDialog> {
                       final group = groups[index];
                       return ListTile(
                         title: Text(group.name),
-                        subtitle: Text(
-                          '${group.sourceNames.length} repositories',
-                        ),
+                        subtitle:
+                            Text('${group.sourceNames.length} repositories'),
                         trailing: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
@@ -137,9 +134,8 @@ class _GroupEditorDialogState extends State<_GroupEditorDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map selected names back to source objects if available
-    final initialSelection = allSources
-        .where((s) => _selectedSourceNames.contains(s.name))
-        .toList();
+    final initialSelection =
+        allSources.where((s) => _selectedSourceNames.contains(s.name)).toList();
 
     final result = await showDialog<List<Source>>(
       context: context,
@@ -233,7 +229,10 @@ class _GroupEditorDialogState extends State<_GroupEditorDialog> {
           onPressed: () => Navigator.pop(context),
           child: const Text('Cancel'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
+        FilledButton(
+          onPressed: _save,
+          child: const Text('Save'),
+        ),
       ],
     );
   }

@@ -22,7 +22,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
+          GithubProvider>(
         builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
@@ -55,8 +56,14 @@ class _SettingsScreenState extends State<SettingsScreen> {
               ),
               const Divider(),
               _buildSectionHeader(context, 'Appearance'),
-              _buildThemeModeDropdown(context, settings),
-              _buildThemeTypeDropdown(context, settings),
+              _buildThemeModeDropdown(
+                context,
+                settings,
+              ),
+              _buildThemeTypeDropdown(
+                context,
+                settings,
+              ),
               _buildFabDropdown(
                 context,
                 title: 'New Session Button',
@@ -418,9 +425,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-          color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.bold,
-        ),
+              color: Theme.of(context).colorScheme.primary,
+              fontWeight: FontWeight.bold,
+            ),
       ),
     );
   }
@@ -440,9 +447,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
-                ),
+                      color: Theme.of(context).colorScheme.primary,
+                      fontWeight: FontWeight.bold,
+                    ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -678,8 +685,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   sendMessagesMode:
                       taskType == RefreshTaskType.sendPendingMessages
-                      ? sendMessagesMode
-                      : null,
+                          ? sendMessagesMode
+                          : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 
@@ -1038,9 +1045,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   }
 
   Widget _buildGithubExclusionsTable(
-    BuildContext context,
-    SettingsProvider settings,
-  ) {
+      BuildContext context, SettingsProvider settings) {
     return SingleChildScrollView(
       scrollDirection: Axis.horizontal,
       child: DataTable(
@@ -1063,9 +1068,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   icon: const Icon(Icons.delete, color: Colors.red, size: 20),
                   onPressed: () {
                     settings.removeGithubExclusion(
-                      exclusion.value,
-                      exclusion.type,
-                    );
+                        exclusion.value, exclusion.type);
                   },
                 ),
               ),
@@ -1092,7 +1095,10 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (newValue != null) onChanged(newValue);
         },
         items: values.map((v) {
-          return DropdownMenuItem(value: v, child: Text(formatter(v)));
+          return DropdownMenuItem(
+            value: v,
+            child: Text(formatter(v)),
+          );
         }).toList(),
       ),
     );

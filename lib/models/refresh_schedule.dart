@@ -28,16 +28,10 @@ class RefreshSchedule {
   }) : id = id ?? const Uuid().v4();
 
   factory RefreshSchedule.fromJson(Map<String, dynamic> json) {
-    final refreshPolicyIndex = getNumberPropOrDefault<num?>(
-      json,
-      'refreshPolicy',
-      null,
-    )?.toInt();
-    final sendMessagesModeIndex = getNumberPropOrDefault<num?>(
-      json,
-      'sendMessagesMode',
-      null,
-    )?.toInt();
+    final refreshPolicyIndex =
+        getNumberPropOrDefault<num?>(json, 'refreshPolicy', null)?.toInt();
+    final sendMessagesModeIndex =
+        getNumberPropOrDefault<num?>(json, 'sendMessagesMode', null)?.toInt();
 
     return RefreshSchedule(
       id: getStringPropOrDefault(json, 'id', null),
@@ -45,12 +39,9 @@ class RefreshSchedule {
       intervalInMinutes:
           (getNumberPropOrThrow(json, 'intervalInMinutes') as num).toInt(),
       isEnabled: getBooleanPropOrDefault(json, 'isEnabled', true),
-      taskType:
-          RefreshTaskType.values[getNumberPropOrDefault(
-            json,
-            'taskType',
-            RefreshTaskType.refresh.index,
-          ).toInt()],
+      taskType: RefreshTaskType.values[getNumberPropOrDefault(
+              json, 'taskType', RefreshTaskType.refresh.index)
+          .toInt()],
       refreshPolicy: refreshPolicyIndex != null
           ? ListRefreshPolicy.values[refreshPolicyIndex]
           : null,

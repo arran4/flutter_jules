@@ -20,13 +20,14 @@ class BulkActionPresetDialog extends StatelessWidget {
 
     return AlertDialog(
       title: Text(
-        isPicker ? 'Load a Bulk Action Preset' : 'Run a Bulk Action Preset',
-      ),
+          isPicker ? 'Load a Bulk Action Preset' : 'Run a Bulk Action Preset'),
       content: SizedBox(
         width: 500,
         height: 300,
         child: provider.presets.isEmpty
-            ? const Center(child: Text('No presets found.'))
+            ? const Center(
+                child: Text('No presets found.'),
+              )
             : ListView.builder(
                 itemCount: provider.presets.length,
                 itemBuilder: (context, index) {

@@ -1,6 +1,11 @@
 import 'dart:convert';
 
-enum ApiErrorType { rateLimit, dailyQuotaExceeded, serviceUnavailable, unknown }
+enum ApiErrorType {
+  rateLimit,
+  dailyQuotaExceeded,
+  serviceUnavailable,
+  unknown,
+}
 
 class ApiErrorUtils {
   static ApiErrorType parseError(String? responseBody) {

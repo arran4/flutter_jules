@@ -1,6 +1,15 @@
 import 'package:flutter/material.dart';
 
-enum JulesThemeType { blue, green, purple, orange, red, teal, pink, indigo }
+enum JulesThemeType {
+  blue,
+  green,
+  purple,
+  orange,
+  red,
+  teal,
+  pink,
+  indigo,
+}
 
 class JulesTheme {
   static ThemeData getTheme(JulesThemeType type, Brightness brightness) {

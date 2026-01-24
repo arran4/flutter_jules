@@ -314,8 +314,7 @@ class CacheService {
       final json = jsonDecode(content);
 
       final session = Session.fromJson(json['session']);
-      final activities =
-          (json['activities'] as List<dynamic>?)
+      final activities = (json['activities'] as List<dynamic>?)
               ?.map((e) => Activity.fromJson(e))
               .toList() ??
           [];

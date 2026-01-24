@@ -46,7 +46,9 @@ void main() {
     });
 
     test('Circular Test: Build -> Parse -> Re-Build -> Correctness', () {
-      final actions = [const BulkActionStep(type: BulkActionType.hide)];
+      final actions = [
+        const BulkActionStep(type: BulkActionType.hide),
+      ];
       const parallelQueries = 5;
       const waitBetween = Duration(seconds: 1);
       const limit = 100;

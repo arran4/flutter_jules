@@ -90,13 +90,10 @@ void main() {
       async.elapse(const Duration(minutes: 1));
 
       // Verify that notification service was called with specific error message
-      verify(
-        mockNotificationService.showNotification(
-          'Authentication Error',
-          'Invalid API token provided. Please check your settings.',
-          payload: 'auth_error',
-        ),
-      ).called(1);
+      verify(mockNotificationService.showNotification('Authentication Error',
+              'Invalid API token provided. Please check your settings.',
+              payload: 'auth_error'))
+          .called(1);
     });
   });
 }

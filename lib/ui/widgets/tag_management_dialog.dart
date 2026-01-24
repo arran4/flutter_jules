@@ -29,10 +29,8 @@ class TagManagementDialogState extends State<TagManagementDialog> {
   Widget build(BuildContext context) {
     final allTags = Provider.of<TagsProvider>(context).allTags;
     final availableTags = allTags
-        .where(
-          (tag) =>
-              !_currentTags.any((t) => t.toLowerCase() == tag.toLowerCase()),
-        )
+        .where((tag) =>
+            !_currentTags.any((t) => t.toLowerCase() == tag.toLowerCase()))
         .toList();
 
     return AlertDialog(
@@ -58,7 +56,10 @@ class TagManagementDialogState extends State<TagManagementDialog> {
           onPressed: () => Navigator.of(context).pop(),
           child: const Text('Cancel'),
         ),
-        TextButton(onPressed: _saveTags, child: const Text('Save')),
+        TextButton(
+          onPressed: _saveTags,
+          child: const Text('Save'),
+        ),
       ],
     );
   }
@@ -67,10 +68,8 @@ class TagManagementDialogState extends State<TagManagementDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Current Tags',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('Current Tags',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         if (_currentTags.isEmpty)
           const Text('No tags yet.')
@@ -79,16 +78,14 @@ class TagManagementDialogState extends State<TagManagementDialog> {
             spacing: 8.0,
             runSpacing: 4.0,
             children: _currentTags
-                .map(
-                  (tag) => Chip(
-                    label: Text('#$tag'),
-                    onDeleted: () {
-                      setState(() {
-                        _currentTags.remove(tag);
-                      });
-                    },
-                  ),
-                )
+                .map((tag) => Chip(
+                      label: Text('#$tag'),
+                      onDeleted: () {
+                        setState(() {
+                          _currentTags.remove(tag);
+                        });
+                      },
+                    ))
                 .toList(),
           ),
       ],
@@ -124,23 +121,19 @@ class TagManagementDialogState extends State<TagManagementDialog> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        const Text(
-          'Available Tags',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
+        const Text('Available Tags',
+            style: TextStyle(fontWeight: FontWeight.bold)),
         const SizedBox(height: 8),
         Wrap(
           spacing: 8.0,
           runSpacing: 4.0,
           children: availableTags
-              .map(
-                (tag) => ActionChip(
-                  label: Text('#$tag'),
-                  onPressed: () {
-                    _addNewTag(tag);
-                  },
-                ),
-              )
+              .map((tag) => ActionChip(
+                    label: Text('#$tag'),
+                    onPressed: () {
+                      _addNewTag(tag);
+                    },
+                  ))
               .toList(),
         ),
       ],
@@ -160,10 +153,8 @@ class TagManagementDialogState extends State<TagManagementDialog> {
   }
 
   void _saveTags() {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     sessionProvider.updateSessionTags(widget.session, _currentTags);
     Navigator.of(context).pop();
   }

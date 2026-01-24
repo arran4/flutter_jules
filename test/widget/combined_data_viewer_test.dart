@@ -12,7 +12,7 @@ void main() {
         "id": "123",
         "prompt": "Test Prompt",
         "createTime": "2025-10-03T05:48:35.523200Z",
-        "state": "COMPLETED",
+        "state": "COMPLETED"
       };
       final session = Session.fromJson(sessionJson);
 
@@ -20,13 +20,16 @@ void main() {
         "name": "sessions/123/activities/456",
         "id": "456",
         "createTime": "2025-10-03T05:48:35.523200Z",
-        "description": "Test Activity",
+        "description": "Test Activity"
       };
       final activity = Activity.fromJson(activityJson);
 
       await tester.pumpWidget(
         MaterialApp(
-          home: CombinedDataViewer(session: session, activities: [activity]),
+          home: CombinedDataViewer(
+            session: session,
+            activities: [activity],
+          ),
         ),
       );
 

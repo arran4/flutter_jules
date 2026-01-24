@@ -94,10 +94,8 @@ void main() {
       expect(and.children[1], isA<LabelElement>());
 
       // Unwrap child
-      final newRoot2 = FilterElementBuilder.toggleEnabled(
-        newRoot,
-        and.children[0],
-      );
+      final newRoot2 =
+          FilterElementBuilder.toggleEnabled(newRoot, and.children[0]);
       expect(newRoot2, isA<AndElement>());
       final and2 = newRoot2 as AndElement;
       expect(and2.children[0], isA<TextElement>());

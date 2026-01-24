@@ -182,11 +182,7 @@ class Session {
       tags: getStringArrayPropOrDefault(json, 'tags', null),
       note: getObjectFunctionPropOrDefault(json, 'note', Note.fromJson, null),
       metadata: getObjectArrayPropOrDefaultFunction(
-        json,
-        'metadata',
-        Metadata.fromJson,
-        () => null,
-      ),
+          json, 'metadata', Metadata.fromJson, () => null),
     );
   }
 

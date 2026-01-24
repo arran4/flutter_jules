@@ -35,15 +35,26 @@ class SourceTile extends StatelessWidget {
     final branchCount = repo?.branches?.length;
 
     return Card(
-      margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
       child: ListTile(
-        leading: Icon(isPrivate ? Icons.lock : Icons.public),
+        leading: Icon(
+          isPrivate ? Icons.lock : Icons.public,
+        ),
         title: Row(
           children: [
             if (isPrivate)
               const Padding(
-                padding: EdgeInsets.only(right: 6.0),
-                child: Icon(Icons.lock, size: 16, color: Colors.grey),
+                padding: EdgeInsets.only(
+                  right: 6.0,
+                ),
+                child: Icon(
+                  Icons.lock,
+                  size: 16,
+                  color: Colors.grey,
+                ),
               ),
             Expanded(
               child: Text(
@@ -58,12 +69,16 @@ class SourceTile extends StatelessWidget {
           children: [
             if (repo?.description != null && repo!.description!.isNotEmpty)
               Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
+                padding: const EdgeInsets.only(
+                  bottom: 4.0,
+                ),
                 child: Text(
                   repo.description!,
                   maxLines: 2,
                   overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
+                  style: Theme.of(
+                    context,
+                  ).textTheme.bodySmall,
                 ),
               ),
             Text(
@@ -73,7 +88,11 @@ class SourceTile extends StatelessWidget {
             Row(
               children: [
                 if (repo?.primaryLanguage != null)
-                  _buildInfoPill(context, repo!.primaryLanguage!, Icons.code),
+                  _buildInfoPill(
+                    context,
+                    repo!.primaryLanguage!,
+                    Icons.code,
+                  ),
                 if (repo?.openIssuesCount != null && repo!.openIssuesCount! > 0)
                   _buildInfoPill(
                     context,
@@ -81,9 +100,17 @@ class SourceTile extends StatelessWidget {
                     Icons.bug_report,
                   ),
                 if (repo?.isFork ?? false)
-                  _buildInfoPill(context, 'Fork', Icons.call_split),
+                  _buildInfoPill(
+                    context,
+                    'Fork',
+                    Icons.call_split,
+                  ),
                 if (item.metadata.isNew)
-                  _buildStatusPill(context, 'NEW', Colors.green),
+                  _buildStatusPill(
+                    context,
+                    'NEW',
+                    Colors.green,
+                  ),
               ],
             ),
             const SizedBox(height: 4),
@@ -96,21 +123,26 @@ class SourceTile extends StatelessWidget {
                       vertical: 2,
                     ),
                     decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
+                      color:
+                          Theme.of(context).colorScheme.surfaceContainerHighest,
+                      borderRadius: BorderRadius.circular(
+                        4,
+                      ),
                     ),
                     child: Text(
                       '$usageCount sessions',
-                      style: Theme.of(context).textTheme.labelSmall,
+                      style: Theme.of(
+                        context,
+                      ).textTheme.labelSmall,
                     ),
                   ),
                 if (usageCount > 0) const SizedBox(width: 8),
                 if (lastUsedDate != null)
                   Text(
                     'Last used: ${DateFormat.yMMMd().format(lastUsedDate!)}',
-                    style: Theme.of(context).textTheme.bodySmall,
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall,
                   ),
               ],
             ),
@@ -136,8 +168,9 @@ class SourceTile extends StatelessWidget {
                 Navigator.push(
                   context,
                   MaterialPageRoute(
-                    builder: (context) =>
-                        SessionListScreen(sourceFilter: source.name),
+                    builder: (context) => SessionListScreen(
+                      sourceFilter: source.name,
+                    ),
                   ),
                 );
               },
@@ -146,10 +179,8 @@ class SourceTile extends StatelessWidget {
               onSelected: (value) =>
                   _handleMenuSelection(context, value, source),
               itemBuilder: (context) {
-                final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-                  context,
-                  listen: false,
-                );
+                final bookmarkProvider =
+                    Provider.of<FilterBookmarkProvider>(context, listen: false);
                 final bookmarks = bookmarkProvider.bookmarks;
 
                 return [
@@ -190,9 +221,8 @@ class SourceTile extends StatelessWidget {
       if (context.mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
-            content: Text(
-              'Refreshed ${source.githubRepo?.repo ?? source.name}',
-            ),
+            content:
+                Text('Refreshed ${source.githubRepo?.repo ?? source.name}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -202,8 +232,7 @@ class SourceTile extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to refresh ${source.githubRepo?.repo ?? source.name}: $e',
-            ),
+                'Failed to refresh ${source.githubRepo?.repo ?? source.name}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -219,10 +248,7 @@ class SourceTile extends StatelessWidget {
   }
 
   void _handleMenuSelection(
-    BuildContext context,
-    String value,
-    Source source,
-  ) async {
+      BuildContext context, String value, Source source) async {
     if (value == 'refresh_sessions') {
       _handleRefreshSessions(context, source);
     } else if (value == 'stats') {
@@ -234,10 +260,8 @@ class SourceTile extends StatelessWidget {
   }
 
   void _handleRefreshSessions(BuildContext context, Source source) async {
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
     final auth = Provider.of<AuthProvider>(context, listen: false);
     try {
       await sessionProvider.refreshSessionsForSource(
@@ -249,8 +273,7 @@ class SourceTile extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Refreshed sessions for ${source.githubRepo?.repo ?? source.name}',
-            ),
+                'Refreshed sessions for ${source.githubRepo?.repo ?? source.name}'),
             duration: const Duration(seconds: 2),
           ),
         );
@@ -260,8 +283,7 @@ class SourceTile extends StatelessWidget {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(
             content: Text(
-              'Failed to refresh sessions for ${source.githubRepo?.repo ?? source.name}: $e',
-            ),
+                'Failed to refresh sessions for ${source.githubRepo?.repo ?? source.name}: $e'),
             backgroundColor: Colors.red,
           ),
         );
@@ -277,14 +299,9 @@ class SourceTile extends StatelessWidget {
   }
 
   void _handleBookmark(
-    BuildContext context,
-    String bookmarkId,
-    String sourceName,
-  ) {
-    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-      context,
-      listen: false,
-    );
+      BuildContext context, String bookmarkId, String sourceName) {
+    final bookmarkProvider =
+        Provider.of<FilterBookmarkProvider>(context, listen: false);
     final bookmark = bookmarkProvider.bookmarks.firstWhere(
       (b) => b.name == bookmarkId,
       orElse: () =>
@@ -306,7 +323,9 @@ class SourceTile extends StatelessWidget {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (context) => SessionListScreen(initialFilter: combinedFilter),
+        builder: (context) => SessionListScreen(
+          initialFilter: combinedFilter,
+        ),
       ),
     );
   }
@@ -331,8 +350,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     ),

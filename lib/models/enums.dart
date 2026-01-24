@@ -79,7 +79,11 @@ enum MessageSubmitAction {
   doesNothing,
 }
 
-enum EscKeyAction { savesDraftAndGoesBack, goesBack, doesNothing }
+enum EscKeyAction {
+  savesDraftAndGoesBack,
+  goesBack,
+  doesNothing,
+}
 
 enum SessionRefreshPolicy { none, shallow, full }
 

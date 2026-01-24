@@ -137,12 +137,8 @@ class BulkActionExecutor extends ChangeNotifier {
     notifyListeners();
   }
 
-  void _addLog(
-    String message,
-    bool isError, [
-    String? sessionId,
-    BulkActionType? undoActionType,
-  ]) {
+  void _addLog(String message, bool isError,
+      [String? sessionId, BulkActionType? undoActionType]) {
     _logs.insert(
       0,
       BulkLogEntry(
