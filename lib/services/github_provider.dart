@@ -279,7 +279,7 @@ class GithubProvider extends ChangeNotifier {
     if (_hasBadCredentials) {
       return null;
     }
-    if (_settingsProvider.isExcluded('$owner/$repo')) return null;
+    if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
 
     final jobId = 'pr_status_${owner}_${repo}_$prNumber';
     final job = GithubJob(
@@ -317,12 +317,12 @@ class GithubProvider extends ChangeNotifier {
             jobId: jobId,
           );
           debugPrint(
-              'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
+              'GitHub Unauthorized/Error for $url: ${response.statusCode} ${response.body}');
           return null;
         } else {
           _warningCount++;
           debugPrint(
-            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+            'Failed to get PR status for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}',
           );
           return null;
         }
@@ -340,6 +340,7 @@ class GithubProvider extends ChangeNotifier {
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
     if (apiKey == null || _hasBadCredentials) return null;
+    if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
@@ -364,14 +365,19 @@ class GithubProvider extends ChangeNotifier {
         prNumber: prNumber,
         jobId: 'diff_${owner}_${repo}_$prNumber',
       );
+      debugPrint(
+          'GitHub Unauthorized/Error (Diff) for $url: ${response.statusCode} ${response.body}');
     } else {
       _warningCount++;
+      debugPrint(
+          'Failed to get PR Diff for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
     }
     return null;
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
     if (apiKey == null || _hasBadCredentials) return null;
+    if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
@@ -394,10 +400,13 @@ class GithubProvider extends ChangeNotifier {
         owner: owner,
         repo: repo,
         prNumber: prNumber,
-        jobId: 'patch_${owner}_${repo}_$prNumber',
       );
+      debugPrint(
+          'GitHub Unauthorized/Error (Patch) for $url: ${response.statusCode} ${response.body}');
     } else {
       _warningCount++;
+      debugPrint(
+          'Failed to get PR Patch for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
     }
     return null;
   }
@@ -415,7 +424,9 @@ class GithubProvider extends ChangeNotifier {
       id: jobId,
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
-        if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
+        if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) {
+          return 'Unknown';
+        }
         if (_hasBadCredentials) return 'Unknown';
 
         // 1. Get the PR's head SHA
@@ -487,7 +498,7 @@ class GithubProvider extends ChangeNotifier {
         if (checksResponse.statusCode != 200) {
           _warningCount++;
           debugPrint(
-            'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
+            'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha ($checksUrl): ${checksResponse.statusCode} ${checksResponse.body}',
           );
           return 'Unknown';
         }
