@@ -2081,7 +2081,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                 .bodySmall,
                                           )
                                         : Text(
-                                            'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                                            'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})${sessionProvider.lastFetchType != null ? " - ${sessionProvider.lastFetchType}" : ""}',
                                             style: Theme.of(context)
                                                 .textTheme
                                                 .bodySmall
