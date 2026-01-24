@@ -262,44 +262,59 @@ class SessionProvider extends ChangeNotifier {
     String? authToken,
     List<Activity>? activities,
   }) async {
-    // Determine metadata
-    final index = _items.indexWhere((i) => i.data.name == session.name);
-    CacheMetadata metadata;
+    try {
+      // Determine metadata
+      final index = _items.indexWhere((i) => i.data.name == session.name);
+      CacheMetadata metadata;
 
-    if (index != -1) {
-      final oldItem = _items[index];
-      final changed = (oldItem.data.updateTime != session.updateTime) ||
-          (oldItem.data.state != session.state);
-      metadata = oldItem.metadata.copyWith(
-        lastRetrieved: DateTime.now(),
-        lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
-      );
-    } else {
-      metadata = CacheMetadata(
-        firstSeen: DateTime.now(),
-        lastRetrieved: DateTime.now(),
-        lastUpdated: DateTime.now(),
-      );
+      if (index != -1) {
+        final oldItem = _items[index];
+        final changed = (oldItem.data.updateTime != session.updateTime) ||
+            (oldItem.data.state != session.state);
+        metadata = oldItem.metadata.copyWith(
+          lastRetrieved: DateTime.now(),
+          lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+        );
+      } else {
+        metadata = CacheMetadata(
+          firstSeen: DateTime.now(),
+          lastRetrieved: DateTime.now(),
+          lastUpdated: DateTime.now(),
+        );
+      }
+
+      if (activities != null) {
+        metadata = _resolvePendingMessages(metadata, activities);
+      }
+
+      final cachedItem = CachedItem(session, metadata);
+
+      if (authToken != null && _cacheService != null) {
+        await _cacheService!.saveSessions(authToken, [cachedItem]);
+      }
+
+      if (index != -1) {
+        _items[index] = cachedItem;
+      } else {
+        _items.add(cachedItem);
+      }
+
+      _sortItems();
+      notifyListeners();
+    } catch (e) {
+      if (e is JulesException) {
+        if (e.context == null) {
+          throw JulesException(
+            e.message,
+            statusCode: e.statusCode,
+            responseBody: e.responseBody,
+            context: 'Session: ${session.name}',
+          );
+        }
+        rethrow;
+      }
+      throw JulesException(e.toString(), context: 'Session: ${session.name}');
     }
-
-    if (activities != null) {
-      metadata = _resolvePendingMessages(metadata, activities);
-    }
-
-    final cachedItem = CachedItem(session, metadata);
-
-    if (authToken != null && _cacheService != null) {
-      await _cacheService!.saveSessions(authToken, [cachedItem]);
-    }
-
-    if (index != -1) {
-      _items[index] = cachedItem;
-    } else {
-      _items.add(cachedItem);
-    }
-
-    _sortItems();
-    notifyListeners();
   }
 
   Future<void> refreshSession(
@@ -379,8 +394,21 @@ class SessionProvider extends ChangeNotifier {
       notifyListeners();
     } catch (e) {
       _progressStreamController.add('Error: ${e.toString()}');
-      // print("Failed to refresh individual session: $e");
-      rethrow;
+      if (e is JulesException) {
+        if (e.context == null) {
+          // Wrap if context missing, or just assume caller handles?
+          // We can't easily modify e.context as it is final.
+          // Throw new one?
+          throw JulesException(
+            e.message,
+            statusCode: e.statusCode,
+            responseBody: e.responseBody,
+            context: 'Session: $sessionName',
+          );
+        }
+        rethrow;
+      }
+      throw JulesException(e.toString(), context: 'Session: $sessionName');
     }
   }
 
@@ -781,90 +809,118 @@ class SessionProvider extends ChangeNotifier {
 
   /// Refresh the PR and CI status for a session from GitHub
   Future<void> refreshGitStatus(String sessionId, String authToken) async {
-    if (_githubProvider == null) {
-      throw Exception("GitHub provider not initialized");
-    }
+    try {
+      if (_githubProvider == null) {
+        throw Exception("GitHub provider not initialized");
+      }
 
-    final index = _items.indexWhere((item) => item.data.id == sessionId);
-    if (index == -1) {
-      throw Exception("Session not found");
-    }
+      final index = _items.indexWhere((item) => item.data.id == sessionId);
+      if (index == -1) {
+        throw Exception("Session not found");
+      }
 
-    final session = _items[index].data;
+      final session = _items[index].data;
 
-    // Check if session has PR output
-    if (session.outputs == null ||
-        !session.outputs!.any((o) => o.pullRequest != null)) {
-      throw Exception("Session does not have a pull request");
-    }
+      // Check if session has PR output
+      if (session.outputs == null ||
+          !session.outputs!.any((o) => o.pullRequest != null)) {
+        throw Exception("Session does not have a pull request");
+      }
 
-    // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+      // Get PR URL from session
+      final pr = session.outputs!
+          .firstWhere((o) => o.pullRequest != null)
+          .pullRequest!;
 
-    // Extract owner, repo, and PR number from URL
-    // URL format: https://github.com/owner/repo/pull/123
-    final uri = Uri.parse(pr.url);
-    final pathSegments = uri.pathSegments;
-    var pullIndex = pathSegments.lastIndexOf('pull');
-    if (pullIndex == -1) {
-      pullIndex = pathSegments.lastIndexOf('pulls');
-    }
+      // Extract owner, repo, and PR number from URL
+      // URL format: https://github.com/owner/repo/pull/123
+      final uri = Uri.parse(pr.url);
+      final pathSegments = uri.pathSegments;
+      var pullIndex = pathSegments.lastIndexOf('pull');
+      if (pullIndex == -1) {
+        pullIndex = pathSegments.lastIndexOf('pulls');
+      }
 
-    if (pullIndex == -1 || pullIndex < 2) {
-      throw Exception(
-        "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
+      if (pullIndex == -1 || pullIndex < 2) {
+        throw Exception(
+          "Invalid PR URL format: 'pull' or 'pulls' segment not found or misplaced.",
+        );
+      }
+
+      final owner = pathSegments[pullIndex - 2];
+      final repo = pathSegments[pullIndex - 1];
+      final prNumber = pathSegments[pathSegments.length - 1];
+
+      // Fetch PR and CI statuses from GitHub in parallel
+      final results = await Future.wait([
+        _githubProvider!.getPrStatus(owner, repo, prNumber),
+        _githubProvider!.getCIStatus(owner, repo, prNumber),
+      ]);
+
+      Object? result0 = results[0];
+      GitHubPrResponse? prResponse;
+      String? rawPrStatus;
+
+      if (result0 is GitHubPrResponse) {
+        prResponse = result0;
+      } else if (result0 is String) {
+        debugPrint('Warning: getPrStatus returned String: $result0');
+        rawPrStatus = result0;
+      } else if (result0 is Map<String, dynamic>) {
+        // debugPrint('Warning: getPrStatus returned Map');
+        // Backward compatibility if needed
+        prResponse = GitHubPrResponse(result0);
+      }
+
+      final ciStatus = results[1] as String?;
+
+      // Update session with new statuses
+      final updatedSession = session.copyWith(
+        prStatus: prResponse?.displayStatus ?? rawPrStatus ?? session.prStatus,
+        ciStatus: ciStatus ?? session.ciStatus,
+        mergeableState: prResponse?.mergeableState,
+        additions: prResponse?.additions,
+        deletions: prResponse?.deletions,
+        changedFiles: prResponse?.changedFiles,
+        diffUrl: prResponse?.diffUrl,
+        patchUrl: prResponse?.patchUrl,
       );
+
+      // Update in cache
+      if (_cacheService != null) {
+        await _cacheService!.updateSession(authToken, updatedSession);
+      }
+
+      // Update in memory
+      _items[index] = CachedItem(updatedSession, _items[index].metadata);
+
+      notifyListeners();
+    } catch (e) {
+      if (e is JulesException) {
+        if (e.context == null) {
+          throw JulesException(
+            e.message,
+            statusCode: e.statusCode,
+            responseBody: e.responseBody,
+            context: 'Session: $sessionId',
+          );
+        }
+        rethrow;
+      } else if (e is GithubApiException) {
+        // GithubApiException might already have context (PR info).
+        // We can append Session info?
+        // But context is String?
+        // Let's create a JulesException wrapping it or appending context.
+        // Or rethrow as GithubApiException with updated context?
+        // GithubApiException fields are final.
+        throw GithubApiException(
+          e.statusCode,
+          e.message,
+          context: '${e.context ?? ''} (Session: $sessionId)',
+        );
+      }
+      throw JulesException(e.toString(), context: 'Session: $sessionId');
     }
-
-    final owner = pathSegments[pullIndex - 2];
-    final repo = pathSegments[pullIndex - 1];
-    final prNumber = pathSegments[pathSegments.length - 1];
-
-    // Fetch PR and CI statuses from GitHub in parallel
-    final results = await Future.wait([
-      _githubProvider!.getPrStatus(owner, repo, prNumber),
-      _githubProvider!.getCIStatus(owner, repo, prNumber),
-    ]);
-
-    Object? result0 = results[0];
-    GitHubPrResponse? prResponse;
-    String? rawPrStatus;
-
-    if (result0 is GitHubPrResponse) {
-      prResponse = result0;
-    } else if (result0 is String) {
-      debugPrint('Warning: getPrStatus returned String: $result0');
-      rawPrStatus = result0;
-    } else if (result0 is Map<String, dynamic>) {
-      // debugPrint('Warning: getPrStatus returned Map');
-      // Backward compatibility if needed
-      prResponse = GitHubPrResponse(result0);
-    }
-
-    final ciStatus = results[1] as String?;
-
-    // Update session with new statuses
-    final updatedSession = session.copyWith(
-      prStatus: prResponse?.displayStatus ?? rawPrStatus ?? session.prStatus,
-      ciStatus: ciStatus ?? session.ciStatus,
-      mergeableState: prResponse?.mergeableState,
-      additions: prResponse?.additions,
-      deletions: prResponse?.deletions,
-      changedFiles: prResponse?.changedFiles,
-      diffUrl: prResponse?.diffUrl,
-      patchUrl: prResponse?.patchUrl,
-    );
-
-    // Update in cache
-    if (_cacheService != null) {
-      await _cacheService!.updateSession(authToken, updatedSession);
-    }
-
-    // Update in memory
-    _items[index] = CachedItem(updatedSession, _items[index].metadata);
-
-    notifyListeners();
   }
 
   Future<void> updateSessionTags(Session session, List<String> tags) async {

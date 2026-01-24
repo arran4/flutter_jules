@@ -555,6 +555,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
             }
 
             if (handled) {
+              if (e.context != null) {
+                message = '$message (Context: ${e.context})';
+              }
               Provider.of<MessageQueueProvider>(
                 context,
                 listen: false,
@@ -782,9 +785,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 );
                 if (mounted) {
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
+                    SnackBar(
                       content: Text(
-                        "API Error: Resource Exhausted. Message queued for later.",
+                        "API Error: Resource Exhausted. Message queued for later. (Session: ${session.title ?? session.name})",
                       ),
                     ),
                   );

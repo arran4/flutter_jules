@@ -14,11 +14,13 @@ import '../models/github_exclusion.dart';
 class GithubApiException implements Exception {
   final int statusCode;
   final String message;
+  final String? context;
 
-  GithubApiException(this.statusCode, this.message);
+  GithubApiException(this.statusCode, this.message, {this.context});
 
   @override
-  String toString() => 'GithubApiException: $statusCode $message';
+  String toString() =>
+      'GithubApiException: $statusCode $message${context != null ? ' [Context: $context]' : ''}';
 }
 
 class GithubProvider extends ChangeNotifier {
@@ -286,45 +288,54 @@ class GithubProvider extends ChangeNotifier {
       id: jobId,
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
-        if (_hasBadCredentials) return null;
+        try {
+          if (_hasBadCredentials) return null;
 
-        final url = Uri.parse(
-          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
-        );
-        final response = await http.get(
-          url,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        );
-
-        _updateRateLimits(response.headers);
-
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          return GitHubPrResponse(data);
-        } else if (response.statusCode == 401 ||
-            response.statusCode == 403 ||
-            response.statusCode == 404) {
-          _warningCount++;
-          // 404 on private repo acts like auth failure often
-          await _handleUnauthorized(
-            response.body,
-            owner: owner,
-            repo: repo,
-            prNumber: prNumber,
-            jobId: jobId,
+          final url = Uri.parse(
+            'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
           );
-          debugPrint(
-              'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
-          return null;
-        } else {
-          _warningCount++;
-          debugPrint(
-            'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+          final response = await http.get(
+            url,
+            headers: {
+              'Authorization': 'token $apiKey',
+              'Accept': 'application/vnd.github.v3+json',
+            },
           );
-          return null;
+
+          _updateRateLimits(response.headers);
+
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            return GitHubPrResponse(data);
+          } else if (response.statusCode == 401 ||
+              response.statusCode == 403 ||
+              response.statusCode == 404) {
+            _warningCount++;
+            // 404 on private repo acts like auth failure often
+            await _handleUnauthorized(
+              response.body,
+              owner: owner,
+              repo: repo,
+              prNumber: prNumber,
+              jobId: jobId,
+            );
+            debugPrint(
+                'GitHub Unauthorized/Error: ${response.statusCode} ${response.body}');
+            return null;
+          } else {
+            _warningCount++;
+            debugPrint(
+              'Failed to get PR status for $owner/$repo #$prNumber: ${response.statusCode} ${response.body}',
+            );
+            return null;
+          }
+        } catch (e) {
+          if (e is GithubApiException) rethrow;
+          throw GithubApiException(
+            0,
+            e.toString(),
+            context: '$owner/$repo #$prNumber',
+          );
         }
       },
     );
@@ -339,67 +350,85 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
-    if (apiKey == null || _hasBadCredentials) return null;
-    final url = Uri.parse(
-      'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'token $apiKey',
-        'Accept': 'application/vnd.github.v3.diff',
-      },
-    );
-    _updateRateLimits(response.headers);
-    if (response.statusCode == 200) {
-      return response.body;
-    } else if (response.statusCode == 401 ||
-        response.statusCode == 403 ||
-        response.statusCode == 404) {
-      _warningCount++;
-      await _handleUnauthorized(
-        response.body,
-        owner: owner,
-        repo: repo,
-        prNumber: prNumber,
-        jobId: 'diff_${owner}_${repo}_$prNumber',
+    try {
+      if (apiKey == null || _hasBadCredentials) return null;
+      final url = Uri.parse(
+        'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
       );
-    } else {
-      _warningCount++;
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'token $apiKey',
+          'Accept': 'application/vnd.github.v3.diff',
+        },
+      );
+      _updateRateLimits(response.headers);
+      if (response.statusCode == 200) {
+        return response.body;
+      } else if (response.statusCode == 401 ||
+          response.statusCode == 403 ||
+          response.statusCode == 404) {
+        _warningCount++;
+        await _handleUnauthorized(
+          response.body,
+          owner: owner,
+          repo: repo,
+          prNumber: prNumber,
+          jobId: 'diff_${owner}_${repo}_$prNumber',
+        );
+      } else {
+        _warningCount++;
+      }
+      return null;
+    } catch (e) {
+      if (e is GithubApiException) rethrow;
+      throw GithubApiException(
+        0,
+        e.toString(),
+        context: '$owner/$repo #$prNumber',
+      );
     }
-    return null;
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
-    if (apiKey == null || _hasBadCredentials) return null;
-    final url = Uri.parse(
-      'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
-    );
-    final response = await http.get(
-      url,
-      headers: {
-        'Authorization': 'token $apiKey',
-        'Accept': 'application/vnd.github.v3.patch',
-      },
-    );
-    _updateRateLimits(response.headers);
-    if (response.statusCode == 200) {
-      return response.body;
-    } else if (response.statusCode == 401 ||
-        response.statusCode == 403 ||
-        response.statusCode == 404) {
-      _warningCount++;
-      await _handleUnauthorized(
-        response.body,
-        owner: owner,
-        repo: repo,
-        prNumber: prNumber,
-        jobId: 'patch_${owner}_${repo}_$prNumber',
+    try {
+      if (apiKey == null || _hasBadCredentials) return null;
+      final url = Uri.parse(
+        'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
       );
-    } else {
-      _warningCount++;
+      final response = await http.get(
+        url,
+        headers: {
+          'Authorization': 'token $apiKey',
+          'Accept': 'application/vnd.github.v3.patch',
+        },
+      );
+      _updateRateLimits(response.headers);
+      if (response.statusCode == 200) {
+        return response.body;
+      } else if (response.statusCode == 401 ||
+          response.statusCode == 403 ||
+          response.statusCode == 404) {
+        _warningCount++;
+        await _handleUnauthorized(
+          response.body,
+          owner: owner,
+          repo: repo,
+          prNumber: prNumber,
+          jobId: 'patch_${owner}_${repo}_$prNumber',
+        );
+      } else {
+        _warningCount++;
+      }
+      return null;
+    } catch (e) {
+      if (e is GithubApiException) rethrow;
+      throw GithubApiException(
+        0,
+        e.toString(),
+        context: '$owner/$repo #$prNumber',
+      );
     }
-    return null;
   }
 
   Future<String?> getCIStatus(
@@ -415,111 +444,124 @@ class GithubProvider extends ChangeNotifier {
       id: jobId,
       description: 'Check CI Status: $owner/$repo #$prNumber',
       action: () async {
-        if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
-        if (_hasBadCredentials) return 'Unknown';
+        try {
+          if (_settingsProvider.isExcluded('$owner/$repo')) return 'Unknown';
+          if (_hasBadCredentials) return 'Unknown';
 
-        // 1. Get the PR's head SHA
-        final prUrl = Uri.parse(
-          'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
-        );
-        final prResponse = await http.get(
-          prUrl,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        );
-        _updateRateLimits(prResponse.headers);
-
-        if (prResponse.statusCode == 401 ||
-            prResponse.statusCode == 403 ||
-            prResponse.statusCode == 404) {
-          _warningCount++;
-          await _handleUnauthorized(
-            prResponse.body,
-            owner: owner,
-            repo: repo,
-            prNumber: prNumber,
-            jobId: jobId,
+          // 1. Get the PR's head SHA
+          final prUrl = Uri.parse(
+            'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
           );
-          return 'Unknown';
-        }
-
-        if (prResponse.statusCode != 200) {
-          throw GithubApiException(prResponse.statusCode, prResponse.body);
-        }
-
-        final prData = jsonDecode(prResponse.body);
-        final headSha = prData['head']['sha'];
-
-        if (headSha == null) {
-          _warningCount++;
-          return 'Unknown';
-        }
-
-        // 2. Get the check runs for that SHA
-        final checksUrl = Uri.parse(
-          'https://api.github.com/repos/$owner/$repo/commits/$headSha/check-runs',
-        );
-        final checksResponse = await http.get(
-          checksUrl,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        );
-        _updateRateLimits(checksResponse.headers);
-
-        if (checksResponse.statusCode == 401 ||
-            checksResponse.statusCode == 403 ||
-            checksResponse.statusCode == 404) {
-          _warningCount++;
-          await _handleUnauthorized(
-            checksResponse.body,
-            owner: owner,
-            repo: repo,
-            prNumber: prNumber,
-            jobId: jobId,
+          final prResponse = await http.get(
+            prUrl,
+            headers: {
+              'Authorization': 'token $apiKey',
+              'Accept': 'application/vnd.github.v3+json',
+            },
           );
-          return 'Unknown';
-        }
+          _updateRateLimits(prResponse.headers);
 
-        if (checksResponse.statusCode != 200) {
-          _warningCount++;
-          debugPrint(
-            'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
-          );
-          return 'Unknown';
-        }
-
-        final checksData = jsonDecode(checksResponse.body);
-        final checkRuns = checksData['check_runs'] as List;
-
-        if (checkRuns.isEmpty) {
-          return 'No Checks';
-        }
-
-        // 3. Determine the overall status
-        bool isPending = false;
-        bool hasFailures = false;
-
-        for (final run in checkRuns) {
-          if (run['status'] != 'completed') {
-            isPending = true;
-            break; // If anything is pending, the whole thing is
+          if (prResponse.statusCode == 401 ||
+              prResponse.statusCode == 403 ||
+              prResponse.statusCode == 404) {
+            _warningCount++;
+            await _handleUnauthorized(
+              prResponse.body,
+              owner: owner,
+              repo: repo,
+              prNumber: prNumber,
+              jobId: jobId,
+            );
+            return 'Unknown';
           }
-          if (run['conclusion'] == 'failure' ||
-              run['conclusion'] == 'timed_out' ||
-              run['conclusion'] == 'cancelled') {
-            hasFailures = true;
+
+          if (prResponse.statusCode != 200) {
+            throw GithubApiException(
+              prResponse.statusCode,
+              prResponse.body,
+              context: '$owner/$repo #$prNumber',
+            );
           }
+
+          final prData = jsonDecode(prResponse.body);
+          final headSha = prData['head']['sha'];
+
+          if (headSha == null) {
+            _warningCount++;
+            return 'Unknown';
+          }
+
+          // 2. Get the check runs for that SHA
+          final checksUrl = Uri.parse(
+            'https://api.github.com/repos/$owner/$repo/commits/$headSha/check-runs',
+          );
+          final checksResponse = await http.get(
+            checksUrl,
+            headers: {
+              'Authorization': 'token $apiKey',
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          );
+          _updateRateLimits(checksResponse.headers);
+
+          if (checksResponse.statusCode == 401 ||
+              checksResponse.statusCode == 403 ||
+              checksResponse.statusCode == 404) {
+            _warningCount++;
+            await _handleUnauthorized(
+              checksResponse.body,
+              owner: owner,
+              repo: repo,
+              prNumber: prNumber,
+              jobId: jobId,
+            );
+            return 'Unknown';
+          }
+
+          if (checksResponse.statusCode != 200) {
+            _warningCount++;
+            debugPrint(
+              'Failed to get CI status for $owner/$repo #$prNumber, sha $headSha: ${checksResponse.statusCode} ${checksResponse.body}',
+            );
+            return 'Unknown';
+          }
+
+          final checksData = jsonDecode(checksResponse.body);
+          final checkRuns = checksData['check_runs'] as List;
+
+          if (checkRuns.isEmpty) {
+            return 'No Checks';
+          }
+
+          // 3. Determine the overall status
+          bool isPending = false;
+          bool hasFailures = false;
+
+          for (final run in checkRuns) {
+            if (run['status'] != 'completed') {
+              isPending = true;
+              break; // If anything is pending, the whole thing is
+            }
+            if (run['conclusion'] == 'failure' ||
+                run['conclusion'] == 'timed_out' ||
+                run['conclusion'] == 'cancelled') {
+              hasFailures = true;
+            }
+          }
+
+          if (isPending) return 'Pending';
+          if (hasFailures) return 'Failure';
+
+          // If we get here, everything is completed and there are no failures
+          return 'Success';
+        } catch (e) {
+          if (e is GithubApiException) rethrow;
+          throw GithubApiException(
+            0,
+            e.toString(),
+            context: '$owner/$repo #$prNumber',
+          );
         }
-
-        if (isPending) return 'Pending';
-        if (hasFailures) return 'Failure';
-
-        // If we get here, everything is completed and there are no failures
-        return 'Success';
       },
     );
 
@@ -553,45 +595,58 @@ class GithubProvider extends ChangeNotifier {
       id: 'repo_details_${owner}_$repo',
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
-        if (_hasBadCredentials) throw Exception('Bad credentials');
+        try {
+          if (_hasBadCredentials) throw Exception('Bad credentials');
 
-        final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
-        final response = await http.get(
-          url,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
-        );
+          final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
+          final response = await http.get(
+            url,
+            headers: {
+              'Authorization': 'token $apiKey',
+              'Accept': 'application/vnd.github.v3+json',
+            },
+          );
 
-        _updateRateLimits(response.headers);
+          _updateRateLimits(response.headers);
 
-        if (response.statusCode == 401 ||
-            response.statusCode == 403 ||
-            response.statusCode == 404) {
-          await _handleUnauthorized(response.body, owner: owner, repo: repo);
-          throw GithubApiException(response.statusCode, response.body);
-        }
+          if (response.statusCode == 401 ||
+              response.statusCode == 403 ||
+              response.statusCode == 404) {
+            await _handleUnauthorized(response.body, owner: owner, repo: repo);
+            throw GithubApiException(
+              response.statusCode,
+              response.body,
+              context: '$owner/$repo',
+            );
+          }
 
-        if (response.statusCode == 200) {
-          final data = jsonDecode(response.body);
-          final license = data['license'];
-          final parent = data['parent'];
+          if (response.statusCode == 200) {
+            final data = jsonDecode(response.body);
+            final license = data['license'];
+            final parent = data['parent'];
 
-          return {
-            'repoName': data['name'],
-            'repoId': data['id'],
-            'isPrivateGithub': data['private'],
-            'description': data['description'],
-            'primaryLanguage': data['language'],
-            'license': license != null ? license['name'] : null,
-            'openIssuesCount': data['open_issues_count'],
-            'isFork': data['fork'],
-            'forkParent': parent != null ? parent['full_name'] : null,
-            'html_url': data['html_url'],
-          };
-        } else {
-          throw GithubApiException(response.statusCode, response.body);
+            return {
+              'repoName': data['name'],
+              'repoId': data['id'],
+              'isPrivateGithub': data['private'],
+              'description': data['description'],
+              'primaryLanguage': data['language'],
+              'license': license != null ? license['name'] : null,
+              'openIssuesCount': data['open_issues_count'],
+              'isFork': data['fork'],
+              'forkParent': parent != null ? parent['full_name'] : null,
+              'html_url': data['html_url'],
+            };
+          } else {
+            throw GithubApiException(
+              response.statusCode,
+              response.body,
+              context: '$owner/$repo',
+            );
+          }
+        } catch (e) {
+          if (e is GithubApiException) rethrow;
+          throw GithubApiException(0, e.toString(), context: '$owner/$repo');
         }
       },
     );
