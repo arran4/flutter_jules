@@ -13,6 +13,7 @@ class CacheMetadata {
   final bool
       hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
+  final String? reasonForLastUnread;
 
   factory CacheMetadata.empty() =>
       CacheMetadata(firstSeen: DateTime.now(), lastRetrieved: DateTime.now());
@@ -28,6 +29,7 @@ class CacheMetadata {
     this.hasPendingUpdates = false,
     this.isHidden = false,
     this.pendingMessages = const [],
+    this.reasonForLastUnread,
   });
 
   // Convenience Getters
@@ -80,6 +82,8 @@ class CacheMetadata {
         PendingMessage.fromJson,
         () => [],
       ),
+      reasonForLastUnread:
+          getStringPropOrDefault(json, 'reasonForLastUnread', null),
     );
   }
 
@@ -95,6 +99,8 @@ class CacheMetadata {
       'hasPendingUpdates': hasPendingUpdates,
       'isHidden': isHidden,
       'pendingMessages': pendingMessages.map((e) => e.toJson()).toList(),
+      if (reasonForLastUnread != null)
+        'reasonForLastUnread': reasonForLastUnread,
     };
   }
 
@@ -109,6 +115,7 @@ class CacheMetadata {
     bool? hasPendingUpdates,
     bool? isHidden, // Fixed
     List<PendingMessage>? pendingMessages,
+    String? reasonForLastUnread,
   }) {
     return CacheMetadata(
       firstSeen: firstSeen ?? this.firstSeen,
@@ -121,6 +128,7 @@ class CacheMetadata {
       hasPendingUpdates: hasPendingUpdates ?? this.hasPendingUpdates,
       isHidden: isHidden ?? this.isHidden,
       pendingMessages: pendingMessages ?? this.pendingMessages,
+      reasonForLastUnread: reasonForLastUnread ?? this.reasonForLastUnread,
     );
   }
 }
