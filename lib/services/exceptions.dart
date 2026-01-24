@@ -4,13 +4,22 @@ class JulesException implements Exception {
   final String message;
   final int? statusCode;
   final String? responseBody;
+  final String? context;
 
-  JulesException(this.message, {this.statusCode, this.responseBody}) {
+  JulesException(
+    this.message, {
+    this.statusCode,
+    this.responseBody,
+    this.context,
+  }) {
     developer.log(
       'JulesException: $message (Status: $statusCode)',
       error: message,
       stackTrace: StackTrace.current,
     );
+    if (context != null) {
+      developer.log('Context: $context');
+    }
     if (responseBody != null) {
       developer.log('Response body: $responseBody');
     }
@@ -18,10 +27,14 @@ class JulesException implements Exception {
 
   @override
   String toString() {
-    if (responseBody != null) {
-      return 'JulesException: $message\nResponse: $responseBody';
+    final buffer = StringBuffer('JulesException: $message');
+    if (context != null) {
+      buffer.write('\nContext: $context');
     }
-    return 'JulesException: $message';
+    if (responseBody != null) {
+      buffer.write('\nResponse: $responseBody');
+    }
+    return buffer.toString();
   }
 }
 
