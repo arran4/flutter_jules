@@ -150,11 +150,14 @@ class SessionProvider extends ChangeNotifier {
 
             final changed = (oldSession!.updateTime != session.updateTime) ||
                 (oldSession.state != session.state);
+            final reason = _getChangeReason(oldSession, session);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
               lastUpdated:
                   changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+              reasonForLastUnread:
+                  changed ? reason : oldItem.metadata.reasonForLastUnread,
             );
           } else {
             metadata = CacheMetadata(
@@ -273,9 +276,13 @@ class SessionProvider extends ChangeNotifier {
       final oldItem = _items[index];
       final changed = (oldItem.data.updateTime != session.updateTime) ||
           (oldItem.data.state != session.state);
+      final reason = _getChangeReason(oldItem.data, session);
+
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
         lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+        reasonForLastUnread:
+            changed ? reason : oldItem.metadata.reasonForLastUnread,
       );
     } else {
       metadata = CacheMetadata(
@@ -331,9 +338,13 @@ class SessionProvider extends ChangeNotifier {
         final changed =
             (oldItem.data.updateTime != updatedSession.updateTime) ||
                 (oldItem.data.state != updatedSession.state);
+        final reason = _getChangeReason(oldItem.data, updatedSession);
+
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
           lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+          reasonForLastUnread:
+              changed ? reason : oldItem.metadata.reasonForLastUnread,
         );
       } else {
         metadata = CacheMetadata(
@@ -395,6 +406,42 @@ class SessionProvider extends ChangeNotifier {
       return DateTime.parse(item.data.createTime!);
     }
     return item.metadata.lastRetrieved;
+  }
+
+  String? _getChangeReason(Session? oldSession, Session newSession) {
+    if (oldSession == null) return null;
+
+    final reasons = <String>[];
+
+    if (oldSession.state != newSession.state) {
+      final oldState = oldSession.state.toString().split('.').last;
+      final newState = newSession.state.toString().split('.').last;
+      reasons.add("Status changed from $oldState to $newState");
+    }
+
+    if (oldSession.prStatus != newSession.prStatus) {
+      final oldPr = oldSession.prStatus ?? 'None';
+      final newPr = newSession.prStatus ?? 'None';
+      if (oldPr != newPr) {
+        reasons.add("Github PR Status changed from $oldPr to $newPr");
+      }
+    }
+
+    if (oldSession.ciStatus != newSession.ciStatus) {
+      final oldCi = oldSession.ciStatus ?? 'None';
+      final newCi = newSession.ciStatus ?? 'None';
+      if (oldCi != newCi) {
+        reasons.add("CI Status changed from $oldCi to $newCi");
+      }
+    }
+
+    if (reasons.isEmpty && oldSession.updateTime != newSession.updateTime) {
+      return "Session updated";
+    }
+
+    if (reasons.isEmpty) return null;
+
+    return reasons.join(". ");
   }
 
   CacheMetadata _resolvePendingMessages(
@@ -757,6 +804,7 @@ class SessionProvider extends ChangeNotifier {
             labels: item.metadata.labels,
             isWatched: item.metadata.isWatched,
             hasPendingUpdates: item.metadata.hasPendingUpdates,
+            reasonForLastUnread: "Marked as unread manually",
           ),
         );
         notifyListeners();
@@ -859,13 +907,25 @@ class SessionProvider extends ChangeNotifier {
       patchUrl: prResponse?.patchUrl,
     );
 
+    final reason = _getChangeReason(session, updatedSession);
+    var metadata = _items[index].metadata;
+
+    if (reason != null) {
+      metadata = metadata.copyWith(
+        lastUpdated: DateTime.now(),
+        reasonForLastUnread: reason,
+      );
+    }
+
+    final newItem = CachedItem(updatedSession, metadata);
+
     // Update in cache
     if (_cacheService != null) {
-      await _cacheService!.updateSession(authToken, updatedSession);
+      await _cacheService!.saveSessions(authToken, [newItem]);
     }
 
     // Update in memory
-    _items[index] = CachedItem(updatedSession, _items[index].metadata);
+    _items[index] = newItem;
 
     notifyListeners();
   }
@@ -981,12 +1041,24 @@ class SessionProvider extends ChangeNotifier {
             patchUrl: prResponse?.patchUrl,
           );
 
+          final reason = _getChangeReason(item.data, updatedSession);
+          var metadata = item.metadata;
+
+          if (reason != null) {
+            metadata = metadata.copyWith(
+              lastUpdated: DateTime.now(),
+              reasonForLastUnread: reason,
+            );
+          }
+
+          final newItem = CachedItem(updatedSession, metadata);
+
           // Save to cache
           if (_cacheService != null) {
-            await _cacheService!.updateSession(authToken, updatedSession);
+            await _cacheService!.saveSessions(authToken, [newItem]);
           }
           // Update memory
-          _items[index] = CachedItem(updatedSession, item.metadata);
+          _items[index] = newItem;
           notifyListeners();
         }
       }
