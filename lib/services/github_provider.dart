@@ -14,11 +14,17 @@ import '../models/github_exclusion.dart';
 class GithubApiException implements Exception {
   final int statusCode;
   final String message;
+  final String? context;
 
-  GithubApiException(this.statusCode, this.message);
+  GithubApiException(this.statusCode, this.message, {this.context});
 
   @override
-  String toString() => 'GithubApiException: $statusCode $message';
+  String toString() {
+    if (context != null) {
+      return 'GithubApiException: $statusCode $message (Context: $context)';
+    }
+    return 'GithubApiException: $statusCode $message';
+  }
 }
 
 class GithubProvider extends ChangeNotifier {
@@ -459,7 +465,11 @@ class GithubProvider extends ChangeNotifier {
         }
 
         if (prResponse.statusCode != 200) {
-          throw GithubApiException(prResponse.statusCode, prResponse.body);
+          throw GithubApiException(
+            prResponse.statusCode,
+            prResponse.body,
+            context: 'Checking CI status for $owner/$repo PR #$prNumber',
+          );
         }
 
         final prData = jsonDecode(prResponse.body);
@@ -585,7 +595,11 @@ class GithubProvider extends ChangeNotifier {
           debugPrint(
               'GITHUB_API_ERROR (RepoDetails) for $url: ${response.statusCode} ${response.body}');
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
-          throw GithubApiException(response.statusCode, response.body);
+          throw GithubApiException(
+            response.statusCode,
+            response.body,
+            context: 'Fetching details for repo $owner/$repo',
+          );
         }
 
         if (response.statusCode == 200) {
@@ -606,7 +620,11 @@ class GithubProvider extends ChangeNotifier {
             'html_url': data['html_url'],
           };
         } else {
-          throw GithubApiException(response.statusCode, response.body);
+          throw GithubApiException(
+            response.statusCode,
+            response.body,
+            context: 'Fetching details for repo $owner/$repo',
+          );
         }
       },
     );

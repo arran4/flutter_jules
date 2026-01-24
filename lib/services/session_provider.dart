@@ -1007,9 +1007,13 @@ class SessionProvider extends ChangeNotifier {
         } else {
           // Other API errors (like 404 Not Found)
           debugPrint(
-            "Background Git status refresh failed for session $sessionId, pr $prUrl: $e",
+            "Background Git status refresh failed for session $sessionId, pr $prUrl: $e${e.context != null ? ' Context: ${e.context}' : ''}",
           );
         }
+      } else if (e is JulesException) {
+        debugPrint(
+          "Background Git status refresh failed for session $sessionId, pr $prUrl: $e${e.context != null ? ' Context: ${e.context}' : ''}",
+        );
       } else {
         // Other general errors
         debugPrint(
