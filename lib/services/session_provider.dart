@@ -18,6 +18,7 @@ class SessionProvider extends ChangeNotifier {
   String? _error;
   ApiExchange? _lastExchange;
   DateTime? _lastFetchTime;
+  String? _lastFetchType;
   CacheService? _cacheService;
   GithubProvider? _githubProvider;
   NotificationProvider? _notificationProvider;
@@ -31,6 +32,7 @@ class SessionProvider extends ChangeNotifier {
   String? get error => _error;
   ApiExchange? get lastExchange => _lastExchange;
   DateTime? get lastFetchTime => _lastFetchTime;
+  String? get lastFetchType => _lastFetchType;
 
   @override
   void dispose() {
@@ -220,6 +222,7 @@ class SessionProvider extends ChangeNotifier {
         _sortItems();
       }
 
+      _lastFetchType = shallow ? 'Quick' : 'Full';
       _lastFetchTime = DateTime.now();
       _error = null;
       _progressStreamController.add('Refresh complete.');
