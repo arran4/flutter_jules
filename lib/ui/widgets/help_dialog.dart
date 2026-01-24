@@ -11,16 +11,20 @@ class HelpDialog extends StatelessWidget {
       final parts = <String>[];
       if (activator.control) parts.add('Ctrl');
       if (activator.alt) parts.add('Alt');
-      if (activator.shift) parts.add('Shift');
       if (activator.meta) parts.add('Meta');
 
       String keyLabel = activator.trigger.keyLabel;
+      bool showShift = activator.shift;
+
       // Special case for ? (Shift + /)
       if (activator.trigger == LogicalKeyboardKey.slash && activator.shift) {
         keyLabel = '?';
+        showShift = false;
       } else if (activator.trigger == LogicalKeyboardKey.space) {
         keyLabel = 'Space';
       }
+
+      if (showShift) parts.add('Shift');
 
       parts.add(keyLabel.toUpperCase());
       return parts.join(' + ');

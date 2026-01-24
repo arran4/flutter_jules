@@ -28,6 +28,8 @@ import 'ui/widgets/help_dialog.dart';
 import 'ui/widgets/notification_overlay.dart';
 import 'models/app_shortcut_action.dart';
 import 'intents.dart';
+import 'utils/app_shortcuts.dart';
+import 'dart:io';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -89,16 +91,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
         }
       });
 
-      shortcutRegistry.register(Shortcut(
-          const SingleActivator(LogicalKeyboardKey.slash,
-              control: true, shift: true),
-          AppShortcutAction.showHelp,
-          'Show Help'));
-
-      shortcutRegistry.register(Shortcut(
-          const SingleActivator(LogicalKeyboardKey.keyN, control: true),
-          AppShortcutAction.newSession,
-          'New Session'));
+      registerGlobalShortcuts(shortcutRegistry, isMacOS: Platform.isMacOS);
     });
   }
 
