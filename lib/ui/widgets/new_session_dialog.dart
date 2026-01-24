@@ -988,21 +988,21 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children: errorMsg
-                                                    .processingErrors
-                                                    .map<Widget>(
-                                                      (e) => Text(
-                                                        "• $e",
-                                                        style: TextStyle(
-                                                          color: Colors
-                                                              .red.shade900,
-                                                          fontSize: 11,
-                                                          fontFamily:
-                                                              'monospace',
-                                                        ),
-                                                      ),
-                                                    )
-                                                    .toList(),
+                                                children:
+                                                    errorMsg.processingErrors
+                                                        .map<Widget>(
+                                                          (e) => Text(
+                                                            "• $e",
+                                                            style: TextStyle(
+                                                              color: Colors
+                                                                  .red.shade900,
+                                                              fontSize: 11,
+                                                              fontFamily:
+                                                                  'monospace',
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
                                               ),
                                             );
                                           } catch (_) {
@@ -1367,11 +1367,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       ),
                                     ),
                                   ),
-
+                                ],
                               );
                             },
                           ),
                         ),
+                      ),
                     ],
                   ),
                 ),

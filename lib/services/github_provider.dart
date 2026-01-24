@@ -209,8 +209,7 @@ class GithubProvider extends ChangeNotifier {
             ));
 
             if (jobId != null) {
-              final msg =
-                  'GITHUB_API_ERROR: 404 for PR $owner/$repo/$prNumber';
+              final msg = 'GITHUB_API_ERROR: 404 for PR $owner/$repo/$prNumber';
               debugPrint(msg);
               await _logFailure(jobId, msg);
             }
