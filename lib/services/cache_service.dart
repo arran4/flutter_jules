@@ -204,6 +204,12 @@ class CacheService {
     return results;
   }
 
+  Future<File> getSessionCacheFile(String token, String sessionId) async {
+    final cacheDir = await _getCacheDirectory(token);
+    final fileName = '${Uri.encodeComponent(sessionId)}.json';
+    return File(path.join(cacheDir.path, 'sessions', fileName));
+  }
+
   Future<void> markSessionAsRead(String token, String sessionId) async {
     final cacheDir = await _getCacheDirectory(token);
     // Might be in sessions or cached_details, but we track metadata in sessions list usually

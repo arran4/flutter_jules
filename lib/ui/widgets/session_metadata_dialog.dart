@@ -1,0 +1,202 @@
+import 'dart:io';
+import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:url_launcher/url_launcher.dart';
+import '../../models.dart';
+import 'package:intl/intl.dart';
+
+class SessionMetadataDialog extends StatelessWidget {
+  final Session session;
+  final CacheMetadata? cacheMetadata;
+  final File? cacheFile;
+
+  const SessionMetadataDialog({
+    super.key,
+    required this.session,
+    this.cacheMetadata,
+    this.cacheFile,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Session Metadata'),
+      content: SizedBox(
+        width: double.maxFinite,
+        child: SingleChildScrollView(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              if (cacheFile != null) ...[
+                _buildSectionHeader(context, 'Local Cache File'),
+                _buildCacheFileRow(context),
+                const SizedBox(height: 16),
+              ],
+              if (cacheMetadata != null) ...[
+                _buildSectionHeader(context, 'Cache Metadata'),
+                _buildCacheMetadataTable(context),
+                const SizedBox(height: 16),
+              ],
+              if (session.metadata != null && session.metadata!.isNotEmpty) ...[
+                _buildSectionHeader(context, 'Server Metadata'),
+                _buildServerMetadataTable(context),
+              ],
+              if (session.metadata == null || session.metadata!.isEmpty)
+                const Text(
+                  "No server metadata available.",
+                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                ),
+            ],
+          ),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Close'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSectionHeader(BuildContext context, String title) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8.0),
+      child: Text(
+        title,
+        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: Theme.of(context).primaryColor,
+            ),
+      ),
+    );
+  }
+
+  Widget _buildCacheFileRow(BuildContext context) {
+    return Card(
+      margin: EdgeInsets.zero,
+      color: Colors.grey.shade50,
+      child: Padding(
+        padding: const EdgeInsets.all(8.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SelectableText(
+              cacheFile!.path,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+            const SizedBox(height: 8),
+            Row(
+              mainAxisAlignment: MainAxisAlignment.end,
+              children: [
+                TextButton.icon(
+                  icon: const Icon(Icons.copy, size: 16),
+                  label: const Text('Copy Path'),
+                  onPressed: () {
+                    Clipboard.setData(ClipboardData(text: cacheFile!.path));
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Path copied')),
+                    );
+                  },
+                ),
+                const SizedBox(width: 8),
+                FilledButton.icon(
+                  icon: const Icon(Icons.description, size: 16),
+                  label: const Text('Open File'),
+                  onPressed: () async {
+                    try {
+                      final uri = Uri.file(cacheFile!.path);
+                      if (await canLaunchUrl(uri)) {
+                        await launchUrl(uri);
+                      } else {
+                        // Fallback: Open directory?
+                        final dir = cacheFile!.parent;
+                        final dirUri = Uri.directory(dir.path);
+                        if (await canLaunchUrl(dirUri)) {
+                          await launchUrl(dirUri);
+                        } else {
+                          if (context.mounted) {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                  content: Text('Cannot open file or directory')),
+                            );
+                          }
+                        }
+                      }
+                    } catch (e) {
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(content: Text('Error opening file: $e')),
+                        );
+                      }
+                    }
+                  },
+                ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildCacheMetadataTable(BuildContext context) {
+    final m = cacheMetadata!;
+    final rows = [
+      _buildRow('First Seen', _formatDate(m.firstSeen)),
+      _buildRow('Last Retrieved', _formatDate(m.lastRetrieved)),
+      if (m.lastOpened != null)
+        _buildRow('Last Opened', _formatDate(m.lastOpened!)),
+      if (m.lastUpdated != null)
+        _buildRow('Last Updated', _formatDate(m.lastUpdated!)),
+      _buildRow('Is Watched', m.isWatched.toString()),
+      _buildRow('Is Hidden', m.isHidden.toString()),
+      if (m.reasonForLastUnread != null)
+        _buildRow('Unread Reason', m.reasonForLastUnread!),
+    ];
+
+    return Table(
+      border: TableBorder.all(color: Colors.grey.shade300),
+      columnWidths: const {
+        0: IntrinsicColumnWidth(),
+        1: FlexColumnWidth(),
+      },
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children: rows,
+    );
+  }
+
+  Widget _buildServerMetadataTable(BuildContext context) {
+    return Table(
+      border: TableBorder.all(color: Colors.grey.shade300),
+      columnWidths: const {
+        0: IntrinsicColumnWidth(),
+        1: FlexColumnWidth(),
+      },
+      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+      children:
+          session.metadata!.map((m) => _buildRow(m.key, m.value)).toList(),
+    );
+  }
+
+  TableRow _buildRow(String key, String value) {
+    return TableRow(
+      children: [
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: Text(key,
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+        ),
+        Padding(
+          padding: const EdgeInsets.all(8.0),
+          child: SelectableText(value, style: const TextStyle(fontSize: 13)),
+        ),
+      ],
+    );
+  }
+
+  String _formatDate(DateTime dt) {
+    return DateFormat.yMMMd().add_jm().format(dt.toLocal());
+  }
+}
