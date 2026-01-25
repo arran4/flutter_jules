@@ -76,6 +76,7 @@ enum MessageSubmitAction {
   addNewLine,
   submitsMessage,
   submitsMessageAndGoesBack,
+  submitsMessageMarksReadAndOpensNext,
   doesNothing,
 }
 

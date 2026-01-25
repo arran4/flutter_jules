@@ -2294,91 +2294,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                               return;
                                             }
 
-                                            // Set the "Last Opened" date before navigating.
-                                            final result = await Navigator.push(
-                                              context,
-                                              MaterialPageRoute(
-                                                builder: (_) =>
-                                                    SessionDetailScreen(
-                                                  session: session,
-                                                ),
-                                              ),
-                                            );
-
-                                            if (result is SessionDetailResult &&
-                                                result.openNewSessionDialog) {
-                                              if (mounted) {
-                                                _createSession();
-                                              }
-                                            }
-
-                                            // On Return
-                                            if (!context.mounted) return;
-                                            final settings =
-                                                Provider.of<SettingsProvider>(
-                                              context,
-                                              listen: false,
-                                            );
-                                            switch (settings.refreshOnReturn) {
-                                              case ListRefreshPolicy.none:
-                                                break;
-                                              case ListRefreshPolicy.dirty:
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
-                                                  context,
-                                                  listen: false,
-                                                );
-                                                Provider.of<SessionProvider>(
-                                                  context,
-                                                  listen: false,
-                                                ).refreshDirtySessions(
-                                                  auth.client,
-                                                  authToken: auth.token!,
-                                                );
-                                                Provider.of<RefreshService>(
-                                                  context,
-                                                  listen: false,
-                                                ).notifyManualRun(
-                                                  RefreshTaskType.refresh,
-                                                  refreshPolicy:
-                                                      ListRefreshPolicy.dirty,
-                                                );
-                                                break;
-                                              case ListRefreshPolicy.watched:
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
-                                                  context,
-                                                  listen: false,
-                                                );
-                                                Provider.of<SessionProvider>(
-                                                  context,
-                                                  listen: false,
-                                                ).refreshWatchedSessions(
-                                                  auth.client,
-                                                  authToken: auth.token!,
-                                                );
-                                                Provider.of<RefreshService>(
-                                                  context,
-                                                  listen: false,
-                                                ).notifyManualRun(
-                                                  RefreshTaskType.refresh,
-                                                  refreshPolicy:
-                                                      ListRefreshPolicy.watched,
-                                                );
-                                                break;
-                                              case ListRefreshPolicy.quick:
-                                                _fetchSessions(
-                                                  force: true,
-                                                  shallow: true,
-                                                );
-                                                break;
-                                              case ListRefreshPolicy.full:
-                                                _fetchSessions(
-                                                  force: true,
-                                                  shallow: false,
-                                                );
-                                                break;
-                                            }
+                                            _openSessionDetail(session);
                                           },
                                           onLongPress: () {
                                             _showTileMenu(
@@ -3079,6 +2995,79 @@ class _SessionListScreenState extends State<SessionListScreen> {
         );
       },
     );
+  }
+
+  Future<void> _openSessionDetail(Session session) async {
+    // Set the "Last Opened" date before navigating.
+    final result = await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => SessionDetailScreen(session: session),
+      ),
+    );
+
+    if (!mounted) return;
+    await _handleSessionResult(result, session);
+
+    // On Return
+    if (!mounted) return;
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    switch (settings.refreshOnReturn) {
+      case ListRefreshPolicy.none:
+        break;
+      case ListRefreshPolicy.dirty:
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).refreshDirtySessions(auth.client, authToken: auth.token!);
+        Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+          RefreshTaskType.refresh,
+          refreshPolicy: ListRefreshPolicy.dirty,
+        );
+        break;
+      case ListRefreshPolicy.watched:
+        final auth = Provider.of<AuthProvider>(context, listen: false);
+        Provider.of<SessionProvider>(
+          context,
+          listen: false,
+        ).refreshWatchedSessions(auth.client, authToken: auth.token!);
+        Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+          RefreshTaskType.refresh,
+          refreshPolicy: ListRefreshPolicy.watched,
+        );
+        break;
+      case ListRefreshPolicy.quick:
+        _fetchSessions(force: true, shallow: true);
+        break;
+      case ListRefreshPolicy.full:
+        _fetchSessions(force: true, shallow: false);
+        break;
+    }
+  }
+
+  Future<void> _handleSessionResult(dynamic result, Session session) async {
+    if (result is SessionDetailResult) {
+      if (result.openNewSessionDialog) {
+        if (mounted) _createSession();
+      } else if (result.openNextSession) {
+        if (mounted) _openNextSession(session);
+      }
+    }
+  }
+
+  void _openNextSession(Session closedSession) {
+    // Find index of the closed session in the current display list
+    final index =
+        _displayItems.indexWhere((item) => item.data.id == closedSession.id);
+    if (index != -1 && index + 1 < _displayItems.length) {
+      final nextItem = _displayItems[index + 1];
+      _openSessionDetail(nextItem.data);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("No next session found in current list")),
+      );
+    }
   }
 
   void _showTileMenu(
