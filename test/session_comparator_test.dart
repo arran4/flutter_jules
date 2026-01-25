@@ -14,8 +14,10 @@ void main() {
   setUp(() {
     mockSettingsProvider = MockSettingsProvider();
     mockNotificationService = MockNotificationService();
-    sessionComparator =
-        SessionComparator(mockSettingsProvider, mockNotificationService);
+    sessionComparator = SessionComparator(
+      mockSettingsProvider,
+      mockNotificationService,
+    );
   });
 
   test('compares sessions and sends notifications', () {

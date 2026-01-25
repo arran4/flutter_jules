@@ -21,10 +21,7 @@ void main() {
 
     test('serialization without reasonForLastUnread', () {
       final now = DateTime.now();
-      final metadata = CacheMetadata(
-        firstSeen: now,
-        lastRetrieved: now,
-      );
+      final metadata = CacheMetadata(firstSeen: now, lastRetrieved: now);
 
       final json = metadata.toJson();
       expect(json.containsKey('reasonForLastUnread'), false);

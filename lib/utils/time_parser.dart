@@ -86,14 +86,17 @@ class TimeParser {
     return _parseDateTime(input);
   }
 
-  static ({DateTime start, DateTime end})? parseRange(String input,
-      {DateTime? now}) {
+  static ({DateTime start, DateTime end})? parseRange(
+    String input, {
+    DateTime? now,
+  }) {
     input = input.toLowerCase().trim();
     now ??= DateTime.now();
 
     // Duration-based phrases (e.g., "last 24 hours")
-    final durationMatch =
-        RegExp(r'last (\d+) (hour|day|week|month|year)s?').firstMatch(input);
+    final durationMatch = RegExp(
+      r'last (\d+) (hour|day|week|month|year)s?',
+    ).firstMatch(input);
     if (durationMatch != null) {
       final value = int.parse(durationMatch.group(1)!);
       final unit = durationMatch.group(2)!;

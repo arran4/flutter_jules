@@ -11,14 +11,11 @@ class SourceGroup {
       name: getStringPropOrThrow(json, 'name'),
       sourceNames:
           getStringArrayPropOrDefault(json, 'sourceNames', <String>[]) ??
-              <String>[],
+          <String>[],
     );
   }
 
   Map<String, dynamic> toJson() {
-    return {
-      'name': name,
-      'sourceNames': sourceNames,
-    };
+    return {'name': name, 'sourceNames': sourceNames};
   }
 }

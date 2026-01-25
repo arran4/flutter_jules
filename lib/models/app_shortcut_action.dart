@@ -1,4 +1,1 @@
-enum AppShortcutAction {
-  showHelp,
-  newSession,
-}
+enum AppShortcutAction { showHelp, newSession }

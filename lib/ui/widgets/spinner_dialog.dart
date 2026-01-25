@@ -4,11 +4,7 @@ class SpinnerDialog extends StatelessWidget {
   final VoidCallback? onCancel;
   final String? message;
 
-  const SpinnerDialog({
-    super.key,
-    this.onCancel,
-    this.message,
-  });
+  const SpinnerDialog({super.key, this.onCancel, this.message});
 
   @override
   Widget build(BuildContext context) {

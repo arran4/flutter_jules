@@ -91,25 +91,27 @@ void main() {
         {
           'now': DateTime(2024, 3, 31),
           'input': '1 month',
-          'expected': DateTime(2024, 2, 29)
+          'expected': DateTime(2024, 2, 29),
         },
         // March 31 -> Feb 28 (non-leap year)
         {
           'now': DateTime(2023, 3, 31),
           'input': '1 month',
-          'expected': DateTime(2023, 2, 28)
+          'expected': DateTime(2023, 2, 28),
         },
         // May 31 -> April 30
         {
           'now': DateTime(2023, 5, 31),
           'input': '1 month',
-          'expected': DateTime(2023, 4, 30)
+          'expected': DateTime(2023, 4, 30),
         },
       ];
 
       for (var tc in testCases) {
-        final result = TimeParser.parse(tc['input'] as String,
-            now: tc['now'] as DateTime)!;
+        final result = TimeParser.parse(
+          tc['input'] as String,
+          now: tc['now'] as DateTime,
+        )!;
         final expected = tc['expected'] as DateTime;
         expect(result.year, expected.year);
         expect(result.month, expected.month);

@@ -33,7 +33,8 @@ class AppContainer extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
         ChangeNotifierProvider(create: (_) => TimerService()),
         ChangeNotifierProvider(
-            create: (_) => jules_shortcuts.ShortcutRegistry()),
+          create: (_) => jules_shortcuts.ShortcutRegistry(),
+        ),
         ChangeNotifierProvider(create: (_) => NotificationProvider()),
         ChangeNotifierProvider(create: (_) => ActivityProvider()),
         ChangeNotifierProvider(create: (_) => AuthProvider()),
@@ -43,16 +44,25 @@ class AppContainer extends StatelessWidget {
           update: (_, devMode, __) =>
               CacheService(isDevMode: devMode.isDevMode),
         ),
-        ChangeNotifierProxyProvider2<SettingsProvider, CacheService,
-            GithubProvider>(
+        ChangeNotifierProxyProvider2<
+          SettingsProvider,
+          CacheService,
+          GithubProvider
+        >(
           create: (context) => GithubProvider(
-              context.read<SettingsProvider>(), context.read<CacheService>()),
+            context.read<SettingsProvider>(),
+            context.read<CacheService>(),
+          ),
           update: (context, settings, cache, github) => github!,
         ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
-        ChangeNotifierProxyProvider3<CacheService, GithubProvider,
-            NotificationProvider, SessionProvider>(
+        ChangeNotifierProxyProvider3<
+          CacheService,
+          GithubProvider,
+          NotificationProvider,
+          SessionProvider
+        >(
           create: (_) => SessionProvider(),
           update: (_, cache, github, notifications, session) => session!
             ..setCacheService(cache)
@@ -63,20 +73,24 @@ class AppContainer extends StatelessWidget {
           create: (_) => SourceProvider(),
           update: (_, cache, source) => source!..setCacheService(cache),
         ),
-        ChangeNotifierProxyProvider2<CacheService, AuthProvider,
-            MessageQueueProvider>(
+        ChangeNotifierProxyProvider2<
+          CacheService,
+          AuthProvider,
+          MessageQueueProvider
+        >(
           create: (_) => MessageQueueProvider(),
           update: (_, cache, auth, queue) =>
               queue!..setCacheService(cache, auth.token),
         ),
         ChangeNotifierProxyProvider6<
-            SettingsProvider,
-            SessionProvider,
-            SourceProvider,
-            NotificationService,
-            MessageQueueProvider,
-            ActivityProvider,
-            RefreshService>(
+          SettingsProvider,
+          SessionProvider,
+          SourceProvider,
+          NotificationService,
+          MessageQueueProvider,
+          ActivityProvider,
+          RefreshService
+        >(
           create: (context) => RefreshService(
             context.read<SettingsProvider>(),
             context.read<SessionProvider>(),
@@ -87,20 +101,25 @@ class AppContainer extends StatelessWidget {
             context.read<ActivityProvider>(),
             context.read<TimerService>(),
           ),
-          update: (
-            _,
-            settings,
-            sessionProvider,
-            sourceProvider,
-            notificationService,
-            messageQueueProvider,
-            activityProvider,
-            service,
-          ) =>
-              service!,
+          update:
+              (
+                _,
+                settings,
+                sessionProvider,
+                sourceProvider,
+                notificationService,
+                messageQueueProvider,
+                activityProvider,
+                service,
+              ) => service!,
         ),
-        ChangeNotifierProxyProvider4<SessionProvider, AuthProvider,
-            GithubProvider, SettingsProvider, BulkActionExecutor>(
+        ChangeNotifierProxyProvider4<
+          SessionProvider,
+          AuthProvider,
+          GithubProvider,
+          SettingsProvider,
+          BulkActionExecutor
+        >(
           create: (context) => BulkActionExecutor(
             sessionProvider: context.read<SessionProvider>(),
             julesClient: context.read<AuthProvider>().client,

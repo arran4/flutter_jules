@@ -6,11 +6,7 @@ class TimeFilterDialog extends StatefulWidget {
   final TimeFilterType? initialType;
   final TimeFilterField? initialField;
 
-  const TimeFilterDialog({
-    super.key,
-    this.initialType,
-    this.initialField,
-  });
+  const TimeFilterDialog({super.key, this.initialType, this.initialField});
 
   @override
   State<TimeFilterDialog> createState() => _TimeFilterDialogState();
@@ -105,19 +101,22 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
                   TextField(
                     controller: _rangeController,
                     decoration: const InputDecoration(
-                        labelText: 'Range (e.g., "5 days", "last week")'),
+                      labelText: 'Range (e.g., "5 days", "last week")',
+                    ),
                   ),
                   const SizedBox(height: 8),
                   Wrap(
                     spacing: 8.0,
                     children:
                         ['15 minutes', '1 hour', '1 day', '7 days', '30 days']
-                            .map((range) => FilterChip(
-                                  label: Text(range),
-                                  onSelected: (selected) {
-                                    _rangeController.text = range;
-                                  },
-                                ))
+                            .map(
+                              (range) => FilterChip(
+                                label: Text(range),
+                                onSelected: (selected) {
+                                  _rangeController.text = range;
+                                },
+                              ),
+                            )
                             .toList(),
                   ),
                 ],
@@ -149,9 +148,11 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
                   }
                 }
               },
-              child: Text(_selectedDateTime == null
-                  ? 'Select Specific Time'
-                  : 'Time: ${_selectedDateTime.toString()}'),
+              child: Text(
+                _selectedDateTime == null
+                    ? 'Select Specific Time'
+                    : 'Time: ${_selectedDateTime.toString()}',
+              ),
             ),
             if (_selectedType == TimeFilterType.between) ...[
               const SizedBox(height: 8),
@@ -181,11 +182,13 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
                     }
                   }
                 },
-                child: Text(_selectedDateTimeEnd == null
-                    ? 'Select End Time'
-                    : 'End Time: ${_selectedDateTimeEnd.toString()}'),
+                child: Text(
+                  _selectedDateTimeEnd == null
+                      ? 'Select End Time'
+                      : 'End Time: ${_selectedDateTimeEnd.toString()}',
+                ),
               ),
-            ]
+            ],
           ],
         ),
       ),
@@ -198,8 +201,9 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         ),
         TextButton(
           onPressed: () {
-            final range =
-                _rangeController.text.isNotEmpty ? _rangeController.text : null;
+            final range = _rangeController.text.isNotEmpty
+                ? _rangeController.text
+                : null;
             final timeFilter = TimeFilter(
               type: _selectedType,
               range: range,
@@ -208,8 +212,9 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
               field: _selectedField,
             );
 
-            String fieldLabel =
-                _displayStringForTimeFilterField(timeFilter.field);
+            String fieldLabel = _displayStringForTimeFilterField(
+              timeFilter.field,
+            );
             String label;
             if (timeFilter.specificTime != null) {
               if (timeFilter.type == TimeFilterType.between &&

@@ -11,7 +11,7 @@ class CacheMetadata {
   final bool isWatched;
   final bool isHidden;
   final bool
-      hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
+  hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
   final String? reasonForLastUnread;
 
@@ -60,8 +60,9 @@ class CacheMetadata {
   factory CacheMetadata.fromJson(Map<String, dynamic> json) {
     return CacheMetadata(
       firstSeen: DateTime.parse(getStringPropOrThrow(json, 'firstSeen')),
-      lastRetrieved:
-          DateTime.parse(getStringPropOrThrow(json, 'lastRetrieved')),
+      lastRetrieved: DateTime.parse(
+        getStringPropOrThrow(json, 'lastRetrieved'),
+      ),
       lastOpened: json['lastOpened'] != null
           ? DateTime.parse(json['lastOpened'] as String)
           : null,
@@ -73,8 +74,11 @@ class CacheMetadata {
           : null,
       labels: getStringArrayPropOrDefault(json, 'labels', []),
       isWatched: getBooleanPropOrDefault(json, 'isWatched', false),
-      hasPendingUpdates:
-          getBooleanPropOrDefault(json, 'hasPendingUpdates', false),
+      hasPendingUpdates: getBooleanPropOrDefault(
+        json,
+        'hasPendingUpdates',
+        false,
+      ),
       isHidden: getBooleanPropOrDefault(json, 'isHidden', false),
       pendingMessages: getObjectArrayPropOrDefaultFunction(
         json,
@@ -82,8 +86,11 @@ class CacheMetadata {
         PendingMessage.fromJson,
         () => [],
       ),
-      reasonForLastUnread:
-          getStringPropOrDefault(json, 'reasonForLastUnread', null),
+      reasonForLastUnread: getStringPropOrDefault(
+        json,
+        'reasonForLastUnread',
+        null,
+      ),
     );
   }
 

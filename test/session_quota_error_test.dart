@@ -9,31 +9,33 @@ void main() {
         "error": {
           "code": 429,
           "message": "Resource has been exhausted (e.g. check quota).",
-          "status": "RESOURCE_EXHAUSTED"
-        }
+          "status": "RESOURCE_EXHAUSTED",
+        },
       });
       expect(ApiErrorUtils.parseError(json), ApiErrorType.rateLimit);
     });
 
-    test('Identifies new 400 FAILED_PRECONDITION error as dailyQuotaExceeded',
-        () {
-      final json = jsonEncode({
-        "error": {
-          "code": 400,
-          "message": "Precondition check failed.",
-          "status": "FAILED_PRECONDITION"
-        }
-      });
-      expect(ApiErrorUtils.parseError(json), ApiErrorType.dailyQuotaExceeded);
-    });
+    test(
+      'Identifies new 400 FAILED_PRECONDITION error as dailyQuotaExceeded',
+      () {
+        final json = jsonEncode({
+          "error": {
+            "code": 400,
+            "message": "Precondition check failed.",
+            "status": "FAILED_PRECONDITION",
+          },
+        });
+        expect(ApiErrorUtils.parseError(json), ApiErrorType.dailyQuotaExceeded);
+      },
+    );
 
     test('Identifies 503 UNAVAILABLE error as serviceUnavailable', () {
       final json = jsonEncode({
         "error": {
           "code": 503,
           "message": "Service Unavailable.",
-          "status": "UNAVAILABLE"
-        }
+          "status": "UNAVAILABLE",
+        },
       });
       expect(ApiErrorUtils.parseError(json), ApiErrorType.serviceUnavailable);
     });
@@ -43,8 +45,8 @@ void main() {
         "error": {
           "code": 400,
           "message": "Bad Request.",
-          "status": "INVALID_ARGUMENT"
-        }
+          "status": "INVALID_ARGUMENT",
+        },
       });
       expect(ApiErrorUtils.parseError(json), ApiErrorType.unknown);
     });
