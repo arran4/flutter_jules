@@ -524,7 +524,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _updateBranchFromSource();
     });
     _removeSourceOverlay();
-    _sourceFocusNode.unfocus();
+    _sourceFocusNode.requestFocus();
   }
 
   void _selectGroup(SourceGroup group) {
