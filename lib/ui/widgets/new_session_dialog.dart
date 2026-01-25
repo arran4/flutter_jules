@@ -111,7 +111,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -200,7 +201,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // check if we can infer a more specific mode.
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -266,12 +268,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
 
       if (mounted) {
-        final settingsProvider =
-            Provider.of<SettingsProvider>(context, listen: false);
+        final settingsProvider = Provider.of<SettingsProvider>(
+          context,
+          listen: false,
+        );
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
         _initializeSelection(sources);
         if (force) {
@@ -383,7 +388,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext!
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -397,13 +405,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     final query = val.toLowerCase();
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final settingsProvider =
-        Provider.of<SettingsProvider>(context, listen: false);
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources =
-          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
     }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
@@ -475,8 +486,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           dense: true,
                           leading: const Icon(Icons.group, size: 16),
                           title: Text(group.name),
-                          subtitle:
-                              Text('${group.sourceNames.length} repositories'),
+                          subtitle: Text(
+                            '${group.sourceNames.length} repositories',
+                          ),
                           onTap: () => _selectGroup(group),
                         ),
                       );
@@ -532,15 +544,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map group members to Source objects
-    final sources =
-        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+    final sources = allSources
+        .where((s) => group.sourceNames.contains(s.name))
+        .toList();
 
     setState(() {
       _bulkSelections = sources
-          .map((s) => BulkSelection(
-                source: s,
-                branch: _getBranchLabelForSource(s),
-              ))
+          .map(
+            (s) =>
+                BulkSelection(source: s, branch: _getBranchLabelForSource(s)),
+          )
           .toList();
 
       _selectedSource = null;
@@ -594,8 +607,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
     // Convert existing BulkSelection to simple Source list for the dialog
-    List<Source> initialSelection =
-        _bulkSelections.map((bs) => bs.source).toList();
+    List<Source> initialSelection = _bulkSelections
+        .map((bs) => bs.source)
+        .toList();
     if (initialSelection.isEmpty && _selectedSource != null) {
       initialSelection.add(_selectedSource!);
     }
@@ -672,8 +686,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             prompt: _promptController.text,
             sourceContext: SourceContext(
               source: selection.source.name,
-              githubRepoContext:
-                  GitHubRepoContext(startingBranch: selection.branch),
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: selection.branch,
+              ),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -732,8 +747,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     if (mounted) {
       Navigator.pop(
         context,
-        NewSessionResult.multiple(sessionsToCreate,
-            isDraft: false, openNewDialog: openNewDialog),
+        NewSessionResult.multiple(
+          sessionsToCreate,
+          isDraft: false,
+          openNewDialog: openNewDialog,
+        ),
       );
     }
   }
@@ -772,8 +790,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             prompt: _promptController.text,
             sourceContext: SourceContext(
               source: selection.source.name,
-              githubRepoContext:
-                  GitHubRepoContext(startingBranch: selection.branch),
+              githubRepoContext: GitHubRepoContext(
+                startingBranch: selection.branch,
+              ),
             ),
             requirePlanApproval: requirePlanApproval,
             automationMode: automationMode,
@@ -855,8 +874,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
 
         // Sort sources
@@ -962,8 +982,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                   decoration: BoxDecoration(
                                     color: Colors.red.shade50,
                                     borderRadius: BorderRadius.circular(8),
-                                    border:
-                                        Border.all(color: Colors.red.shade200),
+                                    border: Border.all(
+                                      color: Colors.red.shade200,
+                                    ),
                                   ),
                                   child: Column(
                                     crossAxisAlignment:
@@ -971,8 +992,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                     children: [
                                       Row(
                                         children: [
-                                          const Icon(Icons.error_outline,
-                                              color: Colors.red),
+                                          const Icon(
+                                            Icons.error_outline,
+                                            color: Colors.red,
+                                          ),
                                           const SizedBox(width: 8),
                                           Expanded(
                                             child: Text(
@@ -988,39 +1011,44 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       Consumer<MessageQueueProvider>(
                                         builder: (context, queueProvider, _) {
                                           try {
-                                            final errorMsg =
-                                                queueProvider.queue.firstWhere(
-                                              (m) =>
-                                                  m.type ==
-                                                      QueuedMessageType
-                                                          .sessionCreation &&
-                                                  m.content ==
-                                                      widget.initialSession!
-                                                          .prompt &&
-                                                  m.processingErrors.isNotEmpty,
-                                            );
+                                            final errorMsg = queueProvider.queue
+                                                .firstWhere(
+                                                  (m) =>
+                                                      m.type ==
+                                                          QueuedMessageType
+                                                              .sessionCreation &&
+                                                      m.content ==
+                                                          widget
+                                                              .initialSession!
+                                                              .prompt &&
+                                                      m
+                                                          .processingErrors
+                                                          .isNotEmpty,
+                                                );
 
                                             return Padding(
                                               padding: const EdgeInsets.only(
-                                                  top: 8.0),
+                                                top: 8.0,
+                                              ),
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children:
-                                                    errorMsg.processingErrors
-                                                        .map<Widget>(
-                                                          (e) => Text(
-                                                            "• $e",
-                                                            style: TextStyle(
-                                                              color: Colors
-                                                                  .red.shade900,
-                                                              fontSize: 11,
-                                                              fontFamily:
-                                                                  'monospace',
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
+                                                children: errorMsg
+                                                    .processingErrors
+                                                    .map<Widget>(
+                                                      (e) => Text(
+                                                        "• $e",
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .red
+                                                              .shade900,
+                                                          fontSize: 11,
+                                                          fontFamily:
+                                                              'monospace',
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
                                               ),
                                             );
                                           } catch (_) {
@@ -1076,8 +1104,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 children: [
                                   const Text(
                                     'Context',
-                                    style:
-                                        TextStyle(fontWeight: FontWeight.bold),
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                    ),
                                   ),
                                   Row(
                                     children: [
@@ -1090,8 +1119,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       ),
                                       TextButton.icon(
                                         style: TextButton.styleFrom(
-                                          textStyle:
-                                              const TextStyle(fontSize: 12),
+                                          textStyle: const TextStyle(
+                                            fontSize: 12,
+                                          ),
                                           tapTargetSize:
                                               MaterialTapTargetSize.shrinkWrap,
                                         ),
@@ -1104,11 +1134,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                 height: 16,
                                                 child:
                                                     CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
+                                                      strokeWidth: 2,
+                                                    ),
                                               )
-                                            : const Icon(Icons.refresh,
-                                                size: 20),
+                                            : const Icon(
+                                                Icons.refresh,
+                                                size: 20,
+                                              ),
                                         label: Text(_refreshStatus),
                                       ),
                                     ],
@@ -1126,12 +1158,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       final selection = _bulkSelections[index];
                                       final source = selection.source;
                                       final repo = source.githubRepo;
-                                      List<String> branches = repo?.branches
+                                      List<String> branches =
+                                          repo?.branches
                                               ?.map((b) => b.displayName)
                                               .toList() ??
                                           [];
-                                      if (!branches
-                                          .contains(selection.branch)) {
+                                      if (!branches.contains(
+                                        selection.branch,
+                                      )) {
                                         branches.add(selection.branch);
                                       }
                                       if (branches.isEmpty) {
@@ -1144,55 +1178,68 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             ? const Icon(Icons.lock, size: 16)
                                             : null,
                                         title: Text(
-                                            _getSourceDisplayLabel(source)),
+                                          _getSourceDisplayLabel(source),
+                                        ),
                                         subtitle: Row(
                                           children: [
                                             Expanded(
-                                              child: DropdownButtonFormField<
-                                                  String>(
-                                                isExpanded: true,
-                                                decoration:
-                                                    const InputDecoration(
-                                                  labelText: 'Branch',
-                                                  border: OutlineInputBorder(),
-                                                ),
-                                                value: selection.branch,
-                                                items: branches
-                                                    .map(
-                                                      (b) => DropdownMenuItem(
-                                                        value: b,
-                                                        child: Text(
-                                                          b,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
+                                              child:
+                                                  DropdownButtonFormField<
+                                                    String
+                                                  >(
+                                                    isExpanded: true,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText: 'Branch',
+                                                          border:
+                                                              OutlineInputBorder(),
                                                         ),
-                                                      ),
-                                                    )
-                                                    .toList(),
-                                                onChanged: (val) {
-                                                  if (val != null) {
-                                                    setState(() {
-                                                      selection.branch = val;
-                                                    });
-                                                  }
-                                                },
-                                              ),
+                                                    value: selection.branch,
+                                                    items: branches
+                                                        .map(
+                                                          (
+                                                            b,
+                                                          ) => DropdownMenuItem(
+                                                            value: b,
+                                                            child: Text(
+                                                              b,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                    onChanged: (val) {
+                                                      if (val != null) {
+                                                        setState(() {
+                                                          selection.branch =
+                                                              val;
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
                                             ),
                                             const SizedBox(width: 8),
                                             IconButton(
-                                              icon: const Icon(Icons.close,
-                                                  size: 16),
+                                              icon: const Icon(
+                                                Icons.close,
+                                                size: 16,
+                                              ),
                                               onPressed: () {
                                                 setState(() {
-                                                  _bulkSelections
-                                                      .removeAt(index);
+                                                  _bulkSelections.removeAt(
+                                                    index,
+                                                  );
                                                   if (_bulkSelections.length <=
                                                       1) {
                                                     if (_bulkSelections
                                                         .isNotEmpty) {
                                                       _selectSource(
-                                                          _bulkSelections
-                                                              .first.source);
+                                                        _bulkSelections
+                                                            .first
+                                                            .source,
+                                                      );
                                                     } else {
                                                       _selectedSource = null;
                                                       _sourceController.clear();
@@ -1227,17 +1274,24 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                 labelText: 'Repository',
                                                 border:
                                                     const OutlineInputBorder(),
-                                                prefixIcon: (_selectedSource
+                                                prefixIcon:
+                                                    (_selectedSource
                                                             ?.githubRepo
                                                             ?.isPrivate ==
                                                         true)
-                                                    ? const Icon(Icons.lock,
-                                                        size: 16)
-                                                    : const Icon(Icons.source,
-                                                        size: 16),
+                                                    ? const Icon(
+                                                        Icons.lock,
+                                                        size: 16,
+                                                      )
+                                                    : const Icon(
+                                                        Icons.source,
+                                                        size: 16,
+                                                      ),
                                                 suffixIcon: IconButton(
-                                                  icon: const Icon(Icons.close,
-                                                      size: 16),
+                                                  icon: const Icon(
+                                                    Icons.close,
+                                                    size: 16,
+                                                  ),
                                                   onPressed: () {
                                                     _sourceController.clear();
                                                     _sourceFocusNode
@@ -1293,104 +1347,104 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         hasScrollBody: false,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.stretch,
-                                children: [
-                                  // Prompt
-                                  Expanded(
-                                    child: Container(
-                                      constraints:
-                                          const BoxConstraints(minHeight: 200),
-                                      child: CallbackShortcuts(
-                                        bindings: {
-                                          const SingleActivator(
-                                            LogicalKeyboardKey.enter,
-                                            control: true,
-                                          ): _handleSend,
-                                          const SingleActivator(
-                                            LogicalKeyboardKey.enter,
-                                            meta: true,
-                                          ): _handleSend,
-                                          const SingleActivator(
-                                            LogicalKeyboardKey.enter,
-                                            control: true,
-                                            shift: true,
-                                          ): _handleSendAndNew,
-                                          const SingleActivator(
-                                            LogicalKeyboardKey.enter,
-                                            meta: true,
-                                            shift: true,
-                                          ): _handleSendAndNew,
-                                        },
-                                        child: TextField(
-                                          controller: _promptController,
-                                          autofocus: true,
-                                          expands: true,
-                                          maxLines: null,
-                                          minLines: null,
-                                          textAlignVertical: TextAlignVertical.top,
-                                          decoration: InputDecoration(
-                                            labelText: 'Prompt',
-                                            hintText:
-                                                'Describe what you want to do...',
-                                            border: const OutlineInputBorder(),
-                                            alignLabelWithHint: true,
-                                            suffixIcon: (widget.mode ==
-                                                        SessionDialogMode
-                                                            .edit ||
-                                                    widget.mode ==
-                                                        SessionDialogMode
-                                                            .createWithContext)
-                                                ? IconButton(
-                                                    icon: const Icon(
-                                                        Icons.content_paste_go),
-                                                    tooltip:
-                                                        'Import Prompt from Original Session',
-                                                    onPressed: () {
-                                                      if (widget.initialSession ==
-                                                          null) {
-                                                        return;
-                                                      }
-                                                      final originalPrompt =
-                                                          widget.initialSession!
-                                                              .prompt;
-                                                      final currentText =
-                                                          _promptController
-                                                              .text;
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              // Prompt
+                              Expanded(
+                                child: Container(
+                                  constraints: const BoxConstraints(
+                                    minHeight: 200,
+                                  ),
+                                  child: CallbackShortcuts(
+                                    bindings: {
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.enter,
+                                        control: true,
+                                      ): _handleSend,
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.enter,
+                                        meta: true,
+                                      ): _handleSend,
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.enter,
+                                        control: true,
+                                        shift: true,
+                                      ): _handleSendAndNew,
+                                      const SingleActivator(
+                                        LogicalKeyboardKey.enter,
+                                        meta: true,
+                                        shift: true,
+                                      ): _handleSendAndNew,
+                                    },
+                                    child: TextField(
+                                      controller: _promptController,
+                                      autofocus: true,
+                                      expands: true,
+                                      maxLines: null,
+                                      minLines: null,
+                                      textAlignVertical: TextAlignVertical.top,
+                                      decoration: InputDecoration(
+                                        labelText: 'Prompt',
+                                        hintText:
+                                            'Describe what you want to do...',
+                                        border: const OutlineInputBorder(),
+                                        alignLabelWithHint: true,
+                                        suffixIcon:
+                                            (widget.mode ==
+                                                    SessionDialogMode.edit ||
+                                                widget.mode ==
+                                                    SessionDialogMode
+                                                        .createWithContext)
+                                            ? IconButton(
+                                                icon: const Icon(
+                                                  Icons.content_paste_go,
+                                                ),
+                                                tooltip:
+                                                    'Import Prompt from Original Session',
+                                                onPressed: () {
+                                                  if (widget.initialSession ==
+                                                      null) {
+                                                    return;
+                                                  }
+                                                  final originalPrompt = widget
+                                                      .initialSession!
+                                                      .prompt;
+                                                  final currentText =
+                                                      _promptController.text;
 
-                                                      if (currentText
-                                                          .trim()
-                                                          .isNotEmpty) {
-                                                        const separator =
-                                                            '\n\n--- Imported Prompt ---\n';
-                                                        _promptController.text =
-                                                            '$currentText$separator$originalPrompt';
-                                                      } else {
-                                                        _promptController.text =
-                                                            originalPrompt;
-                                                      }
-                                                      _promptController
-                                                              .selection =
-                                                          TextSelection
-                                                              .fromPosition(
+                                                  if (currentText
+                                                      .trim()
+                                                      .isNotEmpty) {
+                                                    const separator =
+                                                        '\n\n--- Imported Prompt ---\n';
+                                                    _promptController.text =
+                                                        '$currentText$separator$originalPrompt';
+                                                  } else {
+                                                    _promptController.text =
+                                                        originalPrompt;
+                                                  }
+                                                  _promptController.selection =
+                                                      TextSelection.fromPosition(
                                                         TextPosition(
                                                           offset:
                                                               _promptController
-                                                                  .text.length,
+                                                                  .text
+                                                                  .length,
                                                         ),
                                                       );
-                                                    },
-                                                  )
-                                                : null,
-                                          ),
-                                          onChanged: (val) => setState(() {}),
-                                        ),
+                                                },
+                                              )
+                                            : null,
                                       ),
+                                      onChanged: (val) => setState(() {}),
                                     ),
                                   ),
-                                  const SizedBox(height: 100),
-                                ],
+                                ),
                               ),
+                              const SizedBox(height: 100),
+                            ],
+                          ),
                         ),
                       ),
                     ],

@@ -29,14 +29,15 @@ class ActionScriptParser {
         final directive = parts[0].toLowerCase();
         final value = parts.length > 1 ? parts.sublist(1).join(' ') : '';
         _parseDirective(
-            directive,
-            value,
-            (v) => waitBetween = v,
-            (v) => parallelQueries = v,
-            (v) => limit = v,
-            (v) => offset = v,
-            (v) => randomize = v,
-            (v) => stopOnError = v);
+          directive,
+          value,
+          (v) => waitBetween = v,
+          (v) => parallelQueries = v,
+          (v) => limit = v,
+          (v) => offset = v,
+          (v) => randomize = v,
+          (v) => stopOnError = v,
+        );
       } else {
         // Handle "SET Key = Value" or Action or Comment
         // Strip inline comments if simple
@@ -65,20 +66,22 @@ class ActionScriptParser {
             }
 
             _parseDirective(
-                key,
-                val,
-                (v) => waitBetween = v,
-                (v) => parallelQueries = v,
-                (v) => limit = v,
-                (v) => offset = v,
-                (v) => randomize = v,
-                (v) => stopOnError = v);
+              key,
+              val,
+              (v) => waitBetween = v,
+              (v) => parallelQueries = v,
+              (v) => limit = v,
+              (v) => offset = v,
+              (v) => randomize = v,
+              (v) => stopOnError = v,
+            );
           }
         } else {
           final parts = line.split(RegExp(r'\s+'));
           final actionName = parts[0];
-          final message =
-              parts.length > 1 ? parts.sublist(1).join(' ').trim() : null;
+          final message = parts.length > 1
+              ? parts.sublist(1).join(' ').trim()
+              : null;
 
           final actionType = BulkActionType.values.firstWhere(
             (e) => e.name == actionName,
@@ -94,10 +97,9 @@ class ActionScriptParser {
             }
           }
 
-          actions.add(BulkActionStep(
-            type: actionType,
-            message: extractedMessage,
-          ));
+          actions.add(
+            BulkActionStep(type: actionType, message: extractedMessage),
+          );
         }
       }
     }

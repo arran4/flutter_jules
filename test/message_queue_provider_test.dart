@@ -166,9 +166,9 @@ void main() {
       when(
         mockClient.sendMessage('sessions/s1', 'Good'),
       ).thenAnswer((_) => Future.value());
-      when(mockClient.sendMessage('sessions/s2', 'Bad')).thenThrow(
-        Exception('Fail'),
-      );
+      when(
+        mockClient.sendMessage('sessions/s2', 'Bad'),
+      ).thenThrow(Exception('Fail'));
 
       bool errorCalled = false;
       await provider.sendQueue(

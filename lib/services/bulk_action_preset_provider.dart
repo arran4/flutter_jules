@@ -50,8 +50,9 @@ class BulkActionPresetProvider with ChangeNotifier {
       final jsonString = prefs.getString(_presetsKey);
       if (jsonString != null) {
         final List<dynamic> jsonList = jsonDecode(jsonString);
-        _presets =
-            jsonList.map((json) => BulkActionPreset.fromJson(json)).toList();
+        _presets = jsonList
+            .map((json) => BulkActionPreset.fromJson(json))
+            .toList();
       } else {
         _presets = List.from(_defaultPresets);
         await _savePresets();
@@ -96,9 +97,7 @@ class BulkActionPresetProvider with ChangeNotifier {
 
   Future<void> restoreSystemPreset(String name) async {
     try {
-      final systemPreset = _defaultPresets.firstWhere(
-        (d) => d.name == name,
-      );
+      final systemPreset = _defaultPresets.firstWhere((d) => d.name == name);
       if (!_presets.any((p) => p.name == name)) {
         await addPreset(systemPreset);
       }
@@ -107,10 +106,7 @@ class BulkActionPresetProvider with ChangeNotifier {
     }
   }
 
-  Future<void> updatePreset(
-    String oldName,
-    BulkActionPreset newPreset,
-  ) async {
+  Future<void> updatePreset(String oldName, BulkActionPreset newPreset) async {
     final index = _presets.indexWhere((p) => p.name == oldName);
     if (index != -1) {
       _presets[index] = newPreset;
@@ -137,7 +133,8 @@ class BulkActionPresetProvider with ChangeNotifier {
       final List<dynamic> jsonList = jsonDecode(jsonString);
       final imported = jsonList
           .map(
-              (json) => BulkActionPreset.fromJson(json as Map<String, dynamic>))
+            (json) => BulkActionPreset.fromJson(json as Map<String, dynamic>),
+          )
           .toList();
 
       if (merge) {

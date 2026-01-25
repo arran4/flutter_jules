@@ -43,25 +43,32 @@ class HelpDialog extends StatelessWidget {
     shortcutActions.forEach((activator, action) {
       final description = descriptions[action];
       if (description != null) {
-        rows.add(DataRow(cells: [
-          DataCell(Text(description)),
-          DataCell(
-            Container(
-              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-              decoration: BoxDecoration(
-                color: Colors.grey[200],
-                borderRadius: BorderRadius.circular(4),
-              ),
-              child: Text(
-                _formatActivator(activator),
-                style: const TextStyle(
-                  fontFamily: 'monospace',
-                  fontWeight: FontWeight.bold,
+        rows.add(
+          DataRow(
+            cells: [
+              DataCell(Text(description)),
+              DataCell(
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 8,
+                    vertical: 4,
+                  ),
+                  decoration: BoxDecoration(
+                    color: Colors.grey[200],
+                    borderRadius: BorderRadius.circular(4),
+                  ),
+                  child: Text(
+                    _formatActivator(activator),
+                    style: const TextStyle(
+                      fontFamily: 'monospace',
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
                 ),
               ),
-            ),
+            ],
           ),
-        ]));
+        );
       }
     });
 

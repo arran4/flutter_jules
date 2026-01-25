@@ -22,8 +22,11 @@ void main() {
         final single = activator as SingleActivator;
         expect(single.trigger, LogicalKeyboardKey.slash);
         expect(single.meta, isTrue, reason: 'Should use Meta on macOS');
-        expect(single.control, isFalse,
-            reason: 'Should not use Control on macOS');
+        expect(
+          single.control,
+          isFalse,
+          reason: 'Should not use Control on macOS',
+        );
         expect(single.shift, isTrue);
         helpFound = true;
       }
@@ -41,8 +44,11 @@ void main() {
         newSessionFound = true;
       }
     });
-    expect(newSessionFound, isTrue,
-        reason: 'New Session shortcut not found for macOS');
+    expect(
+      newSessionFound,
+      isTrue,
+      reason: 'New Session shortcut not found for macOS',
+    );
   });
 
   test('registerGlobalShortcuts registers correct shortcuts for non-macOS', () {
@@ -58,8 +64,11 @@ void main() {
         final single = activator as SingleActivator;
         expect(single.trigger, LogicalKeyboardKey.slash);
         expect(single.meta, isFalse);
-        expect(single.control, isTrue,
-            reason: 'Should use Control on non-macOS');
+        expect(
+          single.control,
+          isTrue,
+          reason: 'Should use Control on non-macOS',
+        );
         expect(single.shift, isTrue);
         helpFound = true;
       }
@@ -77,7 +86,10 @@ void main() {
         newSessionFound = true;
       }
     });
-    expect(newSessionFound, isTrue,
-        reason: 'New Session shortcut not found for non-macOS');
+    expect(
+      newSessionFound,
+      isTrue,
+      reason: 'New Session shortcut not found for non-macOS',
+    );
   });
 }

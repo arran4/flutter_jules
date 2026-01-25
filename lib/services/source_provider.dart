@@ -113,16 +113,22 @@ class SourceProvider extends ChangeNotifier {
           source.githubRepo!.repo,
         );
 
-        job.completer.future.then((_) {
-          if (job.status == GithubJobStatus.completed) {
-            final details = job.result as Map<String, dynamic>?;
-            if (details != null) {
-              _updateSourceWithGithubDetails(source.name, details, authToken);
-            }
-          }
-        }).catchError((err) {
-          // Silently ignore, errors are handled in the provider
-        });
+        job.completer.future
+            .then((_) {
+              if (job.status == GithubJobStatus.completed) {
+                final details = job.result as Map<String, dynamic>?;
+                if (details != null) {
+                  _updateSourceWithGithubDetails(
+                    source.name,
+                    details,
+                    authToken,
+                  );
+                }
+              }
+            })
+            .catchError((err) {
+              // Silently ignore, errors are handled in the provider
+            });
 
         githubProvider.enqueue(job);
       }
@@ -214,8 +220,9 @@ class SourceProvider extends ChangeNotifier {
       return;
     }
 
-    final index =
-        _items.indexWhere((item) => item.data.name == sourceToRefresh.name);
+    final index = _items.indexWhere(
+      (item) => item.data.name == sourceToRefresh.name,
+    );
     if (index == -1) {
       return; // Source not found in the list
     }
@@ -257,7 +264,9 @@ class SourceProvider extends ChangeNotifier {
         final newItem = CachedItem(
           updatedSource,
           oldItem.metadata.copyWith(
-              lastRetrieved: DateTime.now(), lastUpdated: DateTime.now()),
+            lastRetrieved: DateTime.now(),
+            lastUpdated: DateTime.now(),
+          ),
         );
 
         _items[index] = newItem;

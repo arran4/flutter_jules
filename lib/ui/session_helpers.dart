@@ -27,10 +27,8 @@ Future<bool> resubmitSession(
 }) async {
   final NewSessionResult? result = await showDialog<NewSessionResult>(
     context: context,
-    builder: (context) => NewSessionDialog(
-      initialSession: session,
-      mode: SessionDialogMode.edit,
-    ),
+    builder: (context) =>
+        NewSessionDialog(initialSession: session, mode: SessionDialogMode.edit),
   );
 
   if (result == null) return false;
@@ -118,9 +116,9 @@ Future<bool> resubmitSession(
                 onPressed: () {
                   Navigator.pop(dialogContext);
                   queueProvider.deleteMessage(msgId);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text("Discarded")),
-                  );
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text("Discarded")));
                 },
                 style: TextButton.styleFrom(foregroundColor: Colors.red),
                 child: const Text('Discard'),
@@ -205,9 +203,7 @@ Future<void> handleNewSessionResultInBackground({
   required ScaffoldMessengerState scaffoldMessenger,
 }) async {
   void showMessage(String message) {
-    scaffoldMessenger.showSnackBar(
-      SnackBar(content: Text(message)),
-    );
+    scaffoldMessenger.showSnackBar(SnackBar(content: Text(message)));
   }
 
   if (result.isDraft) {
@@ -269,10 +265,7 @@ Future<void> handleNewSessionResultInBackground({
   }
 
   if (hideOriginal && anySucceeded) {
-    await sessionProvider.toggleHidden(
-      originalSession.id,
-      authProvider.token!,
-    );
+    await sessionProvider.toggleHidden(originalSession.id, authProvider.token!);
     showMessage("Original session hidden.");
   } else if (anySucceeded) {
     showMessage("New session(s) created.");

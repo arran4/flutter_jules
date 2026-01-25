@@ -97,7 +97,9 @@ class FilterElementBuilder {
 
   /// Toggle disabled wrapper on an element
   static FilterElement? toggleEnabled(
-      FilterElement? root, FilterElement target) {
+    FilterElement? root,
+    FilterElement target,
+  ) {
     if (root == null) return null;
 
     final result = _attemptEnable(root, target);
@@ -116,7 +118,9 @@ class FilterElementBuilder {
   }
 
   static _EnableResult _attemptEnable(
-      FilterElement node, FilterElement target) {
+    FilterElement node,
+    FilterElement target,
+  ) {
     // 1. Check current node
     if (node == target) {
       if (node is DisabledElement) {
@@ -128,22 +132,34 @@ class FilterElementBuilder {
     // 2. Recurse children
     if (node is AndElement) {
       return _attemptEnableComposite(
-          node, node.children, (c) => AndElement(c), target);
+        node,
+        node.children,
+        (c) => AndElement(c),
+        target,
+      );
     } else if (node is OrElement) {
       return _attemptEnableComposite(
-          node, node.children, (c) => OrElement(c), target);
+        node,
+        node.children,
+        (c) => OrElement(c),
+        target,
+      );
     } else if (node is NotElement) {
       final res = _attemptEnable(node.child, target);
       if (res.found) {
         if (res.unwrapped) {
           return _EnableResult(
-              res.element != null ? NotElement(res.element!) : null,
-              true,
-              true);
+            res.element != null ? NotElement(res.element!) : null,
+            true,
+            true,
+          );
         } else {
           // Found deeper but not disabled yet.
           return _EnableResult(
-              NotElement(res.element ?? node.child), false, true);
+            NotElement(res.element ?? node.child),
+            false,
+            true,
+          );
         }
       }
     } else if (node is DisabledElement) {
@@ -152,9 +168,10 @@ class FilterElementBuilder {
         if (res.unwrapped) {
           // Already unwrapped deeper. Just bubble up.
           return _EnableResult(
-              res.element != null ? DisabledElement(res.element!) : null,
-              true,
-              true);
+            res.element != null ? DisabledElement(res.element!) : null,
+            true,
+            true,
+          );
         } else {
           // Found deeper, but NOT unwrapped yet.
           // This is the closest disabled ancestor! Unwrap it.
@@ -170,10 +187,11 @@ class FilterElementBuilder {
   }
 
   static _EnableResult _attemptEnableComposite(
-      FilterElement node,
-      List<FilterElement> children,
-      FilterElement Function(List<FilterElement>) constructor,
-      FilterElement target) {
+    FilterElement node,
+    List<FilterElement> children,
+    FilterElement Function(List<FilterElement>) constructor,
+    FilterElement target,
+  ) {
     for (int i = 0; i < children.length; i++) {
       final res = _attemptEnable(children[i], target);
       if (res.found) {
@@ -250,12 +268,15 @@ class FilterElementBuilder {
 
     if (root is AndElement || root is OrElement) {
       final isAnd = root is AndElement;
-      final children =
-          root is AndElement ? root.children : (root as OrElement).children;
+      final children = root is AndElement
+          ? root.children
+          : (root as OrElement).children;
 
       // Simplify all children first
-      final simplifiedChildren =
-          children.map((c) => simplify(c)).whereType<FilterElement>().toList();
+      final simplifiedChildren = children
+          .map((c) => simplify(c))
+          .whereType<FilterElement>()
+          .toList();
 
       if (simplifiedChildren.isEmpty) return null;
       if (simplifiedChildren.length == 1) return simplifiedChildren.first;
@@ -437,8 +458,9 @@ class FilterElementBuilder {
   }) {
     if (root == null) return root;
 
-    final group =
-        isAnd ? AndElement([target, source]) : OrElement([target, source]);
+    final group = isAnd
+        ? AndElement([target, source])
+        : OrElement([target, source]);
 
     // If source is already in the tree (Move operation), remove it first
     // Note: This logic assumes we handle 'move' by removing source first at the UI level or prior to calling this if needed.

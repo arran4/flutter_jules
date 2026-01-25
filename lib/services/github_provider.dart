@@ -182,12 +182,14 @@ class GithubProvider extends ChangeNotifier {
         final orgOk = await _checkOrgAccess(owner);
         if (!orgOk) {
           // User OK, Org Failed -> Disable Org
-          await _settingsProvider.addGithubExclusion(GithubExclusion(
-            type: GithubExclusionType.org,
-            value: owner,
-            reason: 'PAT access request failed for Org.',
-            date: DateTime.now(),
-          ));
+          await _settingsProvider.addGithubExclusion(
+            GithubExclusion(
+              type: GithubExclusionType.org,
+              value: owner,
+              reason: 'PAT access request failed for Org.',
+              date: DateTime.now(),
+            ),
+          );
           return;
         }
 
@@ -196,23 +198,27 @@ class GithubProvider extends ChangeNotifier {
           final repoOk = await _checkRepoAccess(owner, repo);
           if (!repoOk) {
             // Repo failure -> Disable Repo
-            await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.repo,
-              value: '$owner/$repo',
-              reason: 'PAT access request failed for Repo.',
-              date: DateTime.now(),
-            ));
+            await _settingsProvider.addGithubExclusion(
+              GithubExclusion(
+                type: GithubExclusionType.repo,
+                value: '$owner/$repo',
+                reason: 'PAT access request failed for Repo.',
+                date: DateTime.now(),
+              ),
+            );
             return;
           }
 
           // Repo OK -> Must be PR failure
           if (prNumber != null) {
-            await _settingsProvider.addGithubExclusion(GithubExclusion(
-              type: GithubExclusionType.pullRequest,
-              value: '$owner/$repo/$prNumber',
-              reason: 'PAT access request failed for PR.',
-              date: DateTime.now(),
-            ));
+            await _settingsProvider.addGithubExclusion(
+              GithubExclusion(
+                type: GithubExclusionType.pullRequest,
+                value: '$owner/$repo/$prNumber',
+                reason: 'PAT access request failed for PR.',
+                date: DateTime.now(),
+              ),
+            );
 
             if (jobId != null) {
               final msg = 'GITHUB_API_ERROR: 404 for PR $owner/$repo/$prNumber';
@@ -324,7 +330,8 @@ class GithubProvider extends ChangeNotifier {
             jobId: jobId,
           );
           debugPrint(
-              'GITHUB_API_ERROR for $url: ${response.statusCode} ${response.body}');
+            'GITHUB_API_ERROR for $url: ${response.statusCode} ${response.body}',
+          );
           return null;
         } else {
           _warningCount++;
@@ -373,11 +380,13 @@ class GithubProvider extends ChangeNotifier {
         jobId: 'diff_${owner}_${repo}_$prNumber',
       );
       debugPrint(
-          'GITHUB_API_ERROR (Diff) for $url: ${response.statusCode} ${response.body}');
+        'GITHUB_API_ERROR (Diff) for $url: ${response.statusCode} ${response.body}',
+      );
     } else {
       _warningCount++;
       debugPrint(
-          'GITHUB_API_ERROR: Failed to get PR Diff for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
+        'GITHUB_API_ERROR: Failed to get PR Diff for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}',
+      );
     }
     return null;
   }
@@ -409,11 +418,13 @@ class GithubProvider extends ChangeNotifier {
         prNumber: prNumber,
       );
       debugPrint(
-          'GITHUB_API_ERROR (Patch) for $url: ${response.statusCode} ${response.body}');
+        'GITHUB_API_ERROR (Patch) for $url: ${response.statusCode} ${response.body}',
+      );
     } else {
       _warningCount++;
       debugPrint(
-          'GITHUB_API_ERROR: Failed to get PR Patch for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}');
+        'GITHUB_API_ERROR: Failed to get PR Patch for $owner/$repo #$prNumber ($url): ${response.statusCode} ${response.body}',
+      );
     }
     return null;
   }
@@ -592,7 +603,8 @@ class GithubProvider extends ChangeNotifier {
             response.statusCode == 403 ||
             response.statusCode == 404) {
           debugPrint(
-              'GITHUB_API_ERROR (RepoDetails) for $url: ${response.statusCode} ${response.body}');
+            'GITHUB_API_ERROR (RepoDetails) for $url: ${response.statusCode} ${response.body}',
+          );
           await _handleUnauthorized(response.body, owner: owner, repo: repo);
           throw GithubApiException(
             response.statusCode,
@@ -766,7 +778,7 @@ class GitHubPrResponse {
   final Map<String, dynamic> _links;
 
   GitHubPrResponse(this._data)
-      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
+    : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
