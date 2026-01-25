@@ -169,7 +169,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         }
       });
 
-      void loadFilterAndSessions() {
+      Future<void> loadFilterAndSessions() async {
         // Load last used filter if no explicit filter is set
         if (widget.sourceFilter == null && widget.initialFilter == null) {
           if (settings.lastFilter != _filterTree) {
@@ -181,13 +181,46 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         final auth = Provider.of<AuthProvider>(context, listen: false);
         if (auth.token != null) {
-          // Trigger generic load
-          _fetchSessions();
-          // Background load sources
-          Provider.of<SourceProvider>(
-            context,
-            listen: false,
-          ).fetchSources(auth.client, authToken: auth.token);
+          final sessionProvider =
+              Provider.of<SessionProvider>(context, listen: false);
+
+          switch (settings.refreshOnAppStart) {
+            case ListRefreshPolicy.none:
+              await _fetchSessions(force: false, shallow: false);
+              break;
+            case ListRefreshPolicy.quick:
+              await _fetchSessions(force: false, shallow: true);
+              break;
+            case ListRefreshPolicy.full:
+              await _fetchSessions(force: true, shallow: false);
+              break;
+            case ListRefreshPolicy.dirty:
+              await _fetchSessions(force: false, shallow: false);
+              if (mounted) {
+                await sessionProvider.refreshDirtySessions(
+                  auth.client,
+                  authToken: auth.token!,
+                );
+              }
+              break;
+            case ListRefreshPolicy.watched:
+              await _fetchSessions(force: false, shallow: false);
+              if (mounted) {
+                await sessionProvider.refreshWatchedSessions(
+                  auth.client,
+                  authToken: auth.token!,
+                );
+              }
+              break;
+          }
+
+          if (mounted) {
+            // Background load sources
+            Provider.of<SourceProvider>(
+              context,
+              listen: false,
+            ).fetchSources(auth.client, authToken: auth.token);
+          }
         }
       }
 

@@ -44,6 +44,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
               _buildSectionHeader(context, 'List Updates'),
               _buildListDropdown(
                 context,
+                title: 'On Application Start',
+                value: settings.refreshOnAppStart,
+                onChanged: settings.setRefreshOnAppStart,
+              ),
+              _buildListDropdown(
+                context,
                 title: 'On Return to List',
                 value: settings.refreshOnReturn,
                 onChanged: settings.setRefreshOnReturn,

@@ -9,6 +9,7 @@ import '../models/scheduler_preset.dart';
 import '../models/github_exclusion.dart';
 
 class SettingsProvider extends ChangeNotifier {
+  static const String keyRefreshOnAppStart = 'refresh_on_app_start';
   static const String keyRefreshOnOpen = 'refresh_on_open';
   static const String keyRefreshOnMessage = 'refresh_on_message';
   static const String keyRefreshOnReturn = 'refresh_on_return';
@@ -60,6 +61,7 @@ class SettingsProvider extends ChangeNotifier {
   bool _lastBulkRandomize = false;
   bool _lastBulkStopOnError = false;
 
+  ListRefreshPolicy _refreshOnAppStart = ListRefreshPolicy.quick;
   SessionRefreshPolicy _refreshOnOpen = SessionRefreshPolicy.shallow;
   SessionRefreshPolicy _refreshOnMessage = SessionRefreshPolicy.shallow;
   ListRefreshPolicy _refreshOnReturn = ListRefreshPolicy.dirty;
@@ -96,6 +98,7 @@ class SettingsProvider extends ChangeNotifier {
 
   SharedPreferences? _prefs;
 
+  ListRefreshPolicy get refreshOnAppStart => _refreshOnAppStart;
   SessionRefreshPolicy get refreshOnOpen => _refreshOnOpen;
   SessionRefreshPolicy get refreshOnMessage => _refreshOnMessage;
   ListRefreshPolicy get refreshOnReturn => _refreshOnReturn;
@@ -150,6 +153,11 @@ class SettingsProvider extends ChangeNotifier {
   void _loadSettings() {
     if (_prefs == null) return;
 
+    _refreshOnAppStart = _loadEnum(
+      keyRefreshOnAppStart,
+      ListRefreshPolicy.values,
+      ListRefreshPolicy.quick,
+    );
     _refreshOnOpen = _loadEnum(
       keyRefreshOnOpen,
       SessionRefreshPolicy.values,
@@ -321,6 +329,12 @@ class SettingsProvider extends ChangeNotifier {
     _sessionPageSize = size;
     notifyListeners();
     await _prefs?.setInt(_sessionPageSizeKey, size);
+  }
+
+  Future<void> setRefreshOnAppStart(ListRefreshPolicy policy) async {
+    _refreshOnAppStart = policy;
+    notifyListeners();
+    await _prefs?.setInt(keyRefreshOnAppStart, policy.index);
   }
 
   Future<void> setRefreshOnOpen(SessionRefreshPolicy policy) async {
