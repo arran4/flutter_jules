@@ -500,9 +500,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique = _activities
-                .where((a) => !newIds.contains(a.id))
-                .toList();
+            final oldUnique =
+                _activities.where((a) => !newIds.contains(a.id)).toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -739,9 +738,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           message,
           reason: 'resource_not_found',
           processingErrors: [e.message],
-          metadata: e.responseBody != null
-              ? {'responseBody': e.responseBody}
-              : null,
+          metadata:
+              e.responseBody != null ? {'responseBody': e.responseBody} : null,
         );
         handled = true;
       }
@@ -943,14 +941,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                 (_session.note?.content.isEmpty ?? true)
                     ? Icons.note_add_outlined
                     : _isNoteVisible
-                    ? Icons.speaker_notes_off_outlined
-                    : Icons.speaker_notes_outlined,
+                        ? Icons.speaker_notes_off_outlined
+                        : Icons.speaker_notes_outlined,
               ),
               tooltip: (_session.note?.content.isEmpty ?? true)
                   ? 'Add Note'
                   : _isNoteVisible
-                  ? 'Hide Note'
-                  : 'View Note',
+                      ? 'Hide Note'
+                      : 'View Note',
               onPressed: _toggleNoteVisibility,
             ),
             IconButton(
@@ -1369,8 +1367,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                           (_session.note?.content.isEmpty ?? true)
                               ? Icons.note_add_outlined
                               : (_isNoteVisible
-                                    ? Icons.speaker_notes_off_outlined
-                                    : Icons.speaker_notes_outlined),
+                                  ? Icons.speaker_notes_off_outlined
+                                  : Icons.speaker_notes_outlined),
                           color: Colors.grey,
                         ),
                         const SizedBox(width: 8),
@@ -1461,8 +1459,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr =
-        _session.outputs != null &&
+    bool hasPr = _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     final bool showJulesNotice =
@@ -1474,9 +1471,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages = queueProvider.queue
-        .where((m) => m.sessionId == _session.id)
-        .toList();
+    final queuedMessages =
+        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
 
     // Merge pending messages (Optimistic updates)
     final sessionProvider = Provider.of<SessionProvider>(context);
@@ -1570,8 +1566,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount:
-          finalItems.length +
+      itemCount: finalItems.length +
           (hasPr ? 2 : 0) +
           (showJulesNotice ? 2 : 0) +
           1, // +1 for Last Updated Status
@@ -1588,10 +1583,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color: DateTime.now().difference(updateTime).inMinutes > 15
-                        ? Colors.orange
-                        : Colors.grey,
-                  ),
+                        color:
+                            DateTime.now().difference(updateTime).inMinutes > 15
+                                ? Colors.orange
+                                : Colors.grey,
+                      ),
                 ),
               ),
             );
@@ -1699,8 +1695,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal =
-              activity.id.startsWith('pending-') ||
+          final isLocal = activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -2422,8 +2417,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove =
-        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(

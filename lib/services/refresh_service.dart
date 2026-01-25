@@ -35,9 +35,8 @@ class RefreshService extends ChangeNotifier {
     this._activityProvider,
     this._timerService, {
     @visibleForTesting SessionComparator? sessionComparator,
-  }) : _sessionComparator =
-           sessionComparator ??
-           SessionComparator(_settingsProvider, _notificationService) {
+  }) : _sessionComparator = sessionComparator ??
+            SessionComparator(_settingsProvider, _notificationService) {
     _timerService.addListener(_onTick);
   }
 

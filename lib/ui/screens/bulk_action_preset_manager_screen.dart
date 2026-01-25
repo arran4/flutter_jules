@@ -200,8 +200,7 @@ class _BulkActionPresetManagerScreenState
   }
 
   void _showPresetEditor(BuildContext context, BulkActionPreset? existing) {
-    final isSystem =
-        existing != null &&
+    final isSystem = existing != null &&
         context.read<BulkActionPresetProvider>().isSystemPreset(existing.name);
 
     showDialog(
@@ -226,8 +225,8 @@ class _BulkActionPresetManagerScreenState
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               context.read<BulkActionPresetProvider>().deletePreset(
-                preset.name,
-              );
+                    preset.name,
+                  );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Preset "${preset.name}" deleted')),
@@ -363,9 +362,9 @@ class _BulkActionPresetManagerScreenState
 
                 try {
                   await context.read<BulkActionPresetProvider>().importFromJson(
-                    jsonString,
-                    merge: merge,
-                  );
+                        jsonString,
+                        merge: merge,
+                      );
 
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext);

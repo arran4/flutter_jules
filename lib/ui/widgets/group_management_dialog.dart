@@ -137,9 +137,8 @@ class _GroupEditorDialogState extends State<_GroupEditorDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map selected names back to source objects if available
-    final initialSelection = allSources
-        .where((s) => _selectedSourceNames.contains(s.name))
-        .toList();
+    final initialSelection =
+        allSources.where((s) => _selectedSourceNames.contains(s.name)).toList();
 
     final result = await showDialog<List<Source>>(
       context: context,
