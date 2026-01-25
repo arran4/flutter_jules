@@ -270,6 +270,18 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               Navigator.pop(context);
             }
             return KeyEventResult.handled;
+          case MessageSubmitAction.submitsMessageMarksReadAndOpensNext:
+            if (_messageController.text.isNotEmpty) {
+              _sendMessage(_messageController.text);
+              Navigator.pop(
+                context,
+                const SessionDetailResult(
+                  markAsRead: true,
+                  openNextSession: true,
+                ),
+              );
+            }
+            return KeyEventResult.handled;
           case MessageSubmitAction.doesNothing:
             return KeyEventResult.handled;
         }

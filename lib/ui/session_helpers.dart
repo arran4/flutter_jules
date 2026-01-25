@@ -11,10 +11,12 @@ import 'widgets/new_session_dialog.dart';
 class SessionDetailResult {
   final bool markAsRead;
   final bool openNewSessionDialog;
+  final bool openNextSession;
 
   const SessionDetailResult({
     this.markAsRead = true,
     this.openNewSessionDialog = false,
+    this.openNextSession = false,
   });
 }
 

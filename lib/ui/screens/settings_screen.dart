@@ -1112,6 +1112,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
         return 'Submits message';
       case MessageSubmitAction.submitsMessageAndGoesBack:
         return 'Submits message and goes back';
+      case MessageSubmitAction.submitsMessageMarksReadAndOpensNext:
+        return 'Send message, Mark as read, Open next';
       case MessageSubmitAction.doesNothing:
         return 'Does nothing';
     }
