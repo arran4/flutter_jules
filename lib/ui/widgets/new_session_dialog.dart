@@ -1293,106 +1293,104 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                         hasScrollBody: false,
                         child: Padding(
                           padding: const EdgeInsets.symmetric(horizontal: 24.0),
-                          child: LayoutBuilder(
-                            builder: (context, constraints) {
-                              // Calculate available space
-                              final availableSpace = constraints.minHeight;
-                              final minPromptHeight =
-                                  (availableSpace - 100).clamp(200.0, 99999.0);
-
-                              return Column(
+child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.stretch,
                                 children: [
                                   // Prompt
-                                  Container(
-                                    constraints: BoxConstraints(
-                                        minHeight: minPromptHeight),
-                                    child: CallbackShortcuts(
-                                      bindings: {
-                                        const SingleActivator(
-                                          LogicalKeyboardKey.enter,
-                                          control: true,
-                                        ): _handleSend,
-                                        const SingleActivator(
-                                          LogicalKeyboardKey.enter,
-                                          meta: true,
-                                        ): _handleSend,
-                                        const SingleActivator(
-                                          LogicalKeyboardKey.enter,
-                                          control: true,
-                                          shift: true,
-                                        ): _handleSendAndNew,
-                                        const SingleActivator(
-                                          LogicalKeyboardKey.enter,
-                                          meta: true,
-                                          shift: true,
-                                        ): _handleSendAndNew,
-                                      },
-                                      child: TextField(
-                                        controller: _promptController,
-                                        autofocus: true,
-                                        minLines: null,
-                                        maxLines: null,
-                                        decoration: InputDecoration(
-                                          labelText: 'Prompt',
-                                          hintText:
-                                              'Describe what you want to do...',
-                                          border: const OutlineInputBorder(),
-                                          alignLabelWithHint: true,
-                                          suffixIcon: (widget.mode ==
-                                                      SessionDialogMode.edit ||
-                                                  widget.mode ==
-                                                      SessionDialogMode
-                                                          .createWithContext)
-                                              ? IconButton(
-                                                  icon: const Icon(
-                                                      Icons.content_paste_go),
-                                                  tooltip:
-                                                      'Import Prompt from Original Session',
-                                                  onPressed: () {
-                                                    if (widget.initialSession ==
-                                                        null) {
-                                                      return;
-                                                    }
-                                                    final originalPrompt =
-                                                        widget.initialSession!
-                                                            .prompt;
-                                                    final currentText =
-                                                        _promptController.text;
+                                  Expanded(
+                                    child: Container(
+                                      constraints:
+                                          const BoxConstraints(minHeight: 200),
+                                      child: CallbackShortcuts(
+                                        bindings: {
+                                          const SingleActivator(
+                                            LogicalKeyboardKey.enter,
+                                            control: true,
+                                          ): _handleSend,
+                                          const SingleActivator(
+                                            LogicalKeyboardKey.enter,
+                                            meta: true,
+                                          ): _handleSend,
+                                          const SingleActivator(
+                                            LogicalKeyboardKey.enter,
+                                            control: true,
+                                            shift: true,
+                                          ): _handleSendAndNew,
+                                          const SingleActivator(
+                                            LogicalKeyboardKey.enter,
+                                            meta: true,
+                                            shift: true,
+                                          ): _handleSendAndNew,
+                                        },
+                                        child: TextField(
+                                          controller: _promptController,
+                                          autofocus: true,
+                                          expands: true,
+                                          maxLines: null,
+                                          minLines: null,
+                                          textAlignVertical: TextAlignVertical.top,
+                                          decoration: InputDecoration(
+                                            labelText: 'Prompt',
+                                            hintText:
+                                                'Describe what you want to do...',
+                                            border: const OutlineInputBorder(),
+                                            alignLabelWithHint: true,
+                                            suffixIcon: (widget.mode ==
+                                                        SessionDialogMode
+                                                            .edit ||
+                                                    widget.mode ==
+                                                        SessionDialogMode
+                                                            .createWithContext)
+                                                ? IconButton(
+                                                    icon: const Icon(
+                                                        Icons.content_paste_go),
+                                                    tooltip:
+                                                        'Import Prompt from Original Session',
+                                                    onPressed: () {
+                                                      if (widget.initialSession ==
+                                                          null) {
+                                                        return;
+                                                      }
+                                                      final originalPrompt =
+                                                          widget.initialSession!
+                                                              .prompt;
+                                                      final currentText =
+                                                          _promptController
+                                                              .text;
 
-                                                    if (currentText
-                                                        .trim()
-                                                        .isNotEmpty) {
-                                                      const separator =
-                                                          '\n\n--- Imported Prompt ---\n';
-                                                      _promptController.text =
-                                                          '$currentText$separator$originalPrompt';
-                                                    } else {
-                                                      _promptController.text =
-                                                          originalPrompt;
-                                                    }
-                                                    _promptController
-                                                            .selection =
-                                                        TextSelection
-                                                            .fromPosition(
-                                                      TextPosition(
-                                                        offset:
-                                                            _promptController
-                                                                .text.length,
-                                                      ),
-                                                    );
-                                                  },
-                                                )
-                                              : null,
+                                                      if (currentText
+                                                          .trim()
+                                                          .isNotEmpty) {
+                                                        const separator =
+                                                            '\n\n--- Imported Prompt ---\n';
+                                                        _promptController.text =
+                                                            '$currentText$separator$originalPrompt';
+                                                      } else {
+                                                        _promptController.text =
+                                                            originalPrompt;
+                                                      }
+                                                      _promptController
+                                                              .selection =
+                                                          TextSelection
+                                                              .fromPosition(
+                                                        TextPosition(
+                                                          offset:
+                                                              _promptController
+                                                                  .text.length,
+                                                        ),
+                                                      );
+                                                    },
+                                                  )
+                                                : null,
+                                          ),
+                                          onChanged: (val) => setState(() {}),
                                         ),
-                                        onChanged: (val) => setState(() {}),
                                       ),
                                     ),
                                   ),
+                                  const SizedBox(height: 100),
                                 ],
-                              );
-                            },
-                          ),
+                              ),
                         ),
                       ),
                     ],
