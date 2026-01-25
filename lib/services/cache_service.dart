@@ -33,6 +33,10 @@ class CacheService {
 
   CacheService({this.isDevMode = false});
 
+  Future<Directory> getCacheDirectory(String token) async {
+    return _getCacheDirectory(token);
+  }
+
   Future<Directory> _getCacheDirectory(String token) async {
     final bytes = utf8.encode(token);
     final digest = sha256.convert(bytes);

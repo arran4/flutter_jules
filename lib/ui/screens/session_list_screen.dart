@@ -332,6 +332,31 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  Future<void> _openCacheFolder() async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token == null) return;
+
+    final cacheService = Provider.of<CacheService>(context, listen: false);
+    try {
+      final dir = await cacheService.getCacheDirectory(auth.token!);
+      if (await dir.exists()) {
+        await launchUrl(Uri.directory(dir.path));
+      } else {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Cache directory not found.')),
+          );
+        }
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to open cache directory: $e')),
+        );
+      }
+    }
+  }
+
   Future<void> _createSession() async {
     // Determine pre-selected source from active filters
     String? preSelectedSource = widget.sourceFilter;
@@ -1856,7 +1881,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   },
                 ),
                 PopupMenuButton<String>(
-                  onSelected: (value) {
+                  onSelected: (value) async {
                     if (value == 'new_session') {
                       _createSession();
                     } else if (value == 'full_refresh') {
@@ -1869,6 +1894,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       Navigator.pushNamed(context, '/sources_raw');
                     } else if (value == 'raw_data') {
                       _viewRawData(context);
+                    } else if (value == 'open_cache_folder') {
+                      await _openCacheFolder();
                     } else if (value == 'go_offline') {
                       final queueProvider = Provider.of<MessageQueueProvider>(
                         context,
@@ -1999,6 +2026,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             Icon(Icons.data_object),
                             SizedBox(width: 8),
                             Text('View Raw Data'),
+                          ],
+                        ),
+                      ),
+                      const PopupMenuItem(
+                        value: 'open_cache_folder',
+                        child: Row(
+                          children: [
+                            Icon(Icons.folder_open),
+                            SizedBox(width: 8),
+                            Text('Open Cache Folder'),
                           ],
                         ),
                       ),
