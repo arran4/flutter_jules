@@ -1913,6 +1913,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     Navigator.pushNamed(context, '/sources_raw');
                   },
                 ),
+                if (settings.fabVisibility == FabVisibility.appBar)
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'New Session',
+                    onPressed: _createSession,
+                  ),
                 PopupMenuButton<String>(
                   onSelected: (value) async {
                     if (value == 'new_session') {
@@ -1977,7 +1983,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       listen: false,
                     ).isOffline;
                     return [
-                      if (settings.fabVisibility == FabVisibility.appBar)
+                      if (settings.fabVisibility == FabVisibility.inMenu)
                         const PopupMenuItem(
                           value: 'new_session',
                           child: Row(
@@ -1988,7 +1994,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ],
                           ),
                         ),
-                      if (settings.fabVisibility == FabVisibility.appBar)
+                      if (settings.fabVisibility == FabVisibility.inMenu)
                         const PopupMenuDivider(),
                       const PopupMenuItem(
                         value: 'full_refresh',

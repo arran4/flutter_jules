@@ -1035,9 +1035,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (newValue != null) onChanged(newValue);
         },
         items: FabVisibility.values.map((v) {
+          String text = v.toString().split('.').last;
+          if (v == FabVisibility.appBar) {
+            text = 'App Bar';
+          } else if (v == FabVisibility.floating) {
+            text = 'Floating';
+          } else if (v == FabVisibility.off) {
+            text = 'Off';
+          } else if (v == FabVisibility.inMenu) {
+            text = 'In Menu';
+          }
           return DropdownMenuItem(
             value: v,
-            child: Text(v.toString().split('.').last),
+            child: Text(text),
           );
         }).toList(),
       ),
