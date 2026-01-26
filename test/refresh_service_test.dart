@@ -133,4 +133,37 @@ void main() {
       verifyNever(mockSessionProvider.fetchSessions(any));
     });
   });
+
+  test('getNextScheduledRefresh returns the next scheduled run', () {
+    final schedule1 = RefreshSchedule(
+      id: '1',
+      name: 'Schedule 1',
+      intervalInMinutes: 10,
+      isEnabled: true,
+      lastRun: DateTime.now().subtract(const Duration(minutes: 5)),
+      refreshPolicy: ListRefreshPolicy.quick,
+    );
+    final schedule2 = RefreshSchedule(
+      id: '2',
+      name: 'Schedule 2',
+      intervalInMinutes: 20,
+      isEnabled: true,
+      lastRun: DateTime.now().subtract(const Duration(minutes: 5)),
+      refreshPolicy: ListRefreshPolicy.full,
+    );
+    when(mockSettingsProvider.schedules).thenReturn([schedule1, schedule2]);
+
+    final result = refreshService.getNextScheduledRefresh();
+    expect(result, isNotNull);
+    expect(result!.schedule.id, equals('1'));
+    // Schedule 1 is 10 mins interval, last run 5 mins ago. Next run is in 5 mins.
+    // Schedule 2 is 20 mins interval, last run 5 mins ago. Next run is in 15 mins.
+    // So Schedule 1 should be next.
+  });
+
+  test('getNextScheduledRefresh handles no schedules', () {
+    when(mockSettingsProvider.schedules).thenReturn([]);
+    final result = refreshService.getNextScheduledRefresh();
+    expect(result, isNull);
+  });
 }

@@ -21,6 +21,34 @@ String timeAgo(DateTime dateTime) {
   }
 }
 
+String timeUntil(DateTime dateTime) {
+  final now = DateTime.now();
+  final difference = dateTime.difference(now);
+
+  if (difference.isNegative) {
+    return "Due";
+  }
+
+  if (difference.inDays > 365) {
+    final years = (difference.inDays / 365).floor();
+    return 'in $years ${years == 1 ? "year" : "years"}';
+  } else if (difference.inDays > 30) {
+    final months = (difference.inDays / 30).floor();
+    return 'in $months ${months == 1 ? "month" : "months"}';
+  } else if (difference.inDays > 0) {
+    final days = difference.inDays;
+    return 'in $days ${days == 1 ? "day" : "days"}';
+  } else if (difference.inHours > 0) {
+    final hours = difference.inHours;
+    return 'in $hours ${hours == 1 ? "hour" : "hours"}';
+  } else if (difference.inMinutes > 0) {
+    final mins = difference.inMinutes;
+    return 'in $mins ${mins == 1 ? "min" : "mins"}';
+  } else {
+    return 'in <1 min';
+  }
+}
+
 bool matchesTimeFilter(Session session, TimeFilter timeFilter) {
   final timeStr = timeFilter.field == TimeFilterField.created
       ? session.createTime
