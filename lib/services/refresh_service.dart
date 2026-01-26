@@ -35,8 +35,9 @@ class RefreshService extends ChangeNotifier {
     this._activityProvider,
     this._timerService, {
     @visibleForTesting SessionComparator? sessionComparator,
-  }) : _sessionComparator = sessionComparator ??
-            SessionComparator(_settingsProvider, _notificationService) {
+  }) : _sessionComparator =
+           sessionComparator ??
+           SessionComparator(_settingsProvider, _notificationService) {
     _timerService.addListener(_onTick);
   }
 
@@ -190,8 +191,9 @@ class RefreshService extends ChangeNotifier {
 
   ({RefreshSchedule schedule, DateTime time})? getNextScheduledRefresh() {
     final now = DateTime.now();
-    final schedules =
-        _settingsProvider.schedules.where((s) => s.isEnabled).toList();
+    final schedules = _settingsProvider.schedules
+        .where((s) => s.isEnabled)
+        .toList();
 
     if (schedules.isEmpty) return null;
 
@@ -203,8 +205,9 @@ class RefreshService extends ChangeNotifier {
       if (schedule.lastRun == null) {
         nextTime = now;
       } else {
-        nextTime = schedule.lastRun!
-            .add(Duration(minutes: schedule.intervalInMinutes));
+        nextTime = schedule.lastRun!.add(
+          Duration(minutes: schedule.intervalInMinutes),
+        );
       }
 
       if (bestTime == null || nextTime.isBefore(bestTime)) {

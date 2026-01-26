@@ -111,7 +111,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -200,7 +201,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // check if we can infer a more specific mode.
     if (widget.initialSession != null) {
       _promptController.text = widget.initialSession!.prompt;
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -272,8 +274,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         );
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
         _initializeSelection(sources);
         if (force) {
@@ -385,7 +388,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext!
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -406,8 +412,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources =
-          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
     }
     allSources.sort((a, b) {
       final labelA = _getSourceDisplayLabel(a);
@@ -537,8 +544,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map group members to Source objects
-    final sources =
-        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+    final sources = allSources
+        .where((s) => group.sourceNames.contains(s.name))
+        .toList();
 
     setState(() {
       _bulkSelections = sources
@@ -599,8 +607,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
     // Convert existing BulkSelection to simple Source list for the dialog
-    List<Source> initialSelection =
-        _bulkSelections.map((bs) => bs.source).toList();
+    List<Source> initialSelection = _bulkSelections
+        .map((bs) => bs.source)
+        .toList();
     if (initialSelection.isEmpty && _selectedSource != null) {
       initialSelection.add(_selectedSource!);
     }
@@ -865,8 +874,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
 
         // Sort sources
@@ -1001,17 +1011,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       Consumer<MessageQueueProvider>(
                                         builder: (context, queueProvider, _) {
                                           try {
-                                            final errorMsg =
-                                                queueProvider.queue.firstWhere(
-                                              (m) =>
-                                                  m.type ==
-                                                      QueuedMessageType
-                                                          .sessionCreation &&
-                                                  m.content ==
-                                                      widget.initialSession!
-                                                          .prompt &&
-                                                  m.processingErrors.isNotEmpty,
-                                            );
+                                            final errorMsg = queueProvider.queue
+                                                .firstWhere(
+                                                  (m) =>
+                                                      m.type ==
+                                                          QueuedMessageType
+                                                              .sessionCreation &&
+                                                      m.content ==
+                                                          widget
+                                                              .initialSession!
+                                                              .prompt &&
+                                                      m
+                                                          .processingErrors
+                                                          .isNotEmpty,
+                                                );
 
                                             return Padding(
                                               padding: const EdgeInsets.only(
@@ -1020,21 +1033,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children:
-                                                    errorMsg.processingErrors
-                                                        .map<Widget>(
-                                                          (e) => Text(
-                                                            "• $e",
-                                                            style: TextStyle(
-                                                              color: Colors
-                                                                  .red.shade900,
-                                                              fontSize: 11,
-                                                              fontFamily:
-                                                                  'monospace',
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
+                                                children: errorMsg
+                                                    .processingErrors
+                                                    .map<Widget>(
+                                                      (e) => Text(
+                                                        "• $e",
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .red
+                                                              .shade900,
+                                                          fontSize: 11,
+                                                          fontFamily:
+                                                              'monospace',
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
                                               ),
                                             );
                                           } catch (_) {
@@ -1120,8 +1134,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                 height: 16,
                                                 child:
                                                     CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
+                                                      strokeWidth: 2,
+                                                    ),
                                               )
                                             : const Icon(
                                                 Icons.refresh,
@@ -1144,7 +1158,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       final selection = _bulkSelections[index];
                                       final source = selection.source;
                                       final repo = source.githubRepo;
-                                      List<String> branches = repo?.branches
+                                      List<String> branches =
+                                          repo?.branches
                                               ?.map((b) => b.displayName)
                                               .toList() ??
                                           [];
@@ -1168,38 +1183,42 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         subtitle: Row(
                                           children: [
                                             Expanded(
-                                              child: DropdownButtonFormField<
-                                                  String>(
-                                                isExpanded: true,
-                                                decoration:
-                                                    const InputDecoration(
-                                                  labelText: 'Branch',
-                                                  border: OutlineInputBorder(),
-                                                ),
-                                                value: selection.branch,
-                                                items: branches
-                                                    .map(
-                                                      (
-                                                        b,
-                                                      ) =>
-                                                          DropdownMenuItem(
-                                                        value: b,
-                                                        child: Text(
-                                                          b,
-                                                          overflow: TextOverflow
-                                                              .ellipsis,
+                                              child:
+                                                  DropdownButtonFormField<
+                                                    String
+                                                  >(
+                                                    isExpanded: true,
+                                                    decoration:
+                                                        const InputDecoration(
+                                                          labelText: 'Branch',
+                                                          border:
+                                                              OutlineInputBorder(),
                                                         ),
-                                                      ),
-                                                    )
-                                                    .toList(),
-                                                onChanged: (val) {
-                                                  if (val != null) {
-                                                    setState(() {
-                                                      selection.branch = val;
-                                                    });
-                                                  }
-                                                },
-                                              ),
+                                                    value: selection.branch,
+                                                    items: branches
+                                                        .map(
+                                                          (
+                                                            b,
+                                                          ) => DropdownMenuItem(
+                                                            value: b,
+                                                            child: Text(
+                                                              b,
+                                                              overflow:
+                                                                  TextOverflow
+                                                                      .ellipsis,
+                                                            ),
+                                                          ),
+                                                        )
+                                                        .toList(),
+                                                    onChanged: (val) {
+                                                      if (val != null) {
+                                                        setState(() {
+                                                          selection.branch =
+                                                              val;
+                                                        });
+                                                      }
+                                                    },
+                                                  ),
                                             ),
                                             const SizedBox(width: 8),
                                             IconButton(
@@ -1218,7 +1237,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                         .isNotEmpty) {
                                                       _selectSource(
                                                         _bulkSelections
-                                                            .first.source,
+                                                            .first
+                                                            .source,
                                                       );
                                                     } else {
                                                       _selectedSource = null;
@@ -1254,7 +1274,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                 labelText: 'Repository',
                                                 border:
                                                     const OutlineInputBorder(),
-                                                prefixIcon: (_selectedSource
+                                                prefixIcon:
+                                                    (_selectedSource
                                                             ?.githubRepo
                                                             ?.isPrivate ==
                                                         true)
@@ -1369,7 +1390,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             'Describe what you want to do...',
                                         border: const OutlineInputBorder(),
                                         alignLabelWithHint: true,
-                                        suffixIcon: (widget.mode ==
+                                        suffixIcon:
+                                            (widget.mode ==
                                                     SessionDialogMode.edit ||
                                                 widget.mode ==
                                                     SessionDialogMode
@@ -1386,7 +1408,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                     return;
                                                   }
                                                   final originalPrompt = widget
-                                                      .initialSession!.prompt;
+                                                      .initialSession!
+                                                      .prompt;
                                                   final currentText =
                                                       _promptController.text;
 
@@ -1402,13 +1425,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                         originalPrompt;
                                                   }
                                                   _promptController.selection =
-                                                      TextSelection
-                                                          .fromPosition(
-                                                    TextPosition(
-                                                      offset: _promptController
-                                                          .text.length,
-                                                    ),
-                                                  );
+                                                      TextSelection.fromPosition(
+                                                        TextPosition(
+                                                          offset:
+                                                              _promptController
+                                                                  .text
+                                                                  .length,
+                                                        ),
+                                                      );
                                                 },
                                               )
                                             : null,
