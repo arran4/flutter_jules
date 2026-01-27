@@ -1,4 +1,3 @@
-
 class PromptTemplate {
   final String id;
   final String name;
@@ -13,12 +12,7 @@ class PromptTemplate {
   });
 
   Map<String, dynamic> toJson() {
-    return {
-      'id': id,
-      'name': name,
-      'content': content,
-      'isBuiltIn': isBuiltIn,
-    };
+    return {'id': id, 'name': name, 'content': content, 'isBuiltIn': isBuiltIn};
   }
 
   factory PromptTemplate.fromJson(Map<String, dynamic> json) {

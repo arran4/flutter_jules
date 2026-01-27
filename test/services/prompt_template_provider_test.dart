@@ -73,7 +73,10 @@ void main() {
 
       await provider.toggleBuiltIn(template.id, true);
       expect(provider.isBuiltInDisabled(template.id), false);
-      expect(provider.availableBuiltInTemplates.any((t) => t.id == template.id), true);
+      expect(
+        provider.availableBuiltInTemplates.any((t) => t.id == template.id),
+        true,
+      );
     });
   });
 }

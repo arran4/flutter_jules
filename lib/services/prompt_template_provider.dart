@@ -19,31 +19,36 @@ class PromptTemplateProvider extends ChangeNotifier {
     const PromptTemplate(
       id: 'builtin_explain',
       name: 'Explain Code',
-      content: 'Explain the following code in detail, highlighting key logic and potential issues:',
+      content:
+          'Explain the following code in detail, highlighting key logic and potential issues:',
       isBuiltIn: true,
     ),
     const PromptTemplate(
       id: 'builtin_refactor',
       name: 'Refactor Code',
-      content: 'Refactor the selected code to improve readability and maintainability. Apply best practices and design patterns where appropriate.',
+      content:
+          'Refactor the selected code to improve readability and maintainability. Apply best practices and design patterns where appropriate.',
       isBuiltIn: true,
     ),
     const PromptTemplate(
       id: 'builtin_test',
       name: 'Write Unit Tests',
-      content: 'Write comprehensive unit tests for the following code, covering happy paths and edge cases.',
+      content:
+          'Write comprehensive unit tests for the following code, covering happy paths and edge cases.',
       isBuiltIn: true,
     ),
     const PromptTemplate(
       id: 'builtin_docs',
       name: 'Add Documentation',
-      content: 'Add Javadoc/Docstring style documentation to the following code, explaining parameters, return values, and exceptions.',
+      content:
+          'Add Javadoc/Docstring style documentation to the following code, explaining parameters, return values, and exceptions.',
       isBuiltIn: true,
     ),
-     const PromptTemplate(
+    const PromptTemplate(
       id: 'builtin_bugs',
       name: 'Find Bugs',
-      content: 'Analyze the following code for potential bugs, security vulnerabilities, and performance bottlenecks.',
+      content:
+          'Analyze the following code for potential bugs, security vulnerabilities, and performance bottlenecks.',
       isBuiltIn: true,
     ),
   ];
@@ -52,7 +57,9 @@ class PromptTemplateProvider extends ChangeNotifier {
   List<PromptTemplate> get recentPrompts => _recentPrompts;
 
   List<PromptTemplate> get availableBuiltInTemplates {
-    return _builtInTemplates.where((t) => !_disabledBuiltInIds.contains(t.id)).toList();
+    return _builtInTemplates
+        .where((t) => !_disabledBuiltInIds.contains(t.id))
+        .toList();
   }
 
   List<PromptTemplate> get allBuiltInTemplates => _builtInTemplates;
@@ -73,7 +80,9 @@ class PromptTemplateProvider extends ChangeNotifier {
     if (customJson != null) {
       try {
         final List<dynamic> decoded = jsonDecode(customJson);
-        _customTemplates = decoded.map((j) => PromptTemplate.fromJson(j)).toList();
+        _customTemplates = decoded
+            .map((j) => PromptTemplate.fromJson(j))
+            .toList();
       } catch (e) {
         debugPrint('Error loading custom templates: $e');
         _customTemplates = [];
@@ -85,7 +94,9 @@ class PromptTemplateProvider extends ChangeNotifier {
     if (recentJson != null) {
       try {
         final List<dynamic> decoded = jsonDecode(recentJson);
-        _recentPrompts = decoded.map((j) => PromptTemplate.fromJson(j)).toList();
+        _recentPrompts = decoded
+            .map((j) => PromptTemplate.fromJson(j))
+            .toList();
       } catch (e) {
         debugPrint('Error loading recent prompts: $e');
         _recentPrompts = [];
@@ -98,14 +109,18 @@ class PromptTemplateProvider extends ChangeNotifier {
 
   Future<void> _saveCustom() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = jsonEncode(_customTemplates.map((t) => t.toJson()).toList());
+    final jsonString = jsonEncode(
+      _customTemplates.map((t) => t.toJson()).toList(),
+    );
     await prefs.setString(_customTemplatesKey, jsonString);
     notifyListeners();
   }
 
   Future<void> _saveRecent() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = jsonEncode(_recentPrompts.map((t) => t.toJson()).toList());
+    final jsonString = jsonEncode(
+      _recentPrompts.map((t) => t.toJson()).toList(),
+    );
     await prefs.setString(_recentPromptsKey, jsonString);
     notifyListeners();
   }
@@ -128,10 +143,17 @@ class PromptTemplateProvider extends ChangeNotifier {
     await _saveCustom();
   }
 
-  Future<void> updateCustomTemplate(String id, String name, String content) async {
+  Future<void> updateCustomTemplate(
+    String id,
+    String name,
+    String content,
+  ) async {
     final index = _customTemplates.indexWhere((t) => t.id == id);
     if (index != -1) {
-      _customTemplates[index] = _customTemplates[index].copyWith(name: name, content: content);
+      _customTemplates[index] = _customTemplates[index].copyWith(
+        name: name,
+        content: content,
+      );
       await _saveCustom();
     }
   }
