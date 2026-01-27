@@ -157,7 +157,11 @@ class RefreshService extends ChangeNotifier {
     final oldSessions = _sessionProvider.items.map((e) => e.data).toList();
     switch (schedule.refreshPolicy) {
       case ListRefreshPolicy.full:
-        await _sessionProvider.fetchSessions(client, force: true);
+        await _sessionProvider.fetchSessions(
+          client,
+          force: true,
+          shallow: false,
+        );
         await _sourceProvider.fetchSources(client, force: true);
         break;
       case ListRefreshPolicy.quick:
