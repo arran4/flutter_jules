@@ -24,7 +24,7 @@ import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
-import '../widgets/metadata_viewer.dart';
+import '../widgets/session_metadata_dialog.dart';
 import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
 import '../../services/settings_provider.dart';
@@ -3233,20 +3233,25 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ],
           ),
           onTap: () {
-            Future.delayed(Duration.zero, () {
+            Future.delayed(Duration.zero, () async {
               if (context.mounted) {
-                if (session.metadata != null && session.metadata!.isNotEmpty) {
-                  showDialog(
-                    context: context,
-                    builder: (context) =>
-                        MetadataViewer(metadata: session.metadata!),
-                  );
-                } else {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('No metadata available for this session'),
-                    ),
-                  );
+                final auth = Provider.of<AuthProvider>(context, listen: false);
+                if (auth.token != null) {
+                  final cacheService =
+                      Provider.of<CacheService>(context, listen: false);
+                  final cacheFile = await cacheService.getSessionCacheFile(
+                      auth.token!, session.id);
+
+                  if (context.mounted) {
+                    showDialog(
+                      context: context,
+                      builder: (context) => SessionMetadataDialog(
+                        session: session,
+                        cacheMetadata: metadata,
+                        cacheFile: cacheFile,
+                      ),
+                    );
+                  }
                 }
               }
             });
