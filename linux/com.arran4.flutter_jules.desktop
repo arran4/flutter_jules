@@ -1,0 +1,8 @@
+[Desktop Entry]
+Name=Flutter Jules
+Comment=Arrans Flutter based jules client
+Exec=flutter_jules
+Icon=com.arran4.flutter_jules
+Terminal=false
+Type=Application
+Categories=Utility;
