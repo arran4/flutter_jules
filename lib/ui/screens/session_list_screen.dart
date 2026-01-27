@@ -40,6 +40,7 @@ import '../../services/notification_service.dart';
 import '../../services/shortcut_registry.dart' as custom_shortcuts;
 import '../../models/app_shortcut_action.dart';
 import '../../utils/api_error_utils.dart';
+import '../../utils/platform_utils.dart';
 
 class SessionListScreen extends StatefulWidget {
   final String? sourceFilter;
@@ -2068,16 +2069,17 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ],
                         ),
                       ),
-                      const PopupMenuItem(
-                        value: 'open_cache_folder',
-                        child: Row(
-                          children: [
-                            Icon(Icons.folder_open),
-                            SizedBox(width: 8),
-                            Text('Open Cache Folder'),
-                          ],
+                      if (PlatformUtils.isDesktop)
+                        const PopupMenuItem(
+                          value: 'open_cache_folder',
+                          child: Row(
+                            children: [
+                              Icon(Icons.folder_open),
+                              SizedBox(width: 8),
+                              Text('Open Cache Folder'),
+                            ],
+                          ),
                         ),
-                      ),
                       const PopupMenuItem(
                         value: 'settings',
                         child: Row(
