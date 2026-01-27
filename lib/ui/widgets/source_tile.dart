@@ -13,6 +13,7 @@ import 'new_session_dialog.dart';
 import 'source_stats_dialog.dart';
 import 'package:flutter_jules/models/filter_expression_parser.dart';
 import '../../services/cache_service.dart';
+import 'session_metadata_dialog.dart';
 
 class SourceTile extends StatelessWidget {
   final CachedItem<Source> item;
@@ -161,6 +162,10 @@ class SourceTile extends StatelessWidget {
                     value: 'stats',
                     child: Text('Show Stats'),
                   ),
+                  const PopupMenuItem(
+                    value: 'view_cache_file',
+                    child: Text('View Cache File'),
+                  ),
                   if (bookmarks.isNotEmpty) const PopupMenuDivider(),
                   ...bookmarks.map(
                     (bookmark) => PopupMenuItem(
@@ -227,9 +232,49 @@ class SourceTile extends StatelessWidget {
       _handleRefreshSessions(context, source);
     } else if (value == 'stats') {
       _showStatsDialog(context, source);
+    } else if (value == 'view_cache_file') {
+      _handleViewCacheFile(context, source);
     } else if (value.startsWith('bookmark_')) {
       final bookmarkId = value.substring('bookmark_'.length);
       _handleBookmark(context, bookmarkId, source.name);
+    }
+  }
+
+  void _handleViewCacheFile(BuildContext context, Source source) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final cacheService = Provider.of<CacheService>(context, listen: false);
+
+    if (auth.token == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Authentication required')),
+      );
+      return;
+    }
+
+    try {
+      final cacheFile =
+          await cacheService.getSourceCacheFile(auth.token!, source.id);
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) => SessionMetadataDialog(
+            session: Session(
+              id: source.id,
+              name: source.name,
+              prompt: '',
+              sourceContext: SourceContext(source: source.name),
+            ),
+            cacheMetadata: item.metadata,
+            cacheFile: cacheFile,
+          ),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error retrieving cache file: $e')),
+        );
+      }
     }
   }
 
