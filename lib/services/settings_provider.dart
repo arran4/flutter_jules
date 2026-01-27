@@ -273,8 +273,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules =
-            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
+        _schedules = decodedList
+            .map((json) => RefreshSchedule.fromJson(json))
+            .toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }
@@ -573,8 +574,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _githubExclusions =
-            decodedList.map((json) => GithubExclusion.fromJson(json)).toList();
+        _githubExclusions = decodedList
+            .map((json) => GithubExclusion.fromJson(json))
+            .toList();
       } catch (e) {
         _githubExclusions = [];
       }
@@ -654,8 +656,9 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _sourceGroups =
-            decodedList.map((json) => SourceGroup.fromJson(json)).toList();
+        _sourceGroups = decodedList
+            .map((json) => SourceGroup.fromJson(json))
+            .toList();
       } catch (e) {
         _sourceGroups = [];
       }
