@@ -188,6 +188,37 @@ class RefreshService extends ChangeNotifier {
     return _sessionComparator.compare(oldSessions, newSessions);
   }
 
+  ({RefreshSchedule schedule, DateTime time})? getNextScheduledRefresh() {
+    final now = DateTime.now();
+    final schedules =
+        _settingsProvider.schedules.where((s) => s.isEnabled).toList();
+
+    if (schedules.isEmpty) return null;
+
+    RefreshSchedule? bestSchedule;
+    DateTime? bestTime;
+
+    for (final schedule in schedules) {
+      DateTime nextTime;
+      if (schedule.lastRun == null) {
+        nextTime = now;
+      } else {
+        nextTime = schedule.lastRun!
+            .add(Duration(minutes: schedule.intervalInMinutes));
+      }
+
+      if (bestTime == null || nextTime.isBefore(bestTime)) {
+        bestTime = nextTime;
+        bestSchedule = schedule;
+      }
+    }
+
+    if (bestSchedule != null && bestTime != null) {
+      return (schedule: bestSchedule, time: bestTime);
+    }
+    return null;
+  }
+
   Future<void> _executeSendPendingMessages(
     RefreshSchedule schedule,
     JulesClient client,
