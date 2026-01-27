@@ -305,7 +305,8 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     }
 
-    final hasOtherContent = activity.progressUpdated != null ||
+    final hasOtherContent =
+        activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;
@@ -401,7 +402,10 @@ class _ActivityItemState extends State<ActivityItem> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (artifact.changeSet!.gitPatch!.suggestedCommitMessage
+                    if (artifact
+                        .changeSet!
+                        .gitPatch!
+                        .suggestedCommitMessage
                         .isNotEmpty) ...[
                       const Text(
                         "Commit Message:",
@@ -657,27 +661,28 @@ class _ActivityItemState extends State<ActivityItem> {
                                                       CrossAxisAlignment.start,
                                                   mainAxisSize:
                                                       MainAxisSize.min,
-                                                  children: (activity
-                                                                  .unmappedProps[
-                                                              'processingErrors']
-                                                          as List)
-                                                      .map<Widget>((e) {
-                                                    return Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                        bottom: 8.0,
-                                                      ),
-                                                      child: SelectableText(
-                                                        "• $e",
-                                                        style: const TextStyle(
-                                                          color: Colors.red,
-                                                          fontFamily:
-                                                              'monospace',
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }).toList(),
+                                                  children:
+                                                      (activity.unmappedProps['processingErrors']
+                                                              as List)
+                                                          .map<Widget>((e) {
+                                                            return Padding(
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    bottom: 8.0,
+                                                                  ),
+                                                              child: SelectableText(
+                                                                "• $e",
+                                                                style: const TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  fontFamily:
+                                                                      'monospace',
+                                                                  fontSize: 12,
+                                                                ),
+                                                              ),
+                                                            );
+                                                          })
+                                                          .toList(),
                                                 ),
                                               ),
                                               actions: [
