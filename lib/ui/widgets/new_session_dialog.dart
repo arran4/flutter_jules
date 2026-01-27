@@ -12,8 +12,10 @@ import '../../services/session_provider.dart';
 
 import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';
+import '../../services/prompt_template_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
+import 'prompt_template_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
 enum SessionDialogMode { create, createWithContext, edit }
@@ -842,6 +844,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   void _handleSend() {
+    if (_promptController.text.isNotEmpty) {
+      context
+          .read<PromptTemplateProvider>()
+          .addRecentPrompt(_promptController.text);
+    }
+
     if (_promptController.text.isNotEmpty &&
         (_selectedSource != null || _bulkSelections.length > 1)) {
       _create(openNewDialog: false);
@@ -851,11 +859,38 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   void _handleSendAndNew() {
+    if (_promptController.text.isNotEmpty) {
+      context
+          .read<PromptTemplateProvider>()
+          .addRecentPrompt(_promptController.text);
+    }
+
     if (_promptController.text.isNotEmpty &&
         (_selectedSource != null || _bulkSelections.length > 1)) {
       _create(openNewDialog: true);
     } else if (_promptController.text.isNotEmpty) {
       _saveDraft();
+    }
+  }
+
+  Future<void> _showTemplateSelector() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => const PromptTemplateSelectorDialog(),
+    );
+
+    if (result != null && result.isNotEmpty) {
+      setState(() {
+        if (_promptController.text.isNotEmpty) {
+          _promptController.text += '\n\n$result';
+        } else {
+          _promptController.text = result;
+        }
+        // Move cursor to end
+        _promptController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _promptController.text.length),
+        );
+      });
     }
   }
 
@@ -1442,6 +1477,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           child: const Text('Delete'),
                         ),
                       const Spacer(),
+                      IconButton(
+                        icon: const Icon(Icons.playlist_add),
+                        tooltip: 'Prompt Templates',
+                        onPressed: _showTemplateSelector,
+                      ),
+                      const SizedBox(width: 8),
                       TextButton(
                         onPressed: (_promptController.text.isNotEmpty)
                             ? _saveDraft
