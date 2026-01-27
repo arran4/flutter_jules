@@ -41,182 +41,151 @@ class FilterUtils {
     final timeFilters =
         activeFilters.where((f) => f.type == FilterType.time).toList();
 
-    // 1. Status: OR logic for Include, AND logic for Exclude
-    if (statusFilters.isNotEmpty) {
-      final includes = statusFilters.where((f) => f.mode == FilterMode.include);
-      final excludes = statusFilters.where((f) => f.mode == FilterMode.exclude);
+    if (!_matchesStatusFilters(session, statusFilters)) return false;
 
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any((f) => session.state == f.value);
-        if (!matchesAny) return false;
-      }
+    if (!_matchesSourceFilters(session, sourceFilters)) return false;
 
-      if (excludes.isNotEmpty) {
-        final matchesAny = excludes.any((f) => session.state == f.value);
-        if (matchesAny) return false;
-      }
+    if (!_matchesFlagFilters(session, metadata, flagFilters, queueProvider)) {
+      return false;
     }
 
-    // 2. Source: OR logic for Include, AND logic for Exclude
-    if (sourceFilters.isNotEmpty) {
-      final includes = sourceFilters.where((f) => f.mode == FilterMode.include);
-      final excludes = sourceFilters.where((f) => f.mode == FilterMode.exclude);
+    if (!_matchesTextFilters(session, metadata, textFilters)) return false;
 
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any(
-          (f) => session.sourceContext?.source == f.value,
-        );
-        if (!matchesAny) return false;
+    if (!_matchesTimeFilters(session, timeFilters)) return false;
+
+    if (!_matchesCiStatusFilters(session, ciStatusFilters)) return false;
+
+    return true;
+  }
+
+  static bool _matchesStatusFilters(
+    Session session,
+    List<FilterToken> statusFilters,
+  ) {
+    return _matchesIncludeExclude(
+      statusFilters,
+      (filter) => session.state == filter.value,
+    );
+  }
+
+  static bool _matchesSourceFilters(
+    Session session,
+    List<FilterToken> sourceFilters,
+  ) {
+    return _matchesIncludeExclude(
+      sourceFilters,
+      (filter) => session.sourceContext?.source == filter.value,
+    );
+  }
+
+  static bool _matchesFlagFilters(
+    Session session,
+    CacheMetadata metadata,
+    List<FilterToken> flagFilters,
+    MessageQueueProvider queueProvider,
+  ) {
+    return _matchesIncludeExclude(
+      flagFilters,
+      (filter) => _matchesFlagFilter(
+        session,
+        metadata,
+        queueProvider,
+        filter,
+      ),
+    );
+  }
+
+  static bool _matchesFlagFilter(
+    Session session,
+    CacheMetadata metadata,
+    MessageQueueProvider queueProvider,
+    FilterToken filter,
+  ) {
+    if (filter.value == 'new' && metadata.isNew) return true;
+    if (filter.value == 'updated' && metadata.isUpdated && !metadata.isNew) {
+      return true;
+    }
+    if (filter.value == 'unread' && metadata.isUnread) return true;
+    if (filter.value == 'has_pr' &&
+        (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
+      return true;
+    }
+    if (filter.value == 'watched' && metadata.isWatched) return true;
+    if (filter.value == 'hidden' && metadata.isHidden) return true;
+    if (filter.value == 'draft') {
+      if (queueProvider.getDrafts(session.id).isNotEmpty) {
+        return true;
       }
-
-      if (excludes.isNotEmpty) {
-        final matchesAny = excludes.any(
-          (f) => session.sourceContext?.source == f.value,
-        );
-        if (matchesAny) return false;
+      if (session.id.startsWith('DRAFT_CREATION_')) {
+        return true;
       }
     }
+    return false;
+  }
 
-    // 3. Flags: OR logic for Includes (matches any flag), AND for Excludes
-    if (flagFilters.isNotEmpty) {
-      final includes = flagFilters.where((f) => f.mode == FilterMode.include);
-      final excludes = flagFilters.where((f) => f.mode == FilterMode.exclude);
+  static bool _matchesTextFilters(
+    Session session,
+    CacheMetadata metadata,
+    List<FilterToken> textFilters,
+  ) {
+    return _matchesIncludeExclude(
+      textFilters,
+      (filter) => _matchesTextFilter(session, metadata, filter),
+    );
+  }
 
-      if (includes.isNotEmpty) {
-        bool matchesAny = false;
-        for (final f in includes) {
-          if (f.value == 'new' && metadata.isNew) matchesAny = true;
-          if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) {
-            matchesAny = true;
-          }
-          if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
-          if (f.value == 'has_pr' &&
-              (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
-            matchesAny = true;
-          }
-          if (f.value == 'watched' && metadata.isWatched) {
-            matchesAny = true;
-          }
-          if (f.value == 'hidden' && metadata.isHidden) {
-            matchesAny = true;
-          }
-          if (f.value == 'draft') {
-            if (queueProvider.getDrafts(session.id).isNotEmpty) {
-              matchesAny = true;
-            }
-            if (session.id.startsWith('DRAFT_CREATION_')) {
-              matchesAny = true;
-            }
-          }
-        }
-        if (!matchesAny) return false;
-      }
-
-      if (excludes.isNotEmpty) {
-        bool matchesAny = false;
-        for (final f in excludes) {
-          if (f.value == 'new' && metadata.isNew) matchesAny = true;
-          if (f.value == 'updated' && metadata.isUpdated && !metadata.isNew) {
-            matchesAny = true;
-          }
-          if (f.value == 'unread' && metadata.isUnread) matchesAny = true;
-          if (f.value == 'has_pr' &&
-              (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
-            matchesAny = true;
-          }
-          if (f.value == 'watched' && metadata.isWatched) {
-            matchesAny = true;
-          }
-          if (f.value == 'hidden' && metadata.isHidden) {
-            matchesAny = true;
-          }
-          if (f.value == 'draft') {
-            if (queueProvider.getDrafts(session.id).isNotEmpty) {
-              matchesAny = true;
-            }
-            if (session.id.startsWith('DRAFT_CREATION_')) {
-              matchesAny = true;
-            }
-          }
-        }
-        if (matchesAny) return false;
-      }
+  static bool _matchesTextFilter(
+    Session session,
+    CacheMetadata metadata,
+    FilterToken filter,
+  ) {
+    final val = filter.value.toString().toLowerCase();
+    if (metadata.labels.any((label) => label.toLowerCase() == val)) {
+      return true;
     }
-
-    // 4. Text Filters (Labels/Tag matching)
-    if (textFilters.isNotEmpty) {
-      final includes = textFilters.where((f) => f.mode == FilterMode.include);
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any((f) {
-          final val = f.value.toString().toLowerCase();
-          // Check labels
-          if (metadata.labels.any((l) => l.toLowerCase() == val)) {
-            return true;
-          }
-          // Check title/name
-          if (session.title?.toLowerCase().contains(val) ?? false) {
-            return true;
-          }
-          if (session.name.toLowerCase().contains(val)) return true;
-          return false;
-        });
-        if (!matchesAny) return false;
-      }
-
-      final excludes = textFilters.where((f) => f.mode == FilterMode.exclude);
-      if (excludes.isNotEmpty) {
-        final matchesAny = excludes.any((f) {
-          final val = f.value.toString().toLowerCase();
-          if (metadata.labels.any((l) => l.toLowerCase() == val)) {
-            return true;
-          }
-          if (session.title?.toLowerCase().contains(val) ?? false) {
-            return true;
-          }
-          if (session.name.toLowerCase().contains(val)) return true;
-          return false;
-        });
-        if (matchesAny) return false;
-      }
+    if (session.title?.toLowerCase().contains(val) ?? false) {
+      return true;
     }
+    return session.name.toLowerCase().contains(val);
+  }
 
-    // 5. Time Filters
-    if (timeFilters.isNotEmpty) {
-      for (final filter in timeFilters) {
-        final timeFilter = filter.value as TimeFilter;
-        final matches = matchesTimeFilter(session, timeFilter);
+  static bool _matchesTimeFilters(
+    Session session,
+    List<FilterToken> timeFilters,
+  ) {
+    for (final filter in timeFilters) {
+      final timeFilter = filter.value as TimeFilter;
+      final matches = matchesTimeFilter(session, timeFilter);
 
-        if (filter.mode == FilterMode.include && !matches) return false;
-        if (filter.mode == FilterMode.exclude && matches) return false;
-      }
+      if (filter.mode == FilterMode.include && !matches) return false;
+      if (filter.mode == FilterMode.exclude && matches) return false;
     }
-    // 6. CI Status: OR logic for Include, AND logic for Exclude
-    if (ciStatusFilters.isNotEmpty) {
-      final includes = ciStatusFilters.where(
-        (f) => f.mode == FilterMode.include,
-      );
-      final excludes = ciStatusFilters.where(
-        (f) => f.mode == FilterMode.exclude,
-      );
+    return true;
+  }
 
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any(
-          (f) =>
-              session.ciStatus?.toLowerCase() ==
-              f.value.toString().toLowerCase(),
-        );
-        if (!matchesAny) return false;
-      }
+  static bool _matchesCiStatusFilters(
+    Session session,
+    List<FilterToken> ciStatusFilters,
+  ) {
+    return _matchesIncludeExclude(
+      ciStatusFilters,
+      (filter) =>
+          session.ciStatus?.toLowerCase() ==
+          filter.value.toString().toLowerCase(),
+    );
+  }
 
-      if (excludes.isNotEmpty) {
-        final matchesAny = excludes.any(
-          (f) =>
-              session.ciStatus?.toLowerCase() ==
-              f.value.toString().toLowerCase(),
-        );
-        if (matchesAny) return false;
-      }
-    }
+  static bool _matchesIncludeExclude(
+    Iterable<FilterToken> filters,
+    bool Function(FilterToken filter) matcher,
+  ) {
+    if (filters.isEmpty) return true;
+
+    final includes = filters.where((filter) => filter.mode == FilterMode.include);
+    final excludes = filters.where((filter) => filter.mode == FilterMode.exclude);
+
+    if (includes.isNotEmpty && !includes.any(matcher)) return false;
+    if (excludes.isNotEmpty && excludes.any(matcher)) return false;
 
     return true;
   }
