@@ -13,6 +13,7 @@ import '../services/message_queue_provider.dart';
 import '../services/notification_provider.dart';
 import '../services/notification_service.dart';
 import '../services/refresh_service.dart';
+import '../services/prompt_template_provider.dart';
 import '../services/session_provider.dart';
 import '../services/settings_provider.dart';
 import '../services/shortcut_registry.dart' as jules_shortcuts;
@@ -54,6 +55,9 @@ class AppContainer extends StatelessWidget {
         ),
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
+        ChangeNotifierProvider(
+          create: (_) => PromptTemplateProvider()..init(),
+        ),
         ChangeNotifierProxyProvider3<CacheService, GithubProvider,
             NotificationProvider, SessionProvider>(
           create: (_) => SessionProvider(),

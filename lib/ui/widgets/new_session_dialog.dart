@@ -12,8 +12,10 @@ import '../../services/session_provider.dart';
 
 import '../../services/settings_provider.dart';
 import '../../services/message_queue_provider.dart';
+import '../../services/prompt_template_provider.dart';
 import '../../models.dart';
 import 'bulk_source_selector_dialog.dart';
+import 'prompt_template_selector_dialog.dart';
 // import '../../models/cache_metadata.dart'; // Not strictly needed here if we extract data
 
 enum SessionDialogMode { create, createWithContext, edit }
@@ -644,6 +646,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _create({bool openNewDialog = false}) async {
+    // Save prompt to recent
+    if (_promptController.text.isNotEmpty) {
+      Provider.of<PromptTemplateProvider>(
+        context,
+        listen: false,
+      ).addRecentPrompt(_promptController.text);
+    }
+
     // Map Mode to API fields
     bool requirePlanApproval = false;
     AutomationMode automationMode = AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
@@ -856,6 +866,29 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       _create(openNewDialog: true);
     } else if (_promptController.text.isNotEmpty) {
       _saveDraft();
+    }
+  }
+
+  Future<void> _openTemplateSelector() async {
+    final result = await showDialog<String>(
+      context: context,
+      builder: (context) => const PromptTemplateSelectorDialog(),
+    );
+
+    if (!mounted) return;
+
+    if (result != null && result.isNotEmpty) {
+      setState(() {
+        if (_promptController.text.isNotEmpty) {
+          _promptController.text += '\n\n$result';
+        } else {
+          _promptController.text = result;
+        }
+        // Move cursor to end
+        _promptController.selection = TextSelection.fromPosition(
+          TextPosition(offset: _promptController.text.length),
+        );
+      });
     }
   }
 
@@ -1441,6 +1474,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                           ),
                           child: const Text('Delete'),
                         ),
+
+                      IconButton(
+                        onPressed: _openTemplateSelector,
+                        icon: const Icon(Icons.description_outlined),
+                        tooltip: 'Templates',
+                      ),
+
                       const Spacer(),
                       TextButton(
                         onPressed: (_promptController.text.isNotEmpty)

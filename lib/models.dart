@@ -13,3 +13,4 @@ export 'models/filter_element_builder.dart';
 export 'models/filter_bookmark.dart';
 export 'models/virtual_activity.dart';
 export 'models/source_group.dart';
+export 'models/prompt_template.dart';
