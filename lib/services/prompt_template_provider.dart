@@ -28,35 +28,40 @@ class PromptTemplateProvider with ChangeNotifier {
       id: 'builtin_refactor',
       name: 'Refactor Code',
       description: 'Improve readability and performance',
-      content: 'Refactor the selected code to improve readability, maintainability, and performance. Explain the changes you made.',
+      content:
+          'Refactor the selected code to improve readability, maintainability, and performance. Explain the changes you made.',
       isBuiltIn: true,
     ),
     PromptTemplate(
       id: 'builtin_tests',
       name: 'Write Tests',
       description: 'Generate unit tests',
-      content: 'Write comprehensive unit tests for the selected code, covering happy paths and edge cases. Use the existing testing framework.',
+      content:
+          'Write comprehensive unit tests for the selected code, covering happy paths and edge cases. Use the existing testing framework.',
       isBuiltIn: true,
     ),
     PromptTemplate(
       id: 'builtin_docs',
       name: 'Add Documentation',
       description: 'Add comments and docstrings',
-      content: 'Add detailed documentation comments (docstrings) to the selected code, explaining the purpose of classes, methods, and parameters.',
+      content:
+          'Add detailed documentation comments (docstrings) to the selected code, explaining the purpose of classes, methods, and parameters.',
       isBuiltIn: true,
     ),
     PromptTemplate(
       id: 'builtin_analyze',
       name: 'Analyze for Bugs',
       description: 'Find bugs and vulnerabilities',
-      content: 'Analyze the selected code for potential bugs, logic errors, and security vulnerabilities. Suggest fixes for any issues found.',
+      content:
+          'Analyze the selected code for potential bugs, logic errors, and security vulnerabilities. Suggest fixes for any issues found.',
       isBuiltIn: true,
     ),
-     PromptTemplate(
+    PromptTemplate(
       id: 'builtin_explain',
       name: 'Explain Code',
       description: 'Explain how the code works',
-      content: 'Explain how the selected code works in detail, breaking it down step-by-step.',
+      content:
+          'Explain how the selected code works in detail, breaking it down step-by-step.',
       isBuiltIn: true,
     ),
   ];
@@ -71,7 +76,9 @@ class PromptTemplateProvider with ChangeNotifier {
     if (customJson != null) {
       try {
         final List<dynamic> jsonList = jsonDecode(customJson);
-        _customTemplates = jsonList.map((j) => PromptTemplate.fromJson(j)).toList();
+        _customTemplates = jsonList
+            .map((j) => PromptTemplate.fromJson(j))
+            .toList();
       } catch (e) {
         debugPrint('Error loading custom templates: $e');
       }
@@ -95,7 +102,9 @@ class PromptTemplateProvider with ChangeNotifier {
 
   Future<void> _saveCustomTemplates() async {
     final prefs = await SharedPreferences.getInstance();
-    final jsonString = jsonEncode(_customTemplates.map((t) => t.toJson()).toList());
+    final jsonString = jsonEncode(
+      _customTemplates.map((t) => t.toJson()).toList(),
+    );
     await prefs.setString(_customTemplatesKey, jsonString);
   }
 
@@ -106,7 +115,10 @@ class PromptTemplateProvider with ChangeNotifier {
 
   Future<void> _saveDisabledBuiltIns() async {
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setStringList(_disabledBuiltInKey, _disabledBuiltInTemplateIds.toList());
+    await prefs.setStringList(
+      _disabledBuiltInKey,
+      _disabledBuiltInTemplateIds.toList(),
+    );
   }
 
   // Custom Templates CRUD

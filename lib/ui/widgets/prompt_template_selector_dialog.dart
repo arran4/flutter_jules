@@ -12,7 +12,8 @@ class PromptTemplateSelectorDialog extends StatefulWidget {
       _PromptTemplateSelectorDialogState();
 }
 
-class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDialog>
+class _PromptTemplateSelectorDialogState
+    extends State<PromptTemplateSelectorDialog>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
 
@@ -51,8 +52,9 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
             TabBar(
               controller: _tabController,
               labelColor: Theme.of(context).colorScheme.primary,
-              unselectedLabelColor:
-                  Theme.of(context).colorScheme.onSurfaceVariant,
+              unselectedLabelColor: Theme.of(
+                context,
+              ).colorScheme.onSurfaceVariant,
               tabs: const [
                 Tab(text: 'Templates'),
                 Tab(text: 'Recent'),
@@ -125,17 +127,20 @@ class _TemplatesTab extends StatelessWidget {
     );
   }
 
-  Widget _buildSectionHeader(BuildContext context, String title,
-      {Widget? trailing}) {
+  Widget _buildSectionHeader(
+    BuildContext context,
+    String title, {
+    Widget? trailing,
+  }) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 8.0, horizontal: 4.0),
       child: Row(
         children: [
           Text(
             title,
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  fontWeight: FontWeight.bold,
-                ),
+            style: Theme.of(
+              context,
+            ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
           ),
           const Spacer(),
           if (trailing != null) trailing,
@@ -145,7 +150,10 @@ class _TemplatesTab extends StatelessWidget {
   }
 
   Widget _buildTemplateItem(
-      BuildContext context, PromptTemplate template, PromptTemplateProvider provider) {
+    BuildContext context,
+    PromptTemplate template,
+    PromptTemplateProvider provider,
+  ) {
     final isEnabled =
         !template.isBuiltIn || provider.isBuiltInEnabled(template.id);
     final theme = Theme.of(context);
@@ -157,7 +165,10 @@ class _TemplatesTab extends StatelessWidget {
           template.name,
           style: TextStyle(color: theme.disabledColor),
         ),
-        subtitle: Text('Disabled', style: TextStyle(color: theme.disabledColor)),
+        subtitle: Text(
+          'Disabled',
+          style: TextStyle(color: theme.disabledColor),
+        ),
         trailing: IconButton(
           icon: const Icon(Icons.visibility_off),
           tooltip: 'Enable',
@@ -191,7 +202,7 @@ class _TemplatesTab extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.end,
             children: [
               if (template.isBuiltIn) ...[
-                 IconButton(
+                IconButton(
                   icon: const Icon(Icons.visibility),
                   tooltip: 'Disable',
                   onPressed: () => provider.toggleBuiltIn(template.id, false),
@@ -239,12 +250,15 @@ class _TemplatesTab extends StatelessWidget {
     String? initialDesc,
     String? initialContent,
   }) async {
-    final nameController =
-        TextEditingController(text: template?.name ?? initialName ?? '');
+    final nameController = TextEditingController(
+      text: template?.name ?? initialName ?? '',
+    );
     final descController = TextEditingController(
-        text: template?.description ?? initialDesc ?? '');
-    final contentController =
-        TextEditingController(text: template?.content ?? initialContent ?? '');
+      text: template?.description ?? initialDesc ?? '',
+    );
+    final contentController = TextEditingController(
+      text: template?.content ?? initialContent ?? '',
+    );
 
     final result = await showDialog<bool>(
       context: context,
@@ -263,8 +277,9 @@ class _TemplatesTab extends StatelessWidget {
               const SizedBox(height: 8),
               TextField(
                 controller: descController,
-                decoration:
-                    const InputDecoration(labelText: 'Description (Optional)'),
+                decoration: const InputDecoration(
+                  labelText: 'Description (Optional)',
+                ),
               ),
               const SizedBox(height: 8),
               TextField(
@@ -295,8 +310,10 @@ class _TemplatesTab extends StatelessWidget {
     );
 
     if (result == true && context.mounted) {
-      final provider =
-          Provider.of<PromptTemplateProvider>(context, listen: false);
+      final provider = Provider.of<PromptTemplateProvider>(
+        context,
+        listen: false,
+      );
       if (template != null) {
         // Edit existing
         final newTemplate = PromptTemplate(
@@ -325,8 +342,11 @@ class _TemplatesTab extends StatelessWidget {
     }
   }
 
-  void _confirmDelete(BuildContext context, PromptTemplateProvider provider,
-      PromptTemplate template) {
+  void _confirmDelete(
+    BuildContext context,
+    PromptTemplateProvider provider,
+    PromptTemplate template,
+  ) {
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -448,12 +468,16 @@ class _RecentTab extends StatelessWidget {
     );
 
     if (result == true && context.mounted) {
-      final provider =
-          Provider.of<PromptTemplateProvider>(context, listen: false);
+      final provider = Provider.of<PromptTemplateProvider>(
+        context,
+        listen: false,
+      );
       final newTemplate = PromptTemplate(
         id: const Uuid().v4(),
         name: nameController.text.trim(),
-        description: descController.text.trim().isEmpty ? null : descController.text.trim(),
+        description: descController.text.trim().isEmpty
+            ? null
+            : descController.text.trim(),
         content: prompt,
         isBuiltIn: false,
       );
