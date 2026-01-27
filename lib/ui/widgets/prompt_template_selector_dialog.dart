@@ -11,7 +11,8 @@ class PromptTemplateSelectorDialog extends StatefulWidget {
       _PromptTemplateSelectorDialogState();
 }
 
-class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDialog>
+class _PromptTemplateSelectorDialogState
+    extends State<PromptTemplateSelectorDialog>
     with SingleTickerProviderStateMixin {
   late TabController _tabController;
   final TextEditingController _searchController = TextEditingController();
@@ -38,7 +39,8 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
         width: 800,
         height: 600,
         constraints: BoxConstraints(
-            maxWidth: MediaQuery.of(context).size.width * 0.9),
+          maxWidth: MediaQuery.of(context).size.width * 0.9,
+        ),
         child: Column(
           children: [
             // Header
@@ -74,7 +76,9 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
                             prefixIcon: Icon(Icons.search),
                             border: OutlineInputBorder(),
                             contentPadding: EdgeInsets.symmetric(
-                                vertical: 8, horizontal: 12),
+                              vertical: 8,
+                              horizontal: 12,
+                            ),
                           ),
                           onChanged: (val) {
                             setState(() {
@@ -228,12 +232,8 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
                 IconButton(
                   icon: const Icon(Icons.edit),
                   tooltip: 'Edit',
-                  onPressed:
-                      () => _showEditor(
-                        context,
-                        template: template,
-                        isEditing: true,
-                      ),
+                  onPressed: () =>
+                      _showEditor(context, template: template, isEditing: true),
                 ),
                 IconButton(
                   icon: const Icon(Icons.delete, color: Colors.red),
@@ -303,7 +303,8 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
                       isDisabled ? Icons.visibility : Icons.visibility_off,
                     ),
                     tooltip: isDisabled ? 'Enable' : 'Disable',
-                    onPressed: () => provider.toggleBuiltIn(template.id, !isDisabled),
+                    onPressed: () =>
+                        provider.toggleBuiltIn(template.id, !isDisabled),
                   ),
                   IconButton(
                     icon: const Icon(Icons.copy),
@@ -337,11 +338,8 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
   }) {
     showDialog(
       context: context,
-      builder:
-          (context) => _TemplateEditorDialog(
-            template: template,
-            isEditing: isEditing,
-          ),
+      builder: (context) =>
+          _TemplateEditorDialog(template: template, isEditing: isEditing),
     );
   }
 
@@ -352,25 +350,24 @@ class _PromptTemplateSelectorDialogState extends State<PromptTemplateSelectorDia
   ) {
     showDialog(
       context: context,
-      builder:
-          (context) => AlertDialog(
-            title: const Text('Delete Template'),
-            content: Text('Are you sure you want to delete "${template.name}"?'),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancel'),
-              ),
-              FilledButton(
-                style: FilledButton.styleFrom(backgroundColor: Colors.red),
-                onPressed: () {
-                  provider.deleteCustomTemplate(template.id);
-                  Navigator.pop(context);
-                },
-                child: const Text('Delete'),
-              ),
-            ],
+      builder: (context) => AlertDialog(
+        title: const Text('Delete Template'),
+        content: Text('Are you sure you want to delete "${template.name}"?'),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel'),
           ),
+          FilledButton(
+            style: FilledButton.styleFrom(backgroundColor: Colors.red),
+            onPressed: () {
+              provider.deleteCustomTemplate(template.id);
+              Navigator.pop(context);
+            },
+            child: const Text('Delete'),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -393,7 +390,9 @@ class _TemplateEditorDialogState extends State<_TemplateEditorDialog> {
   void initState() {
     super.initState();
     _nameController = TextEditingController(
-      text: widget.isEditing ? widget.template?.name : (widget.template != null ? 'Copy of ${widget.template!.name}' : ''),
+      text: widget.isEditing
+          ? widget.template?.name
+          : (widget.template != null ? 'Copy of ${widget.template!.name}' : ''),
     );
     _contentController = TextEditingController(
       text: widget.template?.content ?? '',
@@ -448,9 +447,9 @@ class _TemplateEditorDialogState extends State<_TemplateEditorDialog> {
             final content = _contentController.text.trim();
 
             if (name.isEmpty || content.isEmpty) {
-               ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text('Please enter name and content')),
-                );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text('Please enter name and content')),
+              );
               return;
             }
 
