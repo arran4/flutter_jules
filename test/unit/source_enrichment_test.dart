@@ -51,7 +51,7 @@ class MockGithubProvider extends Mock implements GithubProvider {
           'defaultBranch': 'master', // New field
           'branches': [
             {'displayName': 'master'},
-            {'displayName': 'feature-branch'}
+            {'displayName': 'feature-branch'},
           ], // New field
         };
       },
@@ -63,15 +63,18 @@ class MockGithubProvider extends Mock implements GithubProvider {
   void enqueue(GithubJob job) {
     // Execute immediately
     job.status = GithubJobStatus.running;
-    job.action().then((result) {
-      job.result = result;
-      job.status = GithubJobStatus.completed;
-      job.completer.complete();
-    }).catchError((e) {
-      job.status = GithubJobStatus.failed;
-      job.error = e.toString();
-      job.completer.completeError(e);
-    });
+    job
+        .action()
+        .then((result) {
+          job.result = result;
+          job.status = GithubJobStatus.completed;
+          job.completer.complete();
+        })
+        .catchError((e) {
+          job.status = GithubJobStatus.failed;
+          job.error = e.toString();
+          job.completer.completeError(e);
+        });
   }
 }
 
@@ -101,12 +104,10 @@ void main() {
         githubRepo: initialRepo,
       );
 
-      when(
-        mockClient.listSources(pageToken: anyNamed('pageToken')),
-      ).thenAnswer((_) async => ListSourcesResponse(
-            sources: [initialSource],
-            nextPageToken: null,
-          ));
+      when(mockClient.listSources(pageToken: anyNamed('pageToken'))).thenAnswer(
+        (_) async =>
+            ListSourcesResponse(sources: [initialSource], nextPageToken: null),
+      );
 
       // 2. Call fetchSources with githubProvider
       await provider.fetchSources(
