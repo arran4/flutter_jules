@@ -22,8 +22,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
-          GithubProvider>(
+      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider, GithubProvider>(
         builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
@@ -425,9 +424,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -447,9 +446,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -685,8 +684,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   sendMessagesMode:
                       taskType == RefreshTaskType.sendPendingMessages
-                          ? sendMessagesMode
-                          : null,
+                      ? sendMessagesMode
+                      : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 
@@ -1035,10 +1034,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
           if (newValue != null) onChanged(newValue);
         },
         items: FabVisibility.values.map((v) {
-          return DropdownMenuItem(
-            value: v,
-            child: Text(v.toString().split('.').last),
-          );
+          String text = v.toString().split('.').last;
+          if (v == FabVisibility.appBar) {
+            text = 'App Bar';
+          } else if (v == FabVisibility.floating) {
+            text = 'Floating';
+          } else if (v == FabVisibility.off) {
+            text = 'Off';
+          } else if (v == FabVisibility.inMenu) {
+            text = 'In Menu';
+          }
+          return DropdownMenuItem(value: v, child: Text(text));
         }).toList(),
       ),
     );
