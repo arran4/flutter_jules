@@ -149,8 +149,18 @@ class SourceProvider extends ChangeNotifier {
       owner: oldSource.githubRepo!.owner,
       repo: oldSource.githubRepo!.repo,
       isPrivate: oldSource.githubRepo!.isPrivate,
-      defaultBranch: oldSource.githubRepo!.defaultBranch,
-      branches: oldSource.githubRepo!.branches,
+      defaultBranch: oldSource.githubRepo!.defaultBranch ??
+          (details['defaultBranch'] != null
+              ? GitHubBranch(displayName: details['defaultBranch'])
+              : null),
+      branches: (oldSource.githubRepo!.branches?.isNotEmpty ?? false)
+          ? oldSource.githubRepo!.branches
+          : (details['branches'] != null &&
+                  (details['branches'] as List).isNotEmpty
+              ? (details['branches'] as List)
+                  .map((b) => GitHubBranch(displayName: b['displayName']))
+                  .toList()
+              : oldSource.githubRepo!.branches),
       repoName: details['repoName'],
       repoId: details['repoId'],
       isPrivateGithub: details['isPrivateGithub'],

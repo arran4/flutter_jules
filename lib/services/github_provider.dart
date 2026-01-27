@@ -618,6 +618,35 @@ class GithubProvider extends ChangeNotifier {
           final license = data['license'];
           final parent = data['parent'];
 
+          // Fetch branches
+          List<Map<String, dynamic>> branches = [];
+          try {
+            final branchesUrl = Uri.parse(
+              'https://api.github.com/repos/$owner/$repo/branches',
+            );
+            final branchesResponse = await http.get(
+              branchesUrl,
+              headers: {
+                'Authorization': 'token $apiKey',
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            );
+            _updateRateLimits(branchesResponse.headers);
+
+            if (branchesResponse.statusCode == 200) {
+              final branchesList = jsonDecode(branchesResponse.body) as List;
+              branches = branchesList
+                  .map((b) => {'displayName': b['name'] as String})
+                  .toList();
+            } else {
+              debugPrint(
+                'GITHUB_API_ERROR (Branches) for $branchesUrl: ${branchesResponse.statusCode} ${branchesResponse.body}',
+              );
+            }
+          } catch (e) {
+            debugPrint('Failed to fetch branches for $owner/$repo: $e');
+          }
+
           return {
             'repoName': data['name'],
             'repoId': data['id'],
@@ -629,6 +658,8 @@ class GithubProvider extends ChangeNotifier {
             'isFork': data['fork'],
             'forkParent': parent != null ? parent['full_name'] : null,
             'html_url': data['html_url'],
+            'defaultBranch': data['default_branch'],
+            'branches': branches,
           };
         } else {
           throw GithubApiException(
