@@ -159,15 +159,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
         if (!mounted) return;
-        // Ensure this screen is visible before acting?
-        // Since the shortcut is global, we should check if we are the active route?
-        // Or at least if we are mounted. _createSession does UI stuff.
-        // If SessionDetailScreen is on top, do we want to open a new session dialog?
-        // Yes, likely.
-
-        // However, if we have multiple listeners (e.g. if we push another instance of SessionListScreen somehow, unlikely),
-        // both would react. But here we have one SessionListScreen usually.
-
+        // ignore: avoid_print
+        print('SessionListScreen received action: $action');
         if (action == AppShortcutAction.newSession) {
           _createSession();
         }
@@ -1801,6 +1794,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _displayItems.sort(_compareSessions);
 
         return Focus(
+          onFocusChange: (hasFocus) {
+            // ignore: avoid_print
+            print('SessionListScreen Focus Change: $hasFocus (node=${_focusNode.hashCode})');
+          },
           focusNode: _focusNode,
           autofocus: true,
           child: Scaffold(

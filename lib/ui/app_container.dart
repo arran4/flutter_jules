@@ -31,7 +31,6 @@ class AppContainer extends StatelessWidget {
     return MultiProvider(
       providers: [
         Provider<NotificationService>(create: (_) => NotificationService()),
-        ChangeNotifierProvider(create: (_) => ShortcutRegistry()),
         ChangeNotifierProvider(create: (_) => TimerService()),
         ChangeNotifierProvider(
           create: (_) => jules_shortcuts.ShortcutRegistry(),
