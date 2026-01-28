@@ -201,8 +201,9 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
         ),
         TextButton(
           onPressed: () {
-            final range =
-                _rangeController.text.isNotEmpty ? _rangeController.text : null;
+            final range = _rangeController.text.isNotEmpty
+                ? _rangeController.text
+                : null;
             final timeFilter = TimeFilter(
               type: _selectedType,
               range: range,
