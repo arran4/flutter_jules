@@ -45,7 +45,10 @@ class SessionMetadataDialog extends StatelessWidget {
               if (session.metadata == null || session.metadata!.isEmpty)
                 const Text(
                   "No server metadata available.",
-                  style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+                  style: TextStyle(
+                    fontStyle: FontStyle.italic,
+                    color: Colors.grey,
+                  ),
                 ),
             ],
           ),
@@ -66,9 +69,9 @@ class SessionMetadataDialog extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
       ),
     );
   }
@@ -119,7 +122,8 @@ class SessionMetadataDialog extends StatelessWidget {
                           if (context.mounted) {
                             ScaffoldMessenger.of(context).showSnackBar(
                               const SnackBar(
-                                  content: Text('Cannot open file or directory')),
+                                content: Text('Cannot open file or directory'),
+                              ),
                             );
                           }
                         }
@@ -158,10 +162,7 @@ class SessionMetadataDialog extends StatelessWidget {
 
     return Table(
       border: TableBorder.all(color: Colors.grey.shade300),
-      columnWidths: const {
-        0: IntrinsicColumnWidth(),
-        1: FlexColumnWidth(),
-      },
+      columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: rows,
     );
@@ -170,13 +171,11 @@ class SessionMetadataDialog extends StatelessWidget {
   Widget _buildServerMetadataTable(BuildContext context) {
     return Table(
       border: TableBorder.all(color: Colors.grey.shade300),
-      columnWidths: const {
-        0: IntrinsicColumnWidth(),
-        1: FlexColumnWidth(),
-      },
+      columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children:
-          session.metadata!.map((m) => _buildRow(m.key, m.value)).toList(),
+      children: session.metadata!
+          .map((m) => _buildRow(m.key, m.value))
+          .toList(),
     );
   }
 
@@ -185,8 +184,10 @@ class SessionMetadataDialog extends StatelessWidget {
       children: [
         Padding(
           padding: const EdgeInsets.all(8.0),
-          child: Text(key,
-              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13)),
+          child: Text(
+            key,
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+          ),
         ),
         Padding(
           padding: const EdgeInsets.all(8.0),

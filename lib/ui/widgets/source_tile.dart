@@ -245,15 +245,17 @@ class SourceTile extends StatelessWidget {
     final cacheService = Provider.of<CacheService>(context, listen: false);
 
     if (auth.token == null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Authentication required')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Authentication required')));
       return;
     }
 
     try {
-      final cacheFile =
-          await cacheService.getSourceCacheFile(auth.token!, source.id);
+      final cacheFile = await cacheService.getSourceCacheFile(
+        auth.token!,
+        source.id,
+      );
       if (context.mounted) {
         showDialog(
           context: context,
@@ -376,8 +378,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     ),
