@@ -51,6 +51,30 @@ class _ActivityItemState extends State<ActivityItem> {
     return null;
   }
 
+  void _showUnknownPropertiesDialog(
+    BuildContext context,
+    Map<String, dynamic> unknownProps,
+  ) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Unknown Properties"),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            const JsonEncoder.withIndent('  ').convert(unknownProps),
+            style: const TextStyle(fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -154,26 +178,7 @@ class _ActivityItemState extends State<ActivityItem> {
                       ),
                       tooltip: 'Unknown Properties Found',
                       onPressed: () {
-                        showDialog(
-                          context: context,
-                          builder: (context) => AlertDialog(
-                            title: const Text("Unknown Properties"),
-                            content: SingleChildScrollView(
-                              child: SelectableText(
-                                const JsonEncoder.withIndent(
-                                  '  ',
-                                ).convert(unknownProps),
-                                style: const TextStyle(fontFamily: 'monospace'),
-                              ),
-                            ),
-                            actions: [
-                              TextButton(
-                                onPressed: () => Navigator.pop(context),
-                                child: const Text("Close"),
-                              ),
-                            ],
-                          ),
-                        );
+                        _showUnknownPropertiesDialog(context, unknownProps);
                       },
                     );
                   }
