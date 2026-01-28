@@ -81,51 +81,18 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    if (activeBookmarks.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Text(
-                          'Active Presets',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      ...activeBookmarks.map(
-                        (b) => _buildActiveTile(context, provider, b),
-                      ),
-                    ],
-                    if (restorableBookmarks.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text(
-                          'Deleted System Presets',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      ...restorableBookmarks.map(
-                        (b) => _buildRestorableTile(context, provider, b),
-                      ),
-                    ],
+                    ..._buildActiveSection(
+                      context,
+                      provider,
+                      activeBookmarks,
+                    ),
+                    ..._buildRestorableSection(
+                      context,
+                      provider,
+                      restorableBookmarks,
+                    ),
                     if (activeBookmarks.isEmpty && restorableBookmarks.isEmpty)
-                      Padding(
-                        padding: const EdgeInsets.all(32.0),
-                        child: Center(
-                          child: Text(
-                            _searchQuery.isEmpty
-                                ? 'No presets found.'
-                                : 'No presets match your search.',
-                            style: TextStyle(color: Colors.grey.shade600),
-                            textAlign: TextAlign.center,
-                          ),
-                        ),
-                      ),
+                      _buildEmptyState(),
                   ],
                 ),
               ),
@@ -216,6 +183,33 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
     );
   }
 
+  List<Widget> _buildActiveSection(
+    BuildContext context,
+    FilterBookmarkProvider provider,
+    List<FilterBookmark> activeBookmarks,
+  ) {
+    if (activeBookmarks.isEmpty) {
+      return [];
+    }
+
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
+        child: Text(
+          'Active Presets',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+      ...activeBookmarks.map((bookmark) {
+        return _buildActiveTile(context, provider, bookmark);
+      }),
+    ];
+  }
+
   Widget _buildRestorableTile(
     BuildContext context,
     FilterBookmarkProvider provider,
@@ -243,6 +237,48 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               );
             }
           },
+        ),
+      ),
+    );
+  }
+
+  List<Widget> _buildRestorableSection(
+    BuildContext context,
+    FilterBookmarkProvider provider,
+    List<FilterBookmark> restorableBookmarks,
+  ) {
+    if (restorableBookmarks.isEmpty) {
+      return [];
+    }
+
+    return [
+      const Padding(
+        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
+        child: Text(
+          'Deleted System Presets',
+          style: TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+        ),
+      ),
+      ...restorableBookmarks.map((bookmark) {
+        return _buildRestorableTile(context, provider, bookmark);
+      }),
+    ];
+  }
+
+  Widget _buildEmptyState() {
+    return Padding(
+      padding: const EdgeInsets.all(32.0),
+      child: Center(
+        child: Text(
+          _searchQuery.isEmpty
+              ? 'No presets found.'
+              : 'No presets match your search.',
+          style: TextStyle(color: Colors.grey.shade600),
+          textAlign: TextAlign.center,
         ),
       ),
     );
