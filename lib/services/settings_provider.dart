@@ -39,6 +39,7 @@ class SettingsProvider extends ChangeNotifier {
       'enable_notification_debounce';
   static const String keyNotificationDebounceDuration =
       'notification_debounce_duration';
+  static const String keyAppBarRefreshActions = 'app_bar_refresh_actions';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -87,6 +88,9 @@ class SettingsProvider extends ChangeNotifier {
   ThemeMode _themeMode = ThemeMode.system;
   bool _enableNotificationDebounce = false;
   int _notificationDebounceDuration = 5000;
+  Set<RefreshButtonAction> _appBarRefreshActions = {
+    RefreshButtonAction.refresh,
+  };
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -124,6 +128,7 @@ class SettingsProvider extends ChangeNotifier {
   ThemeMode get themeMode => _themeMode;
   bool get enableNotificationDebounce => _enableNotificationDebounce;
   int get notificationDebounceDuration => _notificationDebounceDuration;
+  Set<RefreshButtonAction> get appBarRefreshActions => _appBarRefreshActions;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -208,6 +213,19 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
     _notificationDebounceDuration =
         _prefs!.getInt(keyNotificationDebounceDuration) ?? 5000;
+
+    if (_prefs!.containsKey(keyAppBarRefreshActions)) {
+      final refreshActionsList =
+          _prefs!.getStringList(keyAppBarRefreshActions) ?? [];
+      _appBarRefreshActions = refreshActionsList
+          .map(
+            (e) => RefreshButtonAction.values.firstWhere(
+              (a) => a.name == e,
+              orElse: () => RefreshButtonAction.refresh,
+            ),
+          )
+          .toSet();
+    }
 
     // Load keybindings
     _enterKeyAction = _loadEnum(
@@ -451,6 +469,17 @@ class SettingsProvider extends ChangeNotifier {
     _notificationDebounceDuration = value;
     notifyListeners();
     await _prefs?.setInt(keyNotificationDebounceDuration, value);
+  }
+
+  Future<void> setAppBarRefreshActions(
+    Set<RefreshButtonAction> actions,
+  ) async {
+    _appBarRefreshActions = actions;
+    notifyListeners();
+    await _prefs?.setStringList(
+      keyAppBarRefreshActions,
+      actions.map((e) => e.name).toList(),
+    );
   }
 
   // Keybinding Setters
