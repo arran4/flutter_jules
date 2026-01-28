@@ -51,6 +51,40 @@ class _ActivityItemState extends State<ActivityItem> {
     return null;
   }
 
+  AlertDialog _buildProcessingErrorsDialog(
+    BuildContext context,
+    List<dynamic> processingErrors,
+  ) {
+    return AlertDialog(
+      title: const Text("Error Log"),
+      content: SingleChildScrollView(
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: processingErrors.map<Widget>((error) {
+            return Padding(
+              padding: const EdgeInsets.only(bottom: 8.0),
+              child: SelectableText(
+                "• $error",
+                style: const TextStyle(
+                  color: Colors.red,
+                  fontFamily: 'monospace',
+                  fontSize: 12,
+                ),
+              ),
+            );
+          }).toList(),
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.pop(context),
+          child: const Text("Close"),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -653,45 +687,11 @@ class _ActivityItemState extends State<ActivityItem> {
                                         onPressed: () {
                                           showDialog(
                                             context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: const Text("Error Log"),
-                                              content: SingleChildScrollView(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children:
-                                                      (activity.unmappedProps['processingErrors']
-                                                              as List)
-                                                          .map<Widget>((e) {
-                                                            return Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    bottom: 8.0,
-                                                                  ),
-                                                              child: SelectableText(
-                                                                "• $e",
-                                                                style: const TextStyle(
-                                                                  color: Colors
-                                                                      .red,
-                                                                  fontFamily:
-                                                                      'monospace',
-                                                                  fontSize: 12,
-                                                                ),
-                                                              ),
-                                                            );
-                                                          })
-                                                          .toList(),
-                                                ),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(context),
-                                                  child: const Text("Close"),
-                                                ),
-                                              ],
+                                            builder: (context) =>
+                                                _buildProcessingErrorsDialog(
+                                              context,
+                                              activity.unmappedProps[
+                                                  'processingErrors'] as List,
                                             ),
                                           );
                                         },
