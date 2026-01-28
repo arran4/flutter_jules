@@ -418,21 +418,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           .where((s) => !s.isArchived && !s.isReadOnly)
           .toList();
     }
-    allSources.sort((a, b) {
-      final labelA = _getSourceDisplayLabel(a);
-      final labelB = _getSourceDisplayLabel(b);
-      final isSourceA =
-          labelA.startsWith('sources/') || a.name.startsWith('sources/');
-      final isSourceB =
-          labelB.startsWith('sources/') || b.name.startsWith('sources/');
-      if (isSourceA != isSourceB) return isSourceA ? 1 : -1;
-      return labelA.compareTo(labelB);
-    });
+    _sortSources(allSources);
 
     setState(() {
       _filteredSources = allSources.where((s) {
-        final label = _getSourceDisplayLabel(s).toLowerCase();
-        return label.contains(query);
+        return _getSourceFilterLabel(s).contains(query);
       }).toList();
 
       if (query.isNotEmpty) {
@@ -850,6 +840,28 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     return s.name;
   }
 
+  String _getSourceFilterLabel(Source s) {
+    return _getSourceDisplayLabel(s).toLowerCase();
+  }
+
+  bool _isSourcesNamespace(Source s) {
+    final label = _getSourceDisplayLabel(s);
+    return label.startsWith('sources/') || s.name.startsWith('sources/');
+  }
+
+  int _compareSources(Source a, Source b) {
+    final labelA = _getSourceDisplayLabel(a);
+    final labelB = _getSourceDisplayLabel(b);
+    final isSourceA = _isSourcesNamespace(a);
+    final isSourceB = _isSourcesNamespace(b);
+    if (isSourceA != isSourceB) return isSourceA ? 1 : -1;
+    return labelA.compareTo(labelB);
+  }
+
+  void _sortSources(List<Source> sources) {
+    sources.sort(_compareSources);
+  }
+
   String _getBranchLabelForSource(Source s) {
     if (s.githubRepo?.defaultBranch != null) {
       return s.githubRepo!.defaultBranch!.displayName;
@@ -913,22 +925,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         }
 
         // Sort sources
-        sources.sort((a, b) {
-          final labelA = _getSourceDisplayLabel(a);
-          final labelB = _getSourceDisplayLabel(b);
-
-          final isSourceA =
-              labelA.startsWith('sources/') || a.name.startsWith('sources/');
-          final isSourceB =
-              labelB.startsWith('sources/') || b.name.startsWith('sources/');
-
-          if (isSourceA != isSourceB) {
-            // If one is source and the other is not, the one that IS 'source' goes last (return 1)
-            return isSourceA ? 1 : -1;
-          }
-
-          return labelA.compareTo(labelB);
-        });
+        _sortSources(sources);
 
         if (sourceProvider.isLoading && sources.isEmpty) {
           // Initial load
