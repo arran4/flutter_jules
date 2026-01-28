@@ -51,6 +51,36 @@ class _ActivityItemState extends State<ActivityItem> {
     return null;
   }
 
+  Widget _buildChangeSetHeader(ChangeSet changeSet) {
+    final prUrl = _getPrUrl(changeSet);
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            "Change in ${changeSet.source}",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        if (prUrl != null)
+          Padding(
+            padding: const EdgeInsets.only(left: 8.0),
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.open_in_new),
+              label: const Text('Create PR'),
+              onPressed: () {
+                launchUrl(Uri.parse(prUrl));
+              },
+              style: ElevatedButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+              ),
+            ),
+          ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -372,35 +402,7 @@ class _ActivityItemState extends State<ActivityItem> {
                 ],
                 if (artifact.changeSet != null) ...[
                   if (artifact.changeSet!.gitPatch != null) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            "Change in ${artifact.changeSet!.source}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (_getPrUrl(artifact.changeSet!) != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.open_in_new),
-                              label: const Text('Create PR'),
-                              onPressed: () {
-                                final url = _getPrUrl(artifact.changeSet!);
-                                if (url != null) {
-                                  launchUrl(Uri.parse(url));
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
+                    _buildChangeSetHeader(artifact.changeSet!),
                     const SizedBox(height: 8),
                     if (artifact
                         .changeSet!
