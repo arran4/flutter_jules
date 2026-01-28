@@ -135,19 +135,7 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
                 overflow: TextOverflow.ellipsis,
               ),
             if (bookmark.expression.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(top: 4.0),
-                child: Text(
-                  bookmark.expression,
-                  style: TextStyle(
-                    fontSize: 10,
-                    color: Colors.grey[500],
-                    fontFamily: 'monospace',
-                  ),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
-                ),
-              ),
+              _ExpressionPreviewText(expression: bookmark.expression),
           ],
         ),
         onTap: () => _showBookmarkEditor(context, bookmark),
@@ -532,6 +520,29 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _ExpressionPreviewText extends StatelessWidget {
+  final String expression;
+
+  const _ExpressionPreviewText({required this.expression});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Text(
+        expression,
+        style: TextStyle(
+          fontSize: 10,
+          color: Colors.grey[500],
+          fontFamily: 'monospace',
+        ),
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
       ),
     );
   }
