@@ -44,11 +44,21 @@ class TagManagementDialogState extends State<TagManagementDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildCurrentTags(),
+              CurrentTagsSection(
+                tags: _currentTags,
+                onRemoveTag: _removeTag,
+              ),
               const SizedBox(height: 20),
-              _buildNewTagInput(),
+              NewTagInput(
+                controller: _newTagController,
+                onSubmitted: _addNewTag,
+                onAddPressed: () => _addNewTag(_newTagController.text),
+              ),
               const SizedBox(height: 20),
-              _buildAvailableTags(availableTags),
+              AvailableTagsSection(
+                availableTags: availableTags,
+                onTagSelected: _addNewTag,
+              ),
             ],
           ),
         ),
@@ -63,88 +73,10 @@ class TagManagementDialogState extends State<TagManagementDialog> {
     );
   }
 
-  Widget _buildCurrentTags() {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Current Tags',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        if (_currentTags.isEmpty)
-          const Text('No tags yet.')
-        else
-          Wrap(
-            spacing: 8.0,
-            runSpacing: 4.0,
-            children: _currentTags
-                .map(
-                  (tag) => Chip(
-                    label: Text('#$tag'),
-                    onDeleted: () {
-                      setState(() {
-                        _currentTags.remove(tag);
-                      });
-                    },
-                  ),
-                )
-                .toList(),
-          ),
-      ],
-    );
-  }
-
-  Widget _buildNewTagInput() {
-    return Row(
-      children: [
-        Expanded(
-          child: TextField(
-            controller: _newTagController,
-            decoration: const InputDecoration(
-              labelText: 'Add a new tag',
-              border: OutlineInputBorder(),
-            ),
-            onSubmitted: _addNewTag,
-          ),
-        ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: () => _addNewTag(_newTagController.text),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildAvailableTags(List<String> availableTags) {
-    if (availableTags.isEmpty) {
-      return const SizedBox.shrink();
-    }
-
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          'Available Tags',
-          style: TextStyle(fontWeight: FontWeight.bold),
-        ),
-        const SizedBox(height: 8),
-        Wrap(
-          spacing: 8.0,
-          runSpacing: 4.0,
-          children: availableTags
-              .map(
-                (tag) => ActionChip(
-                  label: Text('#$tag'),
-                  onPressed: () {
-                    _addNewTag(tag);
-                  },
-                ),
-              )
-              .toList(),
-        ),
-      ],
-    );
+  void _removeTag(String tag) {
+    setState(() {
+      _currentTags.remove(tag);
+    });
   }
 
   void _addNewTag(String tag) {
@@ -166,5 +98,121 @@ class TagManagementDialogState extends State<TagManagementDialog> {
     );
     sessionProvider.updateSessionTags(widget.session, _currentTags);
     Navigator.of(context).pop();
+  }
+}
+
+class CurrentTagsSection extends StatelessWidget {
+  final List<String> tags;
+  final ValueChanged<String> onRemoveTag;
+
+  const CurrentTagsSection({
+    super.key,
+    required this.tags,
+    required this.onRemoveTag,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Current Tags',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        if (tags.isEmpty)
+          const Text('No tags yet.')
+        else
+          Wrap(
+            spacing: 8.0,
+            runSpacing: 4.0,
+            children: tags
+                .map(
+                  (tag) => Chip(
+                    label: Text('#$tag'),
+                    onDeleted: () => onRemoveTag(tag),
+                  ),
+                )
+                .toList(),
+          ),
+      ],
+    );
+  }
+}
+
+class NewTagInput extends StatelessWidget {
+  final TextEditingController controller;
+  final ValueChanged<String> onSubmitted;
+  final VoidCallback onAddPressed;
+
+  const NewTagInput({
+    super.key,
+    required this.controller,
+    required this.onSubmitted,
+    required this.onAddPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: TextField(
+            controller: controller,
+            decoration: const InputDecoration(
+              labelText: 'Add a new tag',
+              border: OutlineInputBorder(),
+            ),
+            onSubmitted: onSubmitted,
+          ),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          onPressed: onAddPressed,
+        ),
+      ],
+    );
+  }
+}
+
+class AvailableTagsSection extends StatelessWidget {
+  final List<String> availableTags;
+  final ValueChanged<String> onTagSelected;
+
+  const AvailableTagsSection({
+    super.key,
+    required this.availableTags,
+    required this.onTagSelected,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    if (availableTags.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          'Available Tags',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          runSpacing: 4.0,
+          children: availableTags
+              .map(
+                (tag) => ActionChip(
+                  label: Text('#$tag'),
+                  onPressed: () => onTagSelected(tag),
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
   }
 }
