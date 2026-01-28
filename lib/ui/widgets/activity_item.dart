@@ -60,6 +60,25 @@ class _ActivityItemState extends State<ActivityItem> {
     );
   }
 
+  Widget _buildMissingMediaDataRow(String mimeType) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.image, color: Colors.grey),
+          const SizedBox(width: 8),
+          Text(
+            "Image ($mimeType) - No Data",
+            style: const TextStyle(
+              color: Colors.grey,
+              fontStyle: FontStyle.italic,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   Widget _buildHeader() {
     final activity = widget.activity;
     final info = ActivityDisplayInfo.fromActivity(activity);
@@ -501,25 +520,10 @@ class _ActivityItemState extends State<ActivityItem> {
                           );
                         },
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                  ] else ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 8),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.image, color: Colors.grey),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Image (${artifact.media!.mimeType}) - No Data",
-                            style: const TextStyle(
-                              color: Colors.grey,
-                              fontStyle: FontStyle.italic,
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
+                  ),
+                  const SizedBox(height: 8),
+                ] else ...[
+                    _buildMissingMediaDataRow(artifact.media!.mimeType),
                   ],
                 ],
               ],
