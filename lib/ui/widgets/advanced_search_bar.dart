@@ -802,9 +802,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.grey.shade300,
-                  ),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1387,19 +1385,12 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
             const SizedBox(height: 2),
             Row(
               children: [
-                Icon(
-                  Icons.sort,
-                  size: 12,
-                  color: Colors.grey.shade500,
-                ),
+                Icon(Icons.sort, size: 12, color: Colors.grey.shade500),
                 const SizedBox(width: 4),
                 Expanded(
                   child: Text(
                     sortsText,
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Colors.grey.shade700,
-                    ),
+                    style: TextStyle(fontSize: 11, color: Colors.grey.shade700),
                     maxLines: 1,
                     overflow: TextOverflow.ellipsis,
                   ),
