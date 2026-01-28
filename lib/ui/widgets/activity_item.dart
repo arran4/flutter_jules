@@ -745,10 +745,7 @@ class _ActivityItemState extends State<ActivityItem> {
       children: [
         const Text(
           "Commit Message:",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
         const SizedBox(height: 4),
         Container(
