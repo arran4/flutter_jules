@@ -4,6 +4,7 @@ import 'package:flutter/material.dart';
 import '../models.dart';
 import '../models/api_exchange.dart';
 import 'notification_provider.dart';
+import 'settings_provider.dart';
 
 import 'jules_client.dart';
 import 'cache_service.dart';
@@ -22,6 +23,7 @@ class SessionProvider extends ChangeNotifier {
   CacheService? _cacheService;
   GithubProvider? _githubProvider;
   NotificationProvider? _notificationProvider;
+  SettingsProvider? _settingsProvider;
   final StreamController<String> _progressStreamController =
       StreamController<String>.broadcast();
 
@@ -50,6 +52,10 @@ class SessionProvider extends ChangeNotifier {
 
   void setNotificationProvider(NotificationProvider service) {
     _notificationProvider = service;
+  }
+
+  void setSettingsProvider(SettingsProvider service) {
+    _settingsProvider = service;
   }
 
   Future<void> fetchSessions(
@@ -149,16 +155,15 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final changed = (oldSession!.updateTime != session.updateTime) ||
-                (oldSession.state != session.state);
             final reason = _getChangeReason(oldSession, session);
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated:
-                  changed ? DateTime.now() : oldItem.metadata.lastUpdated,
+              lastUpdated: reason != null
+                  ? DateTime.now()
+                  : oldItem.metadata.lastUpdated,
               reasonForLastUnread:
-                  changed ? reason : oldItem.metadata.reasonForLastUnread,
+                  reason ?? oldItem.metadata.reasonForLastUnread,
             );
           } else {
             metadata = CacheMetadata(
@@ -276,15 +281,13 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final changed = (oldItem.data.updateTime != session.updateTime) ||
-          (oldItem.data.state != session.state);
       final reason = _getChangeReason(oldItem.data, session);
 
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
-        lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
-        reasonForLastUnread:
-            changed ? reason : oldItem.metadata.reasonForLastUnread,
+        lastUpdated:
+            reason != null ? DateTime.now() : oldItem.metadata.lastUpdated,
+        reasonForLastUnread: reason ?? oldItem.metadata.reasonForLastUnread,
       );
     } else {
       metadata = CacheMetadata(
@@ -337,16 +340,13 @@ class SessionProvider extends ChangeNotifier {
 
       if (index != -1) {
         final oldItem = _items[index];
-        final changed =
-            (oldItem.data.updateTime != updatedSession.updateTime) ||
-                (oldItem.data.state != updatedSession.state);
         final reason = _getChangeReason(oldItem.data, updatedSession);
 
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
-          lastUpdated: changed ? DateTime.now() : oldItem.metadata.lastUpdated,
-          reasonForLastUnread:
-              changed ? reason : oldItem.metadata.reasonForLastUnread,
+          lastUpdated:
+              reason != null ? DateTime.now() : oldItem.metadata.lastUpdated,
+          reasonForLastUnread: reason ?? oldItem.metadata.reasonForLastUnread,
         );
       } else {
         metadata = CacheMetadata(
@@ -415,6 +415,8 @@ class SessionProvider extends ChangeNotifier {
     if (oldSession == null) return null;
 
     final reasons = <String>[];
+    final markUnreadOnGithub =
+        _settingsProvider?.markUnreadOnGithubUpdates ?? false;
 
     if (oldSession.state != newSession.state) {
       final oldState = oldSession.state.toString().split('.').last;
@@ -422,24 +424,37 @@ class SessionProvider extends ChangeNotifier {
       reasons.add("Status changed from $oldState to $newState");
     }
 
-    if (oldSession.prStatus != newSession.prStatus) {
-      final oldPr = oldSession.prStatus ?? 'None';
-      final newPr = newSession.prStatus ?? 'None';
-      if (oldPr != newPr) {
-        reasons.add("Github PR Status changed from $oldPr to $newPr");
-      }
+    // Jules progress check
+    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+        (oldSession.currentAction != newSession.currentAction);
+    if (julesProgress) {
+      reasons.add("Session progressed");
     }
 
-    if (oldSession.ciStatus != newSession.ciStatus) {
-      final oldCi = oldSession.ciStatus ?? 'None';
-      final newCi = newSession.ciStatus ?? 'None';
-      if (oldCi != newCi) {
-        reasons.add("CI Status changed from $oldCi to $newCi");
+    if (markUnreadOnGithub) {
+      if (oldSession.prStatus != newSession.prStatus) {
+        final oldPr = oldSession.prStatus ?? 'None';
+        final newPr = newSession.prStatus ?? 'None';
+        if (oldPr != newPr) {
+          reasons.add("Github PR Status changed from $oldPr to $newPr");
+        }
+      }
+
+      if (oldSession.ciStatus != newSession.ciStatus) {
+        final oldCi = oldSession.ciStatus ?? 'None';
+        final newCi = newSession.ciStatus ?? 'None';
+        if (oldCi != newCi) {
+          reasons.add("CI Status changed from $oldCi to $newCi");
+        }
       }
     }
 
     if (reasons.isEmpty && oldSession.updateTime != newSession.updateTime) {
-      return "Session updated";
+      if (markUnreadOnGithub) {
+        return "Session updated";
+      }
+      // If not marking unread on github, and no other reason found,
+      // we ignore generic updateTime changes (assuming they are github comments etc).
     }
 
     if (reasons.isEmpty) return null;

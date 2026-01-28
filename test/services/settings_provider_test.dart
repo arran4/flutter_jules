@@ -42,5 +42,16 @@ void main() {
       await provider2.init();
       expect(provider2.appBarRefreshActions, isEmpty);
     });
+
+    test('Can update and persist markUnreadOnGithubUpdates', () async {
+      expect(provider.markUnreadOnGithubUpdates, isFalse); // Default is false
+
+      await provider.setMarkUnreadOnGithubUpdates(true);
+      expect(provider.markUnreadOnGithubUpdates, isTrue);
+
+      final provider2 = SettingsProvider();
+      await provider2.init();
+      expect(provider2.markUnreadOnGithubUpdates, isTrue);
+    });
   });
 }

@@ -40,6 +40,8 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotificationDebounceDuration =
       'notification_debounce_duration';
   static const String keyAppBarRefreshActions = 'app_bar_refresh_actions';
+  static const String keyMarkUnreadOnGithubUpdates =
+      'mark_unread_on_github_updates';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -91,6 +93,7 @@ class SettingsProvider extends ChangeNotifier {
   Set<RefreshButtonAction> _appBarRefreshActions = {
     RefreshButtonAction.refresh,
   };
+  bool _markUnreadOnGithubUpdates = false;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -129,6 +132,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get enableNotificationDebounce => _enableNotificationDebounce;
   int get notificationDebounceDuration => _notificationDebounceDuration;
   Set<RefreshButtonAction> get appBarRefreshActions => _appBarRefreshActions;
+  bool get markUnreadOnGithubUpdates => _markUnreadOnGithubUpdates;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -213,6 +217,8 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
     _notificationDebounceDuration =
         _prefs!.getInt(keyNotificationDebounceDuration) ?? 5000;
+    _markUnreadOnGithubUpdates =
+        _prefs!.getBool(keyMarkUnreadOnGithubUpdates) ?? false;
 
     if (_prefs!.containsKey(keyAppBarRefreshActions)) {
       final refreshActionsList =
@@ -480,6 +486,12 @@ class SettingsProvider extends ChangeNotifier {
       keyAppBarRefreshActions,
       actions.map((e) => e.name).toList(),
     );
+  }
+
+  Future<void> setMarkUnreadOnGithubUpdates(bool value) async {
+    _markUnreadOnGithubUpdates = value;
+    notifyListeners();
+    await _prefs?.setBool(keyMarkUnreadOnGithubUpdates, value);
   }
 
   // Keybinding Setters
