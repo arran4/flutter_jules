@@ -11,6 +11,7 @@ import 'advanced_search_bar.dart';
 import 'bulk_action_progress_dialog.dart';
 import 'delay_input_widget.dart';
 import 'save_bulk_action_preset_dialog.dart';
+import 'session_summary_tile.dart';
 import '../../models/bulk_action_preset.dart';
 import '../../services/bulk_action_preset_provider.dart';
 import '../../utils/action_script_builder.dart';
@@ -616,19 +617,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   }
 
   Widget _buildLiteTile(Session session) {
-    final isDraft = session.id.startsWith('DRAFT_CREATION_');
-    return ListTile(
+    return SessionSummaryTile(
+      session: session,
       dense: true,
-      title: Text(
-        "${session.title ?? session.name}${isDraft ? ' (Draft)' : ''}",
-        maxLines: 1,
-        overflow: TextOverflow.ellipsis,
-        style: const TextStyle(fontSize: 12),
-      ),
-      subtitle: Text(
-        "ID: ${session.id.length > 20 ? '${session.id.substring(0, 10)}...${session.id.substring(session.id.length - 10)}' : session.id} • ${session.state?.displayName ?? 'Unknown'}",
-        style: const TextStyle(fontSize: 9),
-      ),
+      titleStyle: const TextStyle(fontSize: 12),
+      subtitleStyle: const TextStyle(fontSize: 9),
     );
   }
 
