@@ -460,26 +460,30 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                 color: isHighlighted ? Colors.blue.shade50 : Colors.transparent,
                 borderRadius: BorderRadius.circular(4),
               ),
-              child: Row(
-                children: [
-                  Icon(
-                    _getIconForType(suggestion.type),
-                    size: 14,
-                    color: accentColor,
-                  ),
-                  const SizedBox(width: 6),
-                  Expanded(
-                    child: Text(
-                      suggestion.label,
-                      style: const TextStyle(fontSize: 12),
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
-              ),
+              child: _buildSuggestionRow(suggestion, accentColor),
             ),
           );
         }).toList(),
+      ],
+    );
+  }
+
+  Widget _buildSuggestionRow(FilterToken suggestion, Color accentColor) {
+    return Row(
+      children: [
+        Icon(
+          _getIconForType(suggestion.type),
+          size: 14,
+          color: accentColor,
+        ),
+        const SizedBox(width: 6),
+        Expanded(
+          child: Text(
+            suggestion.label,
+            style: const TextStyle(fontSize: 12),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
       ],
     );
   }
