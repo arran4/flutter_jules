@@ -408,10 +408,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         _buildSectionHeader('1. Target Sessions'),
         Text(
           'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
         AdvancedSearchBar(
