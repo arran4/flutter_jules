@@ -1107,20 +1107,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                             fontSize: 14,
                           ),
                         ),
-                        if (bookmark.description != null &&
-                            bookmark.description!.isNotEmpty) ...[
-                          const SizedBox(height: 2),
-                          Text(
-                            bookmark.description!,
-                            style: TextStyle(
-                              fontSize: 12,
-                              color: Colors.grey.shade600,
-                              fontStyle: FontStyle.italic,
-                            ),
-                            maxLines: 2,
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ],
+                        _BookmarkDescription(
+                          description: bookmark.description,
+                        ),
                         const SizedBox(height: 4),
                         Container(
                           padding: const EdgeInsets.all(6),
@@ -1402,6 +1391,37 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         ),
       );
     }
+  }
+}
+
+class _BookmarkDescription extends StatelessWidget {
+  const _BookmarkDescription({required this.description});
+
+  final String? description;
+
+  @override
+  Widget build(BuildContext context) {
+    final value = description;
+    if (value == null || value.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const SizedBox(height: 2),
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 12,
+            color: Colors.grey.shade600,
+            fontStyle: FontStyle.italic,
+          ),
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+      ],
+    );
   }
 }
 
