@@ -35,9 +35,8 @@ class RefreshService extends ChangeNotifier {
     this._activityProvider,
     this._timerService, {
     @visibleForTesting SessionComparator? sessionComparator,
-  }) : _sessionComparator =
-           sessionComparator ??
-           SessionComparator(_settingsProvider, _notificationService) {
+  }) : _sessionComparator = sessionComparator ??
+            SessionComparator(_settingsProvider, _notificationService) {
     _timerService.addListener(_onTick);
   }
 
@@ -73,60 +72,81 @@ class RefreshService extends ChangeNotifier {
     final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
     for (final schedule in schedules) {
       if (!schedule.isEnabled) continue;
-      if (schedule.taskType != type) continue;
 
-      bool matches = false;
-      if (type == RefreshTaskType.refresh) {
-        if (refreshPolicy == ListRefreshPolicy.full) {
-          // Full satisfies Full and Quick
-          if (schedule.refreshPolicy == ListRefreshPolicy.full ||
-              schedule.refreshPolicy == ListRefreshPolicy.quick) {
-            matches = true;
-          }
-        } else if (refreshPolicy == schedule.refreshPolicy) {
-          matches = true;
-        }
-      } else if (type == RefreshTaskType.sendPendingMessages) {
-        if (sendMessagesMode == SendMessagesMode.sendAllUntilFailure) {
-          if (schedule.sendMessagesMode ==
-                  SendMessagesMode.sendAllUntilFailure ||
-              schedule.sendMessagesMode == SendMessagesMode.sendOne) {
-            matches = true;
-          }
-        } else if (sendMessagesMode == schedule.sendMessagesMode) {
-          matches = true;
-        }
-      }
-
-      if (matches) {
+      if (_matchesManualRun(
+        schedule,
+        type,
+        refreshPolicy: refreshPolicy,
+        sendMessagesMode: sendMessagesMode,
+      )) {
         schedule.lastRun = now;
         _settingsProvider.updateSchedule(schedule);
       }
     }
   }
 
-  void _executeSchedule(RefreshSchedule schedule) async {
+  bool _matchesManualRun(
+    RefreshSchedule schedule,
+    RefreshTaskType type, {
+    ListRefreshPolicy? refreshPolicy,
+    SendMessagesMode? sendMessagesMode,
+  }) {
+    if (schedule.taskType != type) return false;
+
+    if (type == RefreshTaskType.refresh) {
+      if (refreshPolicy == ListRefreshPolicy.full) {
+        // Full satisfies Full and Quick
+        return schedule.refreshPolicy == ListRefreshPolicy.full ||
+            schedule.refreshPolicy == ListRefreshPolicy.quick;
+      }
+      return refreshPolicy == schedule.refreshPolicy;
+    } else if (type == RefreshTaskType.sendPendingMessages) {
+      if (sendMessagesMode == SendMessagesMode.sendAllUntilFailure) {
+        return schedule.sendMessagesMode ==
+                SendMessagesMode.sendAllUntilFailure ||
+            schedule.sendMessagesMode == SendMessagesMode.sendOne;
+      }
+      return sendMessagesMode == schedule.sendMessagesMode;
+    }
+    return false;
+  }
+
+  late final Map<RefreshTaskType,
+          Future<String> Function(RefreshSchedule, JulesClient)>
+      _scheduleHandlers = {
+    RefreshTaskType.refresh: _executeRefresh,
+    RefreshTaskType.sendPendingMessages: _executeSendPendingMessages,
+  };
+
+  void _executeSchedule(RefreshSchedule schedule) {
+    final handler = _scheduleHandlers[schedule.taskType];
+    if (handler != null) {
+      _runWithNotifications(
+        schedule,
+        () => handler(schedule, _authProvider.client),
+      );
+    }
+  }
+
+  Future<void> _runWithNotifications(
+    RefreshSchedule schedule,
+    Future<String> Function() task,
+  ) async {
     if (_settingsProvider.notifyOnRefreshStart) {
       _notificationService.showNotification(
         'Refresh Started',
         'Executing schedule: ${schedule.name}',
       );
     }
-    final client = _authProvider.client;
+
     try {
-      String summary = '';
-      switch (schedule.taskType) {
-        case RefreshTaskType.refresh:
-          summary = await _executeRefresh(schedule, client);
-          break;
-        case RefreshTaskType.sendPendingMessages:
-          await _executeSendPendingMessages(schedule, client);
-          summary = 'Sent pending messages.';
-          break;
-      }
+      final summary = await task();
+
       if (_settingsProvider.notifyOnRefreshComplete) {
         final actions = <NotificationAction>[];
-        if (summary != 'No new updates.') {
+        if (summary != 'No new updates.' &&
+            summary != 'No changes' &&
+            summary != 'No pending messages.') {
           actions.add(NotificationAction.showNew);
         }
         _notificationService.showNotification(
@@ -191,9 +211,8 @@ class RefreshService extends ChangeNotifier {
 
   ({RefreshSchedule schedule, DateTime time})? getNextScheduledRefresh() {
     final now = DateTime.now();
-    final schedules = _settingsProvider.schedules
-        .where((s) => s.isEnabled)
-        .toList();
+    final schedules =
+        _settingsProvider.schedules.where((s) => s.isEnabled).toList();
 
     if (schedules.isEmpty) return null;
 
@@ -222,7 +241,7 @@ class RefreshService extends ChangeNotifier {
     return null;
   }
 
-  Future<void> _executeSendPendingMessages(
+  Future<String> _executeSendPendingMessages(
     RefreshSchedule schedule,
     JulesClient client,
   ) async {
@@ -230,7 +249,7 @@ class RefreshService extends ChangeNotifier {
       _activityProvider.addLog(
         'No pending messages to send for schedule ${schedule.name}',
       );
-      return;
+      return 'No pending messages.';
     }
 
     switch (schedule.sendMessagesMode) {
@@ -240,26 +259,28 @@ class RefreshService extends ChangeNotifier {
           _activityProvider.addLog(
             'Successfully sent one message for ${schedule.name}',
           );
+          return 'Successfully sent one message.';
         } catch (e) {
           _activityProvider.addLog(
             'Failed to send message for ${schedule.name}: $e',
           );
+          return 'Failed to send message: $e';
         }
-        break;
       case SendMessagesMode.sendAllUntilFailure:
         try {
           await _messageQueueProvider.sendQueue(client);
           _activityProvider.addLog(
             'Successfully sent all pending messages for ${schedule.name}',
           );
+          return 'Successfully sent all pending messages.';
         } catch (e) {
           _activityProvider.addLog(
             'Failed to send all pending messages for ${schedule.name}: $e',
           );
+          return 'Failed to send all pending messages: $e';
         }
-        break;
       default:
-        return;
+        return 'Invalid send mode.';
     }
   }
 }
