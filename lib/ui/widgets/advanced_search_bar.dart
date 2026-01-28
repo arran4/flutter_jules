@@ -827,6 +827,67 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     );
   }
 
+  Widget _buildSearchInputRow() {
+    return Row(
+      children: [
+        // Search input
+        Expanded(
+          child: CompositedTransformTarget(
+            link: _layerLink,
+            child: TextField(
+              controller: _textController,
+              focusNode: _focusNode,
+              onSubmitted: (value) {
+                if (value.trim().isNotEmpty) {
+                  final element = TextElement(value.trim());
+                  final newTree = FilterElementBuilder.addFilter(
+                    widget.filterTree,
+                    element,
+                  );
+                  widget.onFilterTreeChanged(newTree);
+                  _textController.clear();
+                  widget.onSearchChanged('');
+                }
+              },
+              decoration: InputDecoration(
+                hintText: 'Search... (type @ for filters)',
+                prefixIcon: const Icon(Icons.search, size: 20),
+                suffixIcon: _textController.text.isNotEmpty
+                    ? IconButton(
+                        icon: const Icon(Icons.clear, size: 18),
+                        onPressed: () {
+                          _textController.clear();
+                          widget.onSearchChanged('');
+                        },
+                      )
+                    : null,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(20),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
+                ),
+                contentPadding: const EdgeInsets.symmetric(
+                  horizontal: 16,
+                  vertical: 10,
+                ),
+                isDense: true,
+              ),
+            ),
+          ),
+        ),
+        const SizedBox(width: 8),
+        CompositedTransformTarget(
+          link: _presetLayerLink,
+          child: IconButton(
+            key: _presetButtonKey,
+            icon: const Icon(Icons.bookmarks),
+            tooltip: 'Filter Presets',
+            onPressed: _togglePresetMenu,
+          ),
+        ),
+      ],
+    );
+  }
+
   void _togglePresetMenu() {
     if (_presetOverlayEntry != null) {
       _removePresetOverlay();

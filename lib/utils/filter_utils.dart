@@ -93,12 +93,7 @@ class FilterUtils {
   ) {
     return _matchesIncludeExclude(
       flagFilters,
-      (filter) => _matchesFlagFilter(
-        session,
-        metadata,
-        queueProvider,
-        filter,
-      ),
+      (filter) => _matchesFlagFilter(session, metadata, queueProvider, filter),
     );
   }
 
@@ -188,8 +183,12 @@ class FilterUtils {
   ) {
     if (filters.isEmpty) return true;
 
-    final includes = filters.where((filter) => filter.mode == FilterMode.include);
-    final excludes = filters.where((filter) => filter.mode == FilterMode.exclude);
+    final includes = filters.where(
+      (filter) => filter.mode == FilterMode.include,
+    );
+    final excludes = filters.where(
+      (filter) => filter.mode == FilterMode.exclude,
+    );
 
     if (includes.isNotEmpty && !includes.any(matcher)) return false;
     if (excludes.isNotEmpty && excludes.any(matcher)) return false;
