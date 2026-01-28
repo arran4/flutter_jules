@@ -25,7 +25,13 @@ class NotificationOverlay extends StatelessWidget {
               return Material(
                 child: Column(
                   children: provider.notifications
-                      .map((n) => _buildNotification(context, n))
+                      .map(
+                        (notification) => _NotificationBanner(
+                          notification: notification,
+                          onDismiss: () =>
+                              provider.removeNotification(notification.id),
+                        ),
+                      )
                       .toList(),
                 ),
               );
@@ -35,11 +41,19 @@ class NotificationOverlay extends StatelessWidget {
       ],
     );
   }
+}
 
-  Widget _buildNotification(
-    BuildContext context,
-    NotificationMessage notification,
-  ) {
+class _NotificationBanner extends StatelessWidget {
+  final NotificationMessage notification;
+  final VoidCallback onDismiss;
+
+  const _NotificationBanner({
+    required this.notification,
+    required this.onDismiss,
+  });
+
+  @override
+  Widget build(BuildContext context) {
     Color backgroundColor;
     IconData icon;
 

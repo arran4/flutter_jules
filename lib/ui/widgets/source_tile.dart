@@ -182,6 +182,57 @@ class SourceTile extends StatelessWidget {
     );
   }
 
+  Widget? _buildDescription(BuildContext context, GithubRepo? repo) {
+    if (repo?.description == null || repo!.description!.isEmpty) {
+      return null;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Text(
+        repo.description!,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
+  Widget _buildRepoStatsRow(
+    GithubRepo? repo,
+    String defaultBranch,
+    int? branchCount,
+  ) {
+    return Text(
+      '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
+    );
+  }
+
+  Widget _buildUsageRow(BuildContext context) {
+    return Row(
+      children: [
+        if (usageCount > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '$usageCount sessions',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        if (usageCount > 0) const SizedBox(width: 8),
+        if (lastUsedDate != null)
+          Text(
+            'Last used: ${DateFormat.yMMMd().format(lastUsedDate!)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
+    );
+  }
+
   void _handleRefreshSource(BuildContext context, Source source) async {
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
