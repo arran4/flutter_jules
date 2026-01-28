@@ -46,9 +46,73 @@ class FilterUtils {
       final includes = statusFilters.where((f) => f.mode == FilterMode.include);
       final excludes = statusFilters.where((f) => f.mode == FilterMode.exclude);
 
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any((f) => session.state == f.value);
-        if (!matchesAny) return false;
+    if (!_matchesSourceFilters(session, sourceFilters)) return false;
+
+    if (!_matchesFlagFilters(session, metadata, flagFilters, queueProvider)) {
+      return false;
+    }
+
+    if (!_matchesTextFilters(session, metadata, textFilters)) return false;
+
+    if (!_matchesTimeFilters(session, timeFilters)) return false;
+
+    if (!_matchesCiStatusFilters(session, ciStatusFilters)) return false;
+
+    return true;
+  }
+
+  static bool _matchesStatusFilters(
+    Session session,
+    List<FilterToken> statusFilters,
+  ) {
+    return _matchesIncludeExclude(
+      statusFilters,
+      (filter) => session.state == filter.value,
+    );
+  }
+
+  static bool _matchesSourceFilters(
+    Session session,
+    List<FilterToken> sourceFilters,
+  ) {
+    return _matchesIncludeExclude(
+      sourceFilters,
+      (filter) => session.sourceContext?.source == filter.value,
+    );
+  }
+
+  static bool _matchesFlagFilters(
+    Session session,
+    CacheMetadata metadata,
+    List<FilterToken> flagFilters,
+    MessageQueueProvider queueProvider,
+  ) {
+    return _matchesIncludeExclude(
+      flagFilters,
+      (filter) => _matchesFlagFilter(session, metadata, queueProvider, filter),
+    );
+  }
+
+  static bool _matchesFlagFilter(
+    Session session,
+    CacheMetadata metadata,
+    MessageQueueProvider queueProvider,
+    FilterToken filter,
+  ) {
+    if (filter.value == 'new' && metadata.isNew) return true;
+    if (filter.value == 'updated' && metadata.isUpdated && !metadata.isNew) {
+      return true;
+    }
+    if (filter.value == 'unread' && metadata.isUnread) return true;
+    if (filter.value == 'has_pr' &&
+        (session.outputs?.any((o) => o.pullRequest != null) ?? false)) {
+      return true;
+    }
+    if (filter.value == 'watched' && metadata.isWatched) return true;
+    if (filter.value == 'hidden' && metadata.isHidden) return true;
+    if (filter.value == 'draft') {
+      if (queueProvider.getDrafts(session.id).isNotEmpty) {
+        return true;
       }
 
       if (excludes.isNotEmpty) {
@@ -199,14 +263,12 @@ class FilterUtils {
         (f) => f.mode == FilterMode.exclude,
       );
 
-      if (includes.isNotEmpty) {
-        final matchesAny = includes.any(
-          (f) =>
-              session.ciStatus?.toLowerCase() ==
-              f.value.toString().toLowerCase(),
-        );
-        if (!matchesAny) return false;
-      }
+    final includes = filters.where(
+      (filter) => filter.mode == FilterMode.include,
+    );
+    final excludes = filters.where(
+      (filter) => filter.mode == FilterMode.exclude,
+    );
 
       if (excludes.isNotEmpty) {
         final matchesAny = excludes.any(
