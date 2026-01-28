@@ -749,10 +749,7 @@ class _ActivityItemState extends State<ActivityItem> {
           ),
           child: Text(
             const JsonEncoder.withIndent('  ').convert(unknownProps),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
           ),
         ),
       ],
