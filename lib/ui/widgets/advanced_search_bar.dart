@@ -494,97 +494,35 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   }
 
   void _selectSuggestion(FilterToken token) {
-    // Convert token to FilterElement
-    FilterElement? newElement;
-
-    switch (token.type) {
-      case FilterType.flag:
+    final builders = <FilterType, FilterElement? Function(FilterToken)>{
+      FilterType.flag: (token) {
         if (token.value.toString() == 'has_pr' || token.id == 'flag:has_pr') {
-          newElement = HasPrElement();
-        } else {
-          newElement = LabelElement(token.label, token.value.toString());
+          return HasPrElement();
         }
-        break;
-      case FilterType.status:
-        newElement = StatusElement(token.label, token.value.toString());
-        break;
-      case FilterType.source:
-        newElement = SourceElement(token.label, token.value.toString());
-        break;
-      case FilterType.prStatus:
-        newElement = PrStatusElement(token.label, token.value.toString());
-        break;
-      case FilterType.ciStatus:
-        newElement = CiStatusElement(token.label, token.value.toString());
-        break;
-      case FilterType.branch:
-        newElement = BranchElement(token.label, token.value.toString());
-        break;
-      case FilterType.text:
-        // Text search is handled separately, not in tree
-        return;
-      case FilterType.time:
-        if (token.id == 'time_custom' || token.id.startsWith('time_')) {
-          // Check if it's a preset that requires dialog
-          TimeFilterType? initialType;
-          TimeFilterField? initialField;
+        return LabelElement(token.label, token.value.toString());
+      },
+      FilterType.status: (token) =>
+          StatusElement(token.label, token.value.toString()),
+      FilterType.source: (token) =>
+          SourceElement(token.label, token.value.toString()),
+      FilterType.prStatus: (token) =>
+          PrStatusElement(token.label, token.value.toString()),
+      FilterType.ciStatus: (token) =>
+          CiStatusElement(token.label, token.value.toString()),
+      FilterType.branch: (token) =>
+          BranchElement(token.label, token.value.toString()),
+      FilterType.tag: (token) =>
+          TagElement(token.label, token.value.toString()),
+      FilterType.text: (_) => null,
+      FilterType.time: _buildTimeElement,
+    };
 
-          if (token.id == 'time_updated_before') {
-            initialType = TimeFilterType.olderThan;
-            initialField = TimeFilterField.updated;
-          } else if (token.id == 'time_updated_after') {
-            initialType = TimeFilterType.newerThan;
-            initialField = TimeFilterField.updated;
-          } else if (token.id == 'time_created_before') {
-            initialType = TimeFilterType.olderThan;
-            initialField = TimeFilterField.created;
-          } else if (token.id == 'time_created_after') {
-            initialType = TimeFilterType.newerThan;
-            initialField = TimeFilterField.created;
-          } else if (token.id == 'time_updated_between') {
-            initialType = TimeFilterType.between;
-            initialField = TimeFilterField.updated;
-          } else if (token.id == 'time_created_between') {
-            initialType = TimeFilterType.between;
-            initialField = TimeFilterField.created;
-          } else if (token.id == 'time_updated_on') {
-            // "On" usually implies "Between X and X+1d" or similar, handled by 'between' with single day logic in dialog/element
-            // But for dialog init, we can start with 'between' or 'newerThan' etc.
-            // Let's use 'between' as it's the closest to 'on a specific date'.
-            initialType = TimeFilterType.between;
-            initialField = TimeFilterField.updated;
-          } else if (token.id == 'time_created_on') {
-            initialType = TimeFilterType.between;
-            initialField = TimeFilterField.created;
-          }
-
-          if (initialType != null || token.id == 'time_custom') {
-            _removeOverlay(); // Remove overlay before showing dialog
-            showDialog<FilterToken>(
-              context: context,
-              builder: (context) => TimeFilterDialog(
-                initialType: initialType,
-                initialField: initialField,
-              ),
-            ).then((filterToken) {
-              if (filterToken != null) {
-                _selectSuggestion(filterToken);
-              } else {
-                _focusNode.requestFocus();
-              }
-            });
-            return; // Return early, dialog handles the rest
-          }
-        }
-        // Fallback for standard presets like 'Last 15m' which have a value
-        if (token.value != null) {
-          newElement = TimeFilterElement(token.value);
-        }
-        break;
-      case FilterType.tag:
-        newElement = TagElement(token.label, token.value.toString());
-        break;
+    final builder = builders[token.type];
+    if (builder == null) {
+      return;
     }
+
+    final newElement = builder(token);
 
     // Handle exclude mode
     if (newElement == null) return;
@@ -614,6 +552,49 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
     _removeOverlay();
     _focusNode.requestFocus();
+  }
+
+  FilterElement? _buildTimeElement(FilterToken token) {
+    if (token.id == 'time_custom' || token.id.startsWith('time_')) {
+      final presetConfigs = <String, (TimeFilterType, TimeFilterField)>{
+        'time_updated_before': (TimeFilterType.olderThan, TimeFilterField.updated),
+        'time_updated_after': (TimeFilterType.newerThan, TimeFilterField.updated),
+        'time_created_before': (TimeFilterType.olderThan, TimeFilterField.created),
+        'time_created_after': (TimeFilterType.newerThan, TimeFilterField.created),
+        'time_updated_between': (TimeFilterType.between, TimeFilterField.updated),
+        'time_created_between': (TimeFilterType.between, TimeFilterField.created),
+        'time_updated_on': (TimeFilterType.between, TimeFilterField.updated),
+        'time_created_on': (TimeFilterType.between, TimeFilterField.created),
+      };
+
+      final presetConfig = presetConfigs[token.id];
+      final initialType = presetConfig?.$1;
+      final initialField = presetConfig?.$2;
+
+      if (initialType != null || token.id == 'time_custom') {
+        _removeOverlay();
+        showDialog<FilterToken>(
+          context: context,
+          builder: (context) => TimeFilterDialog(
+            initialType: initialType,
+            initialField: initialField,
+          ),
+        ).then((filterToken) {
+          if (filterToken != null) {
+            _selectSuggestion(filterToken);
+          } else {
+            _focusNode.requestFocus();
+          }
+        });
+        return null;
+      }
+    }
+
+    if (token.value != null) {
+      return TimeFilterElement(token.value);
+    }
+
+    return null;
   }
 
   IconData _getIconForType(FilterType type) {
