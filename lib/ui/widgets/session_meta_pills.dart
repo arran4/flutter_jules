@@ -434,9 +434,8 @@ class SessionMetaPills extends StatelessWidget {
             Text("Sort Ascending"),
           ],
         ),
-        onTap: () => onAddSort?.call(
-          SortOption(sortField, SortDirection.ascending),
-        ),
+        onTap: () =>
+            onAddSort?.call(SortOption(sortField, SortDirection.ascending)),
       ),
       PopupMenuItem(
         child: const Row(
@@ -446,9 +445,8 @@ class SessionMetaPills extends StatelessWidget {
             Text("Sort Descending"),
           ],
         ),
-        onTap: () => onAddSort?.call(
-          SortOption(sortField, SortDirection.descending),
-        ),
+        onTap: () =>
+            onAddSort?.call(SortOption(sortField, SortDirection.descending)),
       ),
     ];
   }
