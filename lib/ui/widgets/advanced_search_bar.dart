@@ -802,9 +802,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.grey.shade300,
-                  ),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
