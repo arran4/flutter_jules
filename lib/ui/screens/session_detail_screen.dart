@@ -956,8 +956,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           tooltip: 'Open Pull Request',
           onPressed: _handleOpenPullRequest,
         )
-      else if (_session.state == SessionState.COMPLETED &&
-          _session.url != null)
+      else if (_session.state == SessionState.COMPLETED && _session.url != null)
         IconButton(
           icon: const Icon(Icons.open_in_new, color: Colors.green),
           tooltip: 'Open in Jules',
@@ -1032,10 +1031,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   void _handleViewRawData() {
     showDialog(
       context: context,
-      builder: (context) => CombinedDataViewer(
-        session: _session,
-        activities: _activities,
-      ),
+      builder: (context) =>
+          CombinedDataViewer(session: _session, activities: _activities),
     );
   }
 
@@ -1046,9 +1043,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     if (online) {
       _fetchActivities(force: true);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Still offline")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Still offline")));
     }
   }
 
@@ -1093,9 +1090,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (pr != null) {
         await Clipboard.setData(ClipboardData(text: pr.url));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('PR URL copied')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('PR URL copied')));
         }
       }
     } else if (value == 'full_refresh') {
@@ -1103,9 +1100,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     } else if (value == 'copy_id') {
       await Clipboard.setData(ClipboardData(text: _session.id));
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Session ID copied')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(const SnackBar(content: Text('Session ID copied')));
       }
     } else if (value == 'open_browser') {
       if (_session.url != null) launchUrl(Uri.parse(_session.url!));
@@ -1117,9 +1114,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       if (_session.url != null) {
         await Clipboard.setData(ClipboardData(text: _session.url!));
         if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Jules Link copied')),
-          );
+          ScaffoldMessenger.of(
+            context,
+          ).showSnackBar(const SnackBar(content: Text('Jules Link copied')));
         }
       }
     } else if (value == 'open_read_close') {
