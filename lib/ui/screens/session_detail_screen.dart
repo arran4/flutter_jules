@@ -894,6 +894,37 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     });
   }
 
+  Future<void> _handlePopInvokedWithResult(
+    BuildContext context,
+    bool didPop,
+    dynamic result,
+  ) async {
+    if (!didPop) {
+      return;
+    }
+
+    var shouldMark = _shouldMarkRead;
+    if (result is SessionDetailResult) {
+      shouldMark = result.markAsRead;
+    }
+
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    if (auth.token != null && shouldMark) {
+      // Fire and forget
+      Provider.of<SessionProvider>(
+        context,
+        listen: false,
+      ).markAsRead(_session.id, auth.token!);
+    }
+    // Auto-save draft
+    if (_messageController.text.trim().isNotEmpty && !_isSending) {
+      Provider.of<MessageQueueProvider>(
+        context,
+        listen: false,
+      ).saveDraft(_session.id, _messageController.text);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen to TimerService to trigger periodic rebuilds for relative time updates
@@ -903,28 +934,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     return PopScope(
       canPop: true,
       onPopInvokedWithResult: (bool didPop, dynamic result) async {
-        if (didPop) {
-          bool shouldMark = _shouldMarkRead;
-          if (result is SessionDetailResult) {
-            shouldMark = result.markAsRead;
-          }
-
-          final auth = Provider.of<AuthProvider>(context, listen: false);
-          if (auth.token != null && shouldMark) {
-            // Fire and forget
-            Provider.of<SessionProvider>(
-              context,
-              listen: false,
-            ).markAsRead(_session.id, auth.token!);
-          }
-          // Auto-save draft
-          if (_messageController.text.trim().isNotEmpty && !_isSending) {
-            Provider.of<MessageQueueProvider>(
-              context,
-              listen: false,
-            ).saveDraft(_session.id, _messageController.text);
-          }
-        }
+        await _handlePopInvokedWithResult(context, didPop, result);
       },
       child: Scaffold(
         appBar: AppBar(
