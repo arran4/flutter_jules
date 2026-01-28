@@ -195,6 +195,33 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     return KeyEventResult.ignored;
   }
 
+  InputDecoration _buildRepositoryDecoration() {
+    return InputDecoration(
+      labelText: 'Repository',
+      border: const OutlineInputBorder(),
+      prefixIcon: (_selectedSource?.githubRepo?.isPrivate == true)
+          ? const Icon(
+              Icons.lock,
+              size: 16,
+            )
+          : const Icon(
+              Icons.source,
+              size: 16,
+            ),
+      suffixIcon: IconButton(
+        icon: const Icon(
+          Icons.close,
+          size: 16,
+        ),
+        onPressed: () {
+          _sourceController.clear();
+          _sourceFocusNode.requestFocus();
+          _onSourceTextChanged('');
+        },
+      ),
+    );
+  }
+
   Future<void> _initialize() async {
     // First, load the last-used preferences to set a baseline default.
     await _loadPreferences();
@@ -1300,36 +1327,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             child: TextField(
                                               controller: _sourceController,
                                               focusNode: _sourceFocusNode,
-                                              decoration: InputDecoration(
-                                                labelText: 'Repository',
-                                                border:
-                                                    const OutlineInputBorder(),
-                                                prefixIcon:
-                                                    (_selectedSource
-                                                            ?.githubRepo
-                                                            ?.isPrivate ==
-                                                        true)
-                                                    ? const Icon(
-                                                        Icons.lock,
-                                                        size: 16,
-                                                      )
-                                                    : const Icon(
-                                                        Icons.source,
-                                                        size: 16,
-                                                      ),
-                                                suffixIcon: IconButton(
-                                                  icon: const Icon(
-                                                    Icons.close,
-                                                    size: 16,
-                                                  ),
-                                                  onPressed: () {
-                                                    _sourceController.clear();
-                                                    _sourceFocusNode
-                                                        .requestFocus();
-                                                    _onSourceTextChanged('');
-                                                  },
-                                                ),
-                                              ),
+                                              decoration:
+                                                  _buildRepositoryDecoration(),
                                               onChanged: _onSourceTextChanged,
                                             ),
                                           );
