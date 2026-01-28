@@ -480,32 +480,7 @@ class _ActivityItemState extends State<ActivityItem> {
                 if (artifact.media != null) ...[
                   if (artifact.media!.data.isNotEmpty) ...[
                     const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.memory(
-                        base64Decode(artifact.media!.data),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Icon(Icons.broken_image, color: Colors.grey),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Failed to load image",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
+                    _MediaImage(data: artifact.media!.data),
                     const SizedBox(height: 8),
                   ] else ...[
                     Padding(
@@ -753,6 +728,42 @@ class _ActivityItemState extends State<ActivityItem> {
             ],
           ],
         ),
+      ),
+    );
+  }
+}
+
+class _MediaImage extends StatelessWidget {
+  const _MediaImage({required this.data});
+
+  final String data;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        border: Border.all(color: Colors.grey[300]!),
+        borderRadius: BorderRadius.circular(8),
+      ),
+      clipBehavior: Clip.antiAlias,
+      child: Image.memory(
+        base64Decode(data),
+        fit: BoxFit.contain,
+        errorBuilder: (context, error, stackTrace) {
+          return const Padding(
+            padding: EdgeInsets.all(16.0),
+            child: Row(
+              children: [
+                Icon(Icons.broken_image, color: Colors.grey),
+                SizedBox(width: 8),
+                Text(
+                  "Failed to load image",
+                  style: TextStyle(color: Colors.grey),
+                ),
+              ],
+            ),
+          );
+        },
       ),
     );
   }
