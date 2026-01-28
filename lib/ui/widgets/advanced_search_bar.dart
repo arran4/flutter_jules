@@ -25,7 +25,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
 
   final List<FilterToken>
-      availableSuggestions; // All possible filters for autocomplete
+  availableSuggestions; // All possible filters for autocomplete
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -110,8 +110,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _updateFormulaText() {
     final filterExpression = widget.filterTree?.toExpression() ?? '';
-    final sortExpression =
-        widget.activeSorts.map((s) => s.toExpression()).join(', ');
+    final sortExpression = widget.activeSorts
+        .map((s) => s.toExpression())
+        .join(', ');
     final fullExpression =
         '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
             .trim();
@@ -277,22 +278,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     _removeOverlay();
 
     // Group suggestions by type
-    final flagSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.flag).toList();
-    final statusSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.status).toList();
-    final sourceSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.source).toList();
+    final flagSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.flag)
+        .toList();
+    final statusSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.status)
+        .toList();
+    final sourceSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.source)
+        .toList();
     final prStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.prStatus)
         .toList();
     final ciStatusSuggestions = _filteredSuggestions
         .where((s) => s.type == FilterType.ciStatus)
         .toList();
-    final timeSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.time).toList();
-    final otherSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
+    final timeSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.time)
+        .toList();
+    final otherSuggestions = _filteredSuggestions
+        .where((s) => s.type == FilterType.text)
+        .toList();
 
     _overlayEntry = OverlayEntry(
       builder: (context) => Positioned(
@@ -796,9 +802,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.grey.shade300,
-                  ),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1007,9 +1011,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                                         MaterialPageRoute(
                                           builder: (context) =>
                                               BookmarkManagerScreen(
-                                            availableSuggestions:
-                                                widget.availableSuggestions,
-                                          ),
+                                                availableSuggestions:
+                                                    widget.availableSuggestions,
+                                              ),
                                         ),
                                       );
                                     }
@@ -1401,18 +1405,18 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
 class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
   const PopupMenuHeader({super.key, required super.child})
-      : super(enabled: false, height: 32);
+    : super(enabled: false, height: 32);
 
   @override
   Widget? get child => MouseRegion(
-        cursor: SystemMouseCursors.basic,
-        child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-          child: super.child!,
-        ),
-      );
+    cursor: SystemMouseCursors.basic,
+    child: DefaultTextStyle(
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+      ),
+      child: super.child!,
+    ),
+  );
 }
