@@ -348,8 +348,6 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
               itemCount: executor.queue.length,
               itemBuilder: (context, index) {
                 final session = executor.queue[index];
-                final isPaused = executor.pausedSessionIds.contains(session.id);
-                final isDraft = session.id.startsWith('DRAFT_CREATION_');
 
                 return GestureDetector(
                   onSecondaryTapUp: (details) => _showQueueItemMenu(
@@ -358,44 +356,47 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                     executor,
                     session,
                   ),
-                  child: ListTile(
-                    dense: true,
-                    visualDensity: VisualDensity.compact,
-                    title: Text(
-                      "${session.title ?? session.name}${isDraft ? ' (Draft)' : ''}${isPaused ? ' [PAUSED]' : ''}",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: isPaused
-                            ? Colors.orange.shade700
-                            : Colors.black87,
-                        fontWeight: isPaused
-                            ? FontWeight.w600
-                            : FontWeight.normal,
-                      ),
-                    ),
-                    subtitle: Text(
-                      "ID: ${session.id.length > 20 ? '${session.id.substring(0, 10)}...${session.id.substring(session.id.length - 10)}' : session.id} • ${session.state?.displayName ?? 'Unknown'}",
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    trailing: isPaused
-                        ? const Icon(
-                            Icons.pause_circle,
-                            size: 18,
-                            color: Colors.orange,
-                          )
-                        : null,
-                  ),
+                  child: _buildQueueListTile(session, executor),
                 );
               },
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildQueueListTile(Session session, BulkActionExecutor executor) {
+    final isPaused = executor.pausedSessionIds.contains(session.id);
+    final isDraft = session.id.startsWith('DRAFT_CREATION_');
+
+    return ListTile(
+      dense: true,
+      visualDensity: VisualDensity.compact,
+      title: Text(
+        "${session.title ?? session.name}${isDraft ? ' (Draft)' : ''}${isPaused ? ' [PAUSED]' : ''}",
+        maxLines: 1,
+        overflow: TextOverflow.ellipsis,
+        style: TextStyle(
+          fontSize: 11,
+          color: isPaused ? Colors.orange.shade700 : Colors.black87,
+          fontWeight: isPaused ? FontWeight.w600 : FontWeight.normal,
+        ),
+      ),
+      subtitle: Text(
+        "ID: ${session.id.length > 20 ? '${session.id.substring(0, 10)}...${session.id.substring(session.id.length - 10)}' : session.id} • ${session.state?.displayName ?? 'Unknown'}",
+        style: TextStyle(
+          fontSize: 9,
+          color: Colors.grey.shade600,
+        ),
+      ),
+      trailing: isPaused
+          ? const Icon(
+              Icons.pause_circle,
+              size: 18,
+              color: Colors.orange,
+            )
+          : null,
     );
   }
 
