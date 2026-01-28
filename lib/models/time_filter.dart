@@ -38,9 +38,8 @@ class TimeFilter {
 
     return TimeFilter(
       type: TimeFilterType.values.byName(getStringPropOrThrow(json, 'type')),
-      specificTime: specificTimeStr != null
-          ? DateTime.parse(specificTimeStr)
-          : null,
+      specificTime:
+          specificTimeStr != null ? DateTime.parse(specificTimeStr) : null,
       specificTimeEnd: specificTimeEndStr != null
           ? DateTime.parse(specificTimeEndStr)
           : null,

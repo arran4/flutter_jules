@@ -73,8 +73,7 @@ class FilterExpressionParser {
       _skipWhitespace();
 
       final upperName = name.toUpperCase();
-      final isComposite =
-          upperName == 'AND' ||
+      final isComposite = upperName == 'AND' ||
           upperName == 'OR' ||
           upperName == 'NOT' ||
           upperName == 'DISABLED';
@@ -124,8 +123,8 @@ class FilterExpressionParser {
 
   String _readIdentifier() {
     final start = pos;
-    while (pos < input.length &&
-        RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
+    while (
+        pos < input.length && RegExp(r'[a-zA-Z0-9_\.]').hasMatch(input[pos])) {
       pos++;
     }
     return input.substring(start, pos);
