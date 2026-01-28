@@ -1202,85 +1202,34 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         branches.add('main');
                                       }
 
-                                      return ListTile(
-                                        dense: true,
-                                        leading: (repo?.isPrivate == true)
-                                            ? const Icon(Icons.lock, size: 16)
-                                            : null,
-                                        title: Text(
-                                          _getSourceDisplayLabel(source),
-                                        ),
-                                        subtitle: Row(
-                                          children: [
-                                            Expanded(
-                                              child:
-                                                  DropdownButtonFormField<
-                                                    String
-                                                  >(
-                                                    isExpanded: true,
-                                                    decoration:
-                                                        const InputDecoration(
-                                                          labelText: 'Branch',
-                                                          border:
-                                                              OutlineInputBorder(),
-                                                        ),
-                                                    value: selection.branch,
-                                                    items: branches
-                                                        .map(
-                                                          (
-                                                            b,
-                                                          ) => DropdownMenuItem(
-                                                            value: b,
-                                                            child: Text(
-                                                              b,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
-                                                    onChanged: (val) {
-                                                      if (val != null) {
-                                                        setState(() {
-                                                          selection.branch =
-                                                              val;
-                                                        });
-                                                      }
-                                                    },
-                                                  ),
-                                            ),
-                                            const SizedBox(width: 8),
-                                            IconButton(
-                                              icon: const Icon(
-                                                Icons.close,
-                                                size: 16,
-                                              ),
-                                              onPressed: () {
-                                                setState(() {
-                                                  _bulkSelections.removeAt(
-                                                    index,
-                                                  );
-                                                  if (_bulkSelections.length <=
-                                                      1) {
-                                                    if (_bulkSelections
-                                                        .isNotEmpty) {
-                                                      _selectSource(
-                                                        _bulkSelections
-                                                            .first
-                                                            .source,
-                                                      );
-                                                    } else {
-                                                      _selectedSource = null;
-                                                      _sourceController.clear();
-                                                    }
-                                                    _bulkSelections = [];
-                                                  }
-                                                });
-                                              },
-                                            ),
-                                          ],
-                                        ),
+                                      return _BulkSelectionTile(
+                                        label: _getSourceDisplayLabel(source),
+                                        isPrivate: repo?.isPrivate == true,
+                                        branch: selection.branch,
+                                        branches: branches,
+                                        onBranchChanged: (val) {
+                                          if (val != null) {
+                                            setState(() {
+                                              selection.branch = val;
+                                            });
+                                          }
+                                        },
+                                        onRemove: () {
+                                          setState(() {
+                                            _bulkSelections.removeAt(index);
+                                            if (_bulkSelections.length <= 1) {
+                                              if (_bulkSelections.isNotEmpty) {
+                                                _selectSource(
+                                                  _bulkSelections.first.source,
+                                                );
+                                              } else {
+                                                _selectedSource = null;
+                                                _sourceController.clear();
+                                              }
+                                              _bulkSelections = [];
+                                            }
+                                          });
+                                        },
                                       );
                                     },
                                   ),
@@ -1579,6 +1528,67 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
             ],
           ),
         ),
+      ),
+    );
+  }
+}
+
+class _BulkSelectionTile extends StatelessWidget {
+  final String label;
+  final bool isPrivate;
+  final String branch;
+  final List<String> branches;
+  final ValueChanged<String?> onBranchChanged;
+  final VoidCallback onRemove;
+
+  const _BulkSelectionTile({
+    required this.label,
+    required this.isPrivate,
+    required this.branch,
+    required this.branches,
+    required this.onBranchChanged,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return ListTile(
+      dense: true,
+      leading: isPrivate ? const Icon(Icons.lock, size: 16) : null,
+      title: Text(label),
+      subtitle: Row(
+        children: [
+          Expanded(
+            child: DropdownButtonFormField<String>(
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Branch',
+                border: OutlineInputBorder(),
+              ),
+              value: branch,
+              items: branches
+                  .map(
+                    (b) => DropdownMenuItem(
+                      value: b,
+                      child: Text(
+                        b,
+                        overflow: TextOverflow.ellipsis,
+                      ),
+                    ),
+                  )
+                  .toList(),
+              onChanged: onBranchChanged,
+            ),
+          ),
+          const SizedBox(width: 8),
+          IconButton(
+            icon: const Icon(
+              Icons.close,
+              size: 16,
+            ),
+            onPressed: onRemove,
+          ),
+        ],
       ),
     );
   }
