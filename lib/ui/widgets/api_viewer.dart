@@ -19,29 +19,7 @@ class ApiViewer extends StatelessWidget {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                '${exchange.method} ${exchange.url}',
-                style: Theme.of(context).textTheme.titleMedium,
-                maxLines: 2,
-                overflow: TextOverflow.ellipsis,
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'Status: ${exchange.statusCode}',
-                style: TextStyle(
-                  fontWeight: FontWeight.bold,
-                  color: exchange.statusCode >= 200 && exchange.statusCode < 300
-                      ? Colors.green
-                      : Colors.red,
-                ),
-              ),
-              const SizedBox(height: 16),
-              const TabBar(
-                tabs: [
-                  Tab(text: 'Request'),
-                  Tab(text: 'Response'),
-                ],
-              ),
+              _buildHeader(context),
               Expanded(
                 child: TabBarView(
                   children: [
@@ -68,6 +46,37 @@ class ApiViewer extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildHeader(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          '${exchange.method} ${exchange.url}',
+          style: Theme.of(context).textTheme.titleMedium,
+          maxLines: 2,
+          overflow: TextOverflow.ellipsis,
+        ),
+        const SizedBox(height: 8),
+        Text(
+          'Status: ${exchange.statusCode}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            color: exchange.statusCode >= 200 && exchange.statusCode < 300
+                ? Colors.green
+                : Colors.red,
+          ),
+        ),
+        const SizedBox(height: 16),
+        const TabBar(
+          tabs: [
+            Tab(text: 'Request'),
+            Tab(text: 'Response'),
+          ],
+        ),
+      ],
     );
   }
 
