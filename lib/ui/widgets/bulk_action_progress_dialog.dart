@@ -4,6 +4,7 @@ import '../../models/bulk_action.dart';
 import '../../models/session.dart';
 import '../../services/bulk_action_executor.dart';
 import 'package:intl/intl.dart';
+import 'session_summary_tile.dart';
 
 class BulkActionProgressDialog extends StatefulWidget {
   final BulkJobConfig config;
@@ -347,7 +348,6 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
               itemBuilder: (context, index) {
                 final session = executor.queue[index];
                 final isPaused = executor.pausedSessionIds.contains(session.id);
-                final isDraft = session.id.startsWith('DRAFT_CREATION_');
 
                 return GestureDetector(
                   onSecondaryTapUp: (details) => _showQueueItemMenu(
@@ -356,27 +356,22 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                     executor,
                     session,
                   ),
-                  child: ListTile(
+                  child: SessionSummaryTile(
+                    session: session,
                     dense: true,
                     visualDensity: VisualDensity.compact,
-                    title: Text(
-                      "${session.title ?? session.name}${isDraft ? ' (Draft)' : ''}${isPaused ? ' [PAUSED]' : ''}",
-                      maxLines: 1,
-                      overflow: TextOverflow.ellipsis,
-                      style: TextStyle(
-                        fontSize: 11,
-                        color:
-                            isPaused ? Colors.orange.shade700 : Colors.black87,
-                        fontWeight:
-                            isPaused ? FontWeight.w600 : FontWeight.normal,
-                      ),
+                    showPausedLabel: true,
+                    isPaused: isPaused,
+                    titleStyle: TextStyle(
+                      fontSize: 11,
+                      color:
+                          isPaused ? Colors.orange.shade700 : Colors.black87,
+                      fontWeight:
+                          isPaused ? FontWeight.w600 : FontWeight.normal,
                     ),
-                    subtitle: Text(
-                      "ID: ${session.id.length > 20 ? '${session.id.substring(0, 10)}...${session.id.substring(session.id.length - 10)}' : session.id} • ${session.state?.displayName ?? 'Unknown'}",
-                      style: TextStyle(
-                        fontSize: 9,
-                        color: Colors.grey.shade600,
-                      ),
+                    subtitleStyle: TextStyle(
+                      fontSize: 9,
+                      color: Colors.grey.shade600,
                     ),
                     trailing: isPaused
                         ? const Icon(
