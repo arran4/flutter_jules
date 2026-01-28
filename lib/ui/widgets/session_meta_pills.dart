@@ -363,17 +363,9 @@ class SessionMetaPills extends StatelessWidget {
         items: <PopupMenuEntry>[
           if (filterToken != null) ...[
             PopupMenuItem(
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Filter '${filterToken.label}'",
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: _buildFilterMenuRow(
+                icon: Icons.filter_alt,
+                label: "Filter '${filterToken.label}'",
               ),
               onTap: () => onAddFilter?.call(
                 FilterToken(
@@ -386,17 +378,9 @@ class SessionMetaPills extends StatelessWidget {
               ),
             ),
             PopupMenuItem(
-              child: Row(
-                children: [
-                  const Icon(Icons.filter_alt_off, size: 16),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      "Exclude '${filterToken.label}'",
-                      overflow: TextOverflow.ellipsis,
-                    ),
-                  ),
-                ],
+              child: _buildFilterMenuRow(
+                icon: Icons.filter_alt_off,
+                label: "Exclude '${filterToken.label}'",
               ),
               onTap: () => onAddFilter?.call(
                 FilterToken(
@@ -444,6 +428,24 @@ class SessionMetaPills extends StatelessWidget {
       behavior: HitTestBehavior.opaque,
       onSecondaryTapUp: (details) => showChipMenu(details.globalPosition),
       child: chip,
+    );
+  }
+
+  Widget _buildFilterMenuRow({
+    required IconData icon,
+    required String label,
+  }) {
+    return Row(
+      children: [
+        Icon(icon, size: 16),
+        const SizedBox(width: 8),
+        Expanded(
+          child: Text(
+            label,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
     );
   }
 }
