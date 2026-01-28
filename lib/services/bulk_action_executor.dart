@@ -159,6 +159,7 @@ class BulkActionExecutor extends ChangeNotifier {
 
   Future<void> undoLogEntry(BulkLogEntry entry) async {
     if (entry.undoActionType == null || entry.sessionId == null) return;
+    if (entry.isUndone) return;
 
     final sessionId = entry.sessionId!;
     final authToken = authProvider.token;
@@ -195,9 +196,29 @@ class BulkActionExecutor extends ChangeNotifier {
 
     try {
       await _executeStep(session, step, authToken);
+      final index = _logs.indexOf(entry);
+      if (index != -1) {
+        _logs[index] = entry.copyWith(isUndone: true);
+        notifyListeners();
+      }
     } catch (e) {
       _addLog("Failed to undo: $e", true, sessionId);
     }
+  }
+
+  Future<void> undoAll() async {
+    final undoableLogs =
+        _logs.where((l) => l.undoActionType != null && !l.isUndone).toList();
+
+    if (undoableLogs.isEmpty) return;
+
+    _addLog("Starting 'Undo All' for ${undoableLogs.length} actions...", false);
+
+    for (var log in undoableLogs) {
+      await undoLogEntry(log);
+    }
+
+    _addLog("'Undo All' completed.", false);
   }
 
   Future<void> _processNext() async {
