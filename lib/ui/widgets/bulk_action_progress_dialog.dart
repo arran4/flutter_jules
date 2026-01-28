@@ -93,11 +93,19 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                   style: TextStyle(color: Colors.red),
                 ),
               ),
-            if (isDone)
+            if (isDone) ...[
+              if (executor.logs.any(
+                (l) => l.undoActionType != null && !l.isUndone,
+              ))
+                TextButton(
+                  onPressed: () => executor.undoAll(),
+                  child: const Text('Undo All'),
+                ),
               FilledButton(
                 onPressed: () => Navigator.pop(context),
                 child: const Text('Close'),
               ),
+            ],
           ],
         );
       },
@@ -302,14 +310,16 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                               SizedBox(
                                 height: 20,
                                 child: TextButton(
-                                  onPressed: () => executor.undoLogEntry(log),
+                                  onPressed: log.isUndone
+                                      ? null
+                                      : () => executor.undoLogEntry(log),
                                   style: TextButton.styleFrom(
                                     padding: EdgeInsets.zero,
                                     visualDensity: VisualDensity.compact,
                                   ),
-                                  child: const Text(
-                                    "Undo",
-                                    style: TextStyle(fontSize: 10),
+                                  child: Text(
+                                    log.isUndone ? "Undone" : "Undo",
+                                    style: const TextStyle(fontSize: 10),
                                   ),
                                 ),
                               ),

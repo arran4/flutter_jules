@@ -136,6 +136,7 @@ class BulkLogEntry {
   final bool isError;
   final String? sessionId;
   final BulkActionType? undoActionType;
+  final bool isUndone;
 
   const BulkLogEntry({
     required this.message,
@@ -143,5 +144,24 @@ class BulkLogEntry {
     this.isError = false,
     this.sessionId,
     this.undoActionType,
+    this.isUndone = false,
   });
+
+  BulkLogEntry copyWith({
+    DateTime? timestamp,
+    String? message,
+    bool? isError,
+    String? sessionId,
+    BulkActionType? undoActionType,
+    bool? isUndone,
+  }) {
+    return BulkLogEntry(
+      timestamp: timestamp ?? this.timestamp,
+      message: message ?? this.message,
+      isError: isError ?? this.isError,
+      sessionId: sessionId ?? this.sessionId,
+      undoActionType: undoActionType ?? this.undoActionType,
+      isUndone: isUndone ?? this.isUndone,
+    );
+  }
 }
