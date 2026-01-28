@@ -239,6 +239,63 @@ class _SourceListScreenState extends State<SourceListScreen> {
     }
   }
 
+  FilterContext _buildFilterContext(
+    Source source,
+    CacheMetadata metadata,
+    BuildContext context,
+  ) {
+    final labels = <String>{};
+    if (source.githubRepo?.isPrivate ?? false) labels.add('is:private');
+    if (source.githubRepo?.isFork ?? false) labels.add('is:fork');
+    if (source.isArchived) labels.add('is:archived');
+    if (source.githubRepo?.primaryLanguage != null) {
+      labels.add('lang:${source.githubRepo!.primaryLanguage!.toLowerCase()}');
+    }
+
+    final synthMetadata = CacheMetadata(
+      firstSeen: metadata.firstSeen,
+      lastRetrieved: metadata.lastRetrieved,
+      lastOpened: metadata.lastOpened,
+      lastUpdated: metadata.lastUpdated,
+      labels: labels.toList(),
+    );
+
+    final synthSession = Session(
+      id: source.id,
+      name: source.name,
+      title: source.githubRepo?.repo ?? source.name,
+      prompt: source.githubRepo?.description ?? '',
+      sourceContext: SourceContext(source: source.name),
+    );
+
+    return FilterContext(
+      session: synthSession,
+      metadata: synthMetadata,
+      queueProvider: Provider.of<MessageQueueProvider>(context, listen: false),
+    );
+  }
+
+  bool _sourceMatchesFilters(CachedItem<Source> item, BuildContext context) {
+    final source = item.data;
+    final metadata = item.metadata;
+
+    if (_searchText.isNotEmpty) {
+      final query = _searchText.toLowerCase();
+      if (!(source.name.toLowerCase().contains(query) ||
+          (source.githubRepo?.repo.toLowerCase().contains(query) ?? false) ||
+          (source.githubRepo?.owner.toLowerCase().contains(query) ?? false) ||
+          (source.githubRepo?.description?.toLowerCase().contains(query) ??
+              false))) {
+        return false;
+      }
+    }
+
+    if (_filterTree == null) return true;
+
+    final filterContext = _buildFilterContext(source, metadata, context);
+    return _filterTree!.evaluate(filterContext).isIn;
+  }
+
   void _showRawData(BuildContext context) {
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
 
@@ -290,64 +347,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
         final error = sourceProvider.error;
         final lastFetchTime = sourceProvider.lastFetchTime;
 
-        final filteredSources = sources.where((item) {
-          final source = item.data;
-          final metadata = item.metadata;
-
-          if (_searchText.isNotEmpty) {
-            final query = _searchText.toLowerCase();
-            if (!(source.name.toLowerCase().contains(query) ||
-                (source.githubRepo?.repo.toLowerCase().contains(query) ??
-                    false) ||
-                (source.githubRepo?.owner.toLowerCase().contains(query) ??
-                    false) ||
-                (source.githubRepo?.description?.toLowerCase().contains(
-                      query,
-                    ) ??
-                    false))) {
-              return false;
-            }
-          }
-
-          if (_filterTree == null) return true;
-
-          final labels = <String>{};
-          if (source.githubRepo?.isPrivate ?? false) labels.add('is:private');
-          if (source.githubRepo?.isFork ?? false) labels.add('is:fork');
-          if (source.isArchived) labels.add('is:archived');
-          if (source.githubRepo?.primaryLanguage != null) {
-            labels.add(
-              'lang:${source.githubRepo!.primaryLanguage!.toLowerCase()}',
-            );
-          }
-
-          final synthMetadata = CacheMetadata(
-            firstSeen: metadata.firstSeen,
-            lastRetrieved: metadata.lastRetrieved,
-            lastOpened: metadata.lastOpened,
-            lastUpdated: metadata.lastUpdated,
-            labels: labels.toList(),
-          );
-
-          final synthSession = Session(
-            id: source.id,
-            name: source.name,
-            title: source.githubRepo?.repo ?? source.name,
-            prompt: source.githubRepo?.description ?? '',
-            sourceContext: SourceContext(source: source.name),
-          );
-
-          final filterContext = FilterContext(
-            session: synthSession,
-            metadata: synthMetadata,
-            queueProvider: Provider.of<MessageQueueProvider>(
-              context,
-              listen: false,
-            ),
-          );
-
-          return _filterTree!.evaluate(filterContext).isIn;
-        }).toList();
+        final filteredSources = sources
+            .where((item) => _sourceMatchesFilters(item, context))
+            .toList();
 
         final displaySources = _sortSources(filteredSources);
 
