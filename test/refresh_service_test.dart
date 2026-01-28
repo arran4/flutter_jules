@@ -166,4 +166,42 @@ void main() {
     final result = refreshService.getNextScheduledRefresh();
     expect(result, isNull);
   });
+
+  test('executes full refresh with shallow=false', () async {
+    final schedule = RefreshSchedule(
+      id: '1',
+      name: 'Full Refresh Schedule',
+      intervalInMinutes: 60,
+      isEnabled: true,
+      refreshPolicy: ListRefreshPolicy.full,
+    );
+    when(mockSettingsProvider.schedules).thenReturn([schedule]);
+
+    fakeAsync((async) {
+      refreshService.dispose();
+      timerService.dispose();
+      timerService = TimerService();
+      refreshService = RefreshService(
+        mockSettingsProvider,
+        mockSessionProvider,
+        mockSourceProvider,
+        mockAuthProvider,
+        mockNotificationService,
+        mockMessageQueueProvider,
+        mockActivityProvider,
+        timerService,
+      );
+
+      async.elapse(const Duration(minutes: 1));
+
+      verify(mockSessionProvider.fetchSessions(
+        any,
+        force: true,
+        shallow: false,
+        pageSize: anyNamed('pageSize'),
+        authToken: anyNamed('authToken'),
+        onRefreshFallback: anyNamed('onRefreshFallback'),
+      )).called(1);
+    });
+  });
 }
