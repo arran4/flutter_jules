@@ -176,7 +176,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
     final shortcutRegistry = Provider.of<ShortcutRegistry>(context);
 
     // ignore: avoid_print
-    print('MyApp build: focusNode=${focusManager.focusNode.hashCode}, hasFocus=${focusManager.focusNode.hasFocus}');
+    print(
+        'MyApp build: focusNode=${focusManager.focusNode.hashCode}, hasFocus=${focusManager.focusNode.hasFocus}');
 
     return Shortcuts(
       shortcuts: shortcutRegistry.shortcuts,

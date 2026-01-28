@@ -1796,7 +1796,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
         return Focus(
           onFocusChange: (hasFocus) {
             // ignore: avoid_print
-            print('SessionListScreen Focus Change: $hasFocus (node=${_focusNode.hashCode})');
+            print(
+                'SessionListScreen Focus Change: $hasFocus (node=${_focusNode.hashCode})');
           },
           focusNode: _focusNode,
           autofocus: true,
