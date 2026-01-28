@@ -151,18 +151,7 @@ class _ActivityItemState extends State<ActivityItem> {
                     ],
                   ],
                 ),
-                if (!_isExpanded && summary != null)
-                  Padding(
-                    padding: const EdgeInsets.only(top: 4.0),
-                    child: Text(
-                      summary,
-                      maxLines: 10,
-                      overflow: TextOverflow.ellipsis,
-                      style: Theme.of(
-                        context,
-                      ).textTheme.bodyMedium!.copyWith(color: Colors.grey[600]),
-                    ),
-                  ),
+                _buildSummary(summary),
                 if (isCompactable && _isExpanded && summary != null)
                   Padding(
                     padding: const EdgeInsets.only(top: 2.0),
@@ -282,6 +271,24 @@ class _ActivityItemState extends State<ActivityItem> {
             ],
           ),
         ],
+      ),
+    );
+  }
+
+  Widget _buildSummary(String? summary) {
+    if (_isExpanded || summary == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(top: 4.0),
+      child: Text(
+        summary,
+        maxLines: 10,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(
+          context,
+        ).textTheme.bodyMedium!.copyWith(color: Colors.grey[600]),
       ),
     );
   }
