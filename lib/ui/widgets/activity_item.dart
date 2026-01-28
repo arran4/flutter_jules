@@ -407,27 +407,9 @@ class _ActivityItemState extends State<ActivityItem> {
                         .gitPatch!
                         .suggestedCommitMessage
                         .isNotEmpty) ...[
-                      const Text(
-                        "Commit Message:",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
+                      _buildCommitMessage(
+                        artifact.changeSet!.gitPatch!.suggestedCommitMessage,
                       ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: SelectableText(
-                          artifact.changeSet!.gitPatch!.suggestedCommitMessage,
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
                     ],
                     const Text(
                       "Patch:",
@@ -754,6 +736,35 @@ class _ActivityItemState extends State<ActivityItem> {
           ],
         ),
       ),
+    );
+  }
+
+  Widget _buildCommitMessage(String message) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Commit Message:",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.black.withValues(alpha: 0.05),
+            borderRadius: BorderRadius.circular(4),
+          ),
+          child: SelectableText(
+            message,
+            style: const TextStyle(fontFamily: 'monospace'),
+          ),
+        ),
+        const SizedBox(height: 8),
+      ],
     );
   }
 }
