@@ -81,11 +81,7 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    ..._buildActiveSection(
-                      context,
-                      provider,
-                      activeBookmarks,
-                    ),
+                    ..._buildActiveSection(context, provider, activeBookmarks),
                     ..._buildRestorableSection(
                       context,
                       provider,
