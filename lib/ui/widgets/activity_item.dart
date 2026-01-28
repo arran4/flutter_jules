@@ -51,6 +51,35 @@ class _ActivityItemState extends State<ActivityItem> {
     return null;
   }
 
+  Widget _buildPatchPreview(GitPatch gitPatch) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        const Text(
+          "Patch:",
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+            fontSize: 12,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          padding: const EdgeInsets.all(8),
+          color: Colors.black.withValues(alpha: 0.05),
+          child: Text(
+            gitPatch.unidiffPatch,
+            style: const TextStyle(
+              fontFamily: 'monospace',
+              fontSize: 11,
+            ),
+            maxLines: 15,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Card(
@@ -444,27 +473,7 @@ class _ActivityItemState extends State<ActivityItem> {
                       ),
                       const SizedBox(height: 8),
                     ],
-                    const Text(
-                      "Patch:",
-                      style: TextStyle(
-                        fontWeight: FontWeight.bold,
-                        fontSize: 12,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      color: Colors.black.withValues(alpha: 0.05),
-                      child: Text(
-                        artifact.changeSet!.gitPatch!.unidiffPatch,
-                        style: const TextStyle(
-                          fontFamily: 'monospace',
-                          fontSize: 11,
-                        ),
-                        maxLines: 15,
-                        overflow: TextOverflow.ellipsis,
-                      ),
-                    ),
+                    _buildPatchPreview(artifact.changeSet!.gitPatch!),
                     const SizedBox(height: 8),
                   ] else ...[
                     Padding(
