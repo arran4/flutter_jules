@@ -29,7 +29,7 @@ import 'ui/widgets/notification_overlay.dart';
 import 'models/app_shortcut_action.dart';
 import 'intents.dart';
 import 'utils/app_shortcuts.dart';
-import 'dart:io';
+import 'utils/platform_utils.dart';
 
 final navigatorKey = GlobalKey<NavigatorState>();
 
@@ -39,7 +39,9 @@ void main(List<String> args) async {
     runApp(NewSessionWindow(windowId: windowId));
   } else {
     WidgetsFlutterBinding.ensureInitialized();
-    await windowManager.ensureInitialized();
+    if (PlatformUtils.isDesktop) {
+      await windowManager.ensureInitialized();
+    }
     await NotificationService().init();
 
     runApp(
@@ -62,7 +64,9 @@ class _MyAppState extends State<MyApp> with WindowListener {
   @override
   void initState() {
     super.initState();
-    windowManager.addListener(this);
+    if (PlatformUtils.isDesktop) {
+      windowManager.addListener(this);
+    }
     // Initialize services
     context.read<RefreshService>();
     final settings = context.read<SettingsProvider>();
@@ -89,14 +93,16 @@ class _MyAppState extends State<MyApp> with WindowListener {
         }
       });
 
-      registerGlobalShortcuts(shortcutRegistry, isMacOS: Platform.isMacOS);
+      registerGlobalShortcuts(shortcutRegistry, isMacOS: PlatformUtils.isMacOS);
     });
   }
 
   @override
   void dispose() {
     _actionSubscription?.cancel();
-    windowManager.removeListener(this);
+    if (PlatformUtils.isDesktop) {
+      windowManager.removeListener(this);
+    }
     context.read<SettingsProvider>().removeListener(_onSettingsChanged);
     _trayService?.dispose();
     super.dispose();
@@ -104,22 +110,25 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
   void _onSettingsChanged() {
     final settings = context.read<SettingsProvider>();
-    if (settings.trayEnabled && _trayService == null) {
-      _initTrayService();
-    } else if (!settings.trayEnabled && _trayService != null) {
-      _trayService?.dispose();
-      _trayService = null;
-      trayManager.destroy();
-    }
+    if (PlatformUtils.isDesktop) {
+      if (settings.trayEnabled && _trayService == null) {
+        _initTrayService();
+      } else if (!settings.trayEnabled && _trayService != null) {
+        _trayService?.dispose();
+        _trayService = null;
+        trayManager.destroy();
+      }
 
-    if (settings.trayEnabled && settings.hideToTray) {
-      windowManager.setPreventClose(true);
-    } else {
-      windowManager.setPreventClose(false);
+      if (settings.trayEnabled && settings.hideToTray) {
+        windowManager.setPreventClose(true);
+      } else {
+        windowManager.setPreventClose(false);
+      }
     }
   }
 
   void _initTrayService() {
+    if (!PlatformUtils.isDesktop) return;
     _trayService = TrayService(
       onNewSession: () async {
         final window = await DesktopMultiWindow.createWindow(
@@ -152,6 +161,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
   @override
   Future<void> onWindowClose() async {
+    if (!PlatformUtils.isDesktop) return;
     final settings = context.read<SettingsProvider>();
     if (settings.trayEnabled && settings.hideToTray) {
       await windowManager.hide();

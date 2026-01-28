@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as path;
 import 'package:path_provider/path_provider.dart';
+import '../utils/platform_utils.dart';
 import '../models/session.dart';
 import '../models/source.dart';
 import '../models/activity.dart';
@@ -43,7 +44,7 @@ class CacheService {
     final tokenHash = digest.toString();
 
     Directory baseDir;
-    if (isDevMode) {
+    if (isDevMode && PlatformUtils.isDesktop) {
       baseDir = Directory(path.join(Directory.current.path, '.data'));
     } else {
       if (Platform.isLinux) {
