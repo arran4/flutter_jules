@@ -1,0 +1,35 @@
+name: Cleanup Auto-format PR
+
+on:
+  pull_request:
+    types: [closed]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Cleanup Auto-format PR
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          HEAD_REF: ${{ github.event.pull_request.head.ref }}
+          REPO: ${{ github.repository }}
+        run: |
+          BRANCH="auto-format-${HEAD_REF}"
+          echo "Checking for auto-format PRs associated with branch: $BRANCH"
+
+          # Find open PRs from this branch
+          PR_NUMBER=$(gh pr list --head "$BRANCH" --json number -q '.[0].number')
+
+          if [ -n "$PR_NUMBER" ]; then
+            echo "Closing PR #$PR_NUMBER"
+            gh pr close "$PR_NUMBER" --delete-branch
+          else
+            echo "No open PR found for branch $BRANCH"
+            # Try to delete the branch directly via API in case it exists but has no PR
+            echo "Attempting to delete branch $BRANCH via API..."
+            gh api -X DELETE "repos/$REPO/git/refs/heads/$BRANCH" || echo "Branch $BRANCH not found or could not be deleted"
+          fi
