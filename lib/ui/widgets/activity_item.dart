@@ -57,10 +57,7 @@ class _ActivityItemState extends State<ActivityItem> {
       children: [
         const Text(
           "Patch:",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
         const SizedBox(height: 4),
         Container(
@@ -68,10 +65,7 @@ class _ActivityItemState extends State<ActivityItem> {
           color: Colors.black.withValues(alpha: 0.05),
           child: Text(
             gitPatch.unidiffPatch,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
             maxLines: 15,
             overflow: TextOverflow.ellipsis,
           ),
@@ -360,7 +354,8 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     }
 
-    final hasOtherContent = activity.progressUpdated != null ||
+    final hasOtherContent =
+        activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;
@@ -456,7 +451,10 @@ class _ActivityItemState extends State<ActivityItem> {
                       ],
                     ),
                     const SizedBox(height: 8),
-                    if (artifact.changeSet!.gitPatch!.suggestedCommitMessage
+                    if (artifact
+                        .changeSet!
+                        .gitPatch!
+                        .suggestedCommitMessage
                         .isNotEmpty) ...[
                       const Text(
                         "Commit Message:",
@@ -536,9 +534,9 @@ class _ActivityItemState extends State<ActivityItem> {
                           );
                         },
                       ),
-                  ),
-                  const SizedBox(height: 8),
-                ] else ...[
+                    ),
+                    const SizedBox(height: 8),
+                  ] else ...[
                     _buildMissingMediaDataRow(artifact.media!.mimeType),
                   ],
                 ],
@@ -677,27 +675,28 @@ class _ActivityItemState extends State<ActivityItem> {
                                                       CrossAxisAlignment.start,
                                                   mainAxisSize:
                                                       MainAxisSize.min,
-                                                  children: (activity
-                                                                  .unmappedProps[
-                                                              'processingErrors']
-                                                          as List)
-                                                      .map<Widget>((e) {
-                                                    return Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                        bottom: 8.0,
-                                                      ),
-                                                      child: SelectableText(
-                                                        "• $e",
-                                                        style: const TextStyle(
-                                                          color: Colors.red,
-                                                          fontFamily:
-                                                              'monospace',
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }).toList(),
+                                                  children:
+                                                      (activity.unmappedProps['processingErrors']
+                                                              as List)
+                                                          .map<Widget>((e) {
+                                                            return Padding(
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    bottom: 8.0,
+                                                                  ),
+                                                              child: SelectableText(
+                                                                "• $e",
+                                                                style: const TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  fontFamily:
+                                                                      'monospace',
+                                                                  fontSize: 12,
+                                                                ),
+                                                              ),
+                                                            );
+                                                          })
+                                                          .toList(),
                                                 ),
                                               ),
                                               actions: [
@@ -764,10 +763,7 @@ class _ActivityItemState extends State<ActivityItem> {
           ),
           child: Text(
             const JsonEncoder.withIndent('  ').convert(unknownProps),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
           ),
         ),
       ],
