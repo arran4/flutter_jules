@@ -31,6 +31,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
               const Divider(),
               _buildListUpdatesSection(context, settings),
               const Divider(),
+              _buildRefreshActionsSection(context, settings),
+              const Divider(),
               _buildAppearanceSection(context, settings),
               const Divider(),
               _buildSourceListSection(context, settings),
@@ -232,6 +234,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
       ],
     );
+  }
+
+  Widget _buildRefreshActionsSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Refresh Actions in App Bar'),
+        ...RefreshButtonAction.values.map((action) {
+          return CheckboxListTile(
+            title: Text(_formatRefreshAction(action)),
+            value: settings.appBarRefreshActions.contains(action),
+            onChanged: (value) {
+              final current = Set<RefreshButtonAction>.from(
+                settings.appBarRefreshActions,
+              );
+              if (value == true) {
+                current.add(action);
+              } else {
+                current.remove(action);
+              }
+              settings.setAppBarRefreshActions(current);
+            },
+          );
+        }),
+      ],
+    );
+  }
+
+  String _formatRefreshAction(RefreshButtonAction action) {
+    switch (action) {
+      case RefreshButtonAction.refresh:
+        return 'Refresh (Quick)';
+      case RefreshButtonAction.fullRefresh:
+        return 'Full Refresh';
+      case RefreshButtonAction.refreshDirty:
+        return 'Refresh Dirty Sessions';
+    }
   }
 
   Widget _buildAppearanceSection(

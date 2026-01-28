@@ -364,6 +364,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
     );
   }
 
+  Future<void> _refreshDirtySessions() async {
+    if (!mounted) return;
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final sessionProvider =
+        Provider.of<SessionProvider>(context, listen: false);
+    await sessionProvider.refreshDirtySessions(
+      auth.client,
+      authToken: auth.token!,
+    );
+    if (mounted) {
+      Provider.of<RefreshService>(context, listen: false).notifyManualRun(
+        RefreshTaskType.refresh,
+        refreshPolicy: ListRefreshPolicy.dirty,
+      );
+    }
+  }
+
   Future<void> _openCacheFolder() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     if (auth.token == null) return;
@@ -1900,11 +1917,35 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         },
                       );
                     }
-                    return IconButton(
-                      icon: const Icon(Icons.refresh),
-                      tooltip: 'Refresh',
-                      onPressed: () =>
-                          _fetchSessions(force: true, shallow: true),
+                    return Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: RefreshButtonAction.values
+                          .where((action) =>
+                              settings.appBarRefreshActions.contains(action))
+                          .map((action) {
+                        switch (action) {
+                          case RefreshButtonAction.refresh:
+                            return IconButton(
+                              icon: const Icon(Icons.refresh),
+                              tooltip: 'Refresh (Quick)',
+                              onPressed: () =>
+                                  _fetchSessions(force: true, shallow: true),
+                            );
+                          case RefreshButtonAction.fullRefresh:
+                            return IconButton(
+                              icon: const Icon(Icons.sync),
+                              tooltip: 'Full Refresh',
+                              onPressed: () =>
+                                  _fetchSessions(force: true, shallow: false),
+                            );
+                          case RefreshButtonAction.refreshDirty:
+                            return IconButton(
+                              icon: const Icon(Icons.sync_problem),
+                              tooltip: 'Refresh Dirty Sessions',
+                              onPressed: _refreshDirtySessions,
+                            );
+                        }
+                      }).toList(),
                     );
                   },
                 ),
@@ -1925,8 +1966,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
                   onSelected: (value) async {
                     if (value == 'new_session') {
                       _createSession();
+                    } else if (value == 'refresh') {
+                      _fetchSessions(force: true, shallow: true);
                     } else if (value == 'full_refresh') {
                       _fetchSessions(force: true, shallow: false);
+                    } else if (value == 'refresh_dirty') {
+                      _refreshDirtySessions();
                     } else if (value == 'bulk_actions') {
                       _openBulkActionDialog();
                     } else if (value == 'settings') {
@@ -1950,26 +1995,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                           ),
                         );
                       }
-                    } else if (value == 'refresh_dirty') {
-                      final auth = Provider.of<AuthProvider>(
-                        context,
-                        listen: false,
-                      );
-                      final sessionProvider = Provider.of<SessionProvider>(
-                        context,
-                        listen: false,
-                      );
-                      sessionProvider.refreshDirtySessions(
-                        auth.client,
-                        authToken: auth.token!,
-                      );
-                      Provider.of<RefreshService>(
-                        context,
-                        listen: false,
-                      ).notifyManualRun(
-                        RefreshTaskType.refresh,
-                        refreshPolicy: ListRefreshPolicy.dirty,
-                      );
                     } else if (value == 'open_by_id') {
                       _openSessionById();
                     } else if (value == 'github_status') {
@@ -1998,16 +2023,39 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ),
                       if (settings.fabVisibility == FabVisibility.inMenu)
                         const PopupMenuDivider(),
-                      const PopupMenuItem(
-                        value: 'full_refresh',
-                        child: Row(
-                          children: [
-                            Icon(Icons.refresh),
-                            SizedBox(width: 8),
-                            Text('Full Refresh'),
-                          ],
+                      if (!isOffline) ...[
+                        const PopupMenuItem(
+                          value: 'refresh',
+                          child: Row(
+                            children: [
+                              Icon(Icons.refresh),
+                              SizedBox(width: 8),
+                              Text('Refresh (Quick)'),
+                            ],
+                          ),
                         ),
-                      ),
+                        const PopupMenuItem(
+                          value: 'full_refresh',
+                          child: Row(
+                            children: [
+                              Icon(Icons.sync),
+                              SizedBox(width: 8),
+                              Text('Full Refresh'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuItem(
+                          value: 'refresh_dirty',
+                          child: Row(
+                            children: [
+                              Icon(Icons.sync_problem),
+                              SizedBox(width: 8),
+                              Text('Refresh Dirty Sessions'),
+                            ],
+                          ),
+                        ),
+                        const PopupMenuDivider(),
+                      ],
                       const PopupMenuItem(
                         value: 'bulk_actions',
                         child: Row(

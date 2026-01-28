@@ -89,3 +89,9 @@ enum ListRefreshPolicy { none, dirty, watched, quick, full }
 enum FabVisibility { appBar, floating, off, inMenu }
 
 enum DelayUnit { ms, s, min }
+
+enum RefreshButtonAction {
+  refresh,
+  fullRefresh,
+  refreshDirty,
+}
