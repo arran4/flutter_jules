@@ -26,282 +26,30 @@ class _SettingsScreenState extends State<SettingsScreen> {
         builder: (context, settings, devMode, auth, github, child) {
           return ListView(
             children: [
-              _buildSectionHeader(context, 'Session Updates'),
-              _buildSessionDropdown(
-                context,
-                title: 'On Session Open',
-                value: settings.refreshOnOpen,
-                onChanged: settings.setRefreshOnOpen,
-              ),
-              _buildSessionDropdown(
-                context,
-                title: 'On Message Sent',
-                value: settings.refreshOnMessage,
-                onChanged: settings.setRefreshOnMessage,
-              ),
+              _buildSessionUpdatesSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'List Updates'),
-              _buildListDropdown(
-                context,
-                title: 'On Application Start',
-                value: settings.refreshOnAppStart,
-                onChanged: settings.setRefreshOnAppStart,
-              ),
-              _buildListDropdown(
-                context,
-                title: 'On Return to List',
-                value: settings.refreshOnReturn,
-                onChanged: settings.setRefreshOnReturn,
-              ),
-              _buildListDropdown(
-                context,
-                title: 'On Session Created',
-                value: settings.refreshOnCreate,
-                onChanged: settings.setRefreshOnCreate,
-              ),
+              _buildListUpdatesSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'Appearance'),
-              _buildThemeModeDropdown(context, settings),
-              _buildThemeTypeDropdown(context, settings),
-              _buildFabDropdown(
-                context,
-                title: 'New Session Button',
-                value: settings.fabVisibility,
-                onChanged: settings.setFabVisibility,
-              ),
+              _buildAppearanceSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'Source List'),
-              SwitchListTile(
-                title: const Text('Hide archived and read-only sources'),
-                subtitle: const Text(
-                  'Hide sources that are marked as archived or read-only.',
-                ),
-                value: settings.hideArchivedAndReadOnly,
-                onChanged: (value) =>
-                    settings.setHideArchivedAndReadOnly(value),
-              ),
-              _buildSectionHeader(context, 'Keybindings'),
-              _buildKeybindingDropdown<MessageSubmitAction>(
-                context,
-                title: 'Enter',
-                value: settings.enterKeyAction,
-                onChanged: settings.setEnterKeyAction,
-                values: MessageSubmitAction.values,
-                formatter: _formatMessageSubmitAction,
-              ),
-              _buildKeybindingDropdown<MessageSubmitAction>(
-                context,
-                title: 'Shift+Enter',
-                value: settings.shiftEnterKeyAction,
-                onChanged: settings.setShiftEnterKeyAction,
-                values: MessageSubmitAction.values,
-                formatter: _formatMessageSubmitAction,
-              ),
-              _buildKeybindingDropdown<MessageSubmitAction>(
-                context,
-                title: 'Ctrl+Enter',
-                value: settings.ctrlEnterKeyAction,
-                onChanged: settings.setCtrlEnterKeyAction,
-                values: MessageSubmitAction.values,
-                formatter: _formatMessageSubmitAction,
-              ),
-              _buildKeybindingDropdown<MessageSubmitAction>(
-                context,
-                title: 'Ctrl+Shift+Enter',
-                value: settings.ctrlShiftEnterKeyAction,
-                onChanged: settings.setCtrlShiftEnterKeyAction,
-                values: MessageSubmitAction.values,
-                formatter: _formatMessageSubmitAction,
-              ),
-              _buildKeybindingDropdown<EscKeyAction>(
-                context,
-                title: 'Escape',
-                value: settings.escKeyAction,
-                onChanged: settings.setEscKeyAction,
-                values: EscKeyAction.values,
-                formatter: _formatEscKeyAction,
-              ),
+              _buildSourceListSection(context, settings),
+              _buildKeybindingsSection(context, settings),
               const Divider(),
               _buildAutomaticRefreshSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'Notifications'),
-              SwitchListTile(
-                title: const Text('Task Needs Attention'),
-                subtitle: const Text(
-                  'Receive a notification when a task requires your input.',
-                ),
-                value: settings.notifyOnAttention,
-                onChanged: (value) => settings.setNotifyOnAttention(value),
-              ),
-              SwitchListTile(
-                title: const Text('Task Completes'),
-                subtitle: const Text(
-                  'Receive a notification when a task is completed.',
-                ),
-                value: settings.notifyOnCompletion,
-                onChanged: (value) => settings.setNotifyOnCompletion(value),
-              ),
-              SwitchListTile(
-                title: const Text('Watched Task Updates'),
-                subtitle: const Text(
-                  'Receive a notification for any update on a task you are watching.',
-                ),
-                value: settings.notifyOnWatch,
-                onChanged: (value) => settings.setNotifyOnWatch(value),
-              ),
-              SwitchListTile(
-                title: const Text('Task Fails'),
-                subtitle: const Text(
-                  'Receive a notification when a task fails.',
-                ),
-                value: settings.notifyOnFailure,
-                onChanged: (value) => settings.setNotifyOnFailure(value),
-              ),
-              SwitchListTile(
-                title: const Text('Refresh Started'),
-                subtitle: const Text(
-                  'Receive a notification when a refresh starts.',
-                ),
-                value: settings.notifyOnRefreshStart,
-                onChanged: (value) => settings.setNotifyOnRefreshStart(value),
-              ),
-              SwitchListTile(
-                title: const Text('Refresh Complete'),
-                subtitle: const Text(
-                  'Receive a notification when a refresh is complete.',
-                ),
-                value: settings.notifyOnRefreshComplete,
-                onChanged: (value) =>
-                    settings.setNotifyOnRefreshComplete(value),
-              ),
-              SwitchListTile(
-                title: const Text('Errors'),
-                subtitle: const Text(
-                  'Receive a notification when an error occurs.',
-                ),
-                value: settings.notifyOnErrors,
-                onChanged: (value) => settings.setNotifyOnErrors(value),
-              ),
+              _buildNotificationsSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'System Tray'),
-              SwitchListTile(
-                title: const Text('Enable System Tray'),
-                subtitle: const Text(
-                  'Show an icon in the system tray to manage the application.',
-                ),
-                value: settings.trayEnabled,
-                onChanged: (value) => settings.setTrayEnabled(value),
-              ),
-              if (settings.trayEnabled)
-                SwitchListTile(
-                  title: const Text('Hide to tray instead of closing'),
-                  subtitle: const Text(
-                    'When the window is closed, keep the application running in the tray.',
-                  ),
-                  value: settings.hideToTray,
-                  onChanged: (value) => settings.setHideToTray(value),
-                ),
+              _buildSystemTraySection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'Performance'),
-              ListTile(
-                title: const Text('Sessions Page Size'),
-                subtitle: Text('${settings.sessionPageSize} items'),
-              ),
-              Slider(
-                value: settings.sessionPageSize.toDouble(),
-                min: 10,
-                max: 100,
-                divisions: 9,
-                label: settings.sessionPageSize.toString(),
-                onChanged: (double value) {
-                  settings.setSessionPageSize(value.toInt());
-                },
-              ),
+              _buildPerformanceSection(context, settings),
               const Divider(),
-              _buildSectionHeader(context, 'Diagnostics'),
-              ListTile(
-                title: const Text('View Activity Log'),
-                leading: const Icon(Icons.history),
-                onTap: () => Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ActivityLogScreen(),
-                  ),
-                ),
-              ),
+              _buildDiagnosticsSection(context),
               const Divider(),
-              _buildSectionHeader(context, 'Developer'),
-              SwitchListTile(
-                title: const Text('Developer Mode'),
-                subtitle: const Text('Enable advanced features and stats'),
-                value: devMode.isDevMode,
-                onChanged: (value) => devMode.toggleDevMode(value),
-              ),
-              SwitchListTile(
-                title: const Text('API Logging'),
-                subtitle: const Text(
-                  'Log API requests and responses to console',
-                ),
-                value: devMode.enableApiLogging,
-                onChanged: (value) => devMode.toggleApiLogging(value),
-              ),
-              SwitchListTile(
-                title: const Text('Use Corp Jules Links'),
-                subtitle: const Text(
-                  'Use jules.corp.google.com links instead of jules.google.com for PRs.',
-                ),
-                value: settings.useCorpJulesUrl,
-                onChanged: (value) => settings.setUseCorpJulesUrl(value),
-              ),
+              _buildDeveloperSection(context, settings, devMode),
               const Divider(),
-              _buildSectionHeader(context, 'Authentication'),
-              ListTile(
-                title: const Text('Current Session'),
-                subtitle: Text(
-                  auth.tokenType == TokenType.apiKey
-                      ? 'Manual Access Token'
-                      : 'Google Access Token',
-                ),
-                trailing: const Icon(Icons.check_circle, color: Colors.green),
-              ),
-              ListTile(
-                title: const Text('Update Access Token'),
-                leading: const Icon(Icons.vpn_key),
-                onTap: () => _showApiKeyDialog(context, auth),
-              ),
-              ListTile(
-                title: const Text(
-                  'Sign Out',
-                  style: TextStyle(color: Colors.red),
-                ),
-                leading: const Icon(Icons.logout, color: Colors.red),
-                onTap: () => _showSignOutDialog(context, auth),
-              ),
+              _buildAuthenticationSection(context, auth),
               const Divider(),
-              _buildSectionHeader(context, 'GitHub'),
-              ListTile(
-                title: const Text('Personal Access Token'),
-                subtitle: github.hasBadCredentials
-                    ? Text(
-                        'Error: ${github.authError ?? "Bad credentials"}',
-                        style: const TextStyle(color: Colors.red),
-                      )
-                    : Text(
-                        github.apiKey != null && github.apiKey!.length > 4
-                            ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
-                            : (github.apiKey != null ? '********' : 'Not set'),
-                      ),
-                leading: Icon(
-                  Icons.code,
-                  color: github.hasBadCredentials ? Colors.red : null,
-                ),
-                onTap: () => _showGitHubKeyDialog(context, github),
-              ),
-              if (settings.githubExclusions.isNotEmpty) ...[
-                const Divider(),
-                _buildSectionHeader(context, 'GitHub Exclusions'),
-                _buildGithubExclusionsTable(context, settings),
-              ],
+              _buildGitHubSection(context, settings, github),
             ],
           );
         },
@@ -428,6 +176,399 @@ class _SettingsScreenState extends State<SettingsScreen> {
           fontWeight: FontWeight.bold,
         ),
       ),
+    );
+  }
+
+  Widget _buildSessionUpdatesSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Session Updates'),
+        _buildSessionDropdown(
+          context,
+          title: 'On Session Open',
+          value: settings.refreshOnOpen,
+          onChanged: settings.setRefreshOnOpen,
+        ),
+        _buildSessionDropdown(
+          context,
+          title: 'On Message Sent',
+          value: settings.refreshOnMessage,
+          onChanged: settings.setRefreshOnMessage,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildListUpdatesSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'List Updates'),
+        _buildListDropdown(
+          context,
+          title: 'On Application Start',
+          value: settings.refreshOnAppStart,
+          onChanged: settings.setRefreshOnAppStart,
+        ),
+        _buildListDropdown(
+          context,
+          title: 'On Return to List',
+          value: settings.refreshOnReturn,
+          onChanged: settings.setRefreshOnReturn,
+        ),
+        _buildListDropdown(
+          context,
+          title: 'On Session Created',
+          value: settings.refreshOnCreate,
+          onChanged: settings.setRefreshOnCreate,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAppearanceSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Appearance'),
+        _buildThemeModeDropdown(context, settings),
+        _buildThemeTypeDropdown(context, settings),
+        _buildFabDropdown(
+          context,
+          title: 'New Session Button',
+          value: settings.fabVisibility,
+          onChanged: settings.setFabVisibility,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSourceListSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Source List'),
+        SwitchListTile(
+          title: const Text('Hide archived and read-only sources'),
+          subtitle: const Text(
+            'Hide sources that are marked as archived or read-only.',
+          ),
+          value: settings.hideArchivedAndReadOnly,
+          onChanged: (value) => settings.setHideArchivedAndReadOnly(value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildKeybindingsSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Keybindings'),
+        _buildKeybindingDropdown<MessageSubmitAction>(
+          context,
+          title: 'Enter',
+          value: settings.enterKeyAction,
+          onChanged: settings.setEnterKeyAction,
+          values: MessageSubmitAction.values,
+          formatter: _formatMessageSubmitAction,
+        ),
+        _buildKeybindingDropdown<MessageSubmitAction>(
+          context,
+          title: 'Shift+Enter',
+          value: settings.shiftEnterKeyAction,
+          onChanged: settings.setShiftEnterKeyAction,
+          values: MessageSubmitAction.values,
+          formatter: _formatMessageSubmitAction,
+        ),
+        _buildKeybindingDropdown<MessageSubmitAction>(
+          context,
+          title: 'Ctrl+Enter',
+          value: settings.ctrlEnterKeyAction,
+          onChanged: settings.setCtrlEnterKeyAction,
+          values: MessageSubmitAction.values,
+          formatter: _formatMessageSubmitAction,
+        ),
+        _buildKeybindingDropdown<MessageSubmitAction>(
+          context,
+          title: 'Ctrl+Shift+Enter',
+          value: settings.ctrlShiftEnterKeyAction,
+          onChanged: settings.setCtrlShiftEnterKeyAction,
+          values: MessageSubmitAction.values,
+          formatter: _formatMessageSubmitAction,
+        ),
+        _buildKeybindingDropdown<EscKeyAction>(
+          context,
+          title: 'Escape',
+          value: settings.escKeyAction,
+          onChanged: settings.setEscKeyAction,
+          values: EscKeyAction.values,
+          formatter: _formatEscKeyAction,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotificationsSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Notifications'),
+        SwitchListTile(
+          title: const Text('Task Needs Attention'),
+          subtitle: const Text(
+            'Receive a notification when a task requires your input.',
+          ),
+          value: settings.notifyOnAttention,
+          onChanged: (value) => settings.setNotifyOnAttention(value),
+        ),
+        SwitchListTile(
+          title: const Text('Task Completes'),
+          subtitle: const Text(
+            'Receive a notification when a task is completed.',
+          ),
+          value: settings.notifyOnCompletion,
+          onChanged: (value) => settings.setNotifyOnCompletion(value),
+        ),
+        SwitchListTile(
+          title: const Text('Watched Task Updates'),
+          subtitle: const Text(
+            'Receive a notification for any update on a task you are watching.',
+          ),
+          value: settings.notifyOnWatch,
+          onChanged: (value) => settings.setNotifyOnWatch(value),
+        ),
+        SwitchListTile(
+          title: const Text('Task Fails'),
+          subtitle: const Text(
+            'Receive a notification when a task fails.',
+          ),
+          value: settings.notifyOnFailure,
+          onChanged: (value) => settings.setNotifyOnFailure(value),
+        ),
+        SwitchListTile(
+          title: const Text('Refresh Started'),
+          subtitle: const Text(
+            'Receive a notification when a refresh starts.',
+          ),
+          value: settings.notifyOnRefreshStart,
+          onChanged: (value) => settings.setNotifyOnRefreshStart(value),
+        ),
+        SwitchListTile(
+          title: const Text('Refresh Complete'),
+          subtitle: const Text(
+            'Receive a notification when a refresh is complete.',
+          ),
+          value: settings.notifyOnRefreshComplete,
+          onChanged: (value) => settings.setNotifyOnRefreshComplete(value),
+        ),
+        SwitchListTile(
+          title: const Text('Errors'),
+          subtitle: const Text(
+            'Receive a notification when an error occurs.',
+          ),
+          value: settings.notifyOnErrors,
+          onChanged: (value) => settings.setNotifyOnErrors(value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildSystemTraySection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'System Tray'),
+        SwitchListTile(
+          title: const Text('Enable System Tray'),
+          subtitle: const Text(
+            'Show an icon in the system tray to manage the application.',
+          ),
+          value: settings.trayEnabled,
+          onChanged: (value) => settings.setTrayEnabled(value),
+        ),
+        if (settings.trayEnabled)
+          SwitchListTile(
+            title: const Text('Hide to tray instead of closing'),
+            subtitle: const Text(
+              'When the window is closed, keep the application running in the tray.',
+            ),
+            value: settings.hideToTray,
+            onChanged: (value) => settings.setHideToTray(value),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildPerformanceSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Performance'),
+        ListTile(
+          title: const Text('Sessions Page Size'),
+          subtitle: Text('${settings.sessionPageSize} items'),
+        ),
+        Slider(
+          value: settings.sessionPageSize.toDouble(),
+          min: 10,
+          max: 100,
+          divisions: 9,
+          label: settings.sessionPageSize.toString(),
+          onChanged: (double value) {
+            settings.setSessionPageSize(value.toInt());
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDiagnosticsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Diagnostics'),
+        ListTile(
+          title: const Text('View Activity Log'),
+          leading: const Icon(Icons.history),
+          onTap: () => Navigator.push(
+            context,
+            MaterialPageRoute(
+              builder: (context) => const ActivityLogScreen(),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDeveloperSection(
+    BuildContext context,
+    SettingsProvider settings,
+    DevModeProvider devMode,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Developer'),
+        SwitchListTile(
+          title: const Text('Developer Mode'),
+          subtitle: const Text('Enable advanced features and stats'),
+          value: devMode.isDevMode,
+          onChanged: (value) => devMode.toggleDevMode(value),
+        ),
+        SwitchListTile(
+          title: const Text('API Logging'),
+          subtitle: const Text(
+            'Log API requests and responses to console',
+          ),
+          value: devMode.enableApiLogging,
+          onChanged: (value) => devMode.toggleApiLogging(value),
+        ),
+        SwitchListTile(
+          title: const Text('Use Corp Jules Links'),
+          subtitle: const Text(
+            'Use jules.corp.google.com links instead of jules.google.com for PRs.',
+          ),
+          value: settings.useCorpJulesUrl,
+          onChanged: (value) => settings.setUseCorpJulesUrl(value),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildAuthenticationSection(
+    BuildContext context,
+    AuthProvider auth,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Authentication'),
+        ListTile(
+          title: const Text('Current Session'),
+          subtitle: Text(
+            auth.tokenType == TokenType.apiKey
+                ? 'Manual Access Token'
+                : 'Google Access Token',
+          ),
+          trailing: const Icon(Icons.check_circle, color: Colors.green),
+        ),
+        ListTile(
+          title: const Text('Update Access Token'),
+          leading: const Icon(Icons.vpn_key),
+          onTap: () => _showApiKeyDialog(context, auth),
+        ),
+        ListTile(
+          title: const Text(
+            'Sign Out',
+            style: TextStyle(color: Colors.red),
+          ),
+          leading: const Icon(Icons.logout, color: Colors.red),
+          onTap: () => _showSignOutDialog(context, auth),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildGitHubSection(
+    BuildContext context,
+    SettingsProvider settings,
+    GithubProvider github,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'GitHub'),
+        ListTile(
+          title: const Text('Personal Access Token'),
+          subtitle: github.hasBadCredentials
+              ? Text(
+                  'Error: ${github.authError ?? "Bad credentials"}',
+                  style: const TextStyle(color: Colors.red),
+                )
+              : Text(
+                  github.apiKey != null && github.apiKey!.length > 4
+                      ? '********${github.apiKey!.substring(github.apiKey!.length - 4)}'
+                      : (github.apiKey != null ? '********' : 'Not set'),
+                ),
+          leading: Icon(
+            Icons.code,
+            color: github.hasBadCredentials ? Colors.red : null,
+          ),
+          onTap: () => _showGitHubKeyDialog(context, github),
+        ),
+        if (settings.githubExclusions.isNotEmpty) ...[
+          const Divider(),
+          _buildSectionHeader(context, 'GitHub Exclusions'),
+          _buildGithubExclusionsTable(context, settings),
+        ],
+      ],
     );
   }
 
