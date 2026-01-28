@@ -146,7 +146,7 @@ class SourceTile extends StatelessWidget {
     );
   }
 
-  Widget? _buildDescription(BuildContext context, GithubRepo? repo) {
+  Widget? _buildDescription(BuildContext context, GitHubRepo? repo) {
     if (repo?.description == null || repo!.description!.isEmpty) {
       return null;
     }
@@ -163,7 +163,7 @@ class SourceTile extends StatelessWidget {
   }
 
   Widget _buildRepoStatsRow(
-    GithubRepo? repo,
+    GitHubRepo? repo,
     String defaultBranch,
     int? branchCount,
   ) {
@@ -396,8 +396,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-            color: Theme.of(context).colorScheme.onSurfaceVariant,
-          ),
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
         ),
       ],
     ),

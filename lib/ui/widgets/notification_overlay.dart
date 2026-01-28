@@ -42,7 +42,6 @@ class NotificationOverlay extends StatelessWidget {
       ],
     );
   }
-
 }
 
 class _NotificationBanner extends StatelessWidget {

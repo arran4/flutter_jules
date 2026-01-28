@@ -177,9 +177,8 @@ class SortPillsWidget extends StatelessWidget {
 
   void _showAddSortMenu(BuildContext context) {
     final existingFields = activeSorts.map((s) => s.field).toSet();
-    final availableFields = SortField.values
-        .where((f) => !existingFields.contains(f))
-        .toList();
+    final availableFields =
+        SortField.values.where((f) => !existingFields.contains(f)).toList();
 
     if (availableFields.isEmpty) return; // All fields added
 

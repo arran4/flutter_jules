@@ -11,7 +11,7 @@ class CacheMetadata {
   final bool isWatched;
   final bool isHidden;
   final bool
-  hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
+      hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
   final String? reasonForLastUnread;
 
