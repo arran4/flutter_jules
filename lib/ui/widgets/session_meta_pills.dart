@@ -431,20 +431,12 @@ class SessionMetaPills extends StatelessWidget {
     );
   }
 
-  Widget _buildFilterMenuRow({
-    required IconData icon,
-    required String label,
-  }) {
+  Widget _buildFilterMenuRow({required IconData icon, required String label}) {
     return Row(
       children: [
         Icon(icon, size: 16),
         const SizedBox(width: 8),
-        Expanded(
-          child: Text(
-            label,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
+        Expanded(child: Text(label, overflow: TextOverflow.ellipsis)),
       ],
     );
   }

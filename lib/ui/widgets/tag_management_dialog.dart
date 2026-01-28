@@ -44,10 +44,7 @@ class TagManagementDialogState extends State<TagManagementDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CurrentTagsSection(
-                tags: _currentTags,
-                onRemoveTag: _removeTag,
-              ),
+              CurrentTagsSection(tags: _currentTags, onRemoveTag: _removeTag),
               const SizedBox(height: 20),
               NewTagInput(
                 controller: _newTagController,
@@ -167,10 +164,7 @@ class NewTagInput extends StatelessWidget {
             onSubmitted: onSubmitted,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: onAddPressed,
-        ),
+        IconButton(icon: const Icon(Icons.add), onPressed: onAddPressed),
       ],
     );
   }
