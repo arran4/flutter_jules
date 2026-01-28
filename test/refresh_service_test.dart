@@ -210,66 +210,77 @@ void main() {
     verifyNever(mockSettingsProvider.updateSchedule(schedule));
   });
 
-  test('_executeSendPendingMessages sends pending messages and returns summary',
-      () async {
-    final schedule = RefreshSchedule(
-      id: '1',
-      name: 'Message Schedule',
-      intervalInMinutes: 1,
-      isEnabled: true,
-      taskType: RefreshTaskType.sendPendingMessages,
-      sendMessagesMode: SendMessagesMode.sendOne,
-    );
-    when(mockSettingsProvider.schedules).thenReturn([schedule]);
-    when(mockSettingsProvider.notifyOnRefreshStart).thenReturn(false);
-    when(mockSettingsProvider.notifyOnRefreshComplete).thenReturn(true);
-    when(mockSettingsProvider.notifyOnErrors).thenReturn(false);
-
-    // Mock non-empty queue
-    when(mockMessageQueueProvider.queue).thenReturn([
-      QueuedMessage(
-          id: '1', sessionId: 's1', content: 'test', createdAt: DateTime.now()),
-    ]);
-    when(mockMessageQueueProvider.sendQueue(any, limit: 1))
-        .thenAnswer((_) async {});
-
-    // To test private method execution via timer
-    fakeAsync((async) {
-      // Re-init with mock schedule
-      refreshService.dispose();
-      timerService.dispose();
-      timerService = TimerService();
-
-      // Setup schedule to run now
-      schedule.lastRun = DateTime.now().subtract(const Duration(minutes: 5));
-
-      refreshService = RefreshService(
-        mockSettingsProvider,
-        mockSessionProvider,
-        mockSourceProvider,
-        mockAuthProvider,
-        mockNotificationService,
-        mockMessageQueueProvider,
-        mockActivityProvider,
-        timerService,
+  test(
+    '_executeSendPendingMessages sends pending messages and returns summary',
+    () async {
+      final schedule = RefreshSchedule(
+        id: '1',
+        name: 'Message Schedule',
+        intervalInMinutes: 1,
+        isEnabled: true,
+        taskType: RefreshTaskType.sendPendingMessages,
+        sendMessagesMode: SendMessagesMode.sendOne,
       );
+      when(mockSettingsProvider.schedules).thenReturn([schedule]);
+      when(mockSettingsProvider.notifyOnRefreshStart).thenReturn(false);
+      when(mockSettingsProvider.notifyOnRefreshComplete).thenReturn(true);
+      when(mockSettingsProvider.notifyOnErrors).thenReturn(false);
 
-      // Advance timer to trigger execution
-      async.elapse(const Duration(minutes: 1));
+      // Mock non-empty queue
+      when(mockMessageQueueProvider.queue).thenReturn([
+        QueuedMessage(
+          id: '1',
+          sessionId: 's1',
+          content: 'test',
+          createdAt: DateTime.now(),
+        ),
+      ]);
+      when(
+        mockMessageQueueProvider.sendQueue(any, limit: 1),
+      ).thenAnswer((_) async {});
 
-      // Wait for async execution
-      async.flushMicrotasks();
-    });
+      // To test private method execution via timer
+      fakeAsync((async) {
+        // Re-init with mock schedule
+        refreshService.dispose();
+        timerService.dispose();
+        timerService = TimerService();
 
-    verify(mockActivityProvider
-            .addLog('Successfully sent one message for ${schedule.name}'))
-        .called(1);
+        // Setup schedule to run now
+        schedule.lastRun = DateTime.now().subtract(const Duration(minutes: 5));
 
-    // Verify notification service receives the summary
-    verify(mockNotificationService.showNotification(
-      'Refresh Complete',
-      argThat(contains('Successfully sent one message.')),
-      actions: anyNamed('actions'),
-    )).called(1);
-  });
+        refreshService = RefreshService(
+          mockSettingsProvider,
+          mockSessionProvider,
+          mockSourceProvider,
+          mockAuthProvider,
+          mockNotificationService,
+          mockMessageQueueProvider,
+          mockActivityProvider,
+          timerService,
+        );
+
+        // Advance timer to trigger execution
+        async.elapse(const Duration(minutes: 1));
+
+        // Wait for async execution
+        async.flushMicrotasks();
+      });
+
+      verify(
+        mockActivityProvider.addLog(
+          'Successfully sent one message for ${schedule.name}',
+        ),
+      ).called(1);
+
+      // Verify notification service receives the summary
+      verify(
+        mockNotificationService.showNotification(
+          'Refresh Complete',
+          argThat(contains('Successfully sent one message.')),
+          actions: anyNamed('actions'),
+        ),
+      ).called(1);
+    },
+  );
 }
