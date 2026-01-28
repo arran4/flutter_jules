@@ -167,31 +167,20 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
                 itemBuilder: (context, index) {
                   if (index < _filteredGroups.length) {
                     final group = _filteredGroups[index];
-                    final groupSelected = _isGroupSelected(group);
-                    return CheckboxListTile(
-                      value: groupSelected,
-                      tristate: true,
-                      onChanged: (_) => _toggleGroup(group),
-                      title: Text(group.name),
-                      secondary: const Icon(Icons.group, size: 16),
-                      subtitle: Text(
-                        '${group.sourceNames.length} repositories',
-                      ),
+                    return _GroupCheckboxTile(
+                      group: group,
+                      isSelected: _isGroupSelected(group),
+                      onToggle: _toggleGroup,
                     );
                   }
 
                   final source =
                       _filteredSources[index - _filteredGroups.length];
-                  final isSelected = _isSelected(source);
-                  final isPrivate = source.githubRepo?.isPrivate ?? false;
-
-                  return CheckboxListTile(
-                    value: isSelected,
-                    onChanged: (_) => _toggleSelection(source),
-                    title: Text(_getSourceDisplayLabel(source)),
-                    secondary: isPrivate
-                        ? const Icon(Icons.lock, size: 16)
-                        : null,
+                  return _SourceCheckboxTile(
+                    source: source,
+                    isSelected: _isSelected(source),
+                    displayLabel: _getSourceDisplayLabel(source),
+                    onToggle: _toggleSelection,
                   );
                 },
               ),
@@ -211,6 +200,55 @@ class _BulkSourceSelectorDialogState extends State<BulkSourceSelectorDialog> {
           child: Text('Select (${_selectedSources.length})'),
         ),
       ],
+    );
+  }
+}
+
+class _GroupCheckboxTile extends StatelessWidget {
+  final SourceGroup group;
+  final bool? isSelected;
+  final ValueChanged<SourceGroup> onToggle;
+
+  const _GroupCheckboxTile({
+    required this.group,
+    required this.isSelected,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return CheckboxListTile(
+      value: isSelected,
+      tristate: true,
+      onChanged: (_) => onToggle(group),
+      title: Text(group.name),
+      secondary: const Icon(Icons.group, size: 16),
+      subtitle: Text('${group.sourceNames.length} repositories'),
+    );
+  }
+}
+
+class _SourceCheckboxTile extends StatelessWidget {
+  final Source source;
+  final bool isSelected;
+  final String displayLabel;
+  final ValueChanged<Source> onToggle;
+
+  const _SourceCheckboxTile({
+    required this.source,
+    required this.isSelected,
+    required this.displayLabel,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    final isPrivate = source.githubRepo?.isPrivate ?? false;
+    return CheckboxListTile(
+      value: isSelected,
+      onChanged: (_) => onToggle(source),
+      title: Text(displayLabel),
+      secondary: isPrivate ? const Icon(Icons.lock, size: 16) : null,
     );
   }
 }
