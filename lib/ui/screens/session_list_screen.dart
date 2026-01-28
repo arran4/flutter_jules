@@ -1661,6 +1661,47 @@ class _SessionListScreenState extends State<SessionListScreen> {
     return item.metadata.lastRetrieved;
   }
 
+  bool _matchesSessionFilters(
+    CachedItem<Session> item,
+    MessageQueueProvider queueProvider,
+  ) {
+    final session = item.data;
+    final metadata = item.metadata;
+
+    // Separate text search from filter tree for now, or integrate it?
+    // The current design keeps _searchText separate.
+    // Apply text search first (optimization)
+    if (_searchText.isNotEmpty) {
+      final query = _searchText.toLowerCase();
+      final matches =
+          (session.title?.toLowerCase().contains(query) ?? false) ||
+              (session.name.toLowerCase().contains(query)) ||
+              (session.id.toLowerCase().contains(query)) ||
+              (session.state.toString().toLowerCase().contains(query));
+      if (!matches) return false;
+    }
+
+    // Evaluate the filter tree using new FilterState logic
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
+
+    if (_filterTree == null) {
+      return initialState.isIn;
+    }
+
+    final treeResult = _filterTree!.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
+
+    final finalState = FilterState.combineAnd(initialState, treeResult);
+    return finalState.isIn;
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen to TimerService to trigger periodic rebuilds for relative time updates
@@ -1759,43 +1800,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // Ideally we do this only when list changes, but 'build' is fine for now as it's cheap
         _updateSuggestions(allItems.map((i) => i.data).toList());
 
-        _displayItems = allItems.where((item) {
-          final session = item.data;
-          final metadata = item.metadata;
-
-          // Separate text search from filter tree for now, or integrate it?
-          // The current design keeps _searchText separate.
-          // Apply text search first (optimization)
-          if (_searchText.isNotEmpty) {
-            final query = _searchText.toLowerCase();
-            final matches =
-                (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state.toString().toLowerCase().contains(query));
-            if (!matches) return false;
-          }
-
-          // Evaluate the filter tree using new FilterState logic
-          final initialState = metadata.isHidden
-              ? FilterState.implicitOut
-              : FilterState.implicitIn;
-
-          if (_filterTree == null) {
-            return initialState.isIn;
-          }
-
-          final treeResult = _filterTree!.evaluate(
-            FilterContext(
-              session: session,
-              metadata: metadata,
-              queueProvider: queueProvider,
-            ),
-          );
-
-          final finalState = FilterState.combineAnd(initialState, treeResult);
-          return finalState.isIn;
-        }).toList();
+        _displayItems = allItems
+            .where((item) => _matchesSessionFilters(item, queueProvider))
+            .toList();
 
         _displayItems.sort(_compareSessions);
 
