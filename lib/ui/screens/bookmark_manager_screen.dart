@@ -81,38 +81,12 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    if (activeBookmarks.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 8, 16, 8),
-                        child: Text(
-                          'Active Presets',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      ...activeBookmarks.map(
-                        (b) => _buildActiveTile(context, provider, b),
-                      ),
-                    ],
-                    if (restorableBookmarks.isNotEmpty) ...[
-                      const Padding(
-                        padding: EdgeInsets.fromLTRB(16, 24, 16, 8),
-                        child: Text(
-                          'Deleted System Presets',
-                          style: TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.grey,
-                          ),
-                        ),
-                      ),
-                      ...restorableBookmarks.map(
-                        (b) => _buildRestorableTile(context, provider, b),
-                      ),
-                    ],
+                    ..._buildActiveSection(context, provider, activeBookmarks),
+                    ..._buildRestorableSection(
+                      context,
+                      provider,
+                      restorableBookmarks,
+                    ),
                     if (activeBookmarks.isEmpty && restorableBookmarks.isEmpty)
                       Padding(
                         padding: const EdgeInsets.all(32.0),
