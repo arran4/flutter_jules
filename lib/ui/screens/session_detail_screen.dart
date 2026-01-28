@@ -896,6 +896,29 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     });
   }
 
+  _NoteToggleConfig get _noteToggleConfig {
+    final hasNote = _session.note?.content.isNotEmpty ?? false;
+
+    if (!hasNote) {
+      return const _NoteToggleConfig(
+        icon: Icons.note_add_outlined,
+        label: 'Add Note',
+      );
+    }
+
+    if (_isNoteVisible) {
+      return const _NoteToggleConfig(
+        icon: Icons.speaker_notes_off_outlined,
+        label: 'Hide Note',
+      );
+    }
+
+    return const _NoteToggleConfig(
+      icon: Icons.speaker_notes_outlined,
+      label: 'View Note',
+    );
+  }
+
   Future<void> _handlePopInvokedWithResult(
     BuildContext context,
     bool didPop,
@@ -932,6 +955,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     // Listen to TimerService to trigger periodic rebuilds for relative time updates
     Provider.of<TimerService>(context);
     final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+    final noteToggleConfig = _noteToggleConfig;
 
     return PopScope(
       canPop: true,
@@ -948,19 +972,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             style: const TextStyle(fontSize: 16),
           ),
           actions: [
-            IconButton(
-              icon: Icon(
-                (_session.note?.content.isEmpty ?? true)
-                    ? Icons.note_add_outlined
-                    : _isNoteVisible
-                    ? Icons.speaker_notes_off_outlined
-                    : Icons.speaker_notes_outlined,
-              ),
-              tooltip: (_session.note?.content.isEmpty ?? true)
-                  ? 'Add Note'
-                  : _isNoteVisible
-                  ? 'Hide Note'
-                  : 'View Note',
+            _NoteToggleButton(
+              config: noteToggleConfig,
               onPressed: _toggleNoteVisibility,
             ),
             IconButton(
@@ -1376,19 +1389,11 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                     child: Row(
                       children: [
                         Icon(
-                          (_session.note?.content.isEmpty ?? true)
-                              ? Icons.note_add_outlined
-                              : (_isNoteVisible
-                                    ? Icons.speaker_notes_off_outlined
-                                    : Icons.speaker_notes_outlined),
+                          noteToggleConfig.icon,
                           color: Colors.grey,
                         ),
                         const SizedBox(width: 8),
-                        Text(
-                          (_session.note?.content.isEmpty ?? true)
-                              ? 'Add Note'
-                              : (_isNoteVisible ? 'Hide Note' : 'View Note'),
-                        ),
+                        Text(noteToggleConfig.label),
                       ],
                     ),
                   ),
@@ -2610,6 +2615,32 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           ),
         ],
       ),
+    );
+  }
+}
+
+class _NoteToggleConfig {
+  final IconData icon;
+  final String label;
+
+  const _NoteToggleConfig({required this.icon, required this.label});
+}
+
+class _NoteToggleButton extends StatelessWidget {
+  final _NoteToggleConfig config;
+  final VoidCallback onPressed;
+
+  const _NoteToggleButton({
+    required this.config,
+    required this.onPressed,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return IconButton(
+      icon: Icon(config.icon),
+      tooltip: config.label,
+      onPressed: onPressed,
     );
   }
 }
