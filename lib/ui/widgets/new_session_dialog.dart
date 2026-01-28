@@ -195,6 +195,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     return KeyEventResult.ignored;
   }
 
+  DropdownMenuItem<String> _buildBranchMenuItem(String branch) {
+    return DropdownMenuItem(
+      value: branch,
+      child: Text(
+        branch,
+        overflow: TextOverflow.ellipsis,
+      ),
+    );
+  }
+
   Future<void> _initialize() async {
     // First, load the last-used preferences to set a baseline default.
     await _loadPreferences();
@@ -1227,17 +1237,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                     value: selection.branch,
                                                     items: branches
                                                         .map(
-                                                          (
-                                                            b,
-                                                          ) => DropdownMenuItem(
-                                                            value: b,
-                                                            child: Text(
-                                                              b,
-                                                              overflow:
-                                                                  TextOverflow
-                                                                      .ellipsis,
-                                                            ),
-                                                          ),
+                                                          _buildBranchMenuItem,
                                                         )
                                                         .toList(),
                                                     onChanged: (val) {
@@ -1347,16 +1347,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                         ),
                                         value: _selectedBranch,
                                         items: branches
-                                            .map(
-                                              (b) => DropdownMenuItem(
-                                                value: b,
-                                                child: Text(
-                                                  b,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            )
+                                            .map(_buildBranchMenuItem)
                                             .toList(),
                                         onChanged: (val) {
                                           setState(() {
