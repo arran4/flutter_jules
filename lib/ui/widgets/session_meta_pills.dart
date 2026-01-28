@@ -411,30 +411,7 @@ class SessionMetaPills extends StatelessWidget {
           ],
           if (sortField != null) ...[
             if (filterToken != null) const PopupMenuDivider(),
-            PopupMenuItem(
-              child: const Row(
-                children: [
-                  Icon(Icons.arrow_upward, size: 16),
-                  SizedBox(width: 8),
-                  Text("Sort Ascending"),
-                ],
-              ),
-              onTap: () => onAddSort?.call(
-                SortOption(sortField, SortDirection.ascending),
-              ),
-            ),
-            PopupMenuItem(
-              child: const Row(
-                children: [
-                  Icon(Icons.arrow_downward, size: 16),
-                  SizedBox(width: 8),
-                  Text("Sort Descending"),
-                ],
-              ),
-              onTap: () => onAddSort?.call(
-                SortOption(sortField, SortDirection.descending),
-              ),
-            ),
+            ..._buildSortMenuItems(sortField),
           ],
         ],
       );
@@ -445,5 +422,34 @@ class SessionMetaPills extends StatelessWidget {
       onSecondaryTapUp: (details) => showChipMenu(details.globalPosition),
       child: chip,
     );
+  }
+
+  List<PopupMenuItem<void>> _buildSortMenuItems(SortField sortField) {
+    return [
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.arrow_upward, size: 16),
+            SizedBox(width: 8),
+            Text("Sort Ascending"),
+          ],
+        ),
+        onTap: () => onAddSort?.call(
+          SortOption(sortField, SortDirection.ascending),
+        ),
+      ),
+      PopupMenuItem(
+        child: const Row(
+          children: [
+            Icon(Icons.arrow_downward, size: 16),
+            SizedBox(width: 8),
+            Text("Sort Descending"),
+          ],
+        ),
+        onTap: () => onAddSort?.call(
+          SortOption(sortField, SortDirection.descending),
+        ),
+      ),
+    ];
   }
 }
