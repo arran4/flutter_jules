@@ -63,8 +63,11 @@ class RefreshService extends ChangeNotifier {
     }
   }
 
-  late final Map<RefreshTaskType, Future<String> Function(RefreshSchedule, JulesClient)>
-      _scheduleHandlers = {
+  late final Map<
+    RefreshTaskType,
+    Future<String> Function(RefreshSchedule, JulesClient)
+  >
+  _scheduleHandlers = {
     RefreshTaskType.refresh: _executeRefresh,
     RefreshTaskType.sendPendingMessages: _executeSendPendingMessages,
   };
