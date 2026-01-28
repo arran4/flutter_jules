@@ -3,11 +3,11 @@ import 'dart:convert';
 import 'package:intl/intl.dart';
 import 'package:flutter_markdown/flutter_markdown.dart';
 import 'package:provider/provider.dart';
-import 'package:url_launcher/url_launcher.dart';
 import '../../models.dart';
 import '../../services/settings_provider.dart';
 import 'model_viewer.dart';
 import 'activity_helper.dart';
+import 'change_set_details.dart';
 
 class ActivityItem extends StatefulWidget {
   final Activity activity;
@@ -49,35 +49,6 @@ class _ActivityItemState extends State<ActivityItem> {
       return parts[1];
     }
     return null;
-  }
-
-  Widget _buildPatchPreview(GitPatch gitPatch) {
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        const Text(
-          "Patch:",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          padding: const EdgeInsets.all(8),
-          color: Colors.black.withValues(alpha: 0.05),
-          child: Text(
-            gitPatch.unidiffPatch,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
-            maxLines: 15,
-            overflow: TextOverflow.ellipsis,
-          ),
-        ),
-      ],
-    );
   }
 
   @override
@@ -425,88 +396,10 @@ class _ActivityItemState extends State<ActivityItem> {
                   const SizedBox(height: 8),
                 ],
                 if (artifact.changeSet != null) ...[
-                  if (artifact.changeSet!.gitPatch != null) ...[
-                    Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: [
-                        Flexible(
-                          child: Text(
-                            "Change in ${artifact.changeSet!.source}",
-                            style: const TextStyle(fontWeight: FontWeight.bold),
-                            overflow: TextOverflow.ellipsis,
-                          ),
-                        ),
-                        if (_getPrUrl(artifact.changeSet!) != null)
-                          Padding(
-                            padding: const EdgeInsets.only(left: 8.0),
-                            child: ElevatedButton.icon(
-                              icon: const Icon(Icons.open_in_new),
-                              label: const Text('Create PR'),
-                              onPressed: () {
-                                final url = _getPrUrl(artifact.changeSet!);
-                                if (url != null) {
-                                  launchUrl(Uri.parse(url));
-                                }
-                              },
-                              style: ElevatedButton.styleFrom(
-                                visualDensity: VisualDensity.compact,
-                              ),
-                            ),
-                          ),
-                      ],
-                    ),
-                    const SizedBox(height: 8),
-                    if (artifact.changeSet!.gitPatch!.suggestedCommitMessage
-                        .isNotEmpty) ...[
-                      const Text(
-                        "Commit Message:",
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 12,
-                        ),
-                      ),
-                      const SizedBox(height: 4),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(8),
-                        decoration: BoxDecoration(
-                          color: Colors.black.withValues(alpha: 0.05),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: SelectableText(
-                          artifact.changeSet!.gitPatch!.suggestedCommitMessage,
-                          style: const TextStyle(fontFamily: 'monospace'),
-                        ),
-                      ),
-                      const SizedBox(height: 8),
-                    ],
-                    _buildPatchPreview(artifact.changeSet!.gitPatch!),
-                    const SizedBox(height: 8),
-                  ] else ...[
-                    Padding(
-                      padding: const EdgeInsets.symmetric(vertical: 4),
-                      child: Row(
-                        children: [
-                          const Icon(
-                            Icons.insert_drive_file_outlined,
-                            size: 16,
-                            color: Colors.blueGrey,
-                          ),
-                          const SizedBox(width: 8),
-                          Flexible(
-                            child: Text(
-                              artifact.changeSet!.source,
-                              style: const TextStyle(
-                                fontSize: 13,
-                                color: Colors.blueGrey,
-                                fontWeight: FontWeight.w500,
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                  ],
+                  ChangeSetDetails(
+                    changeSet: artifact.changeSet!,
+                    prUrl: _getPrUrl(artifact.changeSet!),
+                  ),
                 ],
                 if (artifact.media != null) ...[
                   if (artifact.media!.data.isNotEmpty) ...[
