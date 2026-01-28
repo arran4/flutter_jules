@@ -146,7 +146,7 @@ class SourceTile extends StatelessWidget {
     );
   }
 
-  Widget? _buildDescription(BuildContext context, GithubRepo? repo) {
+  Widget? _buildDescription(BuildContext context, GitHubRepo? repo) {
     if (repo?.description == null || repo!.description!.isEmpty) {
       return null;
     }
@@ -163,7 +163,7 @@ class SourceTile extends StatelessWidget {
   }
 
   Widget _buildRepoStatsRow(
-    GithubRepo? repo,
+    GitHubRepo? repo,
     String defaultBranch,
     int? branchCount,
   ) {
@@ -177,10 +177,7 @@ class SourceTile extends StatelessWidget {
       children: [
         if (usageCount > 0)
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 2,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(4),
