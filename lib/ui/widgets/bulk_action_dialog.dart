@@ -218,76 +218,11 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    _buildSectionHeader('1. Target Sessions'),
-                    Text(
-                      'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: Colors.grey.shade600,
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    AdvancedSearchBar(
-                      filterTree: _filterTree,
-                      onFilterTreeChanged: (tree) {
-                        setState(() => _filterTree = tree);
-                        _stateManager.onStateChanged(tree);
-                        _updatePreview();
-                      },
-                      searchText: _searchText,
-                      onSearchChanged: (text) {
-                        setState(() => _searchText = text);
-                        _updatePreview();
-                      },
-                      availableSuggestions: widget.availableSuggestions,
-                      activeSorts: _sorts,
-                      onSortsChanged: (s) {
-                        setState(() => _sorts = s);
-                        _updatePreview();
-                      },
-                      showBookmarksButton: false,
-                    ),
+                    _buildTargetSessionsSection(),
                     const SizedBox(height: 16),
-                    _buildSectionHeader('2. Actions to Perform'),
-                    const Text(
-                      "Actions run in order. If one fails, the rest for that session are skipped.",
-                      style: TextStyle(fontSize: 11, color: Colors.grey),
-                    ),
-                    const SizedBox(height: 8),
-                    _buildActionList(),
-                    TextButton.icon(
-                      onPressed: _addNewAction,
-                      icon: const Icon(Icons.add),
-                      label: const Text("Add Action"),
-                    ),
+                    _buildActionsSection(),
                     const SizedBox(height: 24),
-                    _buildSectionHeader('3. Execution Settings'),
-                    Row(
-                      children: [
-                        Expanded(
-                          child: _buildNumberInput(
-                            label: 'Parallel Queries',
-                            value: _parallelQueries,
-                            onChanged: (v) =>
-                                setState(() => _parallelQueries = v),
-                            min: 1,
-                            max: 10,
-                          ),
-                        ),
-                        const SizedBox(width: 16),
-                        Expanded(
-                          child: DelayInputWidget(
-                            label: 'Wait Between',
-                            initialDelay: _waitBetween,
-                            initialUnit: _waitBetweenUnit,
-                            onDelayChanged: (duration, unit) => setState(() {
-                              _waitBetween = duration;
-                              _waitBetweenUnit = unit;
-                            }),
-                          ),
-                        ),
-                      ],
-                    ),
+                    _buildExecutionSettingsSection(),
                     const SizedBox(height: 24),
                     _buildSectionHeader('4. Execution Control'),
                     Column(
@@ -465,6 +400,97 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         title,
         style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 14),
       ),
+    );
+  }
+
+  Widget _buildTargetSessionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('1. Target Sessions'),
+        Text(
+          'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
+          style: TextStyle(
+            fontSize: 11,
+            color: Colors.grey.shade600,
+          ),
+        ),
+        const SizedBox(height: 12),
+        AdvancedSearchBar(
+          filterTree: _filterTree,
+          onFilterTreeChanged: (tree) {
+            setState(() => _filterTree = tree);
+            _stateManager.onStateChanged(tree);
+            _updatePreview();
+          },
+          searchText: _searchText,
+          onSearchChanged: (text) {
+            setState(() => _searchText = text);
+            _updatePreview();
+          },
+          availableSuggestions: widget.availableSuggestions,
+          activeSorts: _sorts,
+          onSortsChanged: (s) {
+            setState(() => _sorts = s);
+            _updatePreview();
+          },
+          showBookmarksButton: false,
+        ),
+      ],
+    );
+  }
+
+  Widget _buildActionsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('2. Actions to Perform'),
+        const Text(
+          "Actions run in order. If one fails, the rest for that session are skipped.",
+          style: TextStyle(fontSize: 11, color: Colors.grey),
+        ),
+        const SizedBox(height: 8),
+        _buildActionList(),
+        TextButton.icon(
+          onPressed: _addNewAction,
+          icon: const Icon(Icons.add),
+          label: const Text("Add Action"),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildExecutionSettingsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('3. Execution Settings'),
+        Row(
+          children: [
+            Expanded(
+              child: _buildNumberInput(
+                label: 'Parallel Queries',
+                value: _parallelQueries,
+                onChanged: (v) => setState(() => _parallelQueries = v),
+                min: 1,
+                max: 10,
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: DelayInputWidget(
+                label: 'Wait Between',
+                initialDelay: _waitBetween,
+                initialUnit: _waitBetweenUnit,
+                onDelayChanged: (duration, unit) => setState(() {
+                  _waitBetween = duration;
+                  _waitBetweenUnit = unit;
+                }),
+              ),
+            ),
+          ],
+        ),
+      ],
     );
   }
 
