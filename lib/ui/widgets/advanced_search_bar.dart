@@ -522,7 +522,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       return;
     }
 
-    final newElement = builder(token);
+    var newElement = builder(token);
 
     // Handle exclude mode
     if (newElement == null) return;
@@ -557,12 +557,30 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   FilterElement? _buildTimeElement(FilterToken token) {
     if (token.id == 'time_custom' || token.id.startsWith('time_')) {
       final presetConfigs = <String, (TimeFilterType, TimeFilterField)>{
-        'time_updated_before': (TimeFilterType.olderThan, TimeFilterField.updated),
-        'time_updated_after': (TimeFilterType.newerThan, TimeFilterField.updated),
-        'time_created_before': (TimeFilterType.olderThan, TimeFilterField.created),
-        'time_created_after': (TimeFilterType.newerThan, TimeFilterField.created),
-        'time_updated_between': (TimeFilterType.between, TimeFilterField.updated),
-        'time_created_between': (TimeFilterType.between, TimeFilterField.created),
+        'time_updated_before': (
+          TimeFilterType.olderThan,
+          TimeFilterField.updated
+        ),
+        'time_updated_after': (
+          TimeFilterType.newerThan,
+          TimeFilterField.updated
+        ),
+        'time_created_before': (
+          TimeFilterType.olderThan,
+          TimeFilterField.created
+        ),
+        'time_created_after': (
+          TimeFilterType.newerThan,
+          TimeFilterField.created
+        ),
+        'time_updated_between': (
+          TimeFilterType.between,
+          TimeFilterField.updated
+        ),
+        'time_created_between': (
+          TimeFilterType.between,
+          TimeFilterField.created
+        ),
         'time_updated_on': (TimeFilterType.between, TimeFilterField.updated),
         'time_created_on': (TimeFilterType.between, TimeFilterField.created),
       };
@@ -1327,7 +1345,7 @@ class _BookmarkDetails extends StatelessWidget {
         if (hasDescription) ...[
           const SizedBox(height: 2),
           Text(
-            description!,
+            description,
             style: TextStyle(
               fontSize: 12,
               color: Colors.grey.shade600,

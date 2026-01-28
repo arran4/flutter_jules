@@ -762,7 +762,6 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
       ],
     );
   }
-
 }
 
 class _SessionStatusTile extends StatelessWidget {
@@ -819,6 +818,14 @@ class _SessionStatusTile extends StatelessWidget {
         return Colors.blue;
       case SessionState.QUEUED:
         return Colors.amber;
+      case SessionState.PLANNING:
+        return Colors.deepPurple;
+      case SessionState.AWAITING_PLAN_APPROVAL:
+        return Colors.orange;
+      case SessionState.AWAITING_USER_FEEDBACK:
+        return Colors.cyan;
+      case SessionState.PAUSED:
+        return Colors.brown;
       case SessionState.STATE_UNSPECIFIED:
         return Colors.grey;
     }

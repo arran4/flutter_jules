@@ -429,9 +429,9 @@ class _ActivityItemState extends State<ActivityItem> {
                           );
                         },
                       ),
-                  ),
-                  const SizedBox(height: 8),
-                ] else ...[
+                    ),
+                    const SizedBox(height: 8),
+                  ] else ...[
                     _buildMissingMediaDataRow(artifact.media!.mimeType),
                   ],
                 ],

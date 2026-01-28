@@ -961,8 +961,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             }
           },
         )
-      else if (_session.state == SessionState.COMPLETED &&
-          _session.url != null)
+      else if (_session.state == SessionState.COMPLETED && _session.url != null)
         IconButton(
           icon: const Icon(Icons.open_in_new, color: Colors.green),
           tooltip: 'Open in Jules',
@@ -1039,9 +1038,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               : const Icon(Icons.refresh),
           // Disable/Gray out while "busy" (min 2s or until completion)
           // Also blockout if any other network op is running
-          onPressed: (_isRefreshDisabled || _busyCount > 0)
-              ? null
-              : _handleRefresh,
+          onPressed:
+              (_isRefreshDisabled || _busyCount > 0) ? null : _handleRefresh,
           tooltip: 'Refresh',
         );
       },
@@ -2622,9 +2620,7 @@ class _PromptExpander extends StatelessWidget {
           ),
           Center(
             child: Icon(
-              isExpanded
-                  ? Icons.keyboard_arrow_up
-                  : Icons.keyboard_arrow_down,
+              isExpanded ? Icons.keyboard_arrow_up : Icons.keyboard_arrow_down,
               color: Colors.grey,
             ),
           ),

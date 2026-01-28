@@ -159,8 +159,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
       );
       _actionSubscription = shortcutRegistry.onAction.listen((action) {
         if (!mounted) return;
-        // ignore: avoid_print
-        print('SessionListScreen received action: $action');
+
         if (action == AppShortcutAction.newSession) {
           _createSession();
         }
@@ -1814,11 +1813,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _displayItems.sort(_compareSessions);
 
         return Focus(
-          onFocusChange: (hasFocus) {
-            // ignore: avoid_print
-            print(
-                'SessionListScreen Focus Change: $hasFocus (node=${_focusNode.hashCode})');
-          },
+          onFocusChange: (hasFocus) {},
           focusNode: _focusNode,
           autofocus: true,
           child: Scaffold(

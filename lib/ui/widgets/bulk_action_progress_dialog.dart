@@ -364,8 +364,7 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                     isPaused: isPaused,
                     titleStyle: TextStyle(
                       fontSize: 11,
-                      color:
-                          isPaused ? Colors.orange.shade700 : Colors.black87,
+                      color: isPaused ? Colors.orange.shade700 : Colors.black87,
                       fontWeight:
                           isPaused ? FontWeight.w600 : FontWeight.normal,
                     ),
