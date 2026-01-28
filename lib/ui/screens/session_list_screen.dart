@@ -1662,6 +1662,88 @@ class _SessionListScreenState extends State<SessionListScreen> {
     return item.metadata.lastRetrieved;
   }
 
+  List<CachedItem<Session>> _buildDraftSessions(
+    MessageQueueProvider queueProvider,
+  ) {
+    return queueProvider.queue
+        .where(
+          (m) =>
+              m.type == QueuedMessageType.sessionCreation ||
+              m.sessionId == 'new_session',
+        ) // Include legacy or pending
+        .map((m) {
+          Map<String, dynamic> json;
+          if (m.metadata != null) {
+            json = Map<String, dynamic>.from(m.metadata!);
+          } else {
+            // Fallback for items without metadata
+            json = {
+              'id': 'temp',
+              'name': 'temp',
+              'prompt': m.content,
+              'sourceContext': {'source': 'unknown'},
+            };
+          }
+
+          // Override ID to avoid collision
+          json['id'] = 'DRAFT_CREATION_${m.id}';
+
+          // Ensure prompt is set as title
+          if (json['title'] == null || json['title'].toString().isEmpty) {
+            json['title'] =
+                (json['prompt'] as String?) ?? 'New Session (Draft)';
+          }
+
+          final isDraft = m.isDraft;
+          final isOffline =
+              queueProvider.isOffline; // Uses provider from context
+
+          // Inject Flags based on queue state
+          // User Definition: "Pending" is for all new sessions (draft, error, sending).
+          // Status 'QUEUED' maps to "Pending" in UI usually.
+
+          json['state'] = 'QUEUED'; // Always QUEUED to match "Pending" filter
+
+          String statusReason;
+          if (m.processingErrors.isNotEmpty) {
+            final lastError = m.processingErrors.last;
+            if (lastError.contains('429') ||
+                lastError.toLowerCase().contains('quota')) {
+              statusReason = 'Quota limit reached';
+            } else if (lastError.contains('500') ||
+                lastError.contains('502') ||
+                lastError.contains('503')) {
+              statusReason = 'Server error';
+            } else {
+              statusReason = 'Failed: $lastError';
+            }
+          } else if (isDraft) {
+            statusReason = m.queueReason ?? 'Saved as draft';
+          } else if (isOffline) {
+            // It's pending sending, but we are offline
+            statusReason = 'Pending (Offline)';
+          } else {
+            // Pending sending, online
+            statusReason = 'Sending to server...';
+          }
+
+          json['currentAction'] = statusReason;
+
+          final session = Session.fromJson(json);
+
+          return CachedItem(
+            session,
+            CacheMetadata(
+              firstSeen: m.createdAt,
+              lastRetrieved: m.createdAt,
+              labels: isDraft ? ['DRAFT_CREATION'] : ['PENDING_CREATION'],
+              hasPendingUpdates: !isDraft,
+            ),
+          );
+        })
+        .toList();
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen to TimerService to trigger periodic rebuilds for relative time updates
@@ -1803,6 +1885,12 @@ class _SessionListScreenState extends State<SessionListScreen> {
         _displayItems.sort(_compareSessions);
 
         return Focus(
+          onFocusChange: (hasFocus) {
+            // ignore: avoid_print
+            print(
+              'SessionListScreen Focus Change: $hasFocus (node=${_focusNode.hashCode})',
+            );
+          },
           focusNode: _focusNode,
           autofocus: true,
           child: Scaffold(
