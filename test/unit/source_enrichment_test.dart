@@ -63,18 +63,15 @@ class MockGithubProvider extends Mock implements GithubProvider {
   void enqueue(GithubJob job) {
     // Execute immediately
     job.status = GithubJobStatus.running;
-    job
-        .action()
-        .then((result) {
-          job.result = result;
-          job.status = GithubJobStatus.completed;
-          job.completer.complete();
-        })
-        .catchError((e) {
-          job.status = GithubJobStatus.failed;
-          job.error = e.toString();
-          job.completer.completeError(e);
-        });
+    job.action().then((result) {
+      job.result = result;
+      job.status = GithubJobStatus.completed;
+      job.completer.complete();
+    }).catchError((e) {
+      job.status = GithubJobStatus.failed;
+      job.error = e.toString();
+      job.completer.completeError(e);
+    });
   }
 }
 

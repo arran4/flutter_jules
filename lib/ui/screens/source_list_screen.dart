@@ -409,96 +409,100 @@ class _SourceListScreenState extends State<SourceListScreen> {
           body: (sources.isEmpty && isLoading)
               ? const Center(child: Text("Loading repositories..."))
               : (sources.isEmpty && error != null)
-              ? Center(child: Text('Error: $error'))
-              : Column(
-                  children: [
-                    AdvancedSearchBar(
-                      filterTree: _filterTree,
-                      onFilterTreeChanged: (tree) {
-                        setState(() {
-                          _filterTree = tree;
-                        });
-                      },
-                      searchText: _searchText,
-                      onSearchChanged: (text) {
-                        setState(() {
-                          _searchText = text;
-                        });
-                      },
-                      availableSuggestions: _availableSuggestions,
-                      activeSorts: _activeSorts,
-                      onSortsChanged: (sorts) {
-                        setState(() {
-                          _activeSorts = sorts;
-                        });
-                      },
-                    ),
-                    if (lastFetchTime != null)
-                      Padding(
-                        padding: const EdgeInsets.symmetric(horizontal: 16),
-                        child: Align(
-                          alignment: Alignment.centerLeft,
-                          child: Text(
-                            'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(
-                                  color:
-                                      DateTime.now()
-                                              .difference(lastFetchTime)
-                                              .inMinutes >
-                                          30
-                                      ? Colors.orange
-                                      : null,
-                                ),
-                          ),
+                  ? Center(child: Text('Error: $error'))
+                  : Column(
+                      children: [
+                        AdvancedSearchBar(
+                          filterTree: _filterTree,
+                          onFilterTreeChanged: (tree) {
+                            setState(() {
+                              _filterTree = tree;
+                            });
+                          },
+                          searchText: _searchText,
+                          onSearchChanged: (text) {
+                            setState(() {
+                              _searchText = text;
+                            });
+                          },
+                          availableSuggestions: _availableSuggestions,
+                          activeSorts: _activeSorts,
+                          onSortsChanged: (sorts) {
+                            setState(() {
+                              _activeSorts = sorts;
+                            });
+                          },
                         ),
-                      ),
-                    Expanded(
-                      child: RefreshIndicator(
-                        onRefresh: _refreshData,
-                        child: displaySources.isEmpty
-                            ? ListView(
-                                physics: const AlwaysScrollableScrollPhysics(),
-                                children: [
-                                  SizedBox(
-                                    height:
-                                        MediaQuery.of(context).size.height *
-                                        0.7,
-                                    child: Center(
-                                      child: Padding(
-                                        padding: const EdgeInsets.all(20.0),
-                                        child: Text(
-                                          sources.isEmpty
-                                              ? 'No repositories found.'
-                                              : 'No matches found.',
+                        if (lastFetchTime != null)
+                          Padding(
+                            padding: const EdgeInsets.symmetric(horizontal: 16),
+                            child: Align(
+                              alignment: Alignment.centerLeft,
+                              child: Text(
+                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+                                style: Theme.of(context)
+                                    .textTheme
+                                    .bodySmall
+                                    ?.copyWith(
+                                      color: DateTime.now()
+                                                  .difference(lastFetchTime)
+                                                  .inMinutes >
+                                              30
+                                          ? Colors.orange
+                                          : null,
+                                    ),
+                              ),
+                            ),
+                          ),
+                        Expanded(
+                          child: RefreshIndicator(
+                            onRefresh: _refreshData,
+                            child: displaySources.isEmpty
+                                ? ListView(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(),
+                                    children: [
+                                      SizedBox(
+                                        height:
+                                            MediaQuery.of(context).size.height *
+                                                0.7,
+                                        child: Center(
+                                          child: Padding(
+                                            padding: const EdgeInsets.all(20.0),
+                                            child: Text(
+                                              sources.isEmpty
+                                                  ? 'No repositories found.'
+                                                  : 'No matches found.',
+                                            ),
+                                          ),
                                         ),
                                       ),
-                                    ),
-                                  ),
-                                ],
-                              )
-                            : ListView.builder(
-                                physics:
-                                    const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
-                                controller: _scrollController,
-                                itemCount: displaySources.length,
-                                itemBuilder: (context, index) {
-                                  final item = displaySources[index];
-                                  final source = item.data;
-                                  final count = _usageCount[source.name] ?? 0;
-                                  final lastUsedDate = _lastUsed[source.name];
+                                    ],
+                                  )
+                                : ListView.builder(
+                                    physics:
+                                        const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+                                    controller: _scrollController,
+                                    itemCount: displaySources.length,
+                                    itemBuilder: (context, index) {
+                                      final item = displaySources[index];
+                                      final source = item.data;
+                                      final count =
+                                          _usageCount[source.name] ?? 0;
+                                      final lastUsedDate =
+                                          _lastUsed[source.name];
 
-                                  return SourceTile(
-                                    item: item,
-                                    usageCount: count,
-                                    lastUsedDate: lastUsedDate,
-                                  );
-                                },
-                              ),
-                      ),
+                                      return SourceTile(
+                                        item: item,
+                                        usageCount: count,
+                                        lastUsedDate: lastUsedDate,
+                                      );
+                                    },
+                                  ),
+                          ),
+                        ),
+                      ],
                     ),
-                  ],
-                ),
         );
       },
     );

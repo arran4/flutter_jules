@@ -135,15 +135,15 @@ class _MyAppState extends State<MyApp> with WindowListener {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-            auth.client,
-            authToken: auth.token,
-            force: true,
-          );
+                auth.client,
+                authToken: auth.token,
+                force: true,
+              );
           context.read<SourceProvider>().fetchSources(
-            auth.client,
-            authToken: auth.token,
-            force: true,
-          );
+                auth.client,
+                authToken: auth.token,
+                force: true,
+              );
         }
       },
     );

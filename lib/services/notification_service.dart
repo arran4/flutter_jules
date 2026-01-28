@@ -56,20 +56,20 @@ class NotificationService {
 
     final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
-          requestAlertPermission: true,
-          requestBadgePermission: true,
-          requestSoundPermission: true,
-          notificationCategories: [
-            DarwinNotificationCategory(
-              'jules_category',
-              actions: [
-                DarwinNotificationAction.plain('show_task', 'Show Task'),
-                DarwinNotificationAction.plain('open_pr', 'Open PR'),
-                DarwinNotificationAction.plain('show_new', 'Show New'),
-              ],
-            ),
+      requestAlertPermission: true,
+      requestBadgePermission: true,
+      requestSoundPermission: true,
+      notificationCategories: [
+        DarwinNotificationCategory(
+          'jules_category',
+          actions: [
+            DarwinNotificationAction.plain('show_task', 'Show Task'),
+            DarwinNotificationAction.plain('open_pr', 'Open PR'),
+            DarwinNotificationAction.plain('show_new', 'Show New'),
           ],
-        );
+        ),
+      ],
+    );
 
     const LinuxInitializationSettings initializationSettingsLinux =
         LinuxInitializationSettings(defaultActionName: 'Open notification');
@@ -84,12 +84,12 @@ class NotificationService {
 
     final InitializationSettings initializationSettings =
         InitializationSettings(
-          android: initializationSettingsAndroid,
-          iOS: initializationSettingsDarwin,
-          macOS: initializationSettingsDarwin,
-          linux: initializationSettingsLinux,
-          // windows: initializationSettingsWindows,
-        );
+      android: initializationSettingsAndroid,
+      iOS: initializationSettingsDarwin,
+      macOS: initializationSettingsDarwin,
+      linux: initializationSettingsLinux,
+      // windows: initializationSettingsWindows,
+    );
 
     await flutterLocalNotificationsPlugin.initialize(
       initializationSettings,
@@ -197,14 +197,14 @@ class NotificationService {
 
     final AndroidNotificationDetails androidPlatformChannelSpecifics =
         AndroidNotificationDetails(
-          'jules_channel_id',
-          'Jules Notifications',
-          channelDescription: 'Notifications for Jules task updates',
-          importance: Importance.max,
-          priority: Priority.high,
-          showWhen: false,
-          actions: androidActions,
-        );
+      'jules_channel_id',
+      'Jules Notifications',
+      channelDescription: 'Notifications for Jules task updates',
+      importance: Importance.max,
+      priority: Priority.high,
+      showWhen: false,
+      actions: androidActions,
+    );
 
     final linuxActions = notification.actions?.map((action) {
       switch (action) {
@@ -228,9 +228,9 @@ class NotificationService {
 
     const DarwinNotificationDetails darwinPlatformChannelSpecifics =
         DarwinNotificationDetails(
-          categoryIdentifier: 'jules_category',
-          attachments: [],
-        );
+      categoryIdentifier: 'jules_category',
+      attachments: [],
+    );
 
     final LinuxNotificationDetails linuxPlatformChannelSpecifics =
         LinuxNotificationDetails(actions: linuxActions ?? []);
