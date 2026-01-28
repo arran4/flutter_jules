@@ -277,10 +277,9 @@ class _PromptTemplateSelectorDialogState
           opacity: isDisabled ? 0.6 : 1.0,
           child: Card(
             color: isDisabled
-                ? Theme.of(context)
-                    .colorScheme
-                    .onSurface
-                    .withValues(alpha: 0.05)
+                ? Theme.of(
+                    context,
+                  ).colorScheme.onSurface.withValues(alpha: 0.05)
                 : null,
             margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
             child: ListTile(
