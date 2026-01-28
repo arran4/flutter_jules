@@ -2359,58 +2359,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       style: Theme.of(context).textTheme.labelLarge,
                     ),
                     const SizedBox(height: 4),
-                    InkWell(
-                      onTap: () {
+                    _PromptExpander(
+                      prompt: _session.prompt,
+                      isExpanded: _isPromptExpanded,
+                      onToggle: () {
                         setState(() {
                           _isPromptExpanded = !_isPromptExpanded;
                         });
                       },
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          AnimatedSize(
-                            duration: const Duration(milliseconds: 300),
-                            curve: Curves.easeInOut,
-                            alignment: Alignment.topLeft,
-                            child: Container(
-                              constraints: BoxConstraints(
-                                maxHeight: _isPromptExpanded
-                                    ? MediaQuery.sizeOf(context).height * 0.4
-                                    : 60,
-                              ),
-                              width: double.infinity,
-                              clipBehavior: _isPromptExpanded
-                                  ? Clip.hardEdge
-                                  : Clip.hardEdge,
-                              decoration: const BoxDecoration(),
-                              foregroundDecoration: _isPromptExpanded
-                                  ? null
-                                  : BoxDecoration(
-                                      gradient: LinearGradient(
-                                        begin: Alignment.topCenter,
-                                        end: Alignment.bottomCenter,
-                                        colors: [
-                                          Colors.white.withValues(alpha: 0.0),
-                                          Colors.white.withValues(alpha: 0.8),
-                                        ],
-                                        stops: const [0.5, 1.0],
-                                      ),
-                                    ),
-                              child: SingleChildScrollView(
-                                child: MarkdownBody(data: _session.prompt),
-                              ),
-                            ),
-                          ),
-                          Center(
-                            child: Icon(
-                              _isPromptExpanded
-                                  ? Icons.keyboard_arrow_up
-                                  : Icons.keyboard_arrow_down,
-                              color: Colors.grey,
-                            ),
-                          ),
-                        ],
-                      ),
                     ),
                     const SizedBox(height: 16),
                     _buildNotesSection(),
@@ -2601,6 +2557,68 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               );
             },
             child: const Text('View Session Data'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _PromptExpander extends StatelessWidget {
+  final String prompt;
+  final bool isExpanded;
+  final VoidCallback onToggle;
+
+  const _PromptExpander({
+    required this.prompt,
+    required this.isExpanded,
+    required this.onToggle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onToggle,
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          AnimatedSize(
+            duration: const Duration(milliseconds: 300),
+            curve: Curves.easeInOut,
+            alignment: Alignment.topLeft,
+            child: Container(
+              constraints: BoxConstraints(
+                maxHeight:
+                    isExpanded ? MediaQuery.sizeOf(context).height * 0.4 : 60,
+              ),
+              width: double.infinity,
+              clipBehavior: Clip.hardEdge,
+              decoration: const BoxDecoration(),
+              foregroundDecoration: isExpanded
+                  ? null
+                  : BoxDecoration(
+                      gradient: LinearGradient(
+                        begin: Alignment.topCenter,
+                        end: Alignment.bottomCenter,
+                        colors: [
+                          Colors.white.withValues(alpha: 0.0),
+                          Colors.white.withValues(alpha: 0.8),
+                        ],
+                        stops: const [0.5, 1.0],
+                      ),
+                    ),
+              child: SingleChildScrollView(
+                child: MarkdownBody(data: prompt),
+              ),
+            ),
+          ),
+          Center(
+            child: Icon(
+              isExpanded
+                  ? Icons.keyboard_arrow_up
+                  : Icons.keyboard_arrow_down,
+              color: Colors.grey,
+            ),
           ),
         ],
       ),
