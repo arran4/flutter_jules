@@ -34,6 +34,7 @@ class SourceTile extends StatelessWidget {
     final isPrivate = repo?.isPrivate ?? false;
     final defaultBranch = repo?.defaultBranch?.displayName ?? 'N/A';
     final branchCount = repo?.branches?.length;
+    final description = _buildDescription(context, repo);
 
     return Card(
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -57,19 +58,8 @@ class SourceTile extends StatelessWidget {
         subtitle: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            if (repo?.description != null && repo!.description!.isNotEmpty)
-              Padding(
-                padding: const EdgeInsets.only(bottom: 4.0),
-                child: Text(
-                  repo.description!,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
-                  style: Theme.of(context).textTheme.bodySmall,
-                ),
-              ),
-            Text(
-              '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
-            ),
+            if (description != null) description,
+            _buildRepoStatsRow(repo, defaultBranch, branchCount),
             const SizedBox(height: 4),
             Row(
               children: [
@@ -88,33 +78,7 @@ class SourceTile extends StatelessWidget {
               ],
             ),
             const SizedBox(height: 4),
-            Row(
-              children: [
-                if (usageCount > 0)
-                  Container(
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 6,
-                      vertical: 2,
-                    ),
-                    decoration: BoxDecoration(
-                      color: Theme.of(
-                        context,
-                      ).colorScheme.surfaceContainerHighest,
-                      borderRadius: BorderRadius.circular(4),
-                    ),
-                    child: Text(
-                      '$usageCount sessions',
-                      style: Theme.of(context).textTheme.labelSmall,
-                    ),
-                  ),
-                if (usageCount > 0) const SizedBox(width: 8),
-                if (lastUsedDate != null)
-                  Text(
-                    'Last used: ${DateFormat.yMMMd().format(lastUsedDate!)}',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-              ],
-            ),
+            _buildUsageRow(context),
           ],
         ),
         trailing: Row(
@@ -179,6 +143,60 @@ class SourceTile extends StatelessWidget {
           ],
         ),
       ),
+    );
+  }
+
+  Widget? _buildDescription(BuildContext context, GithubRepo? repo) {
+    if (repo?.description == null || repo!.description!.isEmpty) {
+      return null;
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 4.0),
+      child: Text(
+        repo.description!,
+        maxLines: 2,
+        overflow: TextOverflow.ellipsis,
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
+  Widget _buildRepoStatsRow(
+    GithubRepo? repo,
+    String defaultBranch,
+    int? branchCount,
+  ) {
+    return Text(
+      '${repo?.owner ?? "Unknown Owner"} • $defaultBranch${branchCount != null ? " • $branchCount branches" : ""}',
+    );
+  }
+
+  Widget _buildUsageRow(BuildContext context) {
+    return Row(
+      children: [
+        if (usageCount > 0)
+          Container(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 6,
+              vertical: 2,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.surfaceContainerHighest,
+              borderRadius: BorderRadius.circular(4),
+            ),
+            child: Text(
+              '$usageCount sessions',
+              style: Theme.of(context).textTheme.labelSmall,
+            ),
+          ),
+        if (usageCount > 0) const SizedBox(width: 8),
+        if (lastUsedDate != null)
+          Text(
+            'Last used: ${DateFormat.yMMMd().format(lastUsedDate!)}',
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+      ],
     );
   }
 
