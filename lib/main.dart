@@ -135,15 +135,15 @@ class _MyAppState extends State<MyApp> with WindowListener {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
           context.read<SourceProvider>().fetchSources(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
         }
       },
     );
@@ -165,17 +165,30 @@ class _MyAppState extends State<MyApp> with WindowListener {
     final focusManager = GlobalShortcutFocusManager.of(context);
     final shortcutRegistry = Provider.of<ShortcutRegistry>(context);
 
-    return Focus(
-      focusNode: focusManager.focusNode,
-      autofocus: true,
-      child: Shortcuts(
-        shortcuts: shortcutRegistry.shortcuts,
-        child: Actions(
-          actions: <Type, Action<Intent>>{
-            GlobalActionIntent: CallbackAction<GlobalActionIntent>(
-              onInvoke: (GlobalActionIntent intent) =>
-                  shortcutRegistry.dispatch(intent.action),
-            ),
+    // ignore: avoid_print
+    print(
+      'MyApp build: focusNode=${focusManager.focusNode.hashCode}, hasFocus=${focusManager.focusNode.hasFocus}',
+    );
+
+    return Shortcuts(
+      shortcuts: shortcutRegistry.shortcuts,
+      child: Actions(
+        actions: <Type, Action<Intent>>{
+          GlobalActionIntent: CallbackAction<GlobalActionIntent>(
+            onInvoke: (GlobalActionIntent intent) {
+              // ignore: avoid_print
+              print('Invoking action: ${intent.action}');
+              return shortcutRegistry.dispatch(intent.action);
+            },
+          ),
+        },
+        child: Focus(
+          focusNode: focusManager.focusNode,
+          onFocusChange: (hasFocus) {
+            // ignore: avoid_print
+            print(
+              'Global Focus Change: $hasFocus (node=${focusManager.focusNode.hashCode})',
+            );
           },
           child: GestureDetector(
             onTap: () {
