@@ -705,7 +705,7 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
                       itemCount: _matchingSessions.length,
                       itemBuilder: (context, index) {
                         final s = _matchingSessions[index];
-                        return _buildLiteSessionTile(s);
+                        return _SessionStatusTile(session: s);
                       },
                     ),
             ),
@@ -755,22 +755,17 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
     );
   }
 
-  Widget _buildLiteSessionTile(Session session) {
-    Color statusColor = Colors.grey;
-    final state = session.state ?? SessionState.STATE_UNSPECIFIED;
+}
 
-    if (state == SessionState.COMPLETED) {
-      statusColor = Colors.green;
-    }
-    if (state == SessionState.FAILED) {
-      statusColor = Colors.red;
-    }
-    if (state == SessionState.IN_PROGRESS) {
-      statusColor = Colors.blue;
-    }
-    if (state == SessionState.QUEUED) {
-      statusColor = Colors.amber;
-    }
+class _SessionStatusTile extends StatelessWidget {
+  final Session session;
+
+  const _SessionStatusTile({required this.session});
+
+  @override
+  Widget build(BuildContext context) {
+    final state = session.state ?? SessionState.STATE_UNSPECIFIED;
+    final statusColor = _resolveStatusColor(state);
 
     return ListTile(
       dense: true,
@@ -804,5 +799,20 @@ class _BookmarkEditorDialogState extends State<_BookmarkEditorDialog> {
         ],
       ),
     );
+  }
+
+  Color _resolveStatusColor(SessionState state) {
+    switch (state) {
+      case SessionState.COMPLETED:
+        return Colors.green;
+      case SessionState.FAILED:
+        return Colors.red;
+      case SessionState.IN_PROGRESS:
+        return Colors.blue;
+      case SessionState.QUEUED:
+        return Colors.amber;
+      case SessionState.STATE_UNSPECIFIED:
+        return Colors.grey;
+    }
   }
 }
