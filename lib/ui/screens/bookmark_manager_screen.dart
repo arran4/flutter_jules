@@ -55,11 +55,13 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
           }).toList();
 
           // 2. Restorable System Bookmarks
-          final restorableBookmarks =
-              provider.getRestorableSystemBookmarks().where((b) {
-            if (_searchQuery.isEmpty) return true;
-            return b.name.toLowerCase().contains(_searchQuery);
-          }).toList();
+          final restorableBookmarks = provider
+              .getRestorableSystemBookmarks()
+              .where((b) {
+                if (_searchQuery.isEmpty) return true;
+                return b.name.toLowerCase().contains(_searchQuery);
+              })
+              .toList();
 
           return Column(
             children: [
@@ -79,11 +81,7 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               Expanded(
                 child: ListView(
                   children: [
-                    ..._buildActiveSection(
-                      context,
-                      provider,
-                      activeBookmarks,
-                    ),
+                    ..._buildActiveSection(context, provider, activeBookmarks),
                     ..._buildRestorableSection(
                       context,
                       provider,
@@ -287,7 +285,8 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
   }
 
   void _showBookmarkEditor(BuildContext context, FilterBookmark? existing) {
-    final isSystem = existing != null &&
+    final isSystem =
+        existing != null &&
         context.read<FilterBookmarkProvider>().isSystemBookmark(existing.name);
 
     showDialog(
@@ -315,8 +314,8 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
             style: FilledButton.styleFrom(backgroundColor: Colors.red),
             onPressed: () {
               context.read<FilterBookmarkProvider>().deleteBookmark(
-                    bookmark.name,
-                  );
+                bookmark.name,
+              );
               Navigator.pop(context);
               ScaffoldMessenger.of(context).showSnackBar(
                 SnackBar(content: Text('Preset "${bookmark.name}" deleted')),
@@ -355,9 +354,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
               final newName = nameController.text.trim();
               if (newName.isNotEmpty) {
                 await context.read<FilterBookmarkProvider>().copyBookmark(
-                      bookmark.name,
-                      newName,
-                    );
+                  bookmark.name,
+                  newName,
+                );
                 if (context.mounted) {
                   Navigator.pop(context);
                   ScaffoldMessenger.of(context).showSnackBar(
@@ -502,9 +501,9 @@ class _BookmarkManagerScreenState extends State<BookmarkManagerScreen> {
 
                 try {
                   await context.read<FilterBookmarkProvider>().importFromJson(
-                        jsonString,
-                        merge: merge,
-                      );
+                    jsonString,
+                    merge: merge,
+                  );
 
                   if (dialogContext.mounted) {
                     Navigator.pop(dialogContext);
