@@ -437,57 +437,12 @@ class _PresetEditorDialogState extends State<_PresetEditorDialog> {
         width: 600,
         height: 600,
         child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              TextField(
-                controller: _nameController,
-                decoration: const InputDecoration(
-                  labelText: 'Preset Name*',
-                  border: OutlineInputBorder(),
-                ),
-                enabled: !widget.isReadOnly,
-              ),
-              const SizedBox(height: 16),
-              TextField(
-                controller: _descController,
-                decoration: const InputDecoration(
-                  labelText: 'Description',
-                  border: OutlineInputBorder(),
-                ),
-                enabled: !widget.isReadOnly,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Filter Expression',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _filterController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., is:unread has:pr',
-                ),
-                maxLines: 2,
-                enabled: !widget.isReadOnly,
-              ),
-              const SizedBox(height: 24),
-              const Text(
-                'Action Script',
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              const SizedBox(height: 8),
-              TextField(
-                controller: _scriptController,
-                decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  hintText: 'e.g., @wait 1s\nopenPrInBrowser\nmarkAsRead',
-                ),
-                maxLines: 8,
-                enabled: !widget.isReadOnly,
-              ),
-            ],
+          child: _PresetEditorForm(
+            nameController: _nameController,
+            descController: _descController,
+            filterController: _filterController,
+            scriptController: _scriptController,
+            isReadOnly: widget.isReadOnly,
           ),
         ),
       ),
@@ -530,6 +485,78 @@ class _PresetEditorDialogState extends State<_PresetEditorDialog> {
             label: const Text('Save Preset'),
             icon: const Icon(Icons.save),
           ),
+      ],
+    );
+  }
+}
+
+class _PresetEditorForm extends StatelessWidget {
+  final TextEditingController nameController;
+  final TextEditingController descController;
+  final TextEditingController filterController;
+  final TextEditingController scriptController;
+  final bool isReadOnly;
+
+  const _PresetEditorForm({
+    required this.nameController,
+    required this.descController,
+    required this.filterController,
+    required this.scriptController,
+    required this.isReadOnly,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        TextField(
+          controller: nameController,
+          decoration: const InputDecoration(
+            labelText: 'Preset Name*',
+            border: OutlineInputBorder(),
+          ),
+          enabled: !isReadOnly,
+        ),
+        const SizedBox(height: 16),
+        TextField(
+          controller: descController,
+          decoration: const InputDecoration(
+            labelText: 'Description',
+            border: OutlineInputBorder(),
+          ),
+          enabled: !isReadOnly,
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Filter Expression',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: filterController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'e.g., is:unread has:pr',
+          ),
+          maxLines: 2,
+          enabled: !isReadOnly,
+        ),
+        const SizedBox(height: 24),
+        const Text(
+          'Action Script',
+          style: TextStyle(fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 8),
+        TextField(
+          controller: scriptController,
+          decoration: const InputDecoration(
+            border: OutlineInputBorder(),
+            hintText: 'e.g., @wait 1s\nopenPrInBrowser\nmarkAsRead',
+          ),
+          maxLines: 8,
+          enabled: !isReadOnly,
+        ),
       ],
     );
   }
