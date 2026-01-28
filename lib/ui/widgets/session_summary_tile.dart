@@ -44,6 +44,15 @@ class SessionSummaryTile extends StatelessWidget {
       titleSuffix.write(' [PAUSED]');
     }
 
+    String statusLabel = session.state?.displayName ?? 'Unknown';
+
+    // For draft/queued items, the currentAction (synthesized in SessionListScreen)
+    // is the true source of truth for the status (e.g. "Sending...", "Failed: ...", "Saved as draft").
+    // The state is forced to QUEUED (Pending) for filtering, so we shouldn't display that.
+    if (isDraft) {
+      statusLabel = session.currentAction ?? 'Draft';
+    }
+
     return ListTile(
       dense: dense,
       visualDensity: visualDensity,
@@ -54,7 +63,7 @@ class SessionSummaryTile extends StatelessWidget {
         style: titleStyle,
       ),
       subtitle: Text(
-        'ID: ${_formatSessionId(session.id)} • ${session.state?.displayName ?? 'Unknown'}',
+        'ID: ${_formatSessionId(session.id)} • $statusLabel',
         style: subtitleStyle,
       ),
       trailing: trailing,

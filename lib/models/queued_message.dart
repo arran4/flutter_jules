@@ -2,6 +2,27 @@ import 'package:dartobjectutils/dartobjectutils.dart';
 
 enum QueuedMessageType { message, sessionCreation }
 
+enum QueueState {
+  /// The message is a draft and should not be sent automatically.
+  draft,
+
+  /// The message is queued and waiting to be picked up by the sender.
+  queued,
+
+  /// The message is currently being sent to the server.
+  sending,
+
+  /// The message failed to send. Check [processingErrors] for details.
+  failed,
+
+  /// The message was successfully sent to the server.
+  /// Corresponds to "In Jules" / "Use Jules State".
+  sent,
+
+  /// The message is no longer in Jules or has been lost/discarded.
+  vestigial,
+}
+
 class QueuedMessage {
   final String id;
   final String sessionId;
@@ -11,8 +32,11 @@ class QueuedMessage {
   final Map<String, dynamic>? metadata;
   final String? queueReason;
   final List<String> processingErrors;
-  final bool isDraft;
+  final QueueState state;
   final String? requestId;
+
+  // Helper getters for backward compatibility during refactor
+  bool get isDraft => state == QueueState.draft;
 
   QueuedMessage({
     required this.id,
@@ -23,11 +47,25 @@ class QueuedMessage {
     this.metadata,
     this.queueReason,
     this.processingErrors = const [],
-    this.isDraft = false,
+    this.state = QueueState.queued,
     this.requestId,
   });
 
   factory QueuedMessage.fromJson(Map<String, dynamic> json) {
+    // Backward compatibility for isDraft
+    QueueState initialState = QueueState.queued;
+    if (json.containsKey('state')) {
+      initialState = _getEnumPropOrDefault(
+        json,
+        'state',
+        QueueState.values,
+        QueueState.queued,
+      )!;
+    } else if (json.containsKey('isDraft')) {
+      final isDraft = getBooleanPropOrDefault(json, 'isDraft', false);
+      initialState = isDraft ? QueueState.draft : QueueState.queued;
+    }
+
     return QueuedMessage(
       id: getStringPropOrThrow(json, 'id'),
       sessionId: getStringPropOrThrow(json, 'sessionId'),
@@ -45,7 +83,7 @@ class QueuedMessage {
               ?.map((e) => e.toString())
               .toList() ??
           [],
-      isDraft: getBooleanPropOrDefault(json, 'isDraft', false),
+      state: initialState,
       requestId: getStringPropOrDefault(json, 'requestId', null),
     );
   }
@@ -60,7 +98,9 @@ class QueuedMessage {
       if (metadata != null) 'metadata': metadata,
       if (queueReason != null) 'queueReason': queueReason,
       'processingErrors': processingErrors,
-      'isDraft': isDraft,
+      'state': state.toString().split('.').last,
+      'isDraft':
+          state == QueueState.draft, // Maintain for legacy readers if any
       if (requestId != null) 'requestId': requestId,
     };
   }
@@ -71,9 +111,16 @@ class QueuedMessage {
     Map<String, dynamic>? metadata,
     String? queueReason,
     List<String>? processingErrors,
-    bool? isDraft,
+    QueueState? state,
+    bool? isDraft, // Deprecated, mapped to state
     String? requestId,
   }) {
+    // Handle legacy isDraft argument
+    QueueState newState = state ?? this.state;
+    if (isDraft != null) {
+      newState = isDraft ? QueueState.draft : QueueState.queued;
+    }
+
     return QueuedMessage(
       id: id,
       sessionId: sessionId ?? this.sessionId,
@@ -83,7 +130,7 @@ class QueuedMessage {
       metadata: metadata ?? this.metadata,
       queueReason: queueReason ?? this.queueReason,
       processingErrors: processingErrors ?? this.processingErrors,
-      isDraft: isDraft ?? this.isDraft,
+      state: newState,
       requestId: requestId ?? this.requestId,
     );
   }

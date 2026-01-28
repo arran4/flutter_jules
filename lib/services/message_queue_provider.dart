@@ -41,6 +41,16 @@ class MessageQueueProvider extends ChangeNotifier {
       _queue = await _cacheService!.loadMessageQueue(_authToken!);
       await _migrateQueue(); // Temporary migration
       notifyListeners();
+
+      // Auto-send on startup if we have queued items
+      // We need a client reference here. Ideally this is triggered by the UI or AuthProvider
+      // when the client is ready. For now, we rely on the UI/AuthProvider to call sendQueue
+      // when connectivity is established.
+      // But we can verify if we have queued items and log it.
+      if (_queue.any((m) => m.state == QueueState.queued)) {
+        debugPrint(
+            "Queue loaded with pending items. Waiting for client to send.");
+      }
     }
   }
 
@@ -69,8 +79,8 @@ class MessageQueueProvider extends ChangeNotifier {
             createdAt: msg.createdAt,
             type: QueuedMessageType.sessionCreation,
             metadata: session.toJson(), // Minimal metadata recovery
-            isDraft:
-                true, // Legacy queue items that weren't sent should be drafts
+            state: QueueState
+                .draft, // Legacy queue items that weren't sent should be drafts
             queueReason: 'Recovered from legacy queue',
             processingErrors: msg.processingErrors,
           );
@@ -82,30 +92,17 @@ class MessageQueueProvider extends ChangeNotifier {
       }
 
       // Fix 2: Ensure correct queueReason for drafts
-      if (_queue[i].isDraft &&
+      if (msg.state == QueueState.draft &&
           (_queue[i].queueReason == null || _queue[i].queueReason!.isEmpty)) {
         debugPrint("Fixing queueReason for draft message ${msg.id}");
         _queue[i] = _queue[i].copyWith(queueReason: "User saved as draft");
         changed = true;
       }
 
-      // Fix 3: Ensure session creation requests are marked as drafts if they have never been sent (no errors)
-      if (_queue[i].type == QueuedMessageType.sessionCreation &&
-          !_queue[i].isDraft &&
-          (_queue[i].processingErrors.isEmpty) &&
-          (_queue[i].queueReason == null)) {
-        // If it's just sitting there without errors or reason, assume it's a draft or pending offline
-        // But we don't want to auto-send really old stuff?
-        // Let's mark as draft to be safe for user review
-        debugPrint(
-          "Marking unsent session creation request ${msg.id} as draft.",
-        );
-        _queue[i] = _queue[i].copyWith(
-          isDraft: true,
-          queueReason: "Restored as draft",
-        );
-        changed = true;
-      }
+      // Fix 3: REMOVED.
+      // Previously we reverted 'queued' items to 'draft' if they had no errors.
+      // This caused legitimate queued items to be stuck as drafts after app restart.
+      // We should trust the 'queued' state. If it's queued, it should be sent.
     }
 
     if (changed) {
@@ -142,7 +139,7 @@ class MessageQueueProvider extends ChangeNotifier {
       content: content,
       createdAt: DateTime.now(),
       queueReason: reason,
-      isDraft: isDraft,
+      state: isDraft ? QueueState.draft : QueueState.queued,
       requestId: requestId,
       metadata: metadata,
       processingErrors: processingErrors ?? [],
@@ -167,7 +164,7 @@ class MessageQueueProvider extends ChangeNotifier {
       type: QueuedMessageType.sessionCreation,
       metadata: session.toJson(),
       queueReason: reason,
-      isDraft: isDraft,
+      state: isDraft ? QueueState.draft : QueueState.queued,
       requestId: requestId ?? DateTime.now().microsecondsSinceEpoch.toString(),
     );
     _queue.add(message);
@@ -193,10 +190,15 @@ class MessageQueueProvider extends ChangeNotifier {
   }) {
     final index = _queue.indexWhere((m) => m.id == id);
     if (index != -1) {
+      QueueState? newState;
+      if (isDraft != null) {
+        newState = isDraft ? QueueState.draft : QueueState.queued;
+      }
+
       _queue[index] = _queue[index].copyWith(
         content: session.prompt,
         metadata: session.toJson(),
-        isDraft: isDraft,
+        state: newState,
         queueReason: reason,
       );
       _saveQueue();
@@ -234,7 +236,9 @@ class MessageQueueProvider extends ChangeNotifier {
   }
 
   List<QueuedMessage> getDrafts(String sessionId) {
-    return _queue.where((m) => m.sessionId == sessionId && m.isDraft).toList();
+    return _queue
+        .where((m) => m.sessionId == sessionId && m.state == QueueState.draft)
+        .toList();
   }
 
   // Returns true if connection successful
@@ -266,7 +270,7 @@ class MessageQueueProvider extends ChangeNotifier {
   }) async {
     if (_isOffline) return;
 
-    var toProcess = _queue.where((m) => !m.isDraft).toList();
+    var toProcess = _queue.where((m) => m.state == QueueState.queued).toList();
     // Sort by creation time to send in order
     toProcess.sort((a, b) => a.createdAt.compareTo(b.createdAt));
     int sentCount = 0;
@@ -279,6 +283,15 @@ class MessageQueueProvider extends ChangeNotifier {
       if (limit > 0 && sentCount >= limit) {
         break;
       }
+
+      // Update state to sending
+      final sendingIndex = _queue.indexWhere((m) => m.id == msg.id);
+      if (sendingIndex != -1) {
+        _queue[sendingIndex] =
+            _queue[sendingIndex].copyWith(state: QueueState.sending);
+        notifyListeners(); // Update UI to show "Sending..."
+      }
+
       try {
         if (msg.type == QueuedMessageType.sessionCreation) {
           Session sessionToCreate;
@@ -362,9 +375,11 @@ class MessageQueueProvider extends ChangeNotifier {
             currentErrors.add(e.toString());
           }
 
+          // Transition to failed state
           _queue[index] = _queue[index].copyWith(
             processingErrors: currentErrors,
             metadata: newMetadata,
+            state: QueueState.failed,
           );
         }
         // Stop on first error to preserve order

@@ -1701,7 +1701,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         json['title'] = (json['prompt'] as String?) ?? 'New Session (Draft)';
       }
 
-      final isDraft = m.isDraft;
+      final state = m.state;
       final isOffline = queueProvider.isOffline; // Uses provider from context
 
       // Inject Flags based on queue state
@@ -1723,14 +1723,23 @@ class _SessionListScreenState extends State<SessionListScreen> {
         } else {
           statusReason = 'Failed: $lastError';
         }
-      } else if (isDraft) {
+      } else if (state == QueueState.draft) {
         statusReason = m.queueReason ?? 'Saved as draft';
+      } else if (state == QueueState.sending) {
+        statusReason = 'Sending to server...';
+      } else if (state == QueueState.sent) {
+        statusReason = 'Sent (Waiting for sync)';
+      } else if (state == QueueState.failed) {
+        statusReason = 'Sending failed';
       } else if (isOffline) {
         // It's pending sending, but we are offline
         statusReason = 'Pending (Offline)';
+        if (state == QueueState.queued) {
+          statusReason = 'Queued (Offline)';
+        }
       } else {
-        // Pending sending, online
-        statusReason = 'Sending to server...';
+        // Pending sending, online, cached as queued?
+        statusReason = 'Queued';
       }
 
       json['currentAction'] = statusReason;
@@ -1742,8 +1751,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
         CacheMetadata(
           firstSeen: m.createdAt,
           lastRetrieved: m.createdAt,
-          labels: isDraft ? ['DRAFT_CREATION'] : ['PENDING_CREATION'],
-          hasPendingUpdates: !isDraft,
+          labels: (state == QueueState.draft)
+              ? ['DRAFT_CREATION']
+              : ['PENDING_CREATION'],
+          hasPendingUpdates: state != QueueState.draft,
         ),
       );
     }).toList();
@@ -2274,114 +2285,215 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                         child: InkWell(
                                           onTap: () async {
                                             if (session.id.startsWith(
-                                              'DRAFT_CREATION_',
-                                            )) {
+                                                'DRAFT_CREATION_')) {
                                               final realId =
-                                                  session.id.substring(
-                                                15,
-                                              ); // Length of DRAFT_CREATION_
-                                              if (!queueProvider.queue.any(
-                                                (m) => m.id == realId,
-                                              )) {
+                                                  session.id.substring(15);
+
+                                              try {
+                                                final queueItem = queueProvider
+                                                    .queue
+                                                    .firstWhere(
+                                                        (m) => m.id == realId);
+
+                                                if (queueItem.state ==
+                                                    QueueState.sending) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(const SnackBar(
+                                                          content: Text(
+                                                              'Session creation in progress...')));
+                                                  return;
+                                                }
+                                                if (queueItem.state ==
+                                                    QueueState.sent) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(const SnackBar(
+                                                          content: Text(
+                                                              'Session sent. Waiting for sync...')));
+                                                  return;
+                                                }
+                                                if (queueItem.state ==
+                                                    QueueState.queued) {
+                                                  ScaffoldMessenger.of(context)
+                                                      .showSnackBar(const SnackBar(
+                                                          content: Text(
+                                                              'Retrying send...')));
+                                                  final auth =
+                                                      Provider.of<AuthProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  queueProvider
+                                                      .sendQueue(auth.client,
+                                                          onSessionCreated:
+                                                              (newSession) {
+                                                    Provider.of<SessionProvider>(
+                                                            context,
+                                                            listen: false)
+                                                        .fetchSessions(
+                                                            auth.client,
+                                                            force: true);
+                                                  });
+                                                                                                  return;
+                                                }
+                                              } catch (_) {
                                                 return;
                                               }
 
-                                              // Reuse Logic inline
-                                              // We can't easily call _openDraft here without duplication or refactor.
-                                              // Let's implement inline for now.
                                               final result = await showDialog<
                                                   NewSessionResult>(
                                                 context: context,
                                                 builder: (context) =>
                                                     NewSessionDialog(
-                                                  initialSession: session,
-                                                  mode: SessionDialogMode.edit,
-                                                ),
+                                                        initialSession: session,
+                                                        mode: SessionDialogMode
+                                                            .edit),
                                               );
 
-                                              if (result == null) return;
-                                              if (!context.mounted) return;
+                                              if (result == null ||
+                                                  !context.mounted) {
+                                                return;
+                                              }
 
                                               if (result.isDelete) {
                                                 queueProvider
                                                     .deleteMessage(realId);
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content:
-                                                        Text("Draft deleted"),
-                                                  ),
-                                                );
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(const SnackBar(
+                                                        content: Text(
+                                                            "Draft deleted")));
                                               } else if (result.isDraft) {
-                                                // Draft Update is always single
                                                 queueProvider
                                                     .updateCreateSessionRequest(
-                                                  realId,
-                                                  result.session,
-                                                  isDraft: true,
-                                                );
-                                                ScaffoldMessenger.of(
-                                                  context,
-                                                ).showSnackBar(
-                                                  const SnackBar(
-                                                    content:
-                                                        Text("Draft updated"),
-                                                  ),
-                                                );
+                                                        realId, result.session,
+                                                        isDraft: true);
+                                                ScaffoldMessenger.of(context)
+                                                    .showSnackBar(const SnackBar(
+                                                        content: Text(
+                                                            "Draft updated")));
                                               } else {
-                                                // Send Now: Delete draft, add new request (non-draft)
                                                 queueProvider
                                                     .deleteMessage(realId);
-                                                // Add new request
                                                 queueProvider
                                                     .addCreateSessionRequest(
-                                                  result.session,
-                                                  isDraft: false,
-                                                );
-                                                // Also could call _createSession direct logic if online
-                                                // But queuing is safer/consistent.
-                                                // But if we want immediate feedback like "Creating...", we normally do that.
-                                                // But here we are in list.
-                                                // Let's try to send immediately if possible?
-                                                // Actually, just queuing as non-draft will trigger auto-send if online?
-                                                // MessageQueueProvider 'sendQueue' needs to be triggered.
-                                                // Or assume queue provider handles it?
-                                                // queueProvider.sendQueue() is usually manual or on connection.
-                                                // Let's trigger it.
-                                                final auth =
-                                                    Provider.of<AuthProvider>(
-                                                  context,
-                                                  listen: false,
-                                                );
-                                                queueProvider.sendQueue(
-                                                  auth.client,
-                                                  onSessionCreated:
-                                                      (newSession) {
-                                                    // Immediately add to provider
-                                                    Provider.of<
-                                                        SessionProvider>(
-                                                      context,
-                                                      listen: false,
-                                                    ).updateSession(
-                                                      newSession,
-                                                      authToken: auth.token,
-                                                    );
-                                                  },
-                                                );
+                                                        result.session,
+                                                        isDraft: false);
+                                                if (context.mounted) {
+                                                  final auth =
+                                                      Provider.of<AuthProvider>(
+                                                          context,
+                                                          listen: false);
+                                                  queueProvider.sendQueue(
+                                                      auth.client,
+                                                      onSessionCreated: (_) {
+                                                    Provider.of<SessionProvider>(
+                                                            context,
+                                                            listen: false)
+                                                        .fetchSessions(
+                                                            auth.client,
+                                                            force: true);
+                                                  });
+                                                                                                }
                                               }
                                               return;
                                             }
 
                                             _openSessionDetail(session);
                                           },
-                                          onLongPress: () {
-                                            _showTileMenu(
-                                              context,
-                                              session,
-                                              metadata,
-                                              isDevMode,
-                                            );
+                                          onLongPress: () async {
+                                            bool handled = false;
+                                            if (session.id.startsWith(
+                                                'DRAFT_CREATION_')) {
+                                              final realId =
+                                                  session.id.substring(15);
+                                              QueueState? itemState;
+                                              try {
+                                                final item = queueProvider.queue
+                                                    .firstWhere(
+                                                        (m) => m.id == realId);
+                                                itemState = item.state;
+                                              } catch (_) {}
+
+                                              if (itemState ==
+                                                      QueueState.queued ||
+                                                  itemState ==
+                                                      QueueState.failed) {
+                                                handled = true;
+                                                final action =
+                                                    await showModalBottomSheet<
+                                                        String>(
+                                                  context: context,
+                                                  builder: (context) => Column(
+                                                    mainAxisSize:
+                                                        MainAxisSize.min,
+                                                    children: [
+                                                      ListTile(
+                                                          leading: const Icon(
+                                                              Icons.edit),
+                                                          title: const Text(
+                                                              'Edit in New Session'),
+                                                          onTap: () =>
+                                                              Navigator.pop(
+                                                                  context,
+                                                                  'edit')),
+                                                      ListTile(
+                                                          leading: const Icon(
+                                                              Icons.delete),
+                                                          title: const Text(
+                                                              'Delete'),
+                                                          onTap: () =>
+                                                              Navigator.pop(
+                                                                  context,
+                                                                  'delete')),
+                                                    ],
+                                                  ),
+                                                );
+
+                                                if (action == 'edit' &&
+                                                    context.mounted) {
+                                                  final result = await showDialog<
+                                                          NewSessionResult>(
+                                                      context: context,
+                                                      builder: (context) =>
+                                                          NewSessionDialog(
+                                                              initialSession:
+                                                                  session,
+                                                              mode:
+                                                                  SessionDialogMode
+                                                                      .edit));
+                                                  if (result != null &&
+                                                      context.mounted) {
+                                                    if (result.isDelete) {
+                                                      queueProvider
+                                                          .deleteMessage(
+                                                              realId);
+                                                    } else if (result.isDraft) {
+                                                      queueProvider
+                                                          .updateCreateSessionRequest(
+                                                              realId,
+                                                              result.session,
+                                                              isDraft: true,
+                                                              reason:
+                                                                  "User edited queued item");
+                                                    } else {
+                                                      queueProvider
+                                                          .updateCreateSessionRequest(
+                                                              realId,
+                                                              result.session,
+                                                              isDraft: false,
+                                                              reason:
+                                                                  "User edited and re-queued");
+                                                    }
+                                                  }
+                                                } else if (action == 'delete') {
+                                                  queueProvider
+                                                      .deleteMessage(realId);
+                                                }
+                                              }
+                                            }
+
+                                            if (!handled && context.mounted) {
+                                              _showTileMenu(context, session,
+                                                  metadata, isDevMode);
+                                            }
                                           },
                                           onSecondaryTapUp: (details) {
                                             _showTileMenu(

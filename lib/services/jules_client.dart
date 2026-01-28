@@ -72,13 +72,17 @@ class JulesClient {
         http.Response response;
         try {
           if (method == 'GET') {
-            response = await _client.get(url, headers: requestHeaders);
+            response = await _client
+                .get(url, headers: requestHeaders)
+                .timeout(const Duration(seconds: 30));
           } else if (method == 'POST') {
-            response = await _client.post(
-              url,
-              headers: requestHeaders,
-              body: requestBody,
-            );
+            response = await _client
+                .post(
+                  url,
+                  headers: requestHeaders,
+                  body: requestBody,
+                )
+                .timeout(const Duration(seconds: 30));
           } else {
             throw Exception('Unsupported method: $method');
           }
