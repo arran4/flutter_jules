@@ -1287,86 +1287,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 ),
                               ] else ...[
                                 // Standard Single Selection
-                                Row(
-                                  children: [
-                                    Expanded(
-                                      flex: 3,
-                                      child: LayoutBuilder(
-                                        builder: (context, constraints) {
-                                          // Correctly capture width for overlay
-                                          _dropdownWidth = constraints.maxWidth;
-                                          return CompositedTransformTarget(
-                                            link: _sourceLayerLink,
-                                            child: TextField(
-                                              controller: _sourceController,
-                                              focusNode: _sourceFocusNode,
-                                              decoration: InputDecoration(
-                                                labelText: 'Repository',
-                                                border:
-                                                    const OutlineInputBorder(),
-                                                prefixIcon:
-                                                    (_selectedSource
-                                                            ?.githubRepo
-                                                            ?.isPrivate ==
-                                                        true)
-                                                    ? const Icon(
-                                                        Icons.lock,
-                                                        size: 16,
-                                                      )
-                                                    : const Icon(
-                                                        Icons.source,
-                                                        size: 16,
-                                                      ),
-                                                suffixIcon: IconButton(
-                                                  icon: const Icon(
-                                                    Icons.close,
-                                                    size: 16,
-                                                  ),
-                                                  onPressed: () {
-                                                    _sourceController.clear();
-                                                    _sourceFocusNode
-                                                        .requestFocus();
-                                                    _onSourceTextChanged('');
-                                                  },
-                                                ),
-                                              ),
-                                              onChanged: _onSourceTextChanged,
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                    const SizedBox(width: 16),
-                                    Expanded(
-                                      flex: 1,
-                                      child: DropdownButtonFormField<String>(
-                                        isExpanded: true,
-                                        decoration: const InputDecoration(
-                                          labelText: 'Branch',
-                                          border: OutlineInputBorder(),
-                                        ),
-                                        value: _selectedBranch,
-                                        items: branches
-                                            .map(
-                                              (b) => DropdownMenuItem(
-                                                value: b,
-                                                child: Text(
-                                                  b,
-                                                  overflow:
-                                                      TextOverflow.ellipsis,
-                                                ),
-                                              ),
-                                            )
-                                            .toList(),
-                                        onChanged: (val) {
-                                          setState(() {
-                                            _selectedBranch = val;
-                                          });
-                                        },
-                                      ),
-                                    ),
-                                  ],
-                                ),
+                                _buildSingleSourceSelectionRow(branches),
                               ],
                               const SizedBox(height: 16),
                             ],
@@ -1580,6 +1501,82 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildSingleSourceSelectionRow(List<String> branches) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              // Correctly capture width for overlay
+              _dropdownWidth = constraints.maxWidth;
+              return CompositedTransformTarget(
+                link: _sourceLayerLink,
+                child: TextField(
+                  controller: _sourceController,
+                  focusNode: _sourceFocusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Repository',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: (_selectedSource?.githubRepo?.isPrivate == true)
+                        ? const Icon(
+                            Icons.lock,
+                            size: 16,
+                          )
+                        : const Icon(
+                            Icons.source,
+                            size: 16,
+                          ),
+                    suffixIcon: IconButton(
+                      icon: const Icon(
+                        Icons.close,
+                        size: 16,
+                      ),
+                      onPressed: () {
+                        _sourceController.clear();
+                        _sourceFocusNode.requestFocus();
+                        _onSourceTextChanged('');
+                      },
+                    ),
+                  ),
+                  onChanged: _onSourceTextChanged,
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 1,
+          child: DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Branch',
+              border: OutlineInputBorder(),
+            ),
+            value: _selectedBranch,
+            items: branches
+                .map(
+                  (b) => DropdownMenuItem(
+                    value: b,
+                    child: Text(
+                      b,
+                      overflow: TextOverflow.ellipsis,
+                    ),
+                  ),
+                )
+                .toList(),
+            onChanged: (val) {
+              setState(() {
+                _selectedBranch = val;
+              });
+            },
+          ),
+        ),
+      ],
     );
   }
 }
