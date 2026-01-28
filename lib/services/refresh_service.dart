@@ -78,7 +78,7 @@ class RefreshService extends ChangeNotifier {
     // Create a copy of the list to avoid concurrent modification issues if updateSchedule modifies the list
     final schedules = List<RefreshSchedule>.from(_settingsProvider.schedules);
     for (final schedule in schedules) {
-      if (_matchesManualRun(
+      if (_matchesManualTrigger(
         schedule,
         type,
         refreshPolicy: refreshPolicy,
@@ -90,7 +90,7 @@ class RefreshService extends ChangeNotifier {
     }
   }
 
-  bool _matchesManualRun(
+  bool _matchesManualTrigger(
     RefreshSchedule schedule,
     RefreshTaskType type, {
     ListRefreshPolicy? refreshPolicy,
