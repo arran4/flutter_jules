@@ -20,13 +20,17 @@ class FakeSessionProvider extends Fake implements SessionProvider {
   List<CachedItem<Session>> get items => _items;
 
   void setItems(List<Session> sessions) {
-    _items = sessions.map((s) => CachedItem(
-      s,
-      CacheMetadata(
-        firstSeen: DateTime.now(),
-        lastRetrieved: DateTime.now(),
-      ),
-    )).toList();
+    _items = sessions
+        .map(
+          (s) => CachedItem(
+            s,
+            CacheMetadata(
+              firstSeen: DateTime.now(),
+              lastRetrieved: DateTime.now(),
+            ),
+          ),
+        )
+        .toList();
   }
 
   @override
@@ -50,8 +54,8 @@ class FakeAuthProvider extends Fake implements AuthProvider {
 class FakeGithubProvider extends Fake implements GithubProvider {}
 
 class FakeSettingsProvider extends Fake implements SettingsProvider {
-    @override
-    bool get useCorpJulesUrl => false;
+  @override
+  bool get useCorpJulesUrl => false;
 }
 
 void main() {
@@ -90,9 +94,7 @@ void main() {
     final config = BulkJobConfig(
       targetType: BulkTargetType.visible,
       sorts: [],
-      actions: [
-        BulkActionStep(type: BulkActionType.markAsRead),
-      ],
+      actions: [BulkActionStep(type: BulkActionType.markAsRead)],
     );
 
     executor.startJob(config, [session]);
@@ -102,7 +104,9 @@ void main() {
     }
 
     expect(executor.logs.length, greaterThan(0));
-    final logIndex = executor.logs.indexWhere((l) => l.undoActionType == BulkActionType.markAsUnread);
+    final logIndex = executor.logs.indexWhere(
+      (l) => l.undoActionType == BulkActionType.markAsUnread,
+    );
     expect(logIndex, isNot(-1));
     final logEntry = executor.logs[logIndex];
     expect(logEntry.isUndone, false);
@@ -111,21 +115,31 @@ void main() {
 
     expect(sessionProvider.markAsUnreadCalls, 1);
 
-    final updatedLog = executor.logs.firstWhere((l) => l.message == logEntry.message && l.timestamp == logEntry.timestamp);
+    final updatedLog = executor.logs.firstWhere(
+      (l) => l.message == logEntry.message && l.timestamp == logEntry.timestamp,
+    );
     expect(updatedLog.isUndone, true);
   });
 
   test('undoAll should undo all undoable actions', () async {
-    final session1 = Session(id: 's1', name: 'Session 1', prompt: '', state: SessionState.STATE_UNSPECIFIED);
-    final session2 = Session(id: 's2', name: 'Session 2', prompt: '', state: SessionState.STATE_UNSPECIFIED);
+    final session1 = Session(
+      id: 's1',
+      name: 'Session 1',
+      prompt: '',
+      state: SessionState.STATE_UNSPECIFIED,
+    );
+    final session2 = Session(
+      id: 's2',
+      name: 'Session 2',
+      prompt: '',
+      state: SessionState.STATE_UNSPECIFIED,
+    );
     sessionProvider.setItems([session1, session2]);
 
     final config = BulkJobConfig(
       targetType: BulkTargetType.visible,
       sorts: [],
-      actions: [
-        BulkActionStep(type: BulkActionType.markAsRead),
-      ],
+      actions: [BulkActionStep(type: BulkActionType.markAsRead)],
       waitBetween: Duration.zero,
     );
 
@@ -137,26 +151,34 @@ void main() {
 
     expect(sessionProvider.markAsReadCalls, 2);
 
-    final undoableLogs = executor.logs.where((l) => l.undoActionType != null).toList();
+    final undoableLogs = executor.logs
+        .where((l) => l.undoActionType != null)
+        .toList();
     expect(undoableLogs.length, 2);
 
     await executor.undoAll();
 
     expect(sessionProvider.markAsUnreadCalls, 2);
 
-    expect(executor.logs.where((l) => l.undoActionType != null && l.isUndone).length, 2);
+    expect(
+      executor.logs.where((l) => l.undoActionType != null && l.isUndone).length,
+      2,
+    );
   });
 
   test('undoLogEntry should do nothing if already undone', () async {
-    final session = Session(id: 's1', name: 'Session 1', prompt: '', state: SessionState.STATE_UNSPECIFIED);
+    final session = Session(
+      id: 's1',
+      name: 'Session 1',
+      prompt: '',
+      state: SessionState.STATE_UNSPECIFIED,
+    );
     sessionProvider.setItems([session]);
 
     final config = BulkJobConfig(
       targetType: BulkTargetType.visible,
       sorts: [],
-      actions: [
-        BulkActionStep(type: BulkActionType.markAsRead),
-      ],
+      actions: [BulkActionStep(type: BulkActionType.markAsRead)],
     );
 
     executor.startJob(config, [session]);
@@ -169,7 +191,9 @@ void main() {
     await executor.undoLogEntry(logEntry);
     expect(sessionProvider.markAsUnreadCalls, 1);
 
-    final updatedLog = executor.logs.firstWhere((l) => l.message == logEntry.message && l.timestamp == logEntry.timestamp);
+    final updatedLog = executor.logs.firstWhere(
+      (l) => l.message == logEntry.message && l.timestamp == logEntry.timestamp,
+    );
     expect(updatedLog.isUndone, true);
 
     await executor.undoLogEntry(updatedLog);

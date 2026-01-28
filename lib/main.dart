@@ -144,15 +144,15 @@ class _MyAppState extends State<MyApp> with WindowListener {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
           context.read<SourceProvider>().fetchSources(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
         }
       },
     );
@@ -177,7 +177,8 @@ class _MyAppState extends State<MyApp> with WindowListener {
 
     // ignore: avoid_print
     print(
-        'MyApp build: focusNode=${focusManager.focusNode.hashCode}, hasFocus=${focusManager.focusNode.hasFocus}');
+      'MyApp build: focusNode=${focusManager.focusNode.hashCode}, hasFocus=${focusManager.focusNode.hasFocus}',
+    );
 
     return Shortcuts(
       shortcuts: shortcutRegistry.shortcuts,
