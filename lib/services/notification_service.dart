@@ -52,7 +52,7 @@ class NotificationService {
 
   Future<void> init() async {
     const AndroidInitializationSettings initializationSettingsAndroid =
-        AndroidInitializationSettings('app_icon');
+        AndroidInitializationSettings('launcher_icon');
 
     final DarwinInitializationSettings initializationSettingsDarwin =
         DarwinInitializationSettings(
