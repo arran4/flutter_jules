@@ -290,7 +290,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   children: [
                     DropdownButtonFormField<RuleType>(
                       value: type,
-                      decoration: const InputDecoration(labelText: 'Event Type'),
+                      decoration:
+                          const InputDecoration(labelText: 'Event Type'),
                       items: RuleType.values.map((t) {
                         String label;
                         switch (t) {
@@ -300,9 +301,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           case RuleType.ciStatus:
                             label = 'CI Status Change';
                             break;
-                          case RuleType.sessionState:
-                            label = 'Session State Change';
-                            break;
+                          // case RuleType.sessionState:
+                          //   label = 'Session State Change';
+                          //   break;
                           case RuleType.contentUpdate:
                             label = 'Content Update (Generic)';
                             break;

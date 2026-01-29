@@ -1,7 +1,7 @@
 enum RuleType {
   prStatus,
   ciStatus,
-  sessionState,
+  // sessionState, // Disabled for now, as session state changes are always unread
   contentUpdate, // Generic update (comment, commit, etc)
 }
 
@@ -83,9 +83,9 @@ class UnreadRule {
       case RuleType.ciStatus:
         typeStr = "CI Status";
         break;
-      case RuleType.sessionState:
-        typeStr = "Session State";
-        break;
+      // case RuleType.sessionState:
+      //   typeStr = "Session State";
+      //   break;
       case RuleType.contentUpdate:
         typeStr = "Content Update";
         break;

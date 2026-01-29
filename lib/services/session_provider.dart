@@ -487,8 +487,7 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress =
-        (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -524,16 +523,16 @@ class SessionProvider extends ChangeNotifier {
             }
           }
           break;
-        case RuleType.sessionState:
-          final oldState = oldSession.state.toString().split('.').last;
-          final newState = newSession.state.toString().split('.').last;
-          if (oldState != newState) {
-            matched = _matchesTransition(rule, oldState, newState);
-            if (matched) {
-              ruleReason = "State changed from $oldState to $newState";
-            }
-          }
-          break;
+        // case RuleType.sessionState:
+        //   final oldState = oldSession.state.toString().split('.').last;
+        //   final newState = newSession.state.toString().split('.').last;
+        //   if (oldState != newState) {
+        //     matched = _matchesTransition(rule, oldState, newState);
+        //     if (matched) {
+        //       ruleReason = "State changed from $oldState to $newState";
+        //     }
+        //   }
+        //   break;
         case RuleType.contentUpdate:
           if (oldSession.updateTime != newSession.updateTime) {
             matched = true;
@@ -1038,28 +1037,28 @@ class SessionProvider extends ChangeNotifier {
       patchUrl: prResponse?.patchUrl,
     );
 
-          final evaluation = _evaluateUpdateRules(session, updatedSession);
+    final evaluation = _evaluateUpdateRules(session, updatedSession);
     var metadata = _items[index].metadata;
 
-          DateTime? lastUpdated = metadata.lastUpdated;
-          DateTime? lastOpened = metadata.lastOpened;
-          String? reasonForLastUnread = metadata.reasonForLastUnread;
+    DateTime? lastUpdated = metadata.lastUpdated;
+    DateTime? lastOpened = metadata.lastOpened;
+    String? reasonForLastUnread = metadata.reasonForLastUnread;
 
-          if (evaluation.shouldMarkUnread) {
-            lastUpdated = DateTime.now();
-            if (evaluation.reason != null) {
-              reasonForLastUnread = evaluation.reason;
-            }
-          }
-          if (evaluation.shouldMarkRead) {
-            lastOpened = DateTime.now();
+    if (evaluation.shouldMarkUnread) {
+      lastUpdated = DateTime.now();
+      if (evaluation.reason != null) {
+        reasonForLastUnread = evaluation.reason;
+      }
+    }
+    if (evaluation.shouldMarkRead) {
+      lastOpened = DateTime.now();
     }
 
-          metadata = metadata.copyWith(
-            lastUpdated: lastUpdated,
-            lastOpened: lastOpened,
-            reasonForLastUnread: reasonForLastUnread,
-          );
+    metadata = metadata.copyWith(
+      lastUpdated: lastUpdated,
+      lastOpened: lastOpened,
+      reasonForLastUnread: reasonForLastUnread,
+    );
 
     final newItem = CachedItem(updatedSession, metadata);
 
