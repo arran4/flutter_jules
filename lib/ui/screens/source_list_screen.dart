@@ -511,10 +511,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
         child: Text(
           'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
           style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                color: DateTime.now().difference(lastFetchTime).inMinutes > 30
-                    ? Colors.orange
-                    : null,
-              ),
+            color: DateTime.now().difference(lastFetchTime).inMinutes > 30
+                ? Colors.orange
+                : null,
+          ),
         ),
       ),
     );
@@ -534,7 +534,9 @@ class _SourceListScreenState extends State<SourceListScreen> {
               child: Padding(
                 padding: const EdgeInsets.all(20.0),
                 child: Text(
-                  sources.isEmpty ? 'No repositories found.' : 'No matches found.',
+                  sources.isEmpty
+                      ? 'No repositories found.'
+                      : 'No matches found.',
                 ),
               ),
             ),
