@@ -41,7 +41,8 @@ class QueuedMessage {
       )!,
       metadata: json['metadata'] as Map<String, dynamic>?,
       queueReason: getStringPropOrDefault(json, 'queueReason', null),
-      processingErrors: (json['processingErrors'] as List<dynamic>?)
+      processingErrors:
+          (json['processingErrors'] as List<dynamic>?)
               ?.map((e) => e.toString())
               .toList() ??
           [],

@@ -113,7 +113,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -387,7 +388,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext!
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -408,8 +412,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources =
-          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
     }
     _sortSources(allSources);
 
@@ -436,74 +441,222 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     }
   }
 
+  bool _shouldHandleSourceOverlay(int totalCount) {
+    return _sourceOverlayEntry != null && totalCount > 0;
+  }
+
+  bool _isArrowKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.arrowDown ||
+        key == LogicalKeyboardKey.arrowUp;
+  }
+
+  bool _isSubmitKey(LogicalKeyboardKey key) {
+    return key == LogicalKeyboardKey.enter || key == LogicalKeyboardKey.tab;
+  }
+
+  KeyEventResult _handleArrowKey(LogicalKeyboardKey key, int totalCount) {
+    setState(() {
+      if (key == LogicalKeyboardKey.arrowDown) {
+        _highlightedSourceIndex = (_highlightedSourceIndex + 1) % totalCount;
+      } else {
+        _highlightedSourceIndex =
+            (_highlightedSourceIndex - 1 + totalCount) % totalCount;
+      }
+      _showSourceOverlay();
+    });
+    return KeyEventResult.handled;
+  }
+
+  KeyEventResult _handleSubmitKey() {
+    if (_highlightedSourceIndex < _filteredGroups.length) {
+      _selectGroup(_filteredGroups[_highlightedSourceIndex]);
+    } else {
+      final sourceIndex = _highlightedSourceIndex - _filteredGroups.length;
+      if (sourceIndex < _filteredSources.length) {
+        _selectSource(_filteredSources[sourceIndex]);
+      }
+    }
+    return KeyEventResult.handled;
+  }
+
+  _SourceFetchDependencies _sourceFetchDependencies() {
+    return _SourceFetchDependencies(
+      auth: Provider.of<AuthProvider>(context, listen: false),
+      sourceProvider: Provider.of<SourceProvider>(context, listen: false),
+      sessionProvider: Provider.of<SessionProvider>(context, listen: false),
+      githubProvider: Provider.of<GithubProvider>(context, listen: false),
+    );
+  }
+
+  void _startRefresh() {
+    setState(() {
+      _isRefreshing = true;
+      _refreshStatus = 'Refreshing...';
+    });
+  }
+
+  Future<void> _fetchSourcesFromProvider(
+    _SourceFetchDependencies deps, {
+    required bool force,
+  }) async {
+    if (!force && deps.sourceProvider.items.isNotEmpty) {
+      return;
+    }
+
+    await deps.sourceProvider.fetchSources(
+      deps.auth.client,
+      authToken: deps.auth.token,
+      force: force,
+      githubProvider: deps.githubProvider,
+      sessionProvider: deps.sessionProvider,
+      onProgress: (total) {
+        if (mounted) {
+          setState(() {
+            _refreshStatus = 'Loaded $total sources...';
+          });
+        }
+      },
+    );
+  }
+
+  void _applyLoadedSources(
+    SourceProvider sourceProvider, {
+    required bool force,
+  }) {
+    final settingsProvider = Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    );
+    var sources = sourceProvider.items.map((i) => i.data).toList();
+    if (settingsProvider.hideArchivedAndReadOnly) {
+      sources = sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+    }
+    _initializeSelection(sources);
+    if (force) {
+      setState(() {
+        _refreshStatus = 'Updated just now';
+      });
+    }
+  }
+
+  void _handleSourceFetchError(Object error) {
+    if (!mounted) return;
+    setState(() {
+      _refreshStatus = 'Error: ${error.toString().substring(0, 30)}...';
+    });
+  }
+
+  Future<void> _finalizeRefreshState(
+    SourceProvider sourceProvider, {
+    required bool force,
+  }) async {
+    if (!mounted) return;
+    if (force) {
+      setState(() {
+        _isRefreshing = false;
+      });
+      await _resetRefreshStatusAfterDelay(sourceProvider);
+    } else {
+      _updateRefreshStatusFromLastFetch(sourceProvider);
+    }
+  }
+
+  Future<void> _resetRefreshStatusAfterDelay(
+    SourceProvider sourceProvider,
+  ) async {
+    // Reset status after a few seconds
+    await Future.delayed(const Duration(seconds: 5));
+    if (!mounted || _isRefreshing) return;
+    _updateRefreshStatusFromLastFetch(sourceProvider);
+  }
+
+  void _updateRefreshStatusFromLastFetch(SourceProvider sourceProvider) {
+    final lastFetchTime = sourceProvider.lastFetchTime;
+    setState(() {
+      _refreshStatus = lastFetchTime != null
+          ? 'Last updated: ${DateFormat.Hms().format(lastFetchTime)}'
+          : '';
+    });
+  }
+
+  void _restoreModeFromSession() {
+    if (widget.initialSession == null) return;
+    _promptController.text = widget.initialSession!.prompt;
+    final mode =
+        widget.initialSession!.automationMode ??
+        AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
+    final requireApproval = widget.initialSession!.requirePlanApproval ?? false;
+
+    // This logic will now correctly override the preference-loaded value.
+    if (mode == AutomationMode.AUTO_CREATE_PR) {
+      setState(() {
+        _selectedModeIndex = 2; // Start
+        _autoCreatePr = true;
+      });
+    } else if (requireApproval) {
+      setState(() {
+        _selectedModeIndex = 1; // Plan
+      });
+    }
+  }
+
+  void _handleModeSelection(int index) {
+    setState(() {
+      _selectedModeIndex = index;
+    });
+  }
+
+  void _handleAutoCreatePrChanged(bool value) {
+    setState(() {
+      _autoCreatePr = value;
+    });
+  }
+
+  void _handleBulkBranchChanged(int index, String branch) {
+    setState(() {
+      _bulkSelections[index].branch = branch;
+    });
+  }
+
+  void _handleBulkRemove(int index) {
+    setState(() {
+      _bulkSelections.removeAt(index);
+      if (_bulkSelections.length <= 1) {
+        if (_bulkSelections.isNotEmpty) {
+          _selectSource(_bulkSelections.first.source);
+        } else {
+          _selectedSource = null;
+          _sourceController.clear();
+        }
+        _bulkSelections = [];
+      }
+    });
+  }
+
+  void _handleClearSourceField() {
+    _sourceController.clear();
+    _sourceFocusNode.requestFocus();
+    _onSourceTextChanged('');
+  }
+
+  void _updateDropdownWidth(double width) {
+    _dropdownWidth = width;
+  }
+
+  void _handleBranchSelection(String? branch) {
+    setState(() {
+      _selectedBranch = branch;
+    });
+  }
+
+  // Overlay management helpers.
   void _showSourceOverlay() {
     if (_sourceOverlayEntry != null) {
       _sourceOverlayEntry!.markNeedsBuild();
       return;
     }
 
-    _sourceOverlayEntry = OverlayEntry(
-      builder: (context) {
-        return Positioned(
-          width: _dropdownWidth ?? 300,
-          child: CompositedTransformFollower(
-            link: _sourceLayerLink,
-            showWhenUnlinked: false,
-            offset: const Offset(0.0, 60.0), // Approximate height
-            child: Material(
-              elevation: 4.0,
-              color: Theme.of(context).cardColor,
-              child: ConstrainedBox(
-                constraints: const BoxConstraints(maxHeight: 250),
-                child: ListView.builder(
-                  padding: EdgeInsets.zero,
-                  shrinkWrap: true,
-                  itemCount: _filteredGroups.length + _filteredSources.length,
-                  itemBuilder: (context, index) {
-                    final isHighlighted = index == _highlightedSourceIndex;
-                    if (index < _filteredGroups.length) {
-                      final group = _filteredGroups[index];
-                      return Container(
-                        color: isHighlighted
-                            ? Theme.of(context).highlightColor
-                            : null,
-                        child: ListTile(
-                          dense: true,
-                          leading: const Icon(Icons.group, size: 16),
-                          title: Text(group.name),
-                          subtitle: Text(
-                            '${group.sourceNames.length} repositories',
-                          ),
-                          onTap: () => _selectGroup(group),
-                        ),
-                      );
-                    } else {
-                      final source =
-                          _filteredSources[index - _filteredGroups.length];
-                      final isPrivate = source.githubRepo?.isPrivate ?? false;
-
-                      return Container(
-                        color: isHighlighted
-                            ? Theme.of(context).highlightColor
-                            : null,
-                        child: ListTile(
-                          dense: true,
-                          leading: isPrivate
-                              ? const Icon(Icons.lock, size: 16)
-                              : null,
-                          title: Text(_getSourceDisplayLabel(source)),
-                          onTap: () => _selectSource(source),
-                        ),
-                      );
-                    }
-                  },
-                ),
-              ),
-            ),
-          ),
-        );
-      },
-    );
+    _sourceOverlayEntry = OverlayEntry(builder: _buildSourceOverlay);
 
     // Insert into overlay
     Overlay.of(context).insert(_sourceOverlayEntry!);
@@ -529,8 +682,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map group members to Source objects
-    final sources =
-        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+    final sources = allSources
+        .where((s) => group.sourceNames.contains(s.name))
+        .toList();
 
     setState(() {
       _bulkSelections = sources
@@ -591,8 +745,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
     // Convert existing BulkSelection to simple Source list for the dialog
-    List<Source> initialSelection =
-        _bulkSelections.map((bs) => bs.source).toList();
+    List<Source> initialSelection = _bulkSelections
+        .map((bs) => bs.source)
+        .toList();
     if (initialSelection.isEmpty && _selectedSource != null) {
       initialSelection.add(_selectedSource!);
     }
@@ -910,8 +1065,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
 
         // Sort sources
@@ -1031,17 +1187,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       Consumer<MessageQueueProvider>(
                                         builder: (context, queueProvider, _) {
                                           try {
-                                            final errorMsg =
-                                                queueProvider.queue.firstWhere(
-                                              (m) =>
-                                                  m.type ==
-                                                      QueuedMessageType
-                                                          .sessionCreation &&
-                                                  m.content ==
-                                                      widget.initialSession!
-                                                          .prompt &&
-                                                  m.processingErrors.isNotEmpty,
-                                            );
+                                            final errorMsg = queueProvider.queue
+                                                .firstWhere(
+                                                  (m) =>
+                                                      m.type ==
+                                                          QueuedMessageType
+                                                              .sessionCreation &&
+                                                      m.content ==
+                                                          widget
+                                                              .initialSession!
+                                                              .prompt &&
+                                                      m
+                                                          .processingErrors
+                                                          .isNotEmpty,
+                                                );
 
                                             return Padding(
                                               padding: const EdgeInsets.only(
@@ -1050,21 +1209,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children:
-                                                    errorMsg.processingErrors
-                                                        .map<Widget>(
-                                                          (e) => Text(
-                                                            "• $e",
-                                                            style: TextStyle(
-                                                              color: Colors
-                                                                  .red.shade900,
-                                                              fontSize: 11,
-                                                              fontFamily:
-                                                                  'monospace',
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
+                                                children: errorMsg
+                                                    .processingErrors
+                                                    .map<Widget>(
+                                                      (e) => Text(
+                                                        "• $e",
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .red
+                                                              .shade900,
+                                                          fontSize: 11,
+                                                          fontFamily:
+                                                              'monospace',
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
                                               ),
                                             );
                                           } catch (_) {
@@ -1113,55 +1273,25 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                               ],
 
                               // Context (Source & Branch)
-                              Row(
-                                mainAxisAlignment:
-                                    MainAxisAlignment.spaceBetween,
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  const Text(
-                                    'Context',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                    ),
-                                  ),
-                                  Row(
-                                    children: [
-                                      // Multi Button
-                                      IconButton(
-                                        icon: const Icon(Icons.library_add),
-                                        tooltip: 'Select Multiple Repositories',
-                                        onPressed: () =>
-                                            _showBulkDialog(sources),
-                                      ),
-                                      TextButton.icon(
-                                        style: TextButton.styleFrom(
-                                          textStyle: const TextStyle(
-                                            fontSize: 12,
-                                          ),
-                                          tapTargetSize:
-                                              MaterialTapTargetSize.shrinkWrap,
-                                        ),
-                                        onPressed: _isRefreshing
-                                            ? null
-                                            : () => _fetchSources(force: true),
-                                        icon: _isRefreshing
-                                            ? const SizedBox(
-                                                width: 16,
-                                                height: 16,
-                                                child:
-                                                    CircularProgressIndicator(
-                                                  strokeWidth: 2,
-                                                ),
-                                              )
-                                            : const Icon(
-                                                Icons.refresh,
-                                                size: 20,
-                                              ),
-                                        label: Text(_refreshStatus),
-                                      ),
-                                    ],
-                                  ),
-                                ],
+                              _SourceSelectorSection(
+                                isRefreshing: _isRefreshing,
+                                refreshStatus: _refreshStatus,
+                                bulkSelections: _bulkSelections,
+                                selectedSource: _selectedSource,
+                                selectedBranch: _selectedBranch,
+                                branches: branches,
+                                sourceController: _sourceController,
+                                sourceFocusNode: _sourceFocusNode,
+                                sourceLayerLink: _sourceLayerLink,
+                                onOpenBulkDialog: () =>
+                                    _showBulkDialog(sources),
+                                onRefresh: () => _fetchSources(force: true),
+                                onBulkBranchChanged: _handleBulkBranchChanged,
+                                onBulkRemove: _handleBulkRemove,
+                                onSourceTextChanged: _onSourceTextChanged,
+                                onClearSource: _handleClearSourceField,
+                                onDropdownWidthChange: _updateDropdownWidth,
+                                onBranchChanged: _handleBranchSelection,
                               ),
                               const SizedBox(height: 8),
 
@@ -1399,7 +1529,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             'Describe what you want to do...',
                                         border: const OutlineInputBorder(),
                                         alignLabelWithHint: true,
-                                        suffixIcon: (widget.mode ==
+                                        suffixIcon:
+                                            (widget.mode ==
                                                     SessionDialogMode.edit ||
                                                 widget.mode ==
                                                     SessionDialogMode
@@ -1416,7 +1547,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                     return;
                                                   }
                                                   final originalPrompt = widget
-                                                      .initialSession!.prompt;
+                                                      .initialSession!
+                                                      .prompt;
                                                   final currentText =
                                                       _promptController.text;
 
@@ -1432,13 +1564,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                         originalPrompt;
                                                   }
                                                   _promptController.selection =
-                                                      TextSelection
-                                                          .fromPosition(
-                                                    TextPosition(
-                                                      offset: _promptController
-                                                          .text.length,
-                                                    ),
-                                                  );
+                                                      TextSelection.fromPosition(
+                                                        TextPosition(
+                                                          offset:
+                                                              _promptController
+                                                                  .text
+                                                                  .length,
+                                                        ),
+                                                      );
                                                 },
                                               )
                                             : null,
@@ -1556,6 +1689,272 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
           ),
         ),
       ),
+    );
+  }
+}
+
+class _SourceSelectorSection extends StatelessWidget {
+  final bool isRefreshing;
+  final String refreshStatus;
+  final List<BulkSelection> bulkSelections;
+  final Source? selectedSource;
+  final String? selectedBranch;
+  final List<String> branches;
+  final TextEditingController sourceController;
+  final FocusNode sourceFocusNode;
+  final LayerLink sourceLayerLink;
+  final VoidCallback onOpenBulkDialog;
+  final VoidCallback onRefresh;
+  final void Function(int index, String branch) onBulkBranchChanged;
+  final void Function(int index) onBulkRemove;
+  final ValueChanged<String> onSourceTextChanged;
+  final VoidCallback onClearSource;
+  final ValueChanged<double> onDropdownWidthChange;
+  final ValueChanged<String?> onBranchChanged;
+
+  const _SourceSelectorSection({
+    required this.isRefreshing,
+    required this.refreshStatus,
+    required this.bulkSelections,
+    required this.selectedSource,
+    required this.selectedBranch,
+    required this.branches,
+    required this.sourceController,
+    required this.sourceFocusNode,
+    required this.sourceLayerLink,
+    required this.onOpenBulkDialog,
+    required this.onRefresh,
+    required this.onBulkBranchChanged,
+    required this.onBulkRemove,
+    required this.onSourceTextChanged,
+    required this.onClearSource,
+    required this.onDropdownWidthChange,
+    required this.onBranchChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+          crossAxisAlignment: CrossAxisAlignment.center,
+          children: [
+            const Text(
+              'Context',
+              style: TextStyle(fontWeight: FontWeight.bold),
+            ),
+            Row(
+              children: [
+                IconButton(
+                  icon: const Icon(Icons.library_add),
+                  tooltip: 'Select Multiple Repositories',
+                  onPressed: onOpenBulkDialog,
+                ),
+                TextButton.icon(
+                  style: TextButton.styleFrom(
+                    textStyle: const TextStyle(fontSize: 12),
+                    tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                  ),
+                  onPressed: isRefreshing ? null : onRefresh,
+                  icon: isRefreshing
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: CircularProgressIndicator(strokeWidth: 2),
+                        )
+                      : const Icon(Icons.refresh, size: 20),
+                  label: Text(refreshStatus),
+                ),
+              ],
+            ),
+          ],
+        ),
+        const SizedBox(height: 8),
+        if (bulkSelections.length > 1) ...[
+          _BulkSelectionPanel(
+            selections: bulkSelections,
+            onBranchChanged: onBulkBranchChanged,
+            onRemove: onBulkRemove,
+          ),
+        ] else ...[
+          _SingleSourceSelector(
+            sourceController: sourceController,
+            sourceFocusNode: sourceFocusNode,
+            sourceLayerLink: sourceLayerLink,
+            selectedSource: selectedSource,
+            selectedBranch: selectedBranch,
+            branches: branches,
+            onSourceTextChanged: onSourceTextChanged,
+            onClearSource: onClearSource,
+            onDropdownWidthChange: onDropdownWidthChange,
+            onBranchChanged: onBranchChanged,
+          ),
+        ],
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+}
+
+class _BulkSelectionPanel extends StatelessWidget {
+  final List<BulkSelection> selections;
+  final void Function(int index, String branch) onBranchChanged;
+  final void Function(int index) onRemove;
+
+  const _BulkSelectionPanel({
+    required this.selections,
+    required this.onBranchChanged,
+    required this.onRemove,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      height: 150,
+      child: ListView.builder(
+        itemCount: selections.length,
+        itemBuilder: (context, index) {
+          final selection = selections[index];
+          final source = selection.source;
+          final repo = source.githubRepo;
+          List<String> branches =
+              repo?.branches?.map((b) => b.displayName).toList() ?? [];
+          if (!branches.contains(selection.branch)) {
+            branches.add(selection.branch);
+          }
+          if (branches.isEmpty) {
+            branches.add('main');
+          }
+
+          return ListTile(
+            dense: true,
+            leading: (repo?.isPrivate == true)
+                ? const Icon(Icons.lock, size: 16)
+                : null,
+            title: Text(
+              source.githubRepo != null
+                  ? '${source.githubRepo!.owner}/${source.githubRepo!.repo}'
+                  : source.name,
+            ),
+            subtitle: Row(
+              children: [
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    isExpanded: true,
+                    decoration: const InputDecoration(
+                      labelText: 'Branch',
+                      border: OutlineInputBorder(),
+                    ),
+                    value: selection.branch,
+                    items: branches
+                        .map(
+                          (b) => DropdownMenuItem(
+                            value: b,
+                            child: Text(b, overflow: TextOverflow.ellipsis),
+                          ),
+                        )
+                        .toList(),
+                    onChanged: (val) {
+                      if (val != null) {
+                        onBranchChanged(index, val);
+                      }
+                    },
+                  ),
+                ),
+                const SizedBox(width: 8),
+                IconButton(
+                  icon: const Icon(Icons.close, size: 16),
+                  onPressed: () => onRemove(index),
+                ),
+              ],
+            ),
+          );
+        },
+      ),
+    );
+  }
+}
+
+class _SingleSourceSelector extends StatelessWidget {
+  final TextEditingController sourceController;
+  final FocusNode sourceFocusNode;
+  final LayerLink sourceLayerLink;
+  final Source? selectedSource;
+  final String? selectedBranch;
+  final List<String> branches;
+  final ValueChanged<String> onSourceTextChanged;
+  final VoidCallback onClearSource;
+  final ValueChanged<double> onDropdownWidthChange;
+  final ValueChanged<String?> onBranchChanged;
+
+  const _SingleSourceSelector({
+    required this.sourceController,
+    required this.sourceFocusNode,
+    required this.sourceLayerLink,
+    required this.selectedSource,
+    required this.selectedBranch,
+    required this.branches,
+    required this.onSourceTextChanged,
+    required this.onClearSource,
+    required this.onDropdownWidthChange,
+    required this.onBranchChanged,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: LayoutBuilder(
+            builder: (context, constraints) {
+              onDropdownWidthChange(constraints.maxWidth);
+              return CompositedTransformTarget(
+                link: sourceLayerLink,
+                child: TextField(
+                  controller: sourceController,
+                  focusNode: sourceFocusNode,
+                  decoration: InputDecoration(
+                    labelText: 'Repository',
+                    border: const OutlineInputBorder(),
+                    prefixIcon: (selectedSource?.githubRepo?.isPrivate == true)
+                        ? const Icon(Icons.lock, size: 16)
+                        : const Icon(Icons.source, size: 16),
+                    suffixIcon: IconButton(
+                      icon: const Icon(Icons.close, size: 16),
+                      onPressed: onClearSource,
+                    ),
+                  ),
+                  onChanged: onSourceTextChanged,
+                ),
+              );
+            },
+          ),
+        ),
+        const SizedBox(width: 16),
+        Expanded(
+          flex: 1,
+          child: DropdownButtonFormField<String>(
+            isExpanded: true,
+            decoration: const InputDecoration(
+              labelText: 'Branch',
+              border: OutlineInputBorder(),
+            ),
+            value: selectedBranch,
+            items: branches
+                .map(
+                  (b) => DropdownMenuItem(
+                    value: b,
+                    child: Text(b, overflow: TextOverflow.ellipsis),
+                  ),
+                )
+                .toList(),
+            onChanged: onBranchChanged,
+          ),
+        ),
+      ],
     );
   }
 }

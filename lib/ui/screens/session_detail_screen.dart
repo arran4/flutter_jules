@@ -500,8 +500,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique =
-                _activities.where((a) => !newIds.contains(a.id)).toList();
+            final oldUnique = _activities
+                .where((a) => !newIds.contains(a.id))
+                .toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -738,8 +739,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           message,
           reason: 'resource_not_found',
           processingErrors: [e.message],
-          metadata:
-              e.responseBody != null ? {'responseBody': e.responseBody} : null,
+          metadata: e.responseBody != null
+              ? {'responseBody': e.responseBody}
+              : null,
         );
         handled = true;
       }
@@ -932,14 +934,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           (_session.note?.content.isEmpty ?? true)
               ? Icons.note_add_outlined
               : _isNoteVisible
-                  ? Icons.speaker_notes_off_outlined
-                  : Icons.speaker_notes_outlined,
+              ? Icons.speaker_notes_off_outlined
+              : Icons.speaker_notes_outlined,
         ),
         tooltip: (_session.note?.content.isEmpty ?? true)
             ? 'Add Note'
             : _isNoteVisible
-                ? 'Hide Note'
-                : 'View Note',
+            ? 'Hide Note'
+            : 'View Note',
         onPressed: _toggleNoteVisibility,
       ),
       IconButton(
@@ -975,10 +977,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         onPressed: () {
           showDialog(
             context: context,
-            builder: (context) => CombinedDataViewer(
-              session: _session,
-              activities: _activities,
-            ),
+            builder: (context) =>
+                CombinedDataViewer(session: _session, activities: _activities),
           );
         },
       ),
@@ -1012,18 +1012,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             icon: const Icon(Icons.wifi_off),
             tooltip: 'Go Online',
             onPressed: () async {
-              final auth = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
+              final auth = Provider.of<AuthProvider>(context, listen: false);
               final online = await queueProvider.goOnline(auth.client);
               if (!context.mounted) return;
               if (online) {
                 _fetchActivities(force: true);
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Still offline")),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text("Still offline")));
               }
             },
           );
@@ -1038,8 +1035,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               : const Icon(Icons.refresh),
           // Disable/Gray out while "busy" (min 2s or until completion)
           // Also blockout if any other network op is running
-          onPressed:
-              (_isRefreshDisabled || _busyCount > 0) ? null : _handleRefresh,
+          onPressed: (_isRefreshDisabled || _busyCount > 0)
+              ? null
+              : _handleRefresh,
           tooltip: 'Refresh',
         );
       },
@@ -1053,10 +1051,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           context,
           listen: false,
         );
-        final authProvider = Provider.of<AuthProvider>(
-          context,
-          listen: false,
-        );
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final messageQueueProvider = Provider.of<MessageQueueProvider>(
           context,
           listen: false,
@@ -1082,10 +1077,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ?.pullRequest;
           if (pr != null) launchUrl(Uri.parse(pr.url));
           if (context.mounted) {
-            Navigator.pop(
-              context,
-              const SessionDetailResult(markAsRead: true),
-            );
+            Navigator.pop(context, const SessionDetailResult(markAsRead: true));
           }
         } else if (value == 'copy_pr_url') {
           final pr = _session.outputs
@@ -1094,9 +1086,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (pr != null) {
             await Clipboard.setData(ClipboardData(text: pr.url));
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PR URL copied')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('PR URL copied')));
             }
           }
         } else if (value == 'full_refresh') {
@@ -1104,9 +1096,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         } else if (value == 'copy_id') {
           await Clipboard.setData(ClipboardData(text: _session.id));
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Session ID copied')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Session ID copied')));
           }
         } else if (value == 'open_browser') {
           if (_session.url != null) launchUrl(Uri.parse(_session.url!));
@@ -1127,10 +1119,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (_session.url != null) {
             if (await launchUrl(Uri.parse(_session.url!))) {
               if (context.mounted) {
-                await sessionProvider.markAsRead(
-                  _session.id,
-                  auth.token!,
-                );
+                await sessionProvider.markAsRead(_session.id, auth.token!);
                 if (context.mounted) {
                   Navigator.pop(context);
                 }
@@ -1165,15 +1154,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           );
           final isWatched = item?.metadata.isWatched ?? false;
           if (isWatched) {
-            await sessionProvider.unwatchSession(
-              _session.id,
-              auth.token!,
-            );
+            await sessionProvider.unwatchSession(_session.id, auth.token!);
           } else {
-            await sessionProvider.watchSession(
-              _session.id,
-              auth.token!,
-            );
+            await sessionProvider.watchSession(_session.id, auth.token!);
           }
         } else if (value == 'approve_plan') {
           _approvePlan();
@@ -1361,8 +1344,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   (_session.note?.content.isEmpty ?? true)
                       ? Icons.note_add_outlined
                       : (_isNoteVisible
-                          ? Icons.speaker_notes_off_outlined
-                          : Icons.speaker_notes_outlined),
+                            ? Icons.speaker_notes_off_outlined
+                            : Icons.speaker_notes_outlined),
                   color: Colors.grey,
                 ),
                 const SizedBox(width: 8),
@@ -1475,7 +1458,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     final bool showJulesNotice =
@@ -1487,8 +1471,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages =
-        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+    final queuedMessages = queueProvider.queue
+        .where((m) => m.sessionId == _session.id)
+        .toList();
 
     // Merge pending messages (Optimistic updates)
     final sessionProvider = Provider.of<SessionProvider>(context);
@@ -1582,7 +1567,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: finalItems.length +
+      itemCount:
+          finalItems.length +
           (hasPr ? 2 : 0) +
           (showJulesNotice ? 2 : 0) +
           1, // +1 for Last Updated Status
@@ -1599,11 +1585,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            DateTime.now().difference(updateTime).inMinutes > 15
-                                ? Colors.orange
-                                : Colors.grey,
-                      ),
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
+                  ),
                 ),
               ),
             );
@@ -1711,7 +1696,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal = activity.id.startsWith('pending-') ||
+          final isLocal =
+              activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -2350,46 +2336,103 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         child: SelectionArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Start with Pills (State, Date, Automation, Approval, Source, Branch)
-                    // Start with Pills (State, Date, Automation, Approval, PR Status, Source, Branch)
-                    SessionMetaPills(session: _session),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Prompt:",
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 4),
-                    _PromptExpander(
-                      prompt: _session.prompt,
-                      isExpanded: _isPromptExpanded,
-                      onToggle: () {
-                        setState(() {
-                          _isPromptExpanded = !_isPromptExpanded;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildNotesSection(),
-                  ],
-                ),
-              ),
-              const Divider(),
-            ],
+            children: [_buildHeaderContent(context), const Divider()],
           ),
         ),
       ),
     );
   }
 
+  KeyEventResult _handleMessageKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      return _handleEscapeAction(settings);
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      return _handleEnterAction(settings, isShiftPressed, isControlPressed);
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleEscapeAction(SettingsProvider settings) {
+    final action = settings.escKeyAction;
+    switch (action) {
+      case EscKeyAction.savesDraftAndGoesBack:
+        if (_messageController.text.trim().isNotEmpty) {
+          Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          ).saveDraft(_session.id, _messageController.text);
+        }
+        Navigator.pop(context);
+        return KeyEventResult.handled;
+      case EscKeyAction.goesBack:
+        Navigator.pop(context);
+        return KeyEventResult.handled;
+      case EscKeyAction.doesNothing:
+        return KeyEventResult.handled;
+    }
+  }
+
+  KeyEventResult _handleEnterAction(
+    SettingsProvider settings,
+    bool isShiftPressed,
+    bool isControlPressed,
+  ) {
+    MessageSubmitAction action;
+    if (isControlPressed && isShiftPressed) {
+      action = settings.ctrlShiftEnterKeyAction;
+    } else if (isControlPressed) {
+      action = settings.ctrlEnterKeyAction;
+    } else if (isShiftPressed) {
+      action = settings.shiftEnterKeyAction;
+    } else {
+      action = settings.enterKeyAction;
+    }
+
+    // Common logic based on the action's enum index, since they all share the same structure.
+    switch (action) {
+      case MessageSubmitAction.addNewLine:
+        return KeyEventResult.ignored;
+      case MessageSubmitAction.submitsMessage:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.submitsMessageAndGoesBack:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+          // Don't await, let it send in the background while we navigate away.
+          Navigator.pop(context);
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.submitsMessageMarksReadAndOpensNext:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+          Navigator.pop(
+            context,
+            const SessionDetailResult(markAsRead: true, openNextSession: true),
+          );
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.doesNothing:
+        return KeyEventResult.handled;
+    }
+  }
+
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(
@@ -2518,6 +2561,150 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     );
   }
 
+  Widget _buildHeaderContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMetadataSection(),
+          const SizedBox(height: 12),
+          _buildPromptSection(context),
+          const SizedBox(height: 16),
+          _buildNotesSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataSection() {
+    // Start with Pills (State, Date, Automation, Approval, PR Status, Source, Branch)
+    return SessionMetaPills(session: _session);
+  }
+
+  Widget _buildPromptSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text("Prompt:", style: Theme.of(context).textTheme.labelLarge),
+        const SizedBox(height: 4),
+        _PromptExpander(
+          prompt: _session.prompt,
+          isExpanded: _isPromptExpanded,
+          onToggle: () {
+            setState(() {
+              _isPromptExpanded = !_isPromptExpanded;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotesSection() {
+    if (!_isNoteVisible) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildNotesHeader(),
+              const SizedBox(height: 8),
+              _buildNotesBody(),
+              if (!_isNoteEditing && _session.note != null) ...[
+                const SizedBox(height: 8),
+                _buildNotesFooter(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesHeader() {
+    return Row(
+      children: [
+        Text("Notes", style: Theme.of(context).textTheme.titleMedium),
+        const Spacer(),
+        if (_isNoteEditing)
+          TextButton.icon(
+            icon: const Icon(Icons.done, size: 16),
+            label: const Text('Done'),
+            onPressed: () {
+              _updateNote(_noteController.text);
+              setState(() {
+                _isNoteEditing = false;
+              });
+            },
+          )
+        else
+          TextButton.icon(
+            icon: const Icon(Icons.edit, size: 16),
+            label: const Text('Edit'),
+            onPressed: () {
+              setState(() {
+                _isNoteEditing = true;
+              });
+            },
+          ),
+        IconButton(
+          icon: const Icon(Icons.close, size: 16),
+          onPressed: () {
+            setState(() {
+              _isNoteVisible = false;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotesBody() {
+    if (_isNoteEditing) {
+      return TextField(
+        controller: _noteController,
+        autofocus: true,
+        maxLines: null, // Allows for multiline input
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(
+          hintText: 'Add your notes here...',
+          border: InputBorder.none,
+        ),
+      );
+    }
+
+    if (_session.note?.content.isNotEmpty ?? false) {
+      return MarkdownBody(data: _session.note!.content);
+    }
+
+    return const Text(
+      'No notes added yet.',
+      style: TextStyle(color: Colors.grey),
+    );
+  }
+
+  Widget _buildNotesFooter() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Text(
+        'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
+        style: Theme.of(context).textTheme.bodySmall,
+      ),
+    );
+  }
+
   void _showContextMenu(BuildContext context, {Activity? activity}) {
     showDialog(
       context: context,
@@ -2594,8 +2781,9 @@ class _PromptExpander extends StatelessWidget {
             alignment: Alignment.topLeft,
             child: Container(
               constraints: BoxConstraints(
-                maxHeight:
-                    isExpanded ? MediaQuery.sizeOf(context).height * 0.4 : 60,
+                maxHeight: isExpanded
+                    ? MediaQuery.sizeOf(context).height * 0.4
+                    : 60,
               ),
               width: double.infinity,
               clipBehavior: Clip.hardEdge,
@@ -2613,9 +2801,7 @@ class _PromptExpander extends StatelessWidget {
                         stops: const [0.5, 1.0],
                       ),
                     ),
-              child: SingleChildScrollView(
-                child: MarkdownBody(data: prompt),
-              ),
+              child: SingleChildScrollView(child: MarkdownBody(data: prompt)),
             ),
           ),
           Center(

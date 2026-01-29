@@ -492,17 +492,89 @@ class _SourceListScreenState extends State<SourceListScreen> {
                                       final lastUsedDate =
                                           _lastUsed[source.name];
 
-                                      return SourceTile(
-                                        item: item,
-                                        usageCount: count,
-                                        lastUsedDate: lastUsedDate,
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
+  Widget _buildFilterBar() {
+    return AdvancedSearchBar(
+      filterTree: _filterTree,
+      onFilterTreeChanged: (tree) {
+        setState(() {
+          _filterTree = tree;
+        });
+      },
+      searchText: _searchText,
+      onSearchChanged: (text) {
+        setState(() {
+          _searchText = text;
+        });
+      },
+      availableSuggestions: _availableSuggestions,
+      activeSorts: _activeSorts,
+      onSortsChanged: (sorts) {
+        setState(() {
+          _activeSorts = sorts;
+        });
+      },
+    );
+  }
+
+  Widget _buildLastRefreshed(DateTime? lastFetchTime) {
+    if (lastFetchTime == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+            color: DateTime.now().difference(lastFetchTime).inMinutes > 30
+                ? Colors.orange
+                : null,
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourcesListBody(
+    List<CachedItem<Source>> sources,
+    List<CachedItem<Source>> displaySources,
+  ) {
+    if (displaySources.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  sources.isEmpty
+                      ? 'No repositories found.'
+                      : 'No matches found.',
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView.builder(
+      physics:
+          const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+      controller: _scrollController,
+      itemCount: displaySources.length,
+      itemBuilder: (context, index) {
+        final item = displaySources[index];
+        final source = item.data;
+        final count = _usageCount[source.name] ?? 0;
+        final lastUsedDate = _lastUsed[source.name];
+
+        return SourceTile(
+          item: item,
+          usageCount: count,
+          lastUsedDate: lastUsedDate,
         );
       },
     );

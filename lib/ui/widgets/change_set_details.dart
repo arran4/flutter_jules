@@ -71,10 +71,7 @@ class ChangeSetDetails extends StatelessWidget {
         if (gitPatch.suggestedCommitMessage.isNotEmpty) ...[
           const Text(
             "Commit Message:",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Container(
@@ -96,6 +93,40 @@ class ChangeSetDetails extends StatelessWidget {
       ],
     );
   }
+
+  Widget _buildHeaderRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            "Change in ${changeSet.source}",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        _buildPrButton(),
+      ],
+    );
+  }
+
+  Widget _buildPrButton() {
+    if (prUrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.open_in_new),
+        label: const Text('Create PR'),
+        onPressed: () {
+          launchUrl(Uri.parse(prUrl!));
+        },
+        style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
+      ),
+    );
+  }
 }
 
 class _PatchPreview extends StatelessWidget {
@@ -110,10 +141,7 @@ class _PatchPreview extends StatelessWidget {
       children: [
         const Text(
           "Patch:",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
         const SizedBox(height: 4),
         Container(
@@ -121,10 +149,7 @@ class _PatchPreview extends StatelessWidget {
           color: Colors.black.withValues(alpha: 0.05),
           child: Text(
             gitPatch.unidiffPatch,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
             maxLines: 15,
             overflow: TextOverflow.ellipsis,
           ),

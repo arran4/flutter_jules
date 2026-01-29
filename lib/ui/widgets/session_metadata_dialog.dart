@@ -63,15 +63,62 @@ class SessionMetadataDialog extends StatelessWidget {
     );
   }
 
+  Widget _buildLocalCacheSection(BuildContext context) {
+    if (cacheFile == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Local Cache File'),
+        _buildCacheFileRow(context),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildCacheMetadataSection(BuildContext context) {
+    if (cacheMetadata == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Cache Metadata'),
+        _buildCacheMetadataTable(context),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildServerMetadataSection(BuildContext context) {
+    if (session.metadata == null || session.metadata!.isEmpty) {
+      return const Text(
+        "No server metadata available.",
+        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Server Metadata'),
+        _buildServerMetadataTable(context),
+      ],
+    );
+  }
+
   Widget _buildSectionHeader(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(bottom: 8.0),
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
       ),
     );
   }
@@ -173,8 +220,9 @@ class SessionMetadataDialog extends StatelessWidget {
       border: TableBorder.all(color: Colors.grey.shade300),
       columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children:
-          session.metadata!.map((m) => _buildRow(m.key, m.value)).toList(),
+      children: session.metadata!
+          .map((m) => _buildRow(m.key, m.value))
+          .toList(),
     );
   }
 
