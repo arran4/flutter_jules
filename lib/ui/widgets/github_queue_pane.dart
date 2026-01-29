@@ -26,133 +26,115 @@ class GithubQueuePane extends StatelessWidget {
                   style: Theme.of(context).textTheme.titleLarge,
                 ),
                 const SizedBox(height: 16),
-                // Rate Limit Cards
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Rate Limit",
-                        "$remaining / $limit",
-                        Colors.blue,
-                        Icons.speed,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Reset Time",
-                        reset != null
-                            ? DateFormat.Hms().format(reset)
-                            : "--:--",
-                        Colors.orange,
-                        Icons.timer,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Wait Time",
-                        _formatDuration(provider.waitTime),
-                        provider.waitTime.inSeconds > 0
-                            ? Colors.red
-                            : Colors.green,
-                        Icons.hourglass_empty,
-                      ),
-                    ),
-                  ],
+                _buildRateLimitRow(
+                  context,
+                  limit: limit,
+                  remaining: remaining,
+                  reset: reset,
+                  waitTime: provider.waitTime,
                 ),
                 const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Errors",
-                        "${provider.errorCount}",
-                        Colors.red,
-                        Icons.error,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Warnings",
-                        "${provider.warningCount}",
-                        Colors.amber,
-                        Icons.warning,
-                      ),
-                    ),
-                    const SizedBox(width: 8),
-                    Expanded(
-                      child: _buildStatCard(
-                        context,
-                        "Throttled",
-                        _formatDuration(provider.totalThrottledDuration),
-                        provider.totalThrottledDuration.inSeconds > 0
-                            ? Colors.red
-                            : Colors.grey,
-                        Icons.timelapse,
-                      ),
-                    ),
-                  ],
+                _buildErrorWarningRow(
+                  context,
+                  errorCount: provider.errorCount,
+                  warningCount: provider.warningCount,
+                  totalThrottledDuration: provider.totalThrottledDuration,
                 ),
                 const SizedBox(height: 16),
                 const Divider(),
                 const SizedBox(height: 8),
-                if (provider.queue.isEmpty)
-                  const Padding(
-                    padding: EdgeInsets.symmetric(vertical: 16.0),
-                    child: Center(
-                      child: Text(
-                        "Queue is empty",
-                        style: TextStyle(color: Colors.grey),
-                      ),
-                    ),
-                  )
-                else
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        "Processing Queue (${provider.queue.length})",
-                        style: Theme.of(context).textTheme.titleMedium,
-                      ),
-                      const SizedBox(height: 8),
-                      ListView.builder(
-                        shrinkWrap: true,
-                        physics: const NeverScrollableScrollPhysics(),
-                        itemCount: provider.queue.length,
-                        itemBuilder: (context, index) {
-                          final job = provider.queue[index];
-                          return ListTile(
-                            leading: _buildStatusIcon(job.status),
-                            title: Text(job.description),
-                            subtitle: Text(
-                              job.status.toString().split('.').last,
-                            ),
-                            trailing: job.status == GithubJobStatus.running
-                                ? const SizedBox(
-                                    width: 16,
-                                    height: 16,
-                                    child: CircularProgressIndicator(
-                                      strokeWidth: 2,
-                                    ),
-                                  )
-                                : null,
-                          );
-                        },
-                      ),
-                    ],
-                  ),
+                _QueueList(
+                  queue: provider.queue,
+                  buildStatusIcon: _buildStatusIcon,
+                ),
               ],
             ),
           ),
         );
       },
+    );
+  }
+
+  Widget _buildRateLimitRow(
+    BuildContext context, {
+    required int limit,
+    required int remaining,
+    required DateTime? reset,
+    required Duration waitTime,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Rate Limit",
+            "$remaining / $limit",
+            Colors.blue,
+            Icons.speed,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Reset Time",
+            reset != null ? DateFormat.Hms().format(reset) : "--:--",
+            Colors.orange,
+            Icons.timer,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Wait Time",
+            _formatDuration(waitTime),
+            waitTime.inSeconds > 0 ? Colors.red : Colors.green,
+            Icons.hourglass_empty,
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildErrorWarningRow(
+    BuildContext context, {
+    required int errorCount,
+    required int warningCount,
+    required Duration totalThrottledDuration,
+  }) {
+    return Row(
+      children: [
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Errors",
+            "$errorCount",
+            Colors.red,
+            Icons.error,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Warnings",
+            "$warningCount",
+            Colors.amber,
+            Icons.warning,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _buildStatCard(
+            context,
+            "Throttled",
+            _formatDuration(totalThrottledDuration),
+            totalThrottledDuration.inSeconds > 0 ? Colors.red : Colors.grey,
+            Icons.timelapse,
+          ),
+        ),
+      ],
     );
   }
 
@@ -212,5 +194,65 @@ class GithubQueuePane extends StatelessWidget {
     final m = d.inMinutes;
     final s = d.inSeconds % 60;
     return "${m}m ${s}s";
+  }
+}
+
+class _QueueList extends StatelessWidget {
+  const _QueueList({
+    required this.queue,
+    required this.buildStatusIcon,
+  });
+
+  final List<GithubJob> queue;
+  final Widget Function(GithubJobStatus status) buildStatusIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    if (queue.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(
+          child: Text(
+            "Queue is empty",
+            style: TextStyle(color: Colors.grey),
+          ),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Processing Queue (${queue.length})",
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: queue.length,
+          itemBuilder: (context, index) {
+            final job = queue[index];
+            return ListTile(
+              leading: buildStatusIcon(job.status),
+              title: Text(job.description),
+              subtitle: Text(
+                job.status.toString().split('.').last,
+              ),
+              trailing: job.status == GithubJobStatus.running
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(
+                        strokeWidth: 2,
+                      ),
+                    )
+                  : null,
+            );
+          },
+        ),
+      ],
+    );
   }
 }
