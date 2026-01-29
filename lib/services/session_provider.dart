@@ -11,6 +11,18 @@ import 'cache_service.dart';
 import 'github_provider.dart';
 import 'exceptions.dart';
 
+class _UpdateEvaluationResult {
+  final bool shouldMarkUnread;
+  final bool shouldMarkRead;
+  final String? reason;
+
+  _UpdateEvaluationResult({
+    required this.shouldMarkUnread,
+    required this.shouldMarkRead,
+    this.reason,
+  });
+}
+
 class SessionProvider extends ChangeNotifier {
   final GlobalKey<ScaffoldMessengerState> scaffoldKey =
       GlobalKey<ScaffoldMessengerState>();
@@ -155,15 +167,27 @@ class SessionProvider extends ChangeNotifier {
           if (oldItem != null) {
             _items.removeAt(index);
 
-            final reason = _getChangeReason(oldSession, session);
+            final evaluation = _evaluateUpdateRules(oldSession, session);
+
+            DateTime? lastUpdated = oldItem.metadata.lastUpdated;
+            DateTime? lastOpened = oldItem.metadata.lastOpened;
+            String? reasonForLastUnread = oldItem.metadata.reasonForLastUnread;
+
+            if (evaluation.shouldMarkUnread) {
+              lastUpdated = DateTime.now();
+              if (evaluation.reason != null) {
+                reasonForLastUnread = evaluation.reason;
+              }
+            }
+            if (evaluation.shouldMarkRead) {
+              lastOpened = DateTime.now();
+            }
 
             metadata = oldItem.metadata.copyWith(
               lastRetrieved: DateTime.now(),
-              lastUpdated: reason != null
-                  ? DateTime.now()
-                  : oldItem.metadata.lastUpdated,
-              reasonForLastUnread:
-                  reason ?? oldItem.metadata.reasonForLastUnread,
+              lastUpdated: lastUpdated,
+              lastOpened: lastOpened,
+              reasonForLastUnread: reasonForLastUnread,
             );
           } else {
             metadata = CacheMetadata(
@@ -281,13 +305,27 @@ class SessionProvider extends ChangeNotifier {
 
     if (index != -1) {
       final oldItem = _items[index];
-      final reason = _getChangeReason(oldItem.data, session);
+      final evaluation = _evaluateUpdateRules(oldItem.data, session);
+
+      DateTime? lastUpdated = oldItem.metadata.lastUpdated;
+      DateTime? lastOpened = oldItem.metadata.lastOpened;
+      String? reasonForLastUnread = oldItem.metadata.reasonForLastUnread;
+
+      if (evaluation.shouldMarkUnread) {
+        lastUpdated = DateTime.now();
+        if (evaluation.reason != null) {
+          reasonForLastUnread = evaluation.reason;
+        }
+      }
+      if (evaluation.shouldMarkRead) {
+        lastOpened = DateTime.now();
+      }
 
       metadata = oldItem.metadata.copyWith(
         lastRetrieved: DateTime.now(),
-        lastUpdated:
-            reason != null ? DateTime.now() : oldItem.metadata.lastUpdated,
-        reasonForLastUnread: reason ?? oldItem.metadata.reasonForLastUnread,
+        lastUpdated: lastUpdated,
+        lastOpened: lastOpened,
+        reasonForLastUnread: reasonForLastUnread,
       );
     } else {
       metadata = CacheMetadata(
@@ -340,13 +378,27 @@ class SessionProvider extends ChangeNotifier {
 
       if (index != -1) {
         final oldItem = _items[index];
-        final reason = _getChangeReason(oldItem.data, updatedSession);
+        final evaluation = _evaluateUpdateRules(oldItem.data, updatedSession);
+
+        DateTime? lastUpdated = oldItem.metadata.lastUpdated;
+        DateTime? lastOpened = oldItem.metadata.lastOpened;
+        String? reasonForLastUnread = oldItem.metadata.reasonForLastUnread;
+
+        if (evaluation.shouldMarkUnread) {
+          lastUpdated = DateTime.now();
+          if (evaluation.reason != null) {
+            reasonForLastUnread = evaluation.reason;
+          }
+        }
+        if (evaluation.shouldMarkRead) {
+          lastOpened = DateTime.now();
+        }
 
         metadata = oldItem.metadata.copyWith(
           lastRetrieved: DateTime.now(),
-          lastUpdated:
-              reason != null ? DateTime.now() : oldItem.metadata.lastUpdated,
-          reasonForLastUnread: reason ?? oldItem.metadata.reasonForLastUnread,
+          lastUpdated: lastUpdated,
+          lastOpened: lastOpened,
+          reasonForLastUnread: reasonForLastUnread,
         );
       } else {
         metadata = CacheMetadata(
@@ -411,60 +463,118 @@ class SessionProvider extends ChangeNotifier {
     return item.metadata.lastRetrieved;
   }
 
-  String? _getChangeReason(Session? oldSession, Session newSession) {
-    if (oldSession == null) return null;
+  _UpdateEvaluationResult _evaluateUpdateRules(
+    Session? oldSession,
+    Session newSession,
+  ) {
+    if (oldSession == null) {
+      return _UpdateEvaluationResult(
+        shouldMarkUnread: true,
+        shouldMarkRead: false,
+        reason: "New session",
+      );
+    }
 
     final reasons = <String>[];
-    final markUnreadOnPr =
-        _settingsProvider?.markUnreadOnPrStatusChange ?? false;
-    final markUnreadOnCi =
-        _settingsProvider?.markUnreadOnCiStatusChange ?? false;
-    final markUnreadOnComment = _settingsProvider?.markUnreadOnComment ?? false;
+    bool shouldMarkUnread = false;
+    bool shouldMarkRead = false;
 
+    // 1. Check Intrinsic Jules Progress (Always Unread)
     if (oldSession.state != newSession.state) {
       final oldState = oldSession.state.toString().split('.').last;
       final newState = newSession.state.toString().split('.').last;
       reasons.add("Status changed from $oldState to $newState");
+      shouldMarkUnread = true;
     }
 
-    // Jules progress check
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress =
+        (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
+      shouldMarkUnread = true;
     }
 
-    if (markUnreadOnPr) {
-      if (oldSession.prStatus != newSession.prStatus) {
-        final oldPr = oldSession.prStatus ?? 'None';
-        final newPr = newSession.prStatus ?? 'None';
-        if (oldPr != newPr) {
-          reasons.add("Github PR Status changed from $oldPr to $newPr");
+    // 2. Evaluate User Rules
+    final rules = _settingsProvider?.unreadRules ?? [];
+    for (var rule in rules) {
+      if (!rule.enabled) continue;
+
+      bool matched = false;
+      String? ruleReason;
+
+      switch (rule.type) {
+        case RuleType.prStatus:
+          final oldPr = oldSession.prStatus ?? 'None';
+          final newPr = newSession.prStatus ?? 'None';
+          if (oldPr != newPr) {
+            matched = _matchesTransition(rule, oldPr, newPr);
+            if (matched) {
+              ruleReason = "PR Status changed from $oldPr to $newPr";
+            }
+          }
+          break;
+        case RuleType.ciStatus:
+          final oldCi = oldSession.ciStatus ?? 'None';
+          final newCi = newSession.ciStatus ?? 'None';
+          if (oldCi != newCi) {
+            matched = _matchesTransition(rule, oldCi, newCi);
+            if (matched) {
+              ruleReason = "CI Status changed from $oldCi to $newCi";
+            }
+          }
+          break;
+        case RuleType.sessionState:
+          final oldState = oldSession.state.toString().split('.').last;
+          final newState = newSession.state.toString().split('.').last;
+          if (oldState != newState) {
+            matched = _matchesTransition(rule, oldState, newState);
+            if (matched) {
+              ruleReason = "State changed from $oldState to $newState";
+            }
+          }
+          break;
+        case RuleType.contentUpdate:
+          if (oldSession.updateTime != newSession.updateTime) {
+            matched = true;
+            ruleReason = "Session updated";
+          }
+          break;
+      }
+
+      if (matched) {
+        if (rule.action == RuleAction.markUnread) {
+          shouldMarkUnread = true;
+          if (ruleReason != null) reasons.add(ruleReason);
+        } else if (rule.action == RuleAction.markRead) {
+          shouldMarkRead = true;
         }
       }
     }
 
-    if (markUnreadOnCi) {
-      if (oldSession.ciStatus != newSession.ciStatus) {
-        final oldCi = oldSession.ciStatus ?? 'None';
-        final newCi = newSession.ciStatus ?? 'None';
-        if (oldCi != newCi) {
-          reasons.add("CI Status changed from $oldCi to $newCi");
-        }
-      }
+    if (reasons.isEmpty && shouldMarkUnread) {
+      reasons.add("Session updated");
     }
 
-    if (reasons.isEmpty && oldSession.updateTime != newSession.updateTime) {
-      if (markUnreadOnComment) {
-        return "Session updated";
-      }
-      // If not marking unread on github, and no other reason found,
-      // we ignore generic updateTime changes (assuming they are github comments etc).
+    return _UpdateEvaluationResult(
+      shouldMarkUnread: shouldMarkUnread,
+      shouldMarkRead: shouldMarkRead,
+      reason: reasons.isNotEmpty ? reasons.join(". ") : null,
+    );
+  }
+
+  bool _matchesTransition(UnreadRule rule, String oldValue, String newValue) {
+    if (rule.fromValue != null &&
+        rule.fromValue!.isNotEmpty &&
+        rule.fromValue != oldValue) {
+      return false;
     }
-
-    if (reasons.isEmpty) return null;
-
-    return reasons.join(". ");
+    if (rule.toValue != null &&
+        rule.toValue!.isNotEmpty &&
+        rule.toValue != newValue) {
+      return false;
+    }
+    return true;
   }
 
   CacheMetadata _resolvePendingMessages(
@@ -928,15 +1038,28 @@ class SessionProvider extends ChangeNotifier {
       patchUrl: prResponse?.patchUrl,
     );
 
-    final reason = _getChangeReason(session, updatedSession);
+          final evaluation = _evaluateUpdateRules(session, updatedSession);
     var metadata = _items[index].metadata;
 
-    if (reason != null) {
-      metadata = metadata.copyWith(
-        lastUpdated: DateTime.now(),
-        reasonForLastUnread: reason,
-      );
+          DateTime? lastUpdated = metadata.lastUpdated;
+          DateTime? lastOpened = metadata.lastOpened;
+          String? reasonForLastUnread = metadata.reasonForLastUnread;
+
+          if (evaluation.shouldMarkUnread) {
+            lastUpdated = DateTime.now();
+            if (evaluation.reason != null) {
+              reasonForLastUnread = evaluation.reason;
+            }
+          }
+          if (evaluation.shouldMarkRead) {
+            lastOpened = DateTime.now();
     }
+
+          metadata = metadata.copyWith(
+            lastUpdated: lastUpdated,
+            lastOpened: lastOpened,
+            reasonForLastUnread: reasonForLastUnread,
+          );
 
     final newItem = CachedItem(updatedSession, metadata);
 
@@ -1064,15 +1187,28 @@ class SessionProvider extends ChangeNotifier {
             patchUrl: prResponse?.patchUrl,
           );
 
-          final reason = _getChangeReason(item.data, updatedSession);
+          final evaluation = _evaluateUpdateRules(item.data, updatedSession);
           var metadata = item.metadata;
 
-          if (reason != null) {
-            metadata = metadata.copyWith(
-              lastUpdated: DateTime.now(),
-              reasonForLastUnread: reason,
-            );
+          DateTime? lastUpdated = metadata.lastUpdated;
+          DateTime? lastOpened = metadata.lastOpened;
+          String? reasonForLastUnread = metadata.reasonForLastUnread;
+
+          if (evaluation.shouldMarkUnread) {
+            lastUpdated = DateTime.now();
+            if (evaluation.reason != null) {
+              reasonForLastUnread = evaluation.reason;
+            }
           }
+          if (evaluation.shouldMarkRead) {
+            lastOpened = DateTime.now();
+          }
+
+          metadata = metadata.copyWith(
+            lastUpdated: lastUpdated,
+            lastOpened: lastOpened,
+            reasonForLastUnread: reasonForLastUnread,
+          );
 
           final newItem = CachedItem(updatedSession, metadata);
 

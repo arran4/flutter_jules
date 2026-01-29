@@ -2,11 +2,14 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../ui/themes.dart';
-import '../models.dart';
 import '../models/bulk_action.dart';
 import '../models/refresh_schedule.dart';
 import '../models/scheduler_preset.dart';
 import '../models/github_exclusion.dart';
+import '../models/unread_rule.dart';
+import '../models/enums.dart';
+import '../models/filter_element.dart';
+import '../models/source_group.dart';
 
 class SettingsProvider extends ChangeNotifier {
   static const String keyRefreshOnAppStart = 'refresh_on_app_start';
@@ -40,11 +43,7 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotificationDebounceDuration =
       'notification_debounce_duration';
   static const String keyAppBarRefreshActions = 'app_bar_refresh_actions';
-  static const String keyMarkUnreadOnPrStatusChange =
-      'mark_unread_on_pr_status_change';
-  static const String keyMarkUnreadOnCiStatusChange =
-      'mark_unread_on_ci_status_change';
-  static const String keyMarkUnreadOnComment = 'mark_unread_on_comment';
+  static const String keyUnreadRules = 'unread_rules';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -96,9 +95,7 @@ class SettingsProvider extends ChangeNotifier {
   Set<RefreshButtonAction> _appBarRefreshActions = {
     RefreshButtonAction.refresh,
   };
-  bool _markUnreadOnPrStatusChange = false;
-  bool _markUnreadOnCiStatusChange = false;
-  bool _markUnreadOnComment = false;
+  List<UnreadRule> _unreadRules = [];
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -137,9 +134,7 @@ class SettingsProvider extends ChangeNotifier {
   bool get enableNotificationDebounce => _enableNotificationDebounce;
   int get notificationDebounceDuration => _notificationDebounceDuration;
   Set<RefreshButtonAction> get appBarRefreshActions => _appBarRefreshActions;
-  bool get markUnreadOnPrStatusChange => _markUnreadOnPrStatusChange;
-  bool get markUnreadOnCiStatusChange => _markUnreadOnCiStatusChange;
-  bool get markUnreadOnComment => _markUnreadOnComment;
+  List<UnreadRule> get unreadRules => _unreadRules;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -224,11 +219,7 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
     _notificationDebounceDuration =
         _prefs!.getInt(keyNotificationDebounceDuration) ?? 5000;
-    _markUnreadOnPrStatusChange =
-        _prefs!.getBool(keyMarkUnreadOnPrStatusChange) ?? false;
-    _markUnreadOnCiStatusChange =
-        _prefs!.getBool(keyMarkUnreadOnCiStatusChange) ?? false;
-    _markUnreadOnComment = _prefs!.getBool(keyMarkUnreadOnComment) ?? false;
+    _loadUnreadRules();
 
     if (_prefs!.containsKey(keyAppBarRefreshActions)) {
       final refreshActionsList =
@@ -498,22 +489,45 @@ class SettingsProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> setMarkUnreadOnPrStatusChange(bool value) async {
-    _markUnreadOnPrStatusChange = value;
-    notifyListeners();
-    await _prefs?.setBool(keyMarkUnreadOnPrStatusChange, value);
+  void _loadUnreadRules() {
+    final jsonString = _prefs?.getString(keyUnreadRules);
+    if (jsonString != null) {
+      try {
+        final List<dynamic> decodedList = jsonDecode(jsonString);
+        _unreadRules =
+            decodedList.map((json) => UnreadRule.fromJson(json)).toList();
+      } catch (e) {
+        _unreadRules = [];
+      }
+    } else {
+      _unreadRules = [];
+    }
   }
 
-  Future<void> setMarkUnreadOnCiStatusChange(bool value) async {
-    _markUnreadOnCiStatusChange = value;
-    notifyListeners();
-    await _prefs?.setBool(keyMarkUnreadOnCiStatusChange, value);
+  Future<void> _saveUnreadRules() async {
+    final jsonString = jsonEncode(_unreadRules.map((r) => r.toJson()).toList());
+    await _prefs?.setString(keyUnreadRules, jsonString);
   }
 
-  Future<void> setMarkUnreadOnComment(bool value) async {
-    _markUnreadOnComment = value;
+  Future<void> addUnreadRule(UnreadRule rule) async {
+    _unreadRules.add(rule);
+    await _saveUnreadRules();
     notifyListeners();
-    await _prefs?.setBool(keyMarkUnreadOnComment, value);
+  }
+
+  Future<void> updateUnreadRule(UnreadRule rule) async {
+    final index = _unreadRules.indexWhere((r) => r.id == rule.id);
+    if (index != -1) {
+      _unreadRules[index] = rule;
+      await _saveUnreadRules();
+      notifyListeners();
+    }
+  }
+
+  Future<void> deleteUnreadRule(String id) async {
+    _unreadRules.removeWhere((r) => r.id == id);
+    await _saveUnreadRules();
+    notifyListeners();
   }
 
   // Keybinding Setters
