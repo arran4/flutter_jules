@@ -11,62 +11,45 @@ class ChangeSetDetails extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     if (changeSet.gitPatch == null) {
-      return Padding(
-        padding: const EdgeInsets.symmetric(vertical: 4),
-        child: Row(
-          children: [
-            const Icon(
-              Icons.insert_drive_file_outlined,
-              size: 16,
-              color: Colors.blueGrey,
-            ),
-            const SizedBox(width: 8),
-            Flexible(
-              child: Text(
-                changeSet.source,
-                style: const TextStyle(
-                  fontSize: 13,
-                  color: Colors.blueGrey,
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-            ),
-          ],
-        ),
-      );
+      return _buildNoPatchRow();
     }
 
     final gitPatch = changeSet.gitPatch!;
 
+    return _buildPatchDetails(context, gitPatch);
+  }
+
+  Widget _buildNoPatchRow() {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 4),
+      child: Row(
+        children: [
+          const Icon(
+            Icons.insert_drive_file_outlined,
+            size: 16,
+            color: Colors.blueGrey,
+          ),
+          const SizedBox(width: 8),
+          Flexible(
+            child: Text(
+              changeSet.source,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.blueGrey,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPatchDetails(BuildContext context, GitPatch gitPatch) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Row(
-          mainAxisAlignment: MainAxisAlignment.spaceBetween,
-          children: [
-            Flexible(
-              child: Text(
-                "Change in ${changeSet.source}",
-                style: const TextStyle(fontWeight: FontWeight.bold),
-                overflow: TextOverflow.ellipsis,
-              ),
-            ),
-            if (prUrl != null)
-              Padding(
-                padding: const EdgeInsets.only(left: 8.0),
-                child: ElevatedButton.icon(
-                  icon: const Icon(Icons.open_in_new),
-                  label: const Text('Create PR'),
-                  onPressed: () {
-                    launchUrl(Uri.parse(prUrl!));
-                  },
-                  style: ElevatedButton.styleFrom(
-                    visualDensity: VisualDensity.compact,
-                  ),
-                ),
-              ),
-          ],
-        ),
+        _buildHeaderRow(),
         const SizedBox(height: 8),
         if (gitPatch.suggestedCommitMessage.isNotEmpty) ...[
           const Text(
@@ -94,6 +77,42 @@ class ChangeSetDetails extends StatelessWidget {
         _PatchPreview(gitPatch: gitPatch),
         const SizedBox(height: 8),
       ],
+    );
+  }
+
+  Widget _buildHeaderRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Flexible(
+          child: Text(
+            "Change in ${changeSet.source}",
+            style: const TextStyle(fontWeight: FontWeight.bold),
+            overflow: TextOverflow.ellipsis,
+          ),
+        ),
+        _buildPrButton(),
+      ],
+    );
+  }
+
+  Widget _buildPrButton() {
+    if (prUrl == null) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.only(left: 8.0),
+      child: ElevatedButton.icon(
+        icon: const Icon(Icons.open_in_new),
+        label: const Text('Create PR'),
+        onPressed: () {
+          launchUrl(Uri.parse(prUrl!));
+        },
+        style: ElevatedButton.styleFrom(
+          visualDensity: VisualDensity.compact,
+        ),
+      ),
     );
   }
 }
