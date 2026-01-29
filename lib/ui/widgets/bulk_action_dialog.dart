@@ -19,6 +19,7 @@ import '../../utils/action_script_parser.dart';
 import '../../models/filter_expression_parser.dart';
 import 'bulk_action_preset_dialog.dart';
 import '../../models/bulk_action_preset_state_manager.dart';
+import '../../models/cache_metadata.dart';
 import '../../models/enums.dart';
 
 class BulkActionDialog extends StatefulWidget {
@@ -138,41 +139,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
     final queueProvider = context.read<MessageQueueProvider>();
 
     final allMatches = sessionProvider.items
-        .where((item) {
-          final session = item.data;
-          final metadata = item.metadata;
-
-          // Apply dialog-local search text
-          if (_searchText.isNotEmpty) {
-            final query = _searchText.toLowerCase();
-            final titleMatches =
-                (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state?.displayName.toLowerCase().contains(query) ??
-                        false);
-            if (!titleMatches) return false;
-          }
-
-          final initialState = metadata.isHidden
-              ? FilterState.implicitOut
-              : FilterState.implicitIn;
-
-          if (_filterTree == null) {
-            return initialState.isIn;
-          }
-
-          final treeResult = _filterTree!.evaluate(
-            FilterContext(
-              session: session,
-              metadata: metadata,
-              queueProvider: queueProvider,
-            ),
-          );
-
-          final finalState = FilterState.combineAnd(initialState, treeResult);
-          return finalState.isIn;
-        })
+        .where(
+          (item) =>
+              _matchesDialogFilters(item.data, item.metadata, queueProvider),
+        )
         .map((item) => item.data)
         .toList();
 
@@ -181,16 +151,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         _totalMatches = allMatches.length;
 
         // Apply offset and limit for preview
-        var effectiveMatches = allMatches;
-        if (_offset > 0 && _offset < effectiveMatches.length) {
-          effectiveMatches = effectiveMatches.sublist(_offset);
-        } else if (_offset >= effectiveMatches.length) {
-          effectiveMatches = [];
-        }
-
-        if (_limit != null && _limit! > 0) {
-          effectiveMatches = effectiveMatches.take(_limit!).toList();
-        }
+        final effectiveMatches = _applyLimitOffset(allMatches);
 
         _effectiveCount = effectiveMatches.length;
         _previewSessions = effectiveMatches.take(50).toList();
@@ -206,169 +167,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
 
     return AlertDialog(
       title: const Text('Bulk Actions'),
-      content: SizedBox(
-        width: dialogWidth,
-        height: dialogHeight,
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            // Left: Configuration
-            Expanded(
-              flex: 3,
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    _buildTargetSessionsSection(),
-                    const SizedBox(height: 16),
-                    _buildActionsSection(),
-                    const SizedBox(height: 24),
-                    _buildExecutionSettingsSection(),
-                    const SizedBox(height: 24),
-                    _buildSectionHeader('4. Execution Control'),
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Row(
-                          children: [
-                            Expanded(
-                              child: TextField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Limit',
-                                  hintText: 'Max sessions (blank = all)',
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                style: const TextStyle(fontSize: 12),
-                                controller: TextEditingController(
-                                  text: _limit != null ? _limit.toString() : '',
-                                ),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _limit =
-                                        val.isEmpty ? null : int.tryParse(val);
-                                  });
-                                  _updatePreview();
-                                },
-                              ),
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: TextField(
-                                decoration: const InputDecoration(
-                                  labelText: 'Offset',
-                                  hintText: 'Skip first N',
-                                  isDense: true,
-                                  border: OutlineInputBorder(),
-                                ),
-                                keyboardType: TextInputType.number,
-                                style: const TextStyle(fontSize: 12),
-                                controller: TextEditingController(
-                                  text: _offset > 0 ? _offset.toString() : '',
-                                ),
-                                onChanged: (val) {
-                                  setState(() {
-                                    _offset = val.isEmpty
-                                        ? 0
-                                        : (int.tryParse(val) ?? 0);
-                                  });
-                                  _updatePreview();
-                                },
-                              ),
-                            ),
-                          ],
-                        ),
-                        const SizedBox(height: 12),
-                        CheckboxListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: _randomize,
-                          onChanged: (val) =>
-                              setState(() => _randomize = val ?? false),
-                          title: const Text(
-                            'Randomize order',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          subtitle: const Text(
-                            'Process sessions in random order (useful for sampling)',
-                            style: TextStyle(fontSize: 10),
-                          ),
-                        ),
-                        CheckboxListTile(
-                          dense: true,
-                          contentPadding: EdgeInsets.zero,
-                          value: _stopOnError,
-                          onChanged: (val) =>
-                              setState(() => _stopOnError = val ?? false),
-                          title: const Text(
-                            'Stop on first error',
-                            style: TextStyle(fontSize: 12),
-                          ),
-                          subtitle: const Text(
-                            'Cancel entire job if any session fails',
-                            style: TextStyle(fontSize: 10),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ],
-                ),
-              ),
-            ),
-            const VerticalDivider(width: 32),
-            // Right: Preview
-            Expanded(
-              flex: 2,
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  _buildSectionHeader('Preview Matches'),
-                  RichText(
-                    text: TextSpan(
-                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
-                      children: [
-                        TextSpan(text: '$_totalMatches total'),
-                        if (_effectiveCount != _totalMatches) ...[
-                          const TextSpan(
-                            text: ' → ',
-                            style: TextStyle(fontWeight: FontWeight.bold),
-                          ),
-                          TextSpan(
-                            text: '$_effectiveCount will run',
-                            style: TextStyle(
-                              color: Colors.blue.shade700,
-                              fontWeight: FontWeight.bold,
-                            ),
-                          ),
-                        ],
-                        if (_effectiveCount > 50)
-                          const TextSpan(text: ' (showing top 50)'),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Expanded(
-                    child: Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey.shade300),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      child: _previewSessions.isEmpty
-                          ? const Center(child: Text("No matches found."))
-                          : ListView.builder(
-                              itemCount: _previewSessions.length,
-                              itemBuilder: (context, index) =>
-                                  _buildLiteTile(_previewSessions[index]),
-                            ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-        ),
-      ),
+      content: _buildDialogContent(dialogWidth, dialogHeight),
       actions: [
         TextButton(
           onPressed: _openLoadPresetDialog,
@@ -387,6 +186,179 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
               _totalMatches > 0 && _actions.isNotEmpty ? _startJob : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Run Bulk Actions'),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildDialogContent(double dialogWidth, double dialogHeight) {
+    return SizedBox(
+      width: dialogWidth,
+      height: dialogHeight,
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          // Left: Configuration
+          Expanded(
+            flex: 3,
+            child: _buildConfigurationSection(),
+          ),
+          const VerticalDivider(width: 32),
+          // Right: Preview
+          Expanded(
+            flex: 2,
+            child: _buildPreviewSection(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildConfigurationSection() {
+    return SingleChildScrollView(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildTargetSessionsSection(),
+          const SizedBox(height: 16),
+          _buildActionsSection(),
+          const SizedBox(height: 24),
+          _buildExecutionSettingsSection(),
+          const SizedBox(height: 24),
+          _buildExecutionControlsSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildExecutionControlsSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('4. Execution Control'),
+        Row(
+          children: [
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Limit',
+                  hintText: 'Max sessions (blank = all)',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 12),
+                controller: TextEditingController(
+                  text: _limit != null ? _limit.toString() : '',
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    _limit = val.isEmpty ? null : int.tryParse(val);
+                  });
+                  _updatePreview();
+                },
+              ),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: TextField(
+                decoration: const InputDecoration(
+                  labelText: 'Offset',
+                  hintText: 'Skip first N',
+                  isDense: true,
+                  border: OutlineInputBorder(),
+                ),
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 12),
+                controller: TextEditingController(
+                  text: _offset > 0 ? _offset.toString() : '',
+                ),
+                onChanged: (val) {
+                  setState(() {
+                    _offset = val.isEmpty ? 0 : (int.tryParse(val) ?? 0);
+                  });
+                  _updatePreview();
+                },
+              ),
+            ),
+          ],
+        ),
+        const SizedBox(height: 12),
+        CheckboxListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          value: _randomize,
+          onChanged: (val) => setState(() => _randomize = val ?? false),
+          title: const Text(
+            'Randomize order',
+            style: TextStyle(fontSize: 12),
+          ),
+          subtitle: const Text(
+            'Process sessions in random order (useful for sampling)',
+            style: TextStyle(fontSize: 10),
+          ),
+        ),
+        CheckboxListTile(
+          dense: true,
+          contentPadding: EdgeInsets.zero,
+          value: _stopOnError,
+          onChanged: (val) => setState(() => _stopOnError = val ?? false),
+          title: const Text(
+            'Stop on first error',
+            style: TextStyle(fontSize: 12),
+          ),
+          subtitle: const Text(
+            'Cancel entire job if any session fails',
+            style: TextStyle(fontSize: 10),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPreviewSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader('Preview Matches'),
+        RichText(
+          text: TextSpan(
+            style: TextStyle(color: Colors.grey[600], fontSize: 12),
+            children: [
+              TextSpan(text: '$_totalMatches total'),
+              if (_effectiveCount != _totalMatches) ...[
+                const TextSpan(
+                  text: ' → ',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                TextSpan(
+                  text: '$_effectiveCount will run',
+                  style: TextStyle(
+                    color: Colors.blue.shade700,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ],
+              if (_effectiveCount > 50)
+                const TextSpan(text: ' (showing top 50)'),
+            ],
+          ),
+        ),
+        const SizedBox(height: 8),
+        Expanded(
+          child: Container(
+            decoration: BoxDecoration(
+              border: Border.all(color: Colors.grey.shade300),
+              borderRadius: BorderRadius.circular(8),
+            ),
+            child: _previewSessions.isEmpty
+                ? const Center(child: Text("No matches found."))
+                : ListView.builder(
+                    itemCount: _previewSessions.length,
+                    itemBuilder: (context, index) =>
+                        _buildLiteTile(_previewSessions[index]),
+                  ),
+          ),
         ),
       ],
     );
@@ -491,6 +463,62 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         ),
       ],
     );
+  }
+
+  bool _matchesDialogFilters(
+    Session session,
+    CacheMetadata metadata,
+    MessageQueueProvider queueProvider,
+  ) {
+    if (!_applySearchText(session)) {
+      return false;
+    }
+
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
+
+    if (_filterTree == null) {
+      return initialState.isIn;
+    }
+
+    final treeResult = _filterTree!.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
+
+    final finalState = FilterState.combineAnd(initialState, treeResult);
+    return finalState.isIn;
+  }
+
+  bool _applySearchText(Session session) {
+    if (_searchText.isEmpty) {
+      return true;
+    }
+
+    final query = _searchText.toLowerCase();
+    return (session.title?.toLowerCase().contains(query) ?? false) ||
+        (session.name.toLowerCase().contains(query)) ||
+        (session.id.toLowerCase().contains(query)) ||
+        (session.state?.displayName.toLowerCase().contains(query) ?? false);
+  }
+
+  List<Session> _applyLimitOffset(List<Session> matches) {
+    var effectiveMatches = matches;
+    if (_offset > 0 && _offset < effectiveMatches.length) {
+      effectiveMatches = effectiveMatches.sublist(_offset);
+    } else if (_offset >= effectiveMatches.length) {
+      effectiveMatches = [];
+    }
+
+    if (_limit != null && _limit! > 0) {
+      effectiveMatches = effectiveMatches.take(_limit!).toList();
+    }
+
+    return effectiveMatches;
   }
 
   Widget _buildActionList() {

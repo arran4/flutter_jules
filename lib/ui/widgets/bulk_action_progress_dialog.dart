@@ -55,60 +55,100 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
 
         return AlertDialog(
           title: Text(isDone ? 'Bulk Job Finished' : 'Executing Bulk Actions'),
-          content: SizedBox(
-            width: 800,
-            height: 600,
-            child: Column(
-              children: [
-                // 1. Dashboard / Stats
-                _buildDashboard(executor, progress, completed, total),
-                const SizedBox(height: 16),
-
-                // 2. Controls
-                if (!isDone) _buildMainControls(executor),
-                const SizedBox(height: 16),
-
-                // 3. Log and Queue
-                Expanded(
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Log
-                      Expanded(flex: 1, child: _buildLogView(executor)),
-                      const VerticalDivider(width: 32),
-                      // Queue
-                      Expanded(flex: 1, child: _buildQueueView(executor)),
-                    ],
-                  ),
-                ),
-              ],
-            ),
+          content: _buildDialogBody(
+            executor,
+            progress,
+            completed,
+            total,
+            isDone,
           ),
-          actions: [
-            if (!isDone)
-              TextButton(
-                onPressed: () => _confirmCancel(context, executor),
-                child: const Text(
-                  'Cancel Job',
-                  style: TextStyle(color: Colors.red),
-                ),
-              ),
-            if (isDone) ...[
-              if (executor.logs.any(
-                (l) => l.undoActionType != null && !l.isUndone,
-              ))
-                TextButton(
-                  onPressed: () => executor.undoAll(),
-                  child: const Text('Undo All'),
-                ),
-              FilledButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Close'),
-              ),
-            ],
-          ],
+          actions: _buildDialogActions(context, executor, isDone),
         );
       },
+    );
+  }
+
+  Widget _buildDialogBody(
+    BulkActionExecutor executor,
+    double progress,
+    int completed,
+    int total,
+    bool isDone,
+  ) {
+    return SizedBox(
+      width: 800,
+      height: 600,
+      child: Column(
+        children: [
+          _buildDashboardSection(executor, progress, completed, total),
+          const SizedBox(height: 16),
+          _buildControlsSection(executor, isDone),
+          const SizedBox(height: 16),
+          _buildLogAndQueueSection(executor),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildDialogActions(
+    BuildContext context,
+    BulkActionExecutor executor,
+    bool isDone,
+  ) {
+    if (!isDone) {
+      return [
+        TextButton(
+          onPressed: () => _confirmCancel(context, executor),
+          child: const Text(
+            'Cancel Job',
+            style: TextStyle(color: Colors.red),
+          ),
+        ),
+      ];
+    }
+
+    return [
+      if (executor.logs.any(
+        (l) => l.undoActionType != null && !l.isUndone,
+      ))
+        TextButton(
+          onPressed: () => executor.undoAll(),
+          child: const Text('Undo All'),
+        ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Close'),
+      ),
+    ];
+  }
+
+  Widget _buildDashboardSection(
+    BulkActionExecutor executor,
+    double progress,
+    int completed,
+    int total,
+  ) {
+    return _buildDashboard(executor, progress, completed, total);
+  }
+
+  Widget _buildControlsSection(BulkActionExecutor executor, bool isDone) {
+    if (isDone) {
+      return const SizedBox.shrink();
+    }
+
+    return _buildMainControls(executor);
+  }
+
+  Widget _buildLogAndQueueSection(BulkActionExecutor executor) {
+    return Expanded(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 1, child: _buildLogView(executor)),
+          const VerticalDivider(width: 32),
+          Expanded(flex: 1, child: _buildQueueView(executor)),
+        ],
+      ),
     );
   }
 

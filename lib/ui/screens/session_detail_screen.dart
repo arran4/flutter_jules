@@ -92,95 +92,6 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     );
   }
 
-  Widget _buildNotesSection() {
-    if (!_isNoteVisible) {
-      return const SizedBox.shrink();
-    }
-
-    return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-      child: Card(
-        elevation: 0,
-        shape: RoundedRectangleBorder(
-          side: BorderSide(color: Theme.of(context).dividerColor),
-          borderRadius: BorderRadius.circular(8),
-        ),
-        child: Padding(
-          padding: const EdgeInsets.all(12.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                children: [
-                  Text("Notes", style: Theme.of(context).textTheme.titleMedium),
-                  const Spacer(),
-                  if (_isNoteEditing)
-                    TextButton.icon(
-                      icon: const Icon(Icons.done, size: 16),
-                      label: const Text('Done'),
-                      onPressed: () {
-                        _updateNote(_noteController.text);
-                        setState(() {
-                          _isNoteEditing = false;
-                        });
-                      },
-                    )
-                  else
-                    TextButton.icon(
-                      icon: const Icon(Icons.edit, size: 16),
-                      label: const Text('Edit'),
-                      onPressed: () {
-                        setState(() {
-                          _isNoteEditing = true;
-                        });
-                      },
-                    ),
-                  IconButton(
-                    icon: const Icon(Icons.close, size: 16),
-                    onPressed: () {
-                      setState(() {
-                        _isNoteVisible = false;
-                      });
-                    },
-                  ),
-                ],
-              ),
-              const SizedBox(height: 8),
-              if (_isNoteEditing)
-                TextField(
-                  controller: _noteController,
-                  autofocus: true,
-                  maxLines: null, // Allows for multiline input
-                  keyboardType: TextInputType.multiline,
-                  decoration: const InputDecoration(
-                    hintText: 'Add your notes here...',
-                    border: InputBorder.none,
-                  ),
-                )
-              else if (_session.note?.content.isNotEmpty ?? false)
-                MarkdownBody(data: _session.note!.content)
-              else
-                const Text(
-                  'No notes added yet.',
-                  style: TextStyle(color: Colors.grey),
-                ),
-              if (!_isNoteEditing && _session.note != null) ...[
-                const SizedBox(height: 8),
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: Text(
-                    'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
-                    style: Theme.of(context).textTheme.bodySmall,
-                  ),
-                ),
-              ],
-            ],
-          ),
-        ),
-      ),
-    );
-  }
-
   Future<T> _locked<T>(Future<T> Function() op) {
     setState(() => _busyCount++);
     final completer = Completer<T>();
@@ -210,84 +121,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
   void initState() {
     super.initState();
     _noteController.text = widget.session.note?.content ?? '';
-    _messageFocusNode.onKeyEvent = (node, event) {
-      if (event is! KeyDownEvent) {
-        return KeyEventResult.ignored;
-      }
-
-      final settings = Provider.of<SettingsProvider>(context, listen: false);
-      final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
-      final isControlPressed = HardwareKeyboard.instance.isControlPressed;
-
-      // --- Handle Escape Key ---
-      if (event.logicalKey == LogicalKeyboardKey.escape) {
-        final action = settings.escKeyAction;
-        switch (action) {
-          case EscKeyAction.savesDraftAndGoesBack:
-            if (_messageController.text.trim().isNotEmpty) {
-              Provider.of<MessageQueueProvider>(
-                context,
-                listen: false,
-              ).saveDraft(_session.id, _messageController.text);
-            }
-            Navigator.pop(context);
-            return KeyEventResult.handled;
-          case EscKeyAction.goesBack:
-            Navigator.pop(context);
-            return KeyEventResult.handled;
-          case EscKeyAction.doesNothing:
-            return KeyEventResult.handled;
-        }
-      }
-
-      // --- Handle Enter Key ---
-      if (event.logicalKey == LogicalKeyboardKey.enter) {
-        MessageSubmitAction action;
-        if (isControlPressed && isShiftPressed) {
-          action = settings.ctrlShiftEnterKeyAction;
-        } else if (isControlPressed) {
-          action = settings.ctrlEnterKeyAction;
-        } else if (isShiftPressed) {
-          action = settings.shiftEnterKeyAction;
-        } else {
-          action = settings.enterKeyAction;
-        }
-
-        // Common logic based on the action's enum index, since they all share the same structure.
-        switch (action) {
-          case MessageSubmitAction.addNewLine:
-            return KeyEventResult.ignored;
-          case MessageSubmitAction.submitsMessage:
-            if (_messageController.text.isNotEmpty) {
-              _sendMessage(_messageController.text);
-            }
-            return KeyEventResult.handled;
-          case MessageSubmitAction.submitsMessageAndGoesBack:
-            if (_messageController.text.isNotEmpty) {
-              _sendMessage(_messageController.text);
-              // Don't await, let it send in the background while we navigate away.
-              Navigator.pop(context);
-            }
-            return KeyEventResult.handled;
-          case MessageSubmitAction.submitsMessageMarksReadAndOpensNext:
-            if (_messageController.text.isNotEmpty) {
-              _sendMessage(_messageController.text);
-              Navigator.pop(
-                context,
-                const SessionDetailResult(
-                  markAsRead: true,
-                  openNextSession: true,
-                ),
-              );
-            }
-            return KeyEventResult.handled;
-          case MessageSubmitAction.doesNothing:
-            return KeyEventResult.handled;
-        }
-      }
-
-      return KeyEventResult.ignored;
-    };
+    _messageFocusNode.onKeyEvent = _handleMessageKeyEvent;
     _session = widget.session;
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final settings = Provider.of<SettingsProvider>(context, listen: false);
@@ -2351,40 +2185,102 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Start with Pills (State, Date, Automation, Approval, Source, Branch)
-                    // Start with Pills (State, Date, Automation, Approval, PR Status, Source, Branch)
-                    SessionMetaPills(session: _session),
-                    const SizedBox(height: 12),
-                    Text(
-                      "Prompt:",
-                      style: Theme.of(context).textTheme.labelLarge,
-                    ),
-                    const SizedBox(height: 4),
-                    _PromptExpander(
-                      prompt: _session.prompt,
-                      isExpanded: _isPromptExpanded,
-                      onToggle: () {
-                        setState(() {
-                          _isPromptExpanded = !_isPromptExpanded;
-                        });
-                      },
-                    ),
-                    const SizedBox(height: 16),
-                    _buildNotesSection(),
-                  ],
-                ),
-              ),
+              _buildHeaderContent(context),
               const Divider(),
             ],
           ),
         ),
       ),
     );
+  }
+
+  KeyEventResult _handleMessageKeyEvent(FocusNode node, KeyEvent event) {
+    if (event is! KeyDownEvent) {
+      return KeyEventResult.ignored;
+    }
+
+    final settings = Provider.of<SettingsProvider>(context, listen: false);
+    final isShiftPressed = HardwareKeyboard.instance.isShiftPressed;
+    final isControlPressed = HardwareKeyboard.instance.isControlPressed;
+
+    if (event.logicalKey == LogicalKeyboardKey.escape) {
+      return _handleEscapeAction(settings);
+    }
+
+    if (event.logicalKey == LogicalKeyboardKey.enter) {
+      return _handleEnterAction(settings, isShiftPressed, isControlPressed);
+    }
+
+    return KeyEventResult.ignored;
+  }
+
+  KeyEventResult _handleEscapeAction(SettingsProvider settings) {
+    final action = settings.escKeyAction;
+    switch (action) {
+      case EscKeyAction.savesDraftAndGoesBack:
+        if (_messageController.text.trim().isNotEmpty) {
+          Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          ).saveDraft(_session.id, _messageController.text);
+        }
+        Navigator.pop(context);
+        return KeyEventResult.handled;
+      case EscKeyAction.goesBack:
+        Navigator.pop(context);
+        return KeyEventResult.handled;
+      case EscKeyAction.doesNothing:
+        return KeyEventResult.handled;
+    }
+  }
+
+  KeyEventResult _handleEnterAction(
+    SettingsProvider settings,
+    bool isShiftPressed,
+    bool isControlPressed,
+  ) {
+    MessageSubmitAction action;
+    if (isControlPressed && isShiftPressed) {
+      action = settings.ctrlShiftEnterKeyAction;
+    } else if (isControlPressed) {
+      action = settings.ctrlEnterKeyAction;
+    } else if (isShiftPressed) {
+      action = settings.shiftEnterKeyAction;
+    } else {
+      action = settings.enterKeyAction;
+    }
+
+    // Common logic based on the action's enum index, since they all share the same structure.
+    switch (action) {
+      case MessageSubmitAction.addNewLine:
+        return KeyEventResult.ignored;
+      case MessageSubmitAction.submitsMessage:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.submitsMessageAndGoesBack:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+          // Don't await, let it send in the background while we navigate away.
+          Navigator.pop(context);
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.submitsMessageMarksReadAndOpensNext:
+        if (_messageController.text.isNotEmpty) {
+          _sendMessage(_messageController.text);
+          Navigator.pop(
+            context,
+            const SessionDetailResult(
+              markAsRead: true,
+              openNextSession: true,
+            ),
+          );
+        }
+        return KeyEventResult.handled;
+      case MessageSubmitAction.doesNothing:
+        return KeyEventResult.handled;
+    }
   }
 
   Widget _buildInput(BuildContext context) {
@@ -2514,6 +2410,153 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeaderContent(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          _buildMetadataSection(),
+          const SizedBox(height: 12),
+          _buildPromptSection(context),
+          const SizedBox(height: 16),
+          _buildNotesSection(),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMetadataSection() {
+    // Start with Pills (State, Date, Automation, Approval, PR Status, Source, Branch)
+    return SessionMetaPills(session: _session);
+  }
+
+  Widget _buildPromptSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Prompt:",
+          style: Theme.of(context).textTheme.labelLarge,
+        ),
+        const SizedBox(height: 4),
+        _PromptExpander(
+          prompt: _session.prompt,
+          isExpanded: _isPromptExpanded,
+          onToggle: () {
+            setState(() {
+              _isPromptExpanded = !_isPromptExpanded;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotesSection() {
+    if (!_isNoteVisible) {
+      return const SizedBox.shrink();
+    }
+
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16.0),
+      child: Card(
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          side: BorderSide(color: Theme.of(context).dividerColor),
+          borderRadius: BorderRadius.circular(8),
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(12.0),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              _buildNotesHeader(),
+              const SizedBox(height: 8),
+              _buildNotesBody(),
+              if (!_isNoteEditing && _session.note != null) ...[
+                const SizedBox(height: 8),
+                _buildNotesFooter(),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildNotesHeader() {
+    return Row(
+      children: [
+        Text("Notes", style: Theme.of(context).textTheme.titleMedium),
+        const Spacer(),
+        if (_isNoteEditing)
+          TextButton.icon(
+            icon: const Icon(Icons.done, size: 16),
+            label: const Text('Done'),
+            onPressed: () {
+              _updateNote(_noteController.text);
+              setState(() {
+                _isNoteEditing = false;
+              });
+            },
+          )
+        else
+          TextButton.icon(
+            icon: const Icon(Icons.edit, size: 16),
+            label: const Text('Edit'),
+            onPressed: () {
+              setState(() {
+                _isNoteEditing = true;
+              });
+            },
+          ),
+        IconButton(
+          icon: const Icon(Icons.close, size: 16),
+          onPressed: () {
+            setState(() {
+              _isNoteVisible = false;
+            });
+          },
+        ),
+      ],
+    );
+  }
+
+  Widget _buildNotesBody() {
+    if (_isNoteEditing) {
+      return TextField(
+        controller: _noteController,
+        autofocus: true,
+        maxLines: null, // Allows for multiline input
+        keyboardType: TextInputType.multiline,
+        decoration: const InputDecoration(
+          hintText: 'Add your notes here...',
+          border: InputBorder.none,
+        ),
+      );
+    }
+
+    if (_session.note?.content.isNotEmpty ?? false) {
+      return MarkdownBody(data: _session.note!.content);
+    }
+
+    return const Text(
+      'No notes added yet.',
+      style: TextStyle(color: Colors.grey),
+    );
+  }
+
+  Widget _buildNotesFooter() {
+    return Align(
+      alignment: Alignment.centerRight,
+      child: Text(
+        'Last updated: ${DateFormat.yMMMd().add_jm().format(DateTime.parse(_session.note!.updatedDate).toLocal())} (v${_session.note!.version})',
+        style: Theme.of(context).textTheme.bodySmall,
       ),
     );
   }
