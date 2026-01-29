@@ -55,13 +55,15 @@ class AppContainer extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => FilterBookmarkProvider()),
         ChangeNotifierProvider(create: (_) => BulkActionPresetProvider()),
         ChangeNotifierProvider(create: (_) => PromptTemplateProvider()..init()),
-        ChangeNotifierProxyProvider3<CacheService, GithubProvider,
-            NotificationProvider, SessionProvider>(
+        ChangeNotifierProxyProvider4<CacheService, GithubProvider,
+            NotificationProvider, SettingsProvider, SessionProvider>(
           create: (_) => SessionProvider(),
-          update: (_, cache, github, notifications, session) => session!
-            ..setCacheService(cache)
-            ..setGithubProvider(github)
-            ..setNotificationProvider(notifications),
+          update: (_, cache, github, notifications, settings, session) =>
+              session!
+                ..setCacheService(cache)
+                ..setGithubProvider(github)
+                ..setNotificationProvider(notifications)
+                ..setSettingsProvider(settings),
         ),
         ChangeNotifierProxyProvider<CacheService, SourceProvider>(
           create: (_) => SourceProvider(),

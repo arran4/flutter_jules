@@ -202,7 +202,195 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value: settings.refreshOnMessage,
           onChanged: settings.setRefreshOnMessage,
         ),
+        _buildRulesSection(context, settings),
       ],
+    );
+  }
+
+  Widget _buildRulesSection(
+    BuildContext context,
+    SettingsProvider settings,
+  ) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 16, 16, 0),
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                'Unread Rules',
+                style: Theme.of(context).textTheme.titleSmall,
+              ),
+              IconButton(
+                icon: const Icon(Icons.add),
+                onPressed: () => _showRuleEditor(context, settings),
+              ),
+            ],
+          ),
+        ),
+        if (settings.unreadRules.isEmpty)
+          const Padding(
+            padding: EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+            child: Text(
+              'No rules defined. Only direct session progression will mark sessions as unread.',
+              style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+            ),
+          ),
+        ...settings.unreadRules.map((rule) {
+          return ListTile(
+            title: Text(rule.description),
+            trailing: Row(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Switch(
+                  value: rule.enabled,
+                  onChanged: (val) {
+                    settings.updateUnreadRule(rule.copyWith(enabled: val));
+                  },
+                ),
+                IconButton(
+                  icon: const Icon(Icons.edit),
+                  onPressed: () => _showRuleEditor(context, settings, rule),
+                ),
+                IconButton(
+                  icon: const Icon(Icons.delete),
+                  onPressed: () => settings.deleteUnreadRule(rule.id),
+                ),
+              ],
+            ),
+          );
+        }),
+      ],
+    );
+  }
+
+  void _showRuleEditor(
+    BuildContext context,
+    SettingsProvider settings, [
+    UnreadRule? existingRule,
+  ]) {
+    final isEditing = existingRule != null;
+    var type = existingRule?.type ?? RuleType.contentUpdate;
+    var action = existingRule?.action ?? RuleAction.markUnread;
+    final fromController = TextEditingController(text: existingRule?.fromValue);
+    final toController = TextEditingController(text: existingRule?.toValue);
+
+    showDialog(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text(isEditing ? 'Edit Rule' : 'Add Rule'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    DropdownButtonFormField<RuleType>(
+                      value: type,
+                      decoration:
+                          const InputDecoration(labelText: 'Event Type'),
+                      items: RuleType.values.map((t) {
+                        String label;
+                        switch (t) {
+                          case RuleType.prStatus:
+                            label = 'PR Status Change';
+                            break;
+                          case RuleType.ciStatus:
+                            label = 'CI Status Change';
+                            break;
+                          // case RuleType.sessionState:
+                          //   label = 'Session State Change';
+                          //   break;
+                          case RuleType.contentUpdate:
+                            label = 'Content Update (Generic)';
+                            break;
+                        }
+                        return DropdownMenuItem(value: t, child: Text(label));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => type = val);
+                      },
+                    ),
+                    if (type != RuleType.contentUpdate) ...[
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: fromController,
+                        decoration: const InputDecoration(
+                          labelText: 'From Value (Optional)',
+                          hintText: 'Any if empty',
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        controller: toController,
+                        decoration: const InputDecoration(
+                          labelText: 'To Value (Optional)',
+                          hintText: 'Any if empty',
+                        ),
+                      ),
+                    ],
+                    const SizedBox(height: 8),
+                    DropdownButtonFormField<RuleAction>(
+                      value: action,
+                      decoration: const InputDecoration(labelText: 'Action'),
+                      items: RuleAction.values.map((a) {
+                        String label;
+                        switch (a) {
+                          case RuleAction.markUnread:
+                            label = 'Mark Unread';
+                            break;
+                          case RuleAction.markRead:
+                            label = 'Mark Read';
+                            break;
+                          case RuleAction.doNothing:
+                            label = 'Do Nothing';
+                            break;
+                        }
+                        return DropdownMenuItem(value: a, child: Text(label));
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) setState(() => action = val);
+                      },
+                    ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.pop(context),
+                  child: const Text('Cancel'),
+                ),
+                TextButton(
+                  onPressed: () {
+                    final rule = UnreadRule(
+                      id: existingRule?.id ??
+                          DateTime.now().microsecondsSinceEpoch.toString(),
+                      type: type,
+                      action: action,
+                      fromValue: fromController.text.isEmpty
+                          ? null
+                          : fromController.text,
+                      toValue:
+                          toController.text.isEmpty ? null : toController.text,
+                      enabled: existingRule?.enabled ?? true,
+                    );
+                    if (isEditing) {
+                      settings.updateUnreadRule(rule);
+                    } else {
+                      settings.addUnreadRule(rule);
+                    }
+                    Navigator.pop(context);
+                  },
+                  child: const Text('Save'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 
