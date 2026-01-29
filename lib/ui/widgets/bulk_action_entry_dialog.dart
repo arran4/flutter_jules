@@ -29,31 +29,35 @@ class BulkActionEntryDialog extends StatelessWidget {
           child: const Text('Cancel'),
         ),
         FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            showDialog(
-              context: context,
-              builder: (_) => BulkActionDialog(
-                currentFilterTree: currentFilterTree,
-                currentSorts: currentSorts,
-                availableSuggestions: availableSuggestions,
-                mainSearchText: mainSearchText,
-              ),
-            );
-          },
+          onPressed: () => _showOneTimeActionDialog(context),
           child: const Text('One-Time Action'),
         ),
         FilledButton(
-          onPressed: () {
-            Navigator.pop(context);
-            showDialog(
-              context: context,
-              builder: (_) => const BulkActionPresetDialog(),
-            );
-          },
+          onPressed: () => _showPresetDialog(context),
           child: const Text('Run Preset'),
         ),
       ],
+    );
+  }
+
+  void _showOneTimeActionDialog(BuildContext context) {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (_) => BulkActionDialog(
+        currentFilterTree: currentFilterTree,
+        currentSorts: currentSorts,
+        availableSuggestions: availableSuggestions,
+        mainSearchText: mainSearchText,
+      ),
+    );
+  }
+
+  void _showPresetDialog(BuildContext context) {
+    Navigator.pop(context);
+    showDialog(
+      context: context,
+      builder: (_) => const BulkActionPresetDialog(),
     );
   }
 }
