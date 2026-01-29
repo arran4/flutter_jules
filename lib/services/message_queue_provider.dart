@@ -49,7 +49,8 @@ class MessageQueueProvider extends ChangeNotifier {
       // But we can verify if we have queued items and log it.
       if (_queue.any((m) => m.state == QueueState.queued)) {
         debugPrint(
-            "Queue loaded with pending items. Waiting for client to send.");
+          "Queue loaded with pending items. Waiting for client to send.",
+        );
       }
     }
   }
@@ -287,8 +288,9 @@ class MessageQueueProvider extends ChangeNotifier {
       // Update state to sending
       final sendingIndex = _queue.indexWhere((m) => m.id == msg.id);
       if (sendingIndex != -1) {
-        _queue[sendingIndex] =
-            _queue[sendingIndex].copyWith(state: QueueState.sending);
+        _queue[sendingIndex] = _queue[sendingIndex].copyWith(
+          state: QueueState.sending,
+        );
         notifyListeners(); // Update UI to show "Sending..."
       }
 
