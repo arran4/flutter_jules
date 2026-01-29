@@ -81,69 +81,74 @@ class SourceTile extends StatelessWidget {
             _buildUsageRow(context),
           ],
         ),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              icon: const Icon(Icons.refresh),
-              tooltip: 'Refresh source',
-              onPressed: () => _handleRefreshSource(context, source),
-            ),
-            IconButton(
-              icon: const Icon(Icons.add),
-              tooltip: 'New session',
-              onPressed: () => _handleNewSession(context, source.name),
-            ),
-            IconButton(
-              icon: const Icon(Icons.filter_list),
-              tooltip: 'Filter by this source',
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) =>
-                        SessionListScreen(sourceFilter: source.name),
-                  ),
-                );
-              },
-            ),
-            PopupMenuButton<String>(
-              onSelected: (value) =>
-                  _handleMenuSelection(context, value, source),
-              itemBuilder: (context) {
-                final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
-                  context,
-                  listen: false,
-                );
-                final bookmarks = bookmarkProvider.bookmarks;
-
-                return [
-                  const PopupMenuItem(
-                    value: 'refresh_sessions',
-                    child: Text('Refresh Sessions'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'stats',
-                    child: Text('Show Stats'),
-                  ),
-                  const PopupMenuItem(
-                    value: 'view_cache_file',
-                    child: Text('View Cache File'),
-                  ),
-                  if (bookmarks.isNotEmpty) const PopupMenuDivider(),
-                  ...bookmarks.map(
-                    (bookmark) => PopupMenuItem(
-                      value: 'bookmark_${bookmark.name}',
-                      child: Text(bookmark.name),
-                    ),
-                  ),
-                ];
-              },
-            ),
-          ],
-        ),
+        trailing: _buildTrailingActions(context, source),
       ),
     );
+  }
+
+  Widget _buildTrailingActions(BuildContext context, Source source) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh source',
+          onPressed: () => _handleRefreshSource(context, source),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'New session',
+          onPressed: () => _handleNewSession(context, source.name),
+        ),
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          tooltip: 'Filter by this source',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    SessionListScreen(sourceFilter: source.name),
+              ),
+            );
+          },
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) => _handleMenuSelection(context, value, source),
+          itemBuilder: _buildMenuItems,
+        ),
+      ],
+    );
+  }
+
+  List<PopupMenuEntry<String>> _buildMenuItems(BuildContext context) {
+    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
+      context,
+      listen: false,
+    );
+    final bookmarks = bookmarkProvider.bookmarks;
+
+    return [
+      const PopupMenuItem(
+        value: 'refresh_sessions',
+        child: Text('Refresh Sessions'),
+      ),
+      const PopupMenuItem(
+        value: 'stats',
+        child: Text('Show Stats'),
+      ),
+      const PopupMenuItem(
+        value: 'view_cache_file',
+        child: Text('View Cache File'),
+      ),
+      if (bookmarks.isNotEmpty) const PopupMenuDivider(),
+      ...bookmarks.map(
+        (bookmark) => PopupMenuItem(
+          value: 'bookmark_${bookmark.name}',
+          child: Text(bookmark.name),
+        ),
+      ),
+    ];
   }
 
   Widget? _buildDescription(BuildContext context, GitHubRepo? repo) {
