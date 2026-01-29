@@ -113,7 +113,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     if (widget.initialSession != null) {
       // Initialize other fields based on initialSession logic
-      final mode = widget.initialSession!.automationMode ??
+      final mode =
+          widget.initialSession!.automationMode ??
           AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
       final requireApproval =
           widget.initialSession!.requirePlanApproval ?? false;
@@ -288,7 +289,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         // Try to match branch from draft
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
-              .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+              .initialSession!
+              .sourceContext!
+              .githubRepoContext!
+              .startingBranch;
         }
       } else {
         // Set default branch
@@ -309,8 +313,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
     List<Source> allSources = sourceProvider.items.map((i) => i.data).toList();
     if (settingsProvider.hideArchivedAndReadOnly) {
-      allSources =
-          allSources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+      allSources = allSources
+          .where((s) => !s.isArchived && !s.isReadOnly)
+          .toList();
     }
     _sortSources(allSources);
 
@@ -415,7 +420,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     );
   }
 
-  void _applyLoadedSources(SourceProvider sourceProvider, {required bool force}) {
+  void _applyLoadedSources(
+    SourceProvider sourceProvider, {
+    required bool force,
+  }) {
     final settingsProvider = Provider.of<SettingsProvider>(
       context,
       listen: false,
@@ -475,7 +483,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   void _restoreModeFromSession() {
     if (widget.initialSession == null) return;
     _promptController.text = widget.initialSession!.prompt;
-    final mode = widget.initialSession!.automationMode ??
+    final mode =
+        widget.initialSession!.automationMode ??
         AutomationMode.AUTOMATION_MODE_UNSPECIFIED;
     final requireApproval = widget.initialSession!.requirePlanApproval ?? false;
 
@@ -548,9 +557,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       return;
     }
 
-    _sourceOverlayEntry = OverlayEntry(
-      builder: _buildSourceOverlay,
-    );
+    _sourceOverlayEntry = OverlayEntry(builder: _buildSourceOverlay);
 
     // Insert into overlay
     Overlay.of(context).insert(_sourceOverlayEntry!);
@@ -645,8 +652,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     final allSources = sourceProvider.items.map((i) => i.data).toList();
 
     // Map group members to Source objects
-    final sources =
-        allSources.where((s) => group.sourceNames.contains(s.name)).toList();
+    final sources = allSources
+        .where((s) => group.sourceNames.contains(s.name))
+        .toList();
 
     setState(() {
       _bulkSelections = sources
@@ -707,8 +715,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
   Future<void> _showBulkDialog(List<Source> allSources) async {
     // Convert existing BulkSelection to simple Source list for the dialog
-    List<Source> initialSelection =
-        _bulkSelections.map((bs) => bs.source).toList();
+    List<Source> initialSelection = _bulkSelections
+        .map((bs) => bs.source)
+        .toList();
     if (initialSelection.isEmpty && _selectedSource != null) {
       initialSelection.add(_selectedSource!);
     }
@@ -1026,8 +1035,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       builder: (context, sourceProvider, settingsProvider, _) {
         var sources = sourceProvider.items.map((i) => i.data).toList();
         if (settingsProvider.hideArchivedAndReadOnly) {
-          sources =
-              sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
+          sources = sources
+              .where((s) => !s.isArchived && !s.isReadOnly)
+              .toList();
         }
 
         // Sort sources
@@ -1147,17 +1157,20 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                       Consumer<MessageQueueProvider>(
                                         builder: (context, queueProvider, _) {
                                           try {
-                                            final errorMsg =
-                                                queueProvider.queue.firstWhere(
-                                              (m) =>
-                                                  m.type ==
-                                                      QueuedMessageType
-                                                          .sessionCreation &&
-                                                  m.content ==
-                                                      widget.initialSession!
-                                                          .prompt &&
-                                                  m.processingErrors.isNotEmpty,
-                                            );
+                                            final errorMsg = queueProvider.queue
+                                                .firstWhere(
+                                                  (m) =>
+                                                      m.type ==
+                                                          QueuedMessageType
+                                                              .sessionCreation &&
+                                                      m.content ==
+                                                          widget
+                                                              .initialSession!
+                                                              .prompt &&
+                                                      m
+                                                          .processingErrors
+                                                          .isNotEmpty,
+                                                );
 
                                             return Padding(
                                               padding: const EdgeInsets.only(
@@ -1166,21 +1179,22 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                               child: Column(
                                                 crossAxisAlignment:
                                                     CrossAxisAlignment.start,
-                                                children:
-                                                    errorMsg.processingErrors
-                                                        .map<Widget>(
-                                                          (e) => Text(
-                                                            "• $e",
-                                                            style: TextStyle(
-                                                              color: Colors
-                                                                  .red.shade900,
-                                                              fontSize: 11,
-                                                              fontFamily:
-                                                                  'monospace',
-                                                            ),
-                                                          ),
-                                                        )
-                                                        .toList(),
+                                                children: errorMsg
+                                                    .processingErrors
+                                                    .map<Widget>(
+                                                      (e) => Text(
+                                                        "• $e",
+                                                        style: TextStyle(
+                                                          color: Colors
+                                                              .red
+                                                              .shade900,
+                                                          fontSize: 11,
+                                                          fontFamily:
+                                                              'monospace',
+                                                        ),
+                                                      ),
+                                                    )
+                                                    .toList(),
                                               ),
                                             );
                                           } catch (_) {
@@ -1212,7 +1226,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 sourceController: _sourceController,
                                 sourceFocusNode: _sourceFocusNode,
                                 sourceLayerLink: _sourceLayerLink,
-                                onOpenBulkDialog: () => _showBulkDialog(sources),
+                                onOpenBulkDialog: () =>
+                                    _showBulkDialog(sources),
                                 onRefresh: () => _fetchSources(force: true),
                                 onBulkBranchChanged: _handleBulkBranchChanged,
                                 onBulkRemove: _handleBulkRemove,
@@ -1272,7 +1287,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                             'Describe what you want to do...',
                                         border: const OutlineInputBorder(),
                                         alignLabelWithHint: true,
-                                        suffixIcon: (widget.mode ==
+                                        suffixIcon:
+                                            (widget.mode ==
                                                     SessionDialogMode.edit ||
                                                 widget.mode ==
                                                     SessionDialogMode
@@ -1289,7 +1305,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                     return;
                                                   }
                                                   final originalPrompt = widget
-                                                      .initialSession!.prompt;
+                                                      .initialSession!
+                                                      .prompt;
                                                   final currentText =
                                                       _promptController.text;
 
@@ -1305,13 +1322,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                                         originalPrompt;
                                                   }
                                                   _promptController.selection =
-                                                      TextSelection
-                                                          .fromPosition(
-                                                    TextPosition(
-                                                      offset: _promptController
-                                                          .text.length,
-                                                    ),
-                                                  );
+                                                      TextSelection.fromPosition(
+                                                        TextPosition(
+                                                          offset:
+                                                              _promptController
+                                                                  .text
+                                                                  .length,
+                                                        ),
+                                                      );
                                                 },
                                               )
                                             : null,
@@ -1573,9 +1591,7 @@ class _SourceSelectorSection extends StatelessWidget {
           children: [
             const Text(
               'Context',
-              style: TextStyle(
-                fontWeight: FontWeight.bold,
-              ),
+              style: TextStyle(fontWeight: FontWeight.bold),
             ),
             Row(
               children: [
@@ -1596,10 +1612,7 @@ class _SourceSelectorSection extends StatelessWidget {
                           height: 16,
                           child: CircularProgressIndicator(strokeWidth: 2),
                         )
-                      : const Icon(
-                          Icons.refresh,
-                          size: 20,
-                        ),
+                      : const Icon(Icons.refresh, size: 20),
                   label: Text(refreshStatus),
                 ),
               ],
@@ -1687,10 +1700,7 @@ class _BulkSelectionPanel extends StatelessWidget {
                         .map(
                           (b) => DropdownMenuItem(
                             value: b,
-                            child: Text(
-                              b,
-                              overflow: TextOverflow.ellipsis,
-                            ),
+                            child: Text(b, overflow: TextOverflow.ellipsis),
                           ),
                         )
                         .toList(),
@@ -1703,10 +1713,7 @@ class _BulkSelectionPanel extends StatelessWidget {
                 ),
                 const SizedBox(width: 8),
                 IconButton(
-                  icon: const Icon(
-                    Icons.close,
-                    size: 16,
-                  ),
+                  icon: const Icon(Icons.close, size: 16),
                   onPressed: () => onRemove(index),
                 ),
               ],
@@ -1761,19 +1768,10 @@ class _SingleSourceSelector extends StatelessWidget {
                     labelText: 'Repository',
                     border: const OutlineInputBorder(),
                     prefixIcon: (selectedSource?.githubRepo?.isPrivate == true)
-                        ? const Icon(
-                            Icons.lock,
-                            size: 16,
-                          )
-                        : const Icon(
-                            Icons.source,
-                            size: 16,
-                          ),
+                        ? const Icon(Icons.lock, size: 16)
+                        : const Icon(Icons.source, size: 16),
                     suffixIcon: IconButton(
-                      icon: const Icon(
-                        Icons.close,
-                        size: 16,
-                      ),
+                      icon: const Icon(Icons.close, size: 16),
                       onPressed: onClearSource,
                     ),
                   ),
@@ -1797,10 +1795,7 @@ class _SingleSourceSelector extends StatelessWidget {
                 .map(
                   (b) => DropdownMenuItem(
                     value: b,
-                    child: Text(
-                      b,
-                      overflow: TextOverflow.ellipsis,
-                    ),
+                    child: Text(b, overflow: TextOverflow.ellipsis),
                   ),
                 )
                 .toList(),

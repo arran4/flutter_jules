@@ -147,10 +147,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final titleMatches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state?.displayName.toLowerCase().contains(query) ??
-                        false);
+                (session.name.toLowerCase().contains(query)) ||
+                (session.id.toLowerCase().contains(query)) ||
+                (session.state?.displayName.toLowerCase().contains(query) ??
+                    false);
             if (!titleMatches) return false;
           }
 
@@ -246,8 +246,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
                                 ),
                                 onChanged: (val) {
                                   setState(() {
-                                    _limit =
-                                        val.isEmpty ? null : int.tryParse(val);
+                                    _limit = val.isEmpty
+                                        ? null
+                                        : int.tryParse(val);
                                   });
                                   _updatePreview();
                                 },
@@ -383,8 +384,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed:
-              _totalMatches > 0 && _actions.isNotEmpty ? _startJob : null,
+          onPressed: _totalMatches > 0 && _actions.isNotEmpty
+              ? _startJob
+              : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Run Bulk Actions'),
         ),
@@ -409,10 +411,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         _buildSectionHeader('1. Target Sessions'),
         Text(
           'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
         AdvancedSearchBar(
@@ -678,8 +677,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       if (existingPreset != null) {
         final contentDiffers =
             existingPreset.filterExpression != newPreset.filterExpression ||
-                existingPreset.actionScript != newPreset.actionScript ||
-                existingPreset.description != newPreset.description;
+            existingPreset.actionScript != newPreset.actionScript ||
+            existingPreset.description != newPreset.description;
 
         if (contentDiffers) {
           final confirm = await showDialog<bool>(
@@ -723,15 +722,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   void _startJob() {
     // Save configuration
     context.read<SettingsProvider>().saveBulkActionConfig(
-          actions: _actions,
-          parallelQueries: _parallelQueries,
-          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
-          waitBetweenUnit: _waitBetweenUnit,
-          limit: _limit,
-          offset: _offset,
-          randomize: _randomize,
-          stopOnError: _stopOnError,
-        );
+      actions: _actions,
+      parallelQueries: _parallelQueries,
+      waitBetweenMilliseconds: _waitBetween.inMilliseconds,
+      waitBetweenUnit: _waitBetweenUnit,
+      limit: _limit,
+      offset: _offset,
+      randomize: _randomize,
+      stopOnError: _stopOnError,
+    );
 
     final config = BulkJobConfig(
       targetType: BulkTargetType.filtered,
@@ -759,9 +758,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final matches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state.toString().toLowerCase().contains(query));
+                (session.name.toLowerCase().contains(query)) ||
+                (session.id.toLowerCase().contains(query)) ||
+                (session.state.toString().toLowerCase().contains(query));
             if (!matches) return false;
           }
 
