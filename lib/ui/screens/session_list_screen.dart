@@ -2103,17 +2103,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
                             ],
                           ),
                         ),
-                      if (!isOffline)
-                        const PopupMenuItem(
-                          value: 'refresh_dirty',
-                          child: Row(
-                            children: [
-                              Icon(Icons.sync_problem),
-                              SizedBox(width: 8),
-                              Text('Refresh Dirty Sessions'),
-                            ],
-                          ),
-                        ),
                       const PopupMenuItem(
                         value: 'raw_data',
                         child: Row(
@@ -2332,7 +2321,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             auth.client,
                                                             force: true);
                                                   });
-                                                                                                  return;
+                                                  return;
                                                 }
                                               } catch (_) {
                                                 return;
@@ -2391,7 +2380,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                                             auth.client,
                                                             force: true);
                                                   });
-                                                                                                }
+                                                }
                                               }
                                               return;
                                             }
