@@ -2,6 +2,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:flutter_jules/services/settings_provider.dart';
 import 'package:flutter_jules/models/enums.dart';
+import 'package:flutter_jules/models/unread_rule.dart';
 
 void main() {
   group('SettingsProvider', () {
@@ -41,6 +42,29 @@ void main() {
       final provider2 = SettingsProvider();
       await provider2.init();
       expect(provider2.appBarRefreshActions, isEmpty);
+    });
+
+    test('Can update and persist unread rules', () async {
+      // Default is empty
+      expect(provider.unreadRules, isEmpty);
+
+      final rule = UnreadRule(
+        id: 'test-rule',
+        type: RuleType.prStatus,
+        action: RuleAction.markUnread,
+        fromValue: 'Open',
+        toValue: 'Merged',
+      );
+
+      await provider.addUnreadRule(rule);
+      expect(provider.unreadRules.length, 1);
+      expect(provider.unreadRules.first.id, 'test-rule');
+
+      final provider2 = SettingsProvider();
+      await provider2.init();
+      expect(provider2.unreadRules.length, 1);
+      expect(provider2.unreadRules.first.id, 'test-rule');
+      expect(provider2.unreadRules.first.type, RuleType.prStatus);
     });
   });
 }
