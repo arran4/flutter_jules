@@ -31,9 +31,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     _delayController.text = widget.config.waitBetween.inSeconds.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BulkActionExecutor>().startJob(
-            widget.config,
-            widget.targets,
-          );
+        widget.config,
+        widget.targets,
+      );
     });
   }
 
@@ -50,7 +50,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
         final total = executor.totalToProcess;
         final completed = executor.completed.length;
         final progress = total > 0 ? completed / total : 0.0;
-        final isDone = executor.status == BulkJobStatus.completed ||
+        final isDone =
+            executor.status == BulkJobStatus.completed ||
             executor.status == BulkJobStatus.canceled;
 
         return AlertDialog(
@@ -301,8 +302,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                                 log.message,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color:
-                                      log.isError ? Colors.red : Colors.black87,
+                                  color: log.isError
+                                      ? Colors.red
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
@@ -375,8 +377,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                     titleStyle: TextStyle(
                       fontSize: 11,
                       color: isPaused ? Colors.orange.shade700 : Colors.black87,
-                      fontWeight:
-                          isPaused ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isPaused
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     subtitleStyle: TextStyle(
                       fontSize: 9,
