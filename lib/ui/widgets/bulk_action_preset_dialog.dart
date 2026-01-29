@@ -112,8 +112,9 @@ class BulkActionPresetDialog extends StatelessWidget {
     required CacheMetadata metadata,
     required MessageQueueProvider queueProvider,
   }) {
-    final initialState =
-        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
 
     if (config.filterTree == null) {
       return initialState.isIn;
