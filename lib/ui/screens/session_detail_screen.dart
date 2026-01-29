@@ -334,8 +334,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           // If we fetched new ones, merge.
           if (shallow && _activities.isNotEmpty) {
             final newIds = activities.map((a) => a.id).toSet();
-            final oldUnique =
-                _activities.where((a) => !newIds.contains(a.id)).toList();
+            final oldUnique = _activities
+                .where((a) => !newIds.contains(a.id))
+                .toList();
 
             // Combine and Sort
             _activities = [...activities, ...oldUnique];
@@ -572,8 +573,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           message,
           reason: 'resource_not_found',
           processingErrors: [e.message],
-          metadata:
-              e.responseBody != null ? {'responseBody': e.responseBody} : null,
+          metadata: e.responseBody != null
+              ? {'responseBody': e.responseBody}
+              : null,
         );
         handled = true;
       }
@@ -766,14 +768,14 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           (_session.note?.content.isEmpty ?? true)
               ? Icons.note_add_outlined
               : _isNoteVisible
-                  ? Icons.speaker_notes_off_outlined
-                  : Icons.speaker_notes_outlined,
+              ? Icons.speaker_notes_off_outlined
+              : Icons.speaker_notes_outlined,
         ),
         tooltip: (_session.note?.content.isEmpty ?? true)
             ? 'Add Note'
             : _isNoteVisible
-                ? 'Hide Note'
-                : 'View Note',
+            ? 'Hide Note'
+            : 'View Note',
         onPressed: _toggleNoteVisibility,
       ),
       IconButton(
@@ -809,10 +811,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         onPressed: () {
           showDialog(
             context: context,
-            builder: (context) => CombinedDataViewer(
-              session: _session,
-              activities: _activities,
-            ),
+            builder: (context) =>
+                CombinedDataViewer(session: _session, activities: _activities),
           );
         },
       ),
@@ -846,18 +846,15 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
             icon: const Icon(Icons.wifi_off),
             tooltip: 'Go Online',
             onPressed: () async {
-              final auth = Provider.of<AuthProvider>(
-                context,
-                listen: false,
-              );
+              final auth = Provider.of<AuthProvider>(context, listen: false);
               final online = await queueProvider.goOnline(auth.client);
               if (!context.mounted) return;
               if (online) {
                 _fetchActivities(force: true);
               } else {
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(content: Text("Still offline")),
-                );
+                ScaffoldMessenger.of(
+                  context,
+                ).showSnackBar(const SnackBar(content: Text("Still offline")));
               }
             },
           );
@@ -872,8 +869,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               : const Icon(Icons.refresh),
           // Disable/Gray out while "busy" (min 2s or until completion)
           // Also blockout if any other network op is running
-          onPressed:
-              (_isRefreshDisabled || _busyCount > 0) ? null : _handleRefresh,
+          onPressed: (_isRefreshDisabled || _busyCount > 0)
+              ? null
+              : _handleRefresh,
           tooltip: 'Refresh',
         );
       },
@@ -887,10 +885,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           context,
           listen: false,
         );
-        final authProvider = Provider.of<AuthProvider>(
-          context,
-          listen: false,
-        );
+        final authProvider = Provider.of<AuthProvider>(context, listen: false);
         final messageQueueProvider = Provider.of<MessageQueueProvider>(
           context,
           listen: false,
@@ -916,10 +911,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
               ?.pullRequest;
           if (pr != null) launchUrl(Uri.parse(pr.url));
           if (context.mounted) {
-            Navigator.pop(
-              context,
-              const SessionDetailResult(markAsRead: true),
-            );
+            Navigator.pop(context, const SessionDetailResult(markAsRead: true));
           }
         } else if (value == 'copy_pr_url') {
           final pr = _session.outputs
@@ -928,9 +920,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (pr != null) {
             await Clipboard.setData(ClipboardData(text: pr.url));
             if (context.mounted) {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('PR URL copied')),
-              );
+              ScaffoldMessenger.of(
+                context,
+              ).showSnackBar(const SnackBar(content: Text('PR URL copied')));
             }
           }
         } else if (value == 'full_refresh') {
@@ -938,9 +930,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         } else if (value == 'copy_id') {
           await Clipboard.setData(ClipboardData(text: _session.id));
           if (context.mounted) {
-            ScaffoldMessenger.of(context).showSnackBar(
-              const SnackBar(content: Text('Session ID copied')),
-            );
+            ScaffoldMessenger.of(
+              context,
+            ).showSnackBar(const SnackBar(content: Text('Session ID copied')));
           }
         } else if (value == 'open_browser') {
           if (_session.url != null) launchUrl(Uri.parse(_session.url!));
@@ -961,10 +953,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           if (_session.url != null) {
             if (await launchUrl(Uri.parse(_session.url!))) {
               if (context.mounted) {
-                await sessionProvider.markAsRead(
-                  _session.id,
-                  auth.token!,
-                );
+                await sessionProvider.markAsRead(_session.id, auth.token!);
                 if (context.mounted) {
                   Navigator.pop(context);
                 }
@@ -999,15 +988,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           );
           final isWatched = item?.metadata.isWatched ?? false;
           if (isWatched) {
-            await sessionProvider.unwatchSession(
-              _session.id,
-              auth.token!,
-            );
+            await sessionProvider.unwatchSession(_session.id, auth.token!);
           } else {
-            await sessionProvider.watchSession(
-              _session.id,
-              auth.token!,
-            );
+            await sessionProvider.watchSession(_session.id, auth.token!);
           }
         } else if (value == 'approve_plan') {
           _approvePlan();
@@ -1195,8 +1178,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                   (_session.note?.content.isEmpty ?? true)
                       ? Icons.note_add_outlined
                       : (_isNoteVisible
-                          ? Icons.speaker_notes_off_outlined
-                          : Icons.speaker_notes_outlined),
+                            ? Icons.speaker_notes_off_outlined
+                            : Icons.speaker_notes_outlined),
                   color: Colors.grey,
                 ),
                 const SizedBox(width: 8),
@@ -1309,7 +1292,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
       );
     }
 
-    bool hasPr = _session.outputs != null &&
+    bool hasPr =
+        _session.outputs != null &&
         _session.outputs!.any((o) => o.pullRequest != null);
 
     final bool showJulesNotice =
@@ -1321,8 +1305,9 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     // Merge queued messages
     final queueProvider = Provider.of<MessageQueueProvider>(context);
-    final queuedMessages =
-        queueProvider.queue.where((m) => m.sessionId == _session.id).toList();
+    final queuedMessages = queueProvider.queue
+        .where((m) => m.sessionId == _session.id)
+        .toList();
 
     // Merge pending messages (Optimistic updates)
     final sessionProvider = Provider.of<SessionProvider>(context);
@@ -1416,7 +1401,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
     return ListView.builder(
       reverse: true, // Start at bottom, visual index 0 is bottom
-      itemCount: finalItems.length +
+      itemCount:
+          finalItems.length +
           (hasPr ? 2 : 0) +
           (showJulesNotice ? 2 : 0) +
           1, // +1 for Last Updated Status
@@ -1433,11 +1419,10 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
                       ? "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)}) - $_loadingStatus"
                       : "Last updated: ${DateFormat.Hms().format(updateTime)} (${timeAgo(updateTime)})",
                   style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                        color:
-                            DateTime.now().difference(updateTime).inMinutes > 15
-                                ? Colors.orange
-                                : Colors.grey,
-                      ),
+                    color: DateTime.now().difference(updateTime).inMinutes > 15
+                        ? Colors.orange
+                        : Colors.grey,
+                  ),
                 ),
               ),
             );
@@ -1545,7 +1530,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
           // If it's a local activity (pending/queued), "refresh" should just check sync status (full fetch)
           // instead of trying to hit the API for a non-existent ID.
-          final isLocal = activity.id.startsWith('pending-') ||
+          final isLocal =
+              activity.id.startsWith('pending-') ||
               activity.id.startsWith('queued-');
 
           final item = ActivityItem(
@@ -2184,10 +2170,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
         child: SelectionArea(
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              _buildHeaderContent(context),
-              const Divider(),
-            ],
+            children: [_buildHeaderContent(context), const Divider()],
           ),
         ),
       ),
@@ -2271,10 +2254,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
           _sendMessage(_messageController.text);
           Navigator.pop(
             context,
-            const SessionDetailResult(
-              markAsRead: true,
-              openNextSession: true,
-            ),
+            const SessionDetailResult(markAsRead: true, openNextSession: true),
           );
         }
         return KeyEventResult.handled;
@@ -2285,7 +2265,8 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
 
   Widget _buildInput(BuildContext context) {
     final hasText = _messageController.text.isNotEmpty;
-    final canApprove = _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
+    final canApprove =
+        _session.state == SessionState.AWAITING_PLAN_APPROVAL &&
         (_session.requirePlanApproval ?? true);
 
     return SafeArea(
@@ -2439,10 +2420,7 @@ class _SessionDetailScreenState extends State<SessionDetailScreen> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(
-          "Prompt:",
-          style: Theme.of(context).textTheme.labelLarge,
-        ),
+        Text("Prompt:", style: Theme.of(context).textTheme.labelLarge),
         const SizedBox(height: 4),
         _PromptExpander(
           prompt: _session.prompt,
@@ -2637,8 +2615,9 @@ class _PromptExpander extends StatelessWidget {
             alignment: Alignment.topLeft,
             child: Container(
               constraints: BoxConstraints(
-                maxHeight:
-                    isExpanded ? MediaQuery.sizeOf(context).height * 0.4 : 60,
+                maxHeight: isExpanded
+                    ? MediaQuery.sizeOf(context).height * 0.4
+                    : 60,
               ),
               width: double.infinity,
               clipBehavior: Clip.hardEdge,
@@ -2656,9 +2635,7 @@ class _PromptExpander extends StatelessWidget {
                         stops: const [0.5, 1.0],
                       ),
                     ),
-              child: SingleChildScrollView(
-                child: MarkdownBody(data: prompt),
-              ),
+              child: SingleChildScrollView(child: MarkdownBody(data: prompt)),
             ),
           ),
           Center(

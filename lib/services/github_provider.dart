@@ -207,23 +207,29 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<AccessCheckResult> _handleOrgFailure(String owner) async {
-    await _settingsProvider.addGithubExclusion(GithubExclusion(
-      type: GithubExclusionType.org,
-      value: owner,
-      reason: 'PAT access request failed for Org.',
-      date: DateTime.now(),
-    ));
+    await _settingsProvider.addGithubExclusion(
+      GithubExclusion(
+        type: GithubExclusionType.org,
+        value: owner,
+        reason: 'PAT access request failed for Org.',
+        date: DateTime.now(),
+      ),
+    );
     return AccessCheckResult.userOk;
   }
 
   Future<AccessCheckResult> _handleRepoFailure(
-      String owner, String repo) async {
-    await _settingsProvider.addGithubExclusion(GithubExclusion(
-      type: GithubExclusionType.repo,
-      value: '$owner/$repo',
-      reason: 'PAT access request failed for Repo.',
-      date: DateTime.now(),
-    ));
+    String owner,
+    String repo,
+  ) async {
+    await _settingsProvider.addGithubExclusion(
+      GithubExclusion(
+        type: GithubExclusionType.repo,
+        value: '$owner/$repo',
+        reason: 'PAT access request failed for Repo.',
+        date: DateTime.now(),
+      ),
+    );
     return AccessCheckResult.orgOk;
   }
 
@@ -233,12 +239,14 @@ class GithubProvider extends ChangeNotifier {
     String prNumber,
     String? jobId,
   ) async {
-    await _settingsProvider.addGithubExclusion(GithubExclusion(
-      type: GithubExclusionType.pullRequest,
-      value: '$owner/$repo/$prNumber',
-      reason: 'PAT access request failed for PR.',
-      date: DateTime.now(),
-    ));
+    await _settingsProvider.addGithubExclusion(
+      GithubExclusion(
+        type: GithubExclusionType.pullRequest,
+        value: '$owner/$repo/$prNumber',
+        reason: 'PAT access request failed for PR.',
+        date: DateTime.now(),
+      ),
+    );
 
     if (jobId != null) {
       await _logFailure(
@@ -828,7 +836,7 @@ class GitHubPrResponse {
   final Map<String, dynamic> _links;
 
   GitHubPrResponse(this._data)
-      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
+    : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);

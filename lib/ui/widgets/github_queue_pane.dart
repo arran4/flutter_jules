@@ -214,3 +214,53 @@ class GithubQueuePane extends StatelessWidget {
     return "${m}m ${s}s";
   }
 }
+
+class _QueueList extends StatelessWidget {
+  const _QueueList({required this.queue, required this.buildStatusIcon});
+
+  final List<GithubJob> queue;
+  final Widget Function(GithubJobStatus status) buildStatusIcon;
+
+  @override
+  Widget build(BuildContext context) {
+    if (queue.isEmpty) {
+      return const Padding(
+        padding: EdgeInsets.symmetric(vertical: 16.0),
+        child: Center(
+          child: Text("Queue is empty", style: TextStyle(color: Colors.grey)),
+        ),
+      );
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Text(
+          "Processing Queue (${queue.length})",
+          style: Theme.of(context).textTheme.titleMedium,
+        ),
+        const SizedBox(height: 8),
+        ListView.builder(
+          shrinkWrap: true,
+          physics: const NeverScrollableScrollPhysics(),
+          itemCount: queue.length,
+          itemBuilder: (context, index) {
+            final job = queue[index];
+            return ListTile(
+              leading: buildStatusIcon(job.status),
+              title: Text(job.description),
+              subtitle: Text(job.status.toString().split('.').last),
+              trailing: job.status == GithubJobStatus.running
+                  ? const SizedBox(
+                      width: 16,
+                      height: 16,
+                      child: CircularProgressIndicator(strokeWidth: 2),
+                    )
+                  : null,
+            );
+          },
+        ),
+      ],
+    );
+  }
+}
