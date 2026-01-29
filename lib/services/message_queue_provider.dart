@@ -41,6 +41,17 @@ class MessageQueueProvider extends ChangeNotifier {
       _queue = await _cacheService!.loadMessageQueue(_authToken!);
       await _migrateQueue(); // Temporary migration
       notifyListeners();
+
+      // Auto-send on startup if we have queued items
+      // We need a client reference here. Ideally this is triggered by the UI or AuthProvider
+      // when the client is ready. For now, we rely on the UI/AuthProvider to call sendQueue
+      // when connectivity is established.
+      // But we can verify if we have queued items and log it.
+      if (_queue.any((m) => m.state == QueueState.queued)) {
+        debugPrint(
+          "Queue loaded with pending items. Waiting for client to send.",
+        );
+      }
     }
   }
 
@@ -279,6 +290,16 @@ class MessageQueueProvider extends ChangeNotifier {
       if (limit > 0 && sentCount >= limit) {
         break;
       }
+
+      // Update state to sending
+      final sendingIndex = _queue.indexWhere((m) => m.id == msg.id);
+      if (sendingIndex != -1) {
+        _queue[sendingIndex] = _queue[sendingIndex].copyWith(
+          state: QueueState.sending,
+        );
+        notifyListeners(); // Update UI to show "Sending..."
+      }
+
       try {
         if (msg.type == QueuedMessageType.sessionCreation) {
           Session sessionToCreate;

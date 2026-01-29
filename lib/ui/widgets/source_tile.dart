@@ -146,6 +146,68 @@ class SourceTile extends StatelessWidget {
     );
   }
 
+  Widget _buildTrailingActions(BuildContext context, Source source) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh source',
+          onPressed: () => _handleRefreshSource(context, source),
+        ),
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'New session',
+          onPressed: () => _handleNewSession(context, source.name),
+        ),
+        IconButton(
+          icon: const Icon(Icons.filter_list),
+          tooltip: 'Filter by this source',
+          onPressed: () {
+            Navigator.push(
+              context,
+              MaterialPageRoute(
+                builder: (context) =>
+                    SessionListScreen(sourceFilter: source.name),
+              ),
+            );
+          },
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) => _handleMenuSelection(context, value, source),
+          itemBuilder: _buildMenuItems,
+        ),
+      ],
+    );
+  }
+
+  List<PopupMenuEntry<String>> _buildMenuItems(BuildContext context) {
+    final bookmarkProvider = Provider.of<FilterBookmarkProvider>(
+      context,
+      listen: false,
+    );
+    final bookmarks = bookmarkProvider.bookmarks;
+
+    return [
+      const PopupMenuItem(
+        value: 'refresh_sessions',
+        child: Text('Refresh Sessions'),
+      ),
+      const PopupMenuItem(value: 'stats', child: Text('Show Stats')),
+      const PopupMenuItem(
+        value: 'view_cache_file',
+        child: Text('View Cache File'),
+      ),
+      if (bookmarks.isNotEmpty) const PopupMenuDivider(),
+      ...bookmarks.map(
+        (bookmark) => PopupMenuItem(
+          value: 'bookmark_${bookmark.name}',
+          child: Text(bookmark.name),
+        ),
+      ),
+    ];
+  }
+
   Widget? _buildDescription(BuildContext context, GitHubRepo? repo) {
     if (repo?.description == null || repo!.description!.isEmpty) {
       return null;
@@ -177,10 +239,7 @@ class SourceTile extends StatelessWidget {
       children: [
         if (usageCount > 0)
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 2,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(4),
@@ -396,8 +455,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     ),

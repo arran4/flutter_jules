@@ -113,3 +113,28 @@ class _ActivityListView extends StatelessWidget {
     );
   }
 }
+
+class _ActivityCardBody extends StatelessWidget {
+  final Activity activity;
+
+  const _ActivityCardBody({required this.activity});
+
+  @override
+  Widget build(BuildContext context) {
+    return ExpansionTile(
+      title: Text(activity.id),
+      subtitle: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(activity.createTime, style: const TextStyle(fontSize: 12)),
+          if (activity.description.isNotEmpty)
+            Text(
+              activity.description,
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
+            ),
+        ],
+      ),
+      children: [_JsonView(data: activity.toJson())],
+    );
+  }
+}

@@ -31,9 +31,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
     _delayController.text = widget.config.waitBetween.inSeconds.toString();
     WidgetsBinding.instance.addPostFrameCallback((_) {
       context.read<BulkActionExecutor>().startJob(
-            widget.config,
-            widget.targets,
-          );
+        widget.config,
+        widget.targets,
+      );
     });
   }
 
@@ -50,7 +50,8 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
         final total = executor.totalToProcess;
         final completed = executor.completed.length;
         final progress = total > 0 ? completed / total : 0.0;
-        final isDone = executor.status == BulkJobStatus.completed ||
+        final isDone =
+            executor.status == BulkJobStatus.completed ||
             executor.status == BulkJobStatus.canceled;
 
         return AlertDialog(
@@ -109,6 +110,85 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
           ],
         );
       },
+    );
+  }
+
+  Widget _buildDialogBody(
+    BulkActionExecutor executor,
+    double progress,
+    int completed,
+    int total,
+    bool isDone,
+  ) {
+    return SizedBox(
+      width: 800,
+      height: 600,
+      child: Column(
+        children: [
+          _buildDashboardSection(executor, progress, completed, total),
+          const SizedBox(height: 16),
+          _buildControlsSection(executor, isDone),
+          const SizedBox(height: 16),
+          _buildLogAndQueueSection(executor),
+        ],
+      ),
+    );
+  }
+
+  List<Widget> _buildDialogActions(
+    BuildContext context,
+    BulkActionExecutor executor,
+    bool isDone,
+  ) {
+    if (!isDone) {
+      return [
+        TextButton(
+          onPressed: () => _confirmCancel(context, executor),
+          child: const Text('Cancel Job', style: TextStyle(color: Colors.red)),
+        ),
+      ];
+    }
+
+    return [
+      if (executor.logs.any((l) => l.undoActionType != null && !l.isUndone))
+        TextButton(
+          onPressed: () => executor.undoAll(),
+          child: const Text('Undo All'),
+        ),
+      FilledButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Close'),
+      ),
+    ];
+  }
+
+  Widget _buildDashboardSection(
+    BulkActionExecutor executor,
+    double progress,
+    int completed,
+    int total,
+  ) {
+    return _buildDashboard(executor, progress, completed, total);
+  }
+
+  Widget _buildControlsSection(BulkActionExecutor executor, bool isDone) {
+    if (isDone) {
+      return const SizedBox.shrink();
+    }
+
+    return _buildMainControls(executor);
+  }
+
+  Widget _buildLogAndQueueSection(BulkActionExecutor executor) {
+    return Expanded(
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(flex: 1, child: _buildLogView(executor)),
+          const VerticalDivider(width: 32),
+          Expanded(flex: 1, child: _buildQueueView(executor)),
+        ],
+      ),
     );
   }
 
@@ -301,8 +381,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                                 log.message,
                                 style: TextStyle(
                                   fontSize: 11,
-                                  color:
-                                      log.isError ? Colors.red : Colors.black87,
+                                  color: log.isError
+                                      ? Colors.red
+                                      : Colors.black87,
                                 ),
                               ),
                             ),
@@ -375,8 +456,9 @@ class _BulkActionProgressDialogState extends State<BulkActionProgressDialog> {
                     titleStyle: TextStyle(
                       fontSize: 11,
                       color: isPaused ? Colors.orange.shade700 : Colors.black87,
-                      fontWeight:
-                          isPaused ? FontWeight.w600 : FontWeight.normal,
+                      fontWeight: isPaused
+                          ? FontWeight.w600
+                          : FontWeight.normal,
                     ),
                     subtitleStyle: TextStyle(
                       fontSize: 9,

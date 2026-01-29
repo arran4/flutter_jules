@@ -23,10 +23,10 @@ class JulesClient {
   }) : _client = client ?? http.Client();
 
   Map<String, String> get _headers => {
-        'Content-Type': 'application/json',
-        if (accessToken != null) 'Authorization': 'Bearer $accessToken',
-        if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
-      };
+    'Content-Type': 'application/json',
+    if (accessToken != null) 'Authorization': 'Bearer $accessToken',
+    if (apiKey != null) 'X-Goog-Api-Key': apiKey!,
+  };
 
   Future<T> _enqueueRequest<T>(Future<T> Function() task) {
     final prevRequest = _lastRequest;
@@ -74,11 +74,9 @@ class JulesClient {
           if (method == 'GET') {
             response = await _client.get(url, headers: requestHeaders);
           } else if (method == 'POST') {
-            response = await _client.post(
-              url,
-              headers: requestHeaders,
-              body: requestBody,
-            );
+            response = await _client
+                .post(url, headers: requestHeaders, body: requestBody)
+                .timeout(const Duration(seconds: 30));
           } else {
             throw Exception('Unsupported method: $method');
           }

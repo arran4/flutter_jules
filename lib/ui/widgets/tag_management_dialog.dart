@@ -73,6 +73,34 @@ class TagManagementDialogState extends State<TagManagementDialog> {
     );
   }
 
+  List<String> _getAvailableTags(List<String> allTags) {
+    return allTags
+        .where(
+          (tag) =>
+              !_currentTags.any((t) => t.toLowerCase() == tag.toLowerCase()),
+        )
+        .toList();
+  }
+
+  Widget _buildCurrentTagsSection() {
+    return CurrentTagsSection(tags: _currentTags, onRemoveTag: _removeTag);
+  }
+
+  Widget _buildNewTagInput() {
+    return NewTagInput(
+      controller: _newTagController,
+      onSubmitted: _addNewTag,
+      onAddPressed: () => _addNewTag(_newTagController.text),
+    );
+  }
+
+  Widget _buildAvailableTagsSection(List<String> availableTags) {
+    return AvailableTagsSection(
+      availableTags: availableTags,
+      onTagSelected: _addNewTag,
+    );
+  }
+
   void _removeTag(String tag) {
     setState(() {
       _currentTags.remove(tag);
@@ -167,10 +195,7 @@ class NewTagInput extends StatelessWidget {
             onSubmitted: onSubmitted,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: onAddPressed,
-        ),
+        IconButton(icon: const Icon(Icons.add), onPressed: onAddPressed),
       ],
     );
   }
