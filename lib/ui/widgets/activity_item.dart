@@ -131,8 +131,150 @@ class _ActivityItemState extends State<ActivityItem> {
               ],
             ),
           ),
-          Row(
-            mainAxisSize: MainAxisSize.min,
+          _buildHeaderActions(activity, isCompactable),
+        ],
+      ),
+    );
+  }
+
+  DateTime? _parseActivityTimestamp(String createTime) {
+    try {
+      if (createTime.isNotEmpty) {
+        return DateTime.parse(createTime);
+      }
+    } catch (_) {}
+    return null;
+  }
+
+  Widget _buildHeaderTitleRow(String title, DateTime? timestamp) {
+    return Row(
+      children: [
+        Text(title, style: const TextStyle(fontWeight: FontWeight.bold)),
+        if (timestamp != null) ...[
+          const SizedBox(width: 8),
+          Text(
+            DateFormat.Hms().format(timestamp.toLocal()),
+            style: Theme.of(context).textTheme.bodySmall,
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildHeaderSummary(String? summary, bool isCompactable) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSummary(summary),
+        if (isCompactable && _isExpanded && summary != null)
+          Padding(
+            padding: const EdgeInsets.only(top: 2.0),
+            child: Text(summary, style: const TextStyle(fontSize: 13)),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildHeaderActions(Activity activity, bool isCompactable) {
+    return Row(
+      mainAxisSize: MainAxisSize.min,
+      children: [
+        if (widget.onRefresh != null)
+          IconButton(
+            icon: const Icon(Icons.refresh, size: 18),
+            onPressed: () async {
+              await widget.onRefresh!();
+            },
+          ),
+        _buildUnknownPropertiesButton(activity),
+        _buildActivityMenu(activity),
+        if (!isCompactable)
+          IconButton(
+            onPressed: () => setState(() => _isExpanded = !_isExpanded),
+            icon: Icon(
+              _isExpanded ? Icons.expand_less : Icons.expand_more,
+              size: 20,
+              color: Colors.grey,
+            ),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildUnknownPropertiesButton(Activity activity) {
+    final unknownProps = Map<String, dynamic>.from(activity.unmappedProps)
+      ..remove('isPending')
+      ..remove('hasMismatch')
+      ..remove('pendingId')
+      ..remove('isQueued')
+      ..remove('queueReason')
+      ..remove('processingErrors')
+      ..remove('isSent');
+
+    if (unknownProps.isEmpty) {
+      return const SizedBox.shrink();
+    }
+
+    return IconButton(
+      icon: const Icon(Icons.warning_amber, size: 18, color: Colors.orange),
+      tooltip: 'Unknown Properties Found',
+      onPressed: () => _showUnknownPropertiesDialog(unknownProps),
+    );
+  }
+
+  void _showUnknownPropertiesDialog(Map<String, dynamic> unknownProps) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text("Unknown Properties"),
+        content: SingleChildScrollView(
+          child: SelectableText(
+            const JsonEncoder.withIndent('  ').convert(unknownProps),
+            style: const TextStyle(fontFamily: 'monospace'),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text("Close"),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildActivityMenu(Activity activity) {
+    return PopupMenuButton<String>(
+      icon: const Icon(Icons.more_vert, size: 18),
+      padding: EdgeInsets.zero,
+      onSelected: (value) async {
+        if (value == 'raw_data') {
+          showDialog(
+            context: context,
+            builder: (context) =>
+                ModelViewer(data: activity.toJson(), title: 'Activity Data'),
+          );
+        } else if (value == 'refresh') {
+          if (widget.onRefresh != null) {
+            await widget.onRefresh!();
+          }
+        }
+      },
+      itemBuilder: (context) => <PopupMenuEntry<String>>[
+        if (widget.onRefresh != null)
+          const PopupMenuItem<String>(
+            value: 'refresh',
+            child: Row(
+              children: [
+                Icon(Icons.refresh, color: Colors.grey),
+                SizedBox(width: 8),
+                Text('Refresh Activity'),
+              ],
+            ),
+          ),
+        const PopupMenuItem<String>(
+          value: 'raw_data',
+          child: Row(
             children: [
               if (widget.onRefresh != null)
                 IconButton(
@@ -331,7 +473,8 @@ class _ActivityItemState extends State<ActivityItem> {
       }
     }
 
-    final hasOtherContent = activity.progressUpdated != null ||
+    final hasOtherContent =
+        activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
         activity.unmappedProps.isNotEmpty;
@@ -570,27 +713,28 @@ class _ActivityItemState extends State<ActivityItem> {
                                                       CrossAxisAlignment.start,
                                                   mainAxisSize:
                                                       MainAxisSize.min,
-                                                  children: (activity
-                                                                  .unmappedProps[
-                                                              'processingErrors']
-                                                          as List)
-                                                      .map<Widget>((e) {
-                                                    return Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                        bottom: 8.0,
-                                                      ),
-                                                      child: SelectableText(
-                                                        "• $e",
-                                                        style: const TextStyle(
-                                                          color: Colors.red,
-                                                          fontFamily:
-                                                              'monospace',
-                                                          fontSize: 12,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  }).toList(),
+                                                  children:
+                                                      (activity.unmappedProps['processingErrors']
+                                                              as List)
+                                                          .map<Widget>((e) {
+                                                            return Padding(
+                                                              padding:
+                                                                  const EdgeInsets.only(
+                                                                    bottom: 8.0,
+                                                                  ),
+                                                              child: SelectableText(
+                                                                "• $e",
+                                                                style: const TextStyle(
+                                                                  color: Colors
+                                                                      .red,
+                                                                  fontFamily:
+                                                                      'monospace',
+                                                                  fontSize: 12,
+                                                                ),
+                                                              ),
+                                                            );
+                                                          })
+                                                          .toList(),
                                                 ),
                                               ),
                                               actions: [
@@ -657,10 +801,7 @@ class _ActivityItemState extends State<ActivityItem> {
           ),
           child: Text(
             const JsonEncoder.withIndent('  ').convert(unknownProps),
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
           ),
         ),
       ],
