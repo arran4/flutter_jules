@@ -162,8 +162,7 @@ class MockCacheService extends Mock implements CacheService {
   Future<CachedSessionDetails?> loadSessionDetails(
     String? token,
     String? sessionId,
-  ) async =>
-      null;
+  ) async => null;
 }
 
 class MockTimerService extends Mock implements TimerService {}

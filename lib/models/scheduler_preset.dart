@@ -13,28 +13,27 @@ class SchedulerPreset {
   });
 
   static List<SchedulerPreset> get presets => [
-        const SchedulerPreset(
-          name: 'Standard',
-          description: 'Default balanced configuration for regular usage.',
-          schedulesFactory: _createStandardSchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Battery Saver',
-          description: 'Reduces refresh frequency to save power.',
-          schedulesFactory: _createBatterySaverSchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Daily Only',
-          description: 'Refreshes data only once a day.',
-          schedulesFactory: _createDailySchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Manual Only',
-          description:
-              'No automatic data refresh. Only sends pending messages.',
-          schedulesFactory: _createManualSchedules,
-        ),
-      ];
+    const SchedulerPreset(
+      name: 'Standard',
+      description: 'Default balanced configuration for regular usage.',
+      schedulesFactory: _createStandardSchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Battery Saver',
+      description: 'Reduces refresh frequency to save power.',
+      schedulesFactory: _createBatterySaverSchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Daily Only',
+      description: 'Refreshes data only once a day.',
+      schedulesFactory: _createDailySchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Manual Only',
+      description: 'No automatic data refresh. Only sends pending messages.',
+      schedulesFactory: _createManualSchedules,
+    ),
+  ];
 
   static List<RefreshSchedule> _createStandardSchedules() {
     return [
