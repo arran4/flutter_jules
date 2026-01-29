@@ -2,7 +2,6 @@ import 'dart:async';
 
 import 'package:flutter/material.dart';
 import '../models.dart';
-import '../models/api_exchange.dart';
 import 'notification_provider.dart';
 import 'settings_provider.dart';
 

@@ -415,7 +415,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     );
   }
 
-  void _applyLoadedSources(SourceProvider sourceProvider, {required bool force}) {
+  void _applyLoadedSources(SourceProvider sourceProvider,
+      {required bool force}) {
     final settingsProvider = Provider.of<SettingsProvider>(
       context,
       listen: false,
@@ -1212,7 +1213,8 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 sourceController: _sourceController,
                                 sourceFocusNode: _sourceFocusNode,
                                 sourceLayerLink: _sourceLayerLink,
-                                onOpenBulkDialog: () => _showBulkDialog(sources),
+                                onOpenBulkDialog: () =>
+                                    _showBulkDialog(sources),
                                 onRefresh: () => _fetchSources(force: true),
                                 onBulkBranchChanged: _handleBulkBranchChanged,
                                 onBulkRemove: _handleBulkRemove,

@@ -13,7 +13,6 @@ import '../../services/dev_mode_provider.dart';
 import '../../services/timer_service.dart';
 
 import '../../models.dart';
-import '../../models/refresh_schedule.dart';
 import '../../services/github_provider.dart';
 import 'settings_screen.dart';
 import '../widgets/new_session_dialog.dart';
@@ -38,7 +37,6 @@ import 'dart:convert';
 import '../../services/exceptions.dart';
 import '../../services/notification_service.dart';
 import '../../services/shortcut_registry.dart' as custom_shortcuts;
-import '../../models/app_shortcut_action.dart';
 import '../../utils/api_error_utils.dart';
 import '../../utils/platform_utils.dart';
 

@@ -1,6 +1,5 @@
 import 'package:flutter_test/flutter_test.dart';
 import 'package:flutter_jules/services/bulk_action_executor.dart';
-import 'package:flutter_jules/models/bulk_action.dart';
 import 'package:flutter_jules/services/session_provider.dart';
 import 'package:flutter_jules/services/jules_client.dart';
 import 'package:flutter_jules/services/auth_provider.dart';

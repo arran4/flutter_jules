@@ -4,7 +4,6 @@ import 'package:flutter_jules/services/source_provider.dart';
 import 'package:flutter_jules/services/jules_client.dart';
 import 'package:flutter_jules/services/github_provider.dart';
 import 'package:flutter_jules/models.dart';
-import 'package:flutter_jules/models/api_exchange.dart';
 
 class MockJulesClient extends Mock implements JulesClient {
   @override

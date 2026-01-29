@@ -474,9 +474,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       return false;
     }
 
-    final initialState = metadata.isHidden
-        ? FilterState.implicitOut
-        : FilterState.implicitIn;
+    final initialState =
+        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
 
     if (_filterTree == null) {
       return initialState.isIn;

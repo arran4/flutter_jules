@@ -5,7 +5,6 @@ import 'dart:io';
 import 'package:http/http.dart' as http;
 import 'package:dartobjectutils/dartobjectutils.dart';
 import '../models.dart';
-import '../models/api_exchange.dart';
 import 'exceptions.dart';
 
 class JulesClient {

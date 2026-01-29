@@ -3,7 +3,6 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
 import 'package:flutter_jules/models.dart';
-import 'package:flutter_jules/models/api_exchange.dart';
 import 'package:flutter_jules/ui/screens/session_detail_screen.dart';
 import 'package:flutter_jules/services/auth_provider.dart';
 import 'package:flutter_jules/services/session_provider.dart';

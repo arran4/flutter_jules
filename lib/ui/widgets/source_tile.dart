@@ -11,7 +11,6 @@ import '../../services/source_provider.dart';
 import '../screens/session_list_screen.dart';
 import 'new_session_dialog.dart';
 import 'source_stats_dialog.dart';
-import 'package:flutter_jules/models/filter_expression_parser.dart';
 import '../../services/cache_service.dart';
 import 'session_metadata_dialog.dart';
 

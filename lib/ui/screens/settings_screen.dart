@@ -3,8 +3,6 @@ import 'package:flutter_jules/ui/screens/activity_log_screen.dart';
 import 'package:provider/provider.dart';
 import '../themes.dart';
 import '../../models.dart';
-import '../../models/refresh_schedule.dart';
-import '../../models/scheduler_preset.dart';
 import '../../services/settings_provider.dart';
 import '../../services/dev_mode_provider.dart';
 import '../../services/auth_provider.dart';
@@ -289,7 +287,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                   mainAxisSize: MainAxisSize.min,
                   children: [
                     DropdownButtonFormField<RuleType>(
-                      value: type,
+                      initialValue: type,
                       decoration:
                           const InputDecoration(labelText: 'Event Type'),
                       items: RuleType.values.map((t) {
@@ -334,7 +332,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
                     ],
                     const SizedBox(height: 8),
                     DropdownButtonFormField<RuleAction>(
-                      value: action,
+                      initialValue: action,
                       decoration: const InputDecoration(labelText: 'Action'),
                       items: RuleAction.values.map((a) {
                         String label;
