@@ -218,17 +218,8 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _tryCommitFilter(String text, int atIndex) {
     final query = text.substring(atIndex + 1).toLowerCase();
-    final timeSuggestions = _getTimeSuggestions();
-    final allSuggestions = [...widget.availableSuggestions, ...timeSuggestions];
-
-    if (query.isEmpty) {
-      _filteredSuggestions = allSuggestions;
-    } else {
-      _filteredSuggestions = allSuggestions.where((s) {
-        return s.label.toLowerCase().contains(query) ||
-            s.id.toLowerCase().contains(query);
-      }).toList();
-    }
+    final allSuggestions = _buildSuggestionsList();
+    _filteredSuggestions = _filterSuggestions(allSuggestions, query);
 
     _highlightedIndex = 0;
 
@@ -239,192 +230,250 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     }
   }
 
+  List<FilterToken> _buildSuggestionsList() {
+    final timeSuggestions = _getTimeSuggestions();
+    return [...widget.availableSuggestions, ...timeSuggestions];
+  }
+
+  List<FilterToken> _filterSuggestions(
+    List<FilterToken> suggestions,
+    String query,
+  ) {
+    if (query.isEmpty) {
+      return suggestions;
+    }
+
+    return suggestions.where((s) {
+      return s.label.toLowerCase().contains(query) ||
+          s.id.toLowerCase().contains(query);
+    }).toList();
+  }
+
   KeyEventResult _handleFocusKey(FocusNode node, KeyEvent event) {
     if (event is! KeyDownEvent) return KeyEventResult.ignored;
 
     if (_overlayEntry != null && _filteredSuggestions.isNotEmpty) {
-      if (event.logicalKey == LogicalKeyboardKey.arrowDown) {
-        setState(() {
-          _highlightedIndex =
-              (_highlightedIndex + 1) % _filteredSuggestions.length;
-        });
-        _showOverlay();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.arrowUp) {
-        setState(() {
-          _highlightedIndex = (_highlightedIndex - 1) < 0
-              ? _filteredSuggestions.length - 1
-              : _highlightedIndex - 1;
-        });
-        _showOverlay();
-        return KeyEventResult.handled;
-      } else if (event.logicalKey == LogicalKeyboardKey.enter ||
-          event.logicalKey == LogicalKeyboardKey.tab) {
-        if (_highlightedIndex < _filteredSuggestions.length) {
-          _selectSuggestion(_filteredSuggestions[_highlightedIndex]);
-          return KeyEventResult.handled;
-        }
-      } else if (event.logicalKey == LogicalKeyboardKey.escape) {
-        _removeOverlay();
-        return KeyEventResult.handled;
-      }
+      if (_handleArrowDown(event)) return KeyEventResult.handled;
+      if (_handleArrowUp(event)) return KeyEventResult.handled;
+      if (_handleSuggestionCommit(event)) return KeyEventResult.handled;
+      if (_handleEscape(event)) return KeyEventResult.handled;
     }
 
     return KeyEventResult.ignored;
   }
 
+  bool _handleArrowDown(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowDown) {
+      return false;
+    }
+
+    setState(() {
+      _highlightedIndex = (_highlightedIndex + 1) % _filteredSuggestions.length;
+    });
+    _showOverlay();
+    return true;
+  }
+
+  bool _handleArrowUp(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.arrowUp) {
+      return false;
+    }
+
+    setState(() {
+      _highlightedIndex = (_highlightedIndex - 1) < 0
+          ? _filteredSuggestions.length - 1
+          : _highlightedIndex - 1;
+    });
+    _showOverlay();
+    return true;
+  }
+
+  bool _handleSuggestionCommit(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.enter &&
+        event.logicalKey != LogicalKeyboardKey.tab) {
+      return false;
+    }
+
+    if (_highlightedIndex < _filteredSuggestions.length) {
+      _selectSuggestion(_filteredSuggestions[_highlightedIndex]);
+      return true;
+    }
+
+    return false;
+  }
+
+  bool _handleEscape(KeyEvent event) {
+    if (event.logicalKey != LogicalKeyboardKey.escape) {
+      return false;
+    }
+
+    _removeOverlay();
+    return true;
+  }
+
   void _showOverlay() {
     _removeOverlay();
 
-    // Group suggestions by type
-    final flagSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.flag).toList();
-    final statusSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.status).toList();
-    final sourceSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.source).toList();
-    final prStatusSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.prStatus)
-        .toList();
-    final ciStatusSuggestions = _filteredSuggestions
-        .where((s) => s.type == FilterType.ciStatus)
-        .toList();
-    final timeSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.time).toList();
-    final otherSuggestions =
-        _filteredSuggestions.where((s) => s.type == FilterType.text).toList();
+    _overlayEntry = _buildSuggestionsOverlayEntry();
 
-    _overlayEntry = OverlayEntry(
+    Overlay.of(context).insert(_overlayEntry!);
+  }
+
+  OverlayEntry _buildSuggestionsOverlayEntry() {
+    final groups = _groupSuggestionsByType(_filteredSuggestions);
+
+    return OverlayEntry(
       builder: (context) => Positioned(
         width: 800, // Wider for multi-column layout
         child: CompositedTransformFollower(
           link: _layerLink,
           showWhenUnlinked: false,
           offset: const Offset(0, 40),
-          child: Material(
-            elevation: 4,
-            borderRadius: BorderRadius.circular(8),
-            child: Container(
-              constraints: const BoxConstraints(maxHeight: 300),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade300),
-              ),
-              child: SingleChildScrollView(
-                child: Padding(
-                  padding: const EdgeInsets.all(12.0),
-                  child: Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      // Status column
-                      if (statusSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Status',
-                            statusSuggestions,
-                            Colors.blue,
-                          ),
-                        ),
-                      if (statusSuggestions.isNotEmpty &&
-                          (prStatusSuggestions.isNotEmpty ||
-                              flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty ||
-                              timeSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
+          child: _buildSuggestionsOverlayContent(groups),
+        ),
+      ),
+    );
+  }
 
-                      // PR Status column
-                      if (prStatusSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'PR Status',
-                            prStatusSuggestions,
-                            Colors.purple,
-                          ),
-                        ),
-                      if (prStatusSuggestions.isNotEmpty &&
-                          (ciStatusSuggestions.isNotEmpty ||
-                              flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty ||
-                              timeSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // CI Status column
-                      if (ciStatusSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'CI Status',
-                            ciStatusSuggestions,
-                            Colors.blueGrey,
-                          ),
-                        ),
-                      if (ciStatusSuggestions.isNotEmpty &&
-                          (flagSuggestions.isNotEmpty ||
-                              sourceSuggestions.isNotEmpty ||
-                              timeSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // Flags column
-                      if (flagSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Flags',
-                            flagSuggestions,
-                            Colors.orange,
-                          ),
-                        ),
-                      if (flagSuggestions.isNotEmpty &&
-                          (sourceSuggestions.isNotEmpty ||
-                              timeSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // Sources column
-                      if (sourceSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Sources',
-                            sourceSuggestions,
-                            Colors.green,
-                          ),
-                        ),
-                      if (sourceSuggestions.isNotEmpty &&
-                          (timeSuggestions.isNotEmpty ||
-                              otherSuggestions.isNotEmpty))
-                        const VerticalDivider(width: 1),
-
-                      // Time column
-                      if (timeSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Time',
-                            timeSuggestions,
-                            Colors.teal,
-                          ),
-                        ),
-                      if (timeSuggestions.isNotEmpty &&
-                          otherSuggestions.isNotEmpty)
-                        const VerticalDivider(width: 1),
-
-                      // Other/Text column
-                      if (otherSuggestions.isNotEmpty)
-                        Expanded(
-                          child: _buildFilterColumn(
-                            'Other',
-                            otherSuggestions,
-                            Colors.grey,
-                          ),
-                        ),
-                    ],
+  Widget _buildSuggestionsOverlayContent(_SuggestionGroups groups) {
+    return Material(
+      elevation: 4,
+      borderRadius: BorderRadius.circular(8),
+      child: Container(
+        constraints: const BoxConstraints(maxHeight: 300),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(8),
+          border: Border.all(color: Colors.grey.shade300),
+        ),
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.all(12.0),
+            child: Row(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                // Status column
+                if (groups.statusSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'Status',
+                      groups.statusSuggestions,
+                      Colors.blue,
+                    ),
                   ),
-                ),
-              ),
+                if (groups.statusSuggestions.isNotEmpty &&
+                    (groups.prStatusSuggestions.isNotEmpty ||
+                        groups.flagSuggestions.isNotEmpty ||
+                        groups.sourceSuggestions.isNotEmpty ||
+                        groups.timeSuggestions.isNotEmpty))
+                  const VerticalDivider(width: 1),
+
+                // PR Status column
+                if (groups.prStatusSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'PR Status',
+                      groups.prStatusSuggestions,
+                      Colors.purple,
+                    ),
+                  ),
+                if (groups.prStatusSuggestions.isNotEmpty &&
+                    (groups.ciStatusSuggestions.isNotEmpty ||
+                        groups.flagSuggestions.isNotEmpty ||
+                        groups.sourceSuggestions.isNotEmpty ||
+                        groups.timeSuggestions.isNotEmpty))
+                  const VerticalDivider(width: 1),
+
+                // CI Status column
+                if (groups.ciStatusSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'CI Status',
+                      groups.ciStatusSuggestions,
+                      Colors.blueGrey,
+                    ),
+                  ),
+                if (groups.ciStatusSuggestions.isNotEmpty &&
+                    (groups.flagSuggestions.isNotEmpty ||
+                        groups.sourceSuggestions.isNotEmpty ||
+                        groups.timeSuggestions.isNotEmpty))
+                  const VerticalDivider(width: 1),
+
+                // Flags column
+                if (groups.flagSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'Flags',
+                      groups.flagSuggestions,
+                      Colors.orange,
+                    ),
+                  ),
+                if (groups.flagSuggestions.isNotEmpty &&
+                    (groups.sourceSuggestions.isNotEmpty ||
+                        groups.timeSuggestions.isNotEmpty))
+                  const VerticalDivider(width: 1),
+
+                // Sources column
+                if (groups.sourceSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'Sources',
+                      groups.sourceSuggestions,
+                      Colors.green,
+                    ),
+                  ),
+                if (groups.sourceSuggestions.isNotEmpty &&
+                    (groups.timeSuggestions.isNotEmpty ||
+                        groups.otherSuggestions.isNotEmpty))
+                  const VerticalDivider(width: 1),
+
+                // Time column
+                if (groups.timeSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'Time',
+                      groups.timeSuggestions,
+                      Colors.teal,
+                    ),
+                  ),
+                if (groups.timeSuggestions.isNotEmpty &&
+                    groups.otherSuggestions.isNotEmpty)
+                  const VerticalDivider(width: 1),
+
+                // Other/Text column
+                if (groups.otherSuggestions.isNotEmpty)
+                  Expanded(
+                    child: _buildFilterColumn(
+                      'Other',
+                      groups.otherSuggestions,
+                      Colors.grey,
+                    ),
+                  ),
+              ],
             ),
           ),
         ),
       ),
     );
+  }
 
-    Overlay.of(context).insert(_overlayEntry!);
+  _SuggestionGroups _groupSuggestionsByType(List<FilterToken> suggestions) {
+    return _SuggestionGroups(
+      flagSuggestions:
+          suggestions.where((s) => s.type == FilterType.flag).toList(),
+      statusSuggestions:
+          suggestions.where((s) => s.type == FilterType.status).toList(),
+      sourceSuggestions:
+          suggestions.where((s) => s.type == FilterType.source).toList(),
+      prStatusSuggestions:
+          suggestions.where((s) => s.type == FilterType.prStatus).toList(),
+      ciStatusSuggestions:
+          suggestions.where((s) => s.type == FilterType.ciStatus).toList(),
+      timeSuggestions:
+          suggestions.where((s) => s.type == FilterType.time).toList(),
+      otherSuggestions:
+          suggestions.where((s) => s.type == FilterType.text).toList(),
+    );
   }
 
   Widget _buildFilterColumn(
@@ -883,7 +932,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
     // Ensure minWidth isn't larger than maxWidth
     final minW = 350.0 > calcMaxWidth ? calcMaxWidth : 350.0;
 
-    _presetOverlayEntry = OverlayEntry(
+    _presetOverlayEntry = _buildPresetOverlayEntry(
+      bookmarkProvider: bookmarkProvider,
+      targetAnchor: targetAnchor,
+      followerAnchor: followerAnchor,
+      minW: minW,
+      maxW: calcMaxWidth,
+      maxH: maxH,
+    );
+
+    Overlay.of(context).insert(_presetOverlayEntry!);
+  }
+
+  OverlayEntry _buildPresetOverlayEntry({
+    required FilterBookmarkProvider bookmarkProvider,
+    required Alignment targetAnchor,
+    required Alignment followerAnchor,
+    required double minW,
+    required double maxW,
+    required double maxH,
+  }) {
+    return OverlayEntry(
       builder: (context) => Stack(
         children: [
           // Invisible dismiss layer
@@ -901,141 +970,148 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
               targetAnchor: targetAnchor,
               followerAnchor: followerAnchor,
               offset: const Offset(0, 5), // Slight vertical gap
-              child: Material(
-                elevation: 8,
-                borderRadius: BorderRadius.circular(12),
-                color: Colors.white,
-                child: Container(
-                  constraints: BoxConstraints(
-                    minWidth: minW,
-                    maxWidth: calcMaxWidth,
-                    maxHeight: maxH,
-                  ),
-                  decoration: BoxDecoration(
-                    borderRadius: BorderRadius.circular(12),
-                    border: Border.all(color: Colors.grey.shade200),
-                  ),
-                  child: Column(
-                    mainAxisSize: MainAxisSize.min,
-                    crossAxisAlignment: CrossAxisAlignment.stretch,
-                    children: [
-                      // Header
-                      Padding(
-                        padding: const EdgeInsets.all(16.0),
-                        child: Row(
-                          children: [
-                            const Icon(Icons.bookmarks, size: 20),
-                            const SizedBox(width: 8),
-                            const Text(
-                              'Filter Presets',
-                              style: TextStyle(
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                              ),
-                            ),
-                            const Spacer(),
-                            IconButton(
-                              icon: const Icon(Icons.close, size: 18),
-                              onPressed: _removePresetOverlay,
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ],
-                        ),
-                      ),
-                      const Divider(height: 1),
-
-                      // List
-                      Flexible(
-                        child: SingleChildScrollView(
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              // My Presets
-                              _buildPresetSection(
-                                context,
-                                'My Presets',
-                                bookmarkProvider.bookmarks
-                                    .where(
-                                      (b) => !bookmarkProvider.isSystemBookmark(
-                                        b.name,
-                                      ),
-                                    )
-                                    .toList(),
-                                isSystem: false,
-                              ),
-
-                              // System Presets
-                              _buildPresetSection(
-                                context,
-                                'System Presets',
-                                bookmarkProvider.bookmarks
-                                    .where(
-                                      (b) => bookmarkProvider.isSystemBookmark(
-                                        b.name,
-                                      ),
-                                    )
-                                    .toList(),
-                                isSystem: true,
-                              ),
-                            ],
-                          ),
-                        ),
-                      ),
-
-                      const Divider(height: 1),
-
-                      // Footer Actions
-                      Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                          children: [
-                            TextButton.icon(
-                              onPressed: () {
-                                _removePresetOverlay();
-                                _saveCurrentFilters(context);
-                              },
-                              icon: const Icon(Icons.save, size: 16),
-                              label: const Text('Save Current'),
-                            ),
-                            TextButton.icon(
-                              onPressed: () {
-                                _removePresetOverlay();
-                                Future.delayed(
-                                  const Duration(milliseconds: 100),
-                                  () {
-                                    if (context.mounted) {
-                                      Navigator.of(context).push(
-                                        MaterialPageRoute(
-                                          builder: (context) =>
-                                              BookmarkManagerScreen(
-                                            availableSuggestions:
-                                                widget.availableSuggestions,
-                                          ),
-                                        ),
-                                      );
-                                    }
-                                  },
-                                );
-                              },
-                              icon: const Icon(Icons.settings, size: 16),
-                              label: const Text('Manage'),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                ),
+              child: _buildPresetOverlayContent(
+                bookmarkProvider: bookmarkProvider,
+                minW: minW,
+                maxW: maxW,
+                maxH: maxH,
               ),
             ),
           ),
         ],
       ),
     );
+  }
 
-    Overlay.of(context).insert(_presetOverlayEntry!);
+  Widget _buildPresetOverlayContent({
+    required FilterBookmarkProvider bookmarkProvider,
+    required double minW,
+    required double maxW,
+    required double maxH,
+  }) {
+    return Material(
+      elevation: 8,
+      borderRadius: BorderRadius.circular(12),
+      color: Colors.white,
+      child: Container(
+        constraints: BoxConstraints(
+          minWidth: minW,
+          maxWidth: maxW,
+          maxHeight: maxH,
+        ),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: Colors.grey.shade200),
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.stretch,
+          children: [
+            // Header
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Row(
+                children: [
+                  const Icon(Icons.bookmarks, size: 20),
+                  const SizedBox(width: 8),
+                  const Text(
+                    'Filter Presets',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  const Spacer(),
+                  IconButton(
+                    icon: const Icon(Icons.close, size: 18),
+                    onPressed: _removePresetOverlay,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(),
+                  ),
+                ],
+              ),
+            ),
+            const Divider(height: 1),
+
+            // List
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    // My Presets
+                    _buildPresetSection(
+                      context,
+                      'My Presets',
+                      bookmarkProvider.bookmarks
+                          .where(
+                            (b) => !bookmarkProvider.isSystemBookmark(b.name),
+                          )
+                          .toList(),
+                      isSystem: false,
+                    ),
+
+                    // System Presets
+                    _buildPresetSection(
+                      context,
+                      'System Presets',
+                      bookmarkProvider.bookmarks
+                          .where(
+                            (b) => bookmarkProvider.isSystemBookmark(b.name),
+                          )
+                          .toList(),
+                      isSystem: true,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const Divider(height: 1),
+
+            // Footer Actions
+            Padding(
+              padding: const EdgeInsets.all(8.0),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  TextButton.icon(
+                    onPressed: () {
+                      _removePresetOverlay();
+                      _saveCurrentFilters(context);
+                    },
+                    icon: const Icon(Icons.save, size: 16),
+                    label: const Text('Save Current'),
+                  ),
+                  TextButton.icon(
+                    onPressed: () {
+                      _removePresetOverlay();
+                      Future.delayed(
+                        const Duration(milliseconds: 100),
+                        () {
+                          if (mounted) {
+                            Navigator.of(context).push(
+                              MaterialPageRoute(
+                                builder: (context) => BookmarkManagerScreen(
+                                  availableSuggestions:
+                                      widget.availableSuggestions,
+                                ),
+                              ),
+                            );
+                          }
+                        },
+                      );
+                    },
+                    icon: const Icon(Icons.settings, size: 16),
+                    label: const Text('Manage'),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
   }
 
   Widget _buildPresetSection(
@@ -1316,6 +1392,26 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       );
     }
   }
+}
+
+class _SuggestionGroups {
+  const _SuggestionGroups({
+    required this.flagSuggestions,
+    required this.statusSuggestions,
+    required this.sourceSuggestions,
+    required this.prStatusSuggestions,
+    required this.ciStatusSuggestions,
+    required this.timeSuggestions,
+    required this.otherSuggestions,
+  });
+
+  final List<FilterToken> flagSuggestions;
+  final List<FilterToken> statusSuggestions;
+  final List<FilterToken> sourceSuggestions;
+  final List<FilterToken> prStatusSuggestions;
+  final List<FilterToken> ciStatusSuggestions;
+  final List<FilterToken> timeSuggestions;
+  final List<FilterToken> otherSuggestions;
 }
 
 class _BookmarkDetails extends StatelessWidget {
