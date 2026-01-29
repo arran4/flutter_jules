@@ -202,13 +202,27 @@ class _SettingsScreenState extends State<SettingsScreen> {
           value: settings.refreshOnMessage,
           onChanged: settings.setRefreshOnMessage,
         ),
-        SwitchListTile(
-          title: const Text('Mark unread on GitHub updates'),
-          subtitle: const Text(
-            'Mark session as unread when PR status, CI status, or content updates on GitHub.',
+        Padding(
+          padding: const EdgeInsets.only(left: 16.0, top: 16.0, bottom: 8.0),
+          child: Text(
+            'Mark unread on...',
+            style: Theme.of(context).textTheme.titleSmall,
           ),
-          value: settings.markUnreadOnGithubUpdates,
-          onChanged: (value) => settings.setMarkUnreadOnGithubUpdates(value),
+        ),
+        SwitchListTile(
+          title: const Text('PR status change'),
+          value: settings.markUnreadOnPrStatusChange,
+          onChanged: (value) => settings.setMarkUnreadOnPrStatusChange(value),
+        ),
+        SwitchListTile(
+          title: const Text('CI status change'),
+          value: settings.markUnreadOnCiStatusChange,
+          onChanged: (value) => settings.setMarkUnreadOnCiStatusChange(value),
+        ),
+        SwitchListTile(
+          title: const Text('New comments / other updates'),
+          value: settings.markUnreadOnComment,
+          onChanged: (value) => settings.setMarkUnreadOnComment(value),
         ),
       ],
     );

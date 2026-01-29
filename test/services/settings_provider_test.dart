@@ -43,15 +43,25 @@ void main() {
       expect(provider2.appBarRefreshActions, isEmpty);
     });
 
-    test('Can update and persist markUnreadOnGithubUpdates', () async {
-      expect(provider.markUnreadOnGithubUpdates, isFalse); // Default is false
+    test('Can update and persist unread trigger settings', () async {
+      // Defaults are false
+      expect(provider.markUnreadOnPrStatusChange, isFalse);
+      expect(provider.markUnreadOnCiStatusChange, isFalse);
+      expect(provider.markUnreadOnComment, isFalse);
 
-      await provider.setMarkUnreadOnGithubUpdates(true);
-      expect(provider.markUnreadOnGithubUpdates, isTrue);
+      await provider.setMarkUnreadOnPrStatusChange(true);
+      await provider.setMarkUnreadOnCiStatusChange(true);
+      await provider.setMarkUnreadOnComment(true);
+
+      expect(provider.markUnreadOnPrStatusChange, isTrue);
+      expect(provider.markUnreadOnCiStatusChange, isTrue);
+      expect(provider.markUnreadOnComment, isTrue);
 
       final provider2 = SettingsProvider();
       await provider2.init();
-      expect(provider2.markUnreadOnGithubUpdates, isTrue);
+      expect(provider2.markUnreadOnPrStatusChange, isTrue);
+      expect(provider2.markUnreadOnCiStatusChange, isTrue);
+      expect(provider2.markUnreadOnComment, isTrue);
     });
   });
 }

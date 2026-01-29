@@ -415,8 +415,11 @@ class SessionProvider extends ChangeNotifier {
     if (oldSession == null) return null;
 
     final reasons = <String>[];
-    final markUnreadOnGithub =
-        _settingsProvider?.markUnreadOnGithubUpdates ?? false;
+    final markUnreadOnPr =
+        _settingsProvider?.markUnreadOnPrStatusChange ?? false;
+    final markUnreadOnCi =
+        _settingsProvider?.markUnreadOnCiStatusChange ?? false;
+    final markUnreadOnComment = _settingsProvider?.markUnreadOnComment ?? false;
 
     if (oldSession.state != newSession.state) {
       final oldState = oldSession.state.toString().split('.').last;
@@ -431,7 +434,7 @@ class SessionProvider extends ChangeNotifier {
       reasons.add("Session progressed");
     }
 
-    if (markUnreadOnGithub) {
+    if (markUnreadOnPr) {
       if (oldSession.prStatus != newSession.prStatus) {
         final oldPr = oldSession.prStatus ?? 'None';
         final newPr = newSession.prStatus ?? 'None';
@@ -439,7 +442,9 @@ class SessionProvider extends ChangeNotifier {
           reasons.add("Github PR Status changed from $oldPr to $newPr");
         }
       }
+    }
 
+    if (markUnreadOnCi) {
       if (oldSession.ciStatus != newSession.ciStatus) {
         final oldCi = oldSession.ciStatus ?? 'None';
         final newCi = newSession.ciStatus ?? 'None';
@@ -450,7 +455,7 @@ class SessionProvider extends ChangeNotifier {
     }
 
     if (reasons.isEmpty && oldSession.updateTime != newSession.updateTime) {
-      if (markUnreadOnGithub) {
+      if (markUnreadOnComment) {
         return "Session updated";
       }
       // If not marking unread on github, and no other reason found,

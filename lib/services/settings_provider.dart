@@ -40,8 +40,11 @@ class SettingsProvider extends ChangeNotifier {
   static const String keyNotificationDebounceDuration =
       'notification_debounce_duration';
   static const String keyAppBarRefreshActions = 'app_bar_refresh_actions';
-  static const String keyMarkUnreadOnGithubUpdates =
-      'mark_unread_on_github_updates';
+  static const String keyMarkUnreadOnPrStatusChange =
+      'mark_unread_on_pr_status_change';
+  static const String keyMarkUnreadOnCiStatusChange =
+      'mark_unread_on_ci_status_change';
+  static const String keyMarkUnreadOnComment = 'mark_unread_on_comment';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -93,7 +96,9 @@ class SettingsProvider extends ChangeNotifier {
   Set<RefreshButtonAction> _appBarRefreshActions = {
     RefreshButtonAction.refresh,
   };
-  bool _markUnreadOnGithubUpdates = false;
+  bool _markUnreadOnPrStatusChange = false;
+  bool _markUnreadOnCiStatusChange = false;
+  bool _markUnreadOnComment = false;
 
   // Keybinding Actions
   MessageSubmitAction _enterKeyAction = MessageSubmitAction.addNewLine;
@@ -132,7 +137,9 @@ class SettingsProvider extends ChangeNotifier {
   bool get enableNotificationDebounce => _enableNotificationDebounce;
   int get notificationDebounceDuration => _notificationDebounceDuration;
   Set<RefreshButtonAction> get appBarRefreshActions => _appBarRefreshActions;
-  bool get markUnreadOnGithubUpdates => _markUnreadOnGithubUpdates;
+  bool get markUnreadOnPrStatusChange => _markUnreadOnPrStatusChange;
+  bool get markUnreadOnCiStatusChange => _markUnreadOnCiStatusChange;
+  bool get markUnreadOnComment => _markUnreadOnComment;
 
   // Keybinding Getters
   MessageSubmitAction get enterKeyAction => _enterKeyAction;
@@ -217,8 +224,11 @@ class SettingsProvider extends ChangeNotifier {
         _prefs!.getBool(keyEnableNotificationDebounce) ?? false;
     _notificationDebounceDuration =
         _prefs!.getInt(keyNotificationDebounceDuration) ?? 5000;
-    _markUnreadOnGithubUpdates =
-        _prefs!.getBool(keyMarkUnreadOnGithubUpdates) ?? false;
+    _markUnreadOnPrStatusChange =
+        _prefs!.getBool(keyMarkUnreadOnPrStatusChange) ?? false;
+    _markUnreadOnCiStatusChange =
+        _prefs!.getBool(keyMarkUnreadOnCiStatusChange) ?? false;
+    _markUnreadOnComment = _prefs!.getBool(keyMarkUnreadOnComment) ?? false;
 
     if (_prefs!.containsKey(keyAppBarRefreshActions)) {
       final refreshActionsList =
@@ -488,10 +498,22 @@ class SettingsProvider extends ChangeNotifier {
     );
   }
 
-  Future<void> setMarkUnreadOnGithubUpdates(bool value) async {
-    _markUnreadOnGithubUpdates = value;
+  Future<void> setMarkUnreadOnPrStatusChange(bool value) async {
+    _markUnreadOnPrStatusChange = value;
     notifyListeners();
-    await _prefs?.setBool(keyMarkUnreadOnGithubUpdates, value);
+    await _prefs?.setBool(keyMarkUnreadOnPrStatusChange, value);
+  }
+
+  Future<void> setMarkUnreadOnCiStatusChange(bool value) async {
+    _markUnreadOnCiStatusChange = value;
+    notifyListeners();
+    await _prefs?.setBool(keyMarkUnreadOnCiStatusChange, value);
+  }
+
+  Future<void> setMarkUnreadOnComment(bool value) async {
+    _markUnreadOnComment = value;
+    notifyListeners();
+    await _prefs?.setBool(keyMarkUnreadOnComment, value);
   }
 
   // Keybinding Setters
