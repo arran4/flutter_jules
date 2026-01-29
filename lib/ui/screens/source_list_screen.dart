@@ -71,30 +71,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
     final sorted = List<CachedItem<Source>>.from(sources);
     sorted.sort((a, b) {
       for (final sort in _activeSorts) {
-        int cmp = 0;
-        switch (sort.field) {
-          case SortField.name:
-            cmp = _compareAlphabetical(a, b);
-            break;
-          case SortField.updated: // For 'recent'
-            final lastUsedA = _lastUsed[a.data.name];
-            final lastUsedB = _lastUsed[b.data.name];
-            if (lastUsedA != null && lastUsedB != null) {
-              cmp = lastUsedA.compareTo(lastUsedB);
-            } else if (lastUsedA != null) {
-              cmp = 1;
-            } else if (lastUsedB != null) {
-              cmp = -1;
-            }
-            break;
-          case SortField.count:
-            final countA = _usageCount[a.data.name] ?? 0;
-            final countB = _usageCount[b.data.name] ?? 0;
-            cmp = countA.compareTo(countB);
-            break;
-          default:
-            break;
-        }
+        final cmp = _compareBySortOption(sort, a, b);
         if (cmp != 0) {
           return sort.direction == SortDirection.ascending ? cmp : -cmp;
         }
@@ -102,6 +79,52 @@ class _SourceListScreenState extends State<SourceListScreen> {
       return _compareAlphabetical(a, b);
     });
     return sorted;
+  }
+
+  int _compareBySortOption(
+    SortOption sort,
+    CachedItem<Source> a,
+    CachedItem<Source> b,
+  ) {
+    return _compareBySortField(sort.field, a, b);
+  }
+
+  int _compareBySortField(
+    SortField field,
+    CachedItem<Source> a,
+    CachedItem<Source> b,
+  ) {
+    switch (field) {
+      case SortField.name:
+        return _compareAlphabetical(a, b);
+      case SortField.updated:
+        return _compareByLastUsed(a, b);
+      case SortField.count:
+        return _compareByUsageCount(a, b);
+      default:
+        return 0;
+    }
+  }
+
+  int _compareByLastUsed(CachedItem<Source> a, CachedItem<Source> b) {
+    final lastUsedA = _lastUsed[a.data.name];
+    final lastUsedB = _lastUsed[b.data.name];
+    if (lastUsedA != null && lastUsedB != null) {
+      return lastUsedA.compareTo(lastUsedB);
+    }
+    if (lastUsedA != null) {
+      return 1;
+    }
+    if (lastUsedB != null) {
+      return -1;
+    }
+    return 0;
+  }
+
+  int _compareByUsageCount(CachedItem<Source> a, CachedItem<Source> b) {
+    final countA = _usageCount[a.data.name] ?? 0;
+    final countB = _usageCount[b.data.name] ?? 0;
+    return countA.compareTo(countB);
   }
 
   int _compareAlphabetical(CachedItem<Source> a, CachedItem<Source> b) {
@@ -229,14 +252,17 @@ class _SourceListScreenState extends State<SourceListScreen> {
     _processSessions();
     setState(() {});
 
-    if (mounted) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Refreshed ${sourceProvider.items.length} sources'),
-          duration: const Duration(seconds: 2),
-        ),
-      );
-    }
+    _showRefreshSnackBar(sourceProvider.items.length);
+  }
+
+  void _showRefreshSnackBar(int sourceCount) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Refreshed $sourceCount sources'),
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
   FilterContext _buildFilterContext(
@@ -354,155 +380,183 @@ class _SourceListScreenState extends State<SourceListScreen> {
         final displaySources = _sortSources(filteredSources);
 
         return Scaffold(
-          appBar: AppBar(
-            title: const Text('Repositories'),
-            bottom: isLoading
-                ? const PreferredSize(
-                    preferredSize: Size.fromHeight(4.0),
-                    child: LinearProgressIndicator(),
-                  )
-                : null,
-            actions: [
-              IconButton(
-                icon: const Icon(Icons.refresh),
-                tooltip: 'Refresh',
-                onPressed: _refreshData,
-              ),
-              IconButton(
-                icon: const Icon(Icons.groups),
-                tooltip: 'Manage Groups',
-                onPressed: () {
-                  showDialog(
-                    context: context,
-                    builder: (context) => const GroupManagementDialog(),
-                  );
-                },
-              ),
-              IconButton(
-                icon: const Icon(Icons.settings),
-                tooltip: 'Settings',
-                onPressed: () {
-                  Navigator.pushNamed(context, '/settings');
-                },
-              ),
-              PopupMenuButton<String>(
-                onSelected: (value) {
-                  if (value == 'raw_data') {
-                    _showRawData(context);
-                  }
-                },
-                itemBuilder: (context) => [
-                  const PopupMenuItem(
-                    value: 'raw_data',
-                    child: Row(
-                      children: [
-                        Icon(Icons.data_object),
-                        SizedBox(width: 8),
-                        Text('View Raw Data'),
-                      ],
-                    ),
-                  ),
+          appBar: _buildAppBar(isLoading),
+          body: _buildBody(
+            sources: sources,
+            isLoading: isLoading,
+            error: error,
+            displaySources: displaySources,
+            lastFetchTime: lastFetchTime,
+          ),
+        );
+      },
+    );
+  }
+
+  PreferredSizeWidget _buildAppBar(bool isLoading) {
+    return AppBar(
+      title: const Text('Repositories'),
+      bottom: isLoading
+          ? const PreferredSize(
+              preferredSize: Size.fromHeight(4.0),
+              child: LinearProgressIndicator(),
+            )
+          : null,
+      actions: [
+        IconButton(
+          icon: const Icon(Icons.refresh),
+          tooltip: 'Refresh',
+          onPressed: _refreshData,
+        ),
+        IconButton(
+          icon: const Icon(Icons.groups),
+          tooltip: 'Manage Groups',
+          onPressed: () {
+            showDialog(
+              context: context,
+              builder: (context) => const GroupManagementDialog(),
+            );
+          },
+        ),
+        IconButton(
+          icon: const Icon(Icons.settings),
+          tooltip: 'Settings',
+          onPressed: () {
+            Navigator.pushNamed(context, '/settings');
+          },
+        ),
+        PopupMenuButton<String>(
+          onSelected: (value) {
+            if (value == 'raw_data') {
+              _showRawData(context);
+            }
+          },
+          itemBuilder: (context) => [
+            const PopupMenuItem(
+              value: 'raw_data',
+              child: Row(
+                children: [
+                  Icon(Icons.data_object),
+                  SizedBox(width: 8),
+                  Text('View Raw Data'),
                 ],
               ),
-            ],
-          ),
-          body: (sources.isEmpty && isLoading)
-              ? const Center(child: Text("Loading repositories..."))
-              : (sources.isEmpty && error != null)
-                  ? Center(child: Text('Error: $error'))
-                  : Column(
-                      children: [
-                        AdvancedSearchBar(
-                          filterTree: _filterTree,
-                          onFilterTreeChanged: (tree) {
-                            setState(() {
-                              _filterTree = tree;
-                            });
-                          },
-                          searchText: _searchText,
-                          onSearchChanged: (text) {
-                            setState(() {
-                              _searchText = text;
-                            });
-                          },
-                          availableSuggestions: _availableSuggestions,
-                          activeSorts: _activeSorts,
-                          onSortsChanged: (sorts) {
-                            setState(() {
-                              _activeSorts = sorts;
-                            });
-                          },
-                        ),
-                        if (lastFetchTime != null)
-                          Padding(
-                            padding: const EdgeInsets.symmetric(horizontal: 16),
-                            child: Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
-                                style: Theme.of(context)
-                                    .textTheme
-                                    .bodySmall
-                                    ?.copyWith(
-                                      color: DateTime.now()
-                                                  .difference(lastFetchTime)
-                                                  .inMinutes >
-                                              30
-                                          ? Colors.orange
-                                          : null,
-                                    ),
-                              ),
-                            ),
-                          ),
-                        Expanded(
-                          child: RefreshIndicator(
-                            onRefresh: _refreshData,
-                            child: displaySources.isEmpty
-                                ? ListView(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(),
-                                    children: [
-                                      SizedBox(
-                                        height:
-                                            MediaQuery.of(context).size.height *
-                                                0.7,
-                                        child: Center(
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(20.0),
-                                            child: Text(
-                                              sources.isEmpty
-                                                  ? 'No repositories found.'
-                                                  : 'No matches found.',
-                                            ),
-                                          ),
-                                        ),
-                                      ),
-                                    ],
-                                  )
-                                : ListView.builder(
-                                    physics:
-                                        const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
-                                    controller: _scrollController,
-                                    itemCount: displaySources.length,
-                                    itemBuilder: (context, index) {
-                                      final item = displaySources[index];
-                                      final source = item.data;
-                                      final count =
-                                          _usageCount[source.name] ?? 0;
-                                      final lastUsedDate =
-                                          _lastUsed[source.name];
+            ),
+          ],
+        ),
+      ],
+    );
+  }
 
-                                      return SourceTile(
-                                        item: item,
-                                        usageCount: count,
-                                        lastUsedDate: lastUsedDate,
-                                      );
-                                    },
-                                  ),
-                          ),
-                        ),
-                      ],
-                    ),
+  Widget _buildBody({
+    required List<CachedItem<Source>> sources,
+    required bool isLoading,
+    required String? error,
+    required List<CachedItem<Source>> displaySources,
+    required DateTime? lastFetchTime,
+  }) {
+    if (sources.isEmpty && isLoading) {
+      return const Center(child: Text("Loading repositories..."));
+    }
+    if (sources.isEmpty && error != null) {
+      return Center(child: Text('Error: $error'));
+    }
+
+    return Column(
+      children: [
+        _buildFilterBar(),
+        _buildLastRefreshed(lastFetchTime),
+        Expanded(
+          child: RefreshIndicator(
+            onRefresh: _refreshData,
+            child: _buildSourcesListBody(sources, displaySources),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterBar() {
+    return AdvancedSearchBar(
+      filterTree: _filterTree,
+      onFilterTreeChanged: (tree) {
+        setState(() {
+          _filterTree = tree;
+        });
+      },
+      searchText: _searchText,
+      onSearchChanged: (text) {
+        setState(() {
+          _searchText = text;
+        });
+      },
+      availableSuggestions: _availableSuggestions,
+      activeSorts: _activeSorts,
+      onSortsChanged: (sorts) {
+        setState(() {
+          _activeSorts = sorts;
+        });
+      },
+    );
+  }
+
+  Widget _buildLastRefreshed(DateTime? lastFetchTime) {
+    if (lastFetchTime == null) {
+      return const SizedBox.shrink();
+    }
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: Text(
+          'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})',
+          style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                color: DateTime.now().difference(lastFetchTime).inMinutes > 30
+                    ? Colors.orange
+                    : null,
+              ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildSourcesListBody(
+    List<CachedItem<Source>> sources,
+    List<CachedItem<Source>> displaySources,
+  ) {
+    if (displaySources.isEmpty) {
+      return ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        children: [
+          SizedBox(
+            height: MediaQuery.of(context).size.height * 0.7,
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(20.0),
+                child: Text(
+                  sources.isEmpty ? 'No repositories found.' : 'No matches found.',
+                ),
+              ),
+            ),
+          ),
+        ],
+      );
+    }
+    return ListView.builder(
+      physics:
+          const AlwaysScrollableScrollPhysics(), // Ensure refresh works even if few items
+      controller: _scrollController,
+      itemCount: displaySources.length,
+      itemBuilder: (context, index) {
+        final item = displaySources[index];
+        final source = item.data;
+        final count = _usageCount[source.name] ?? 0;
+        final lastUsedDate = _lastUsed[source.name];
+
+        return SourceTile(
+          item: item,
+          usageCount: count,
+          lastUsedDate: lastUsedDate,
         );
       },
     );
