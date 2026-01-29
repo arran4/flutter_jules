@@ -27,6 +27,99 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
+  Future<void> _handleGoogleSignIn() async {
+    try {
+      final authProvider = Provider.of<AuthProvider>(
+        context,
+        listen: false,
+      );
+      await authProvider.signInWithGoogle();
+    } catch (e) {
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Google Sign-In failed: $e')),
+        );
+      }
+    }
+  }
+
+  Widget _buildTokenTypeSelector() {
+    return DropdownButtonFormField<TokenType>(
+      value: _selectedType, // ignore: deprecated_member_use
+      decoration: const InputDecoration(
+        labelText: 'Token Type',
+        border: OutlineInputBorder(),
+      ),
+      items: const [
+        DropdownMenuItem(
+          value: TokenType.accessToken,
+          child: Text('OAuth Access Token'),
+        ),
+        DropdownMenuItem(
+          value: TokenType.apiKey,
+          child: Text('API Key'),
+        ),
+      ],
+      onChanged: (TokenType? value) {
+        setState(() {
+          _selectedType = value!;
+        });
+      },
+    );
+  }
+
+  Widget _buildTokenInput() {
+    return TextFormField(
+      controller: _tokenController,
+      decoration: InputDecoration(
+        labelText:
+            _selectedType == TokenType.apiKey ? 'API Key' : 'Access Token',
+        border: const OutlineInputBorder(),
+        hintText: _selectedType == TokenType.apiKey
+            ? 'Enter your API Key'
+            : 'Enter your Bearer token',
+      ),
+      validator: (value) {
+        if (value == null || value.isEmpty) {
+          return 'Please enter a token';
+        }
+        return null;
+      },
+    );
+  }
+
+  Widget _buildPrimaryAction() {
+    return ElevatedButton(
+      onPressed: _saveToken,
+      child: const Text('Connect'),
+    );
+  }
+
+  Widget _buildGoogleSignInSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        const Divider(),
+        const SizedBox(height: 16),
+        const Text(
+          'Or sign in with Google',
+          textAlign: TextAlign.center,
+          style: TextStyle(color: Colors.grey),
+        ),
+        const SizedBox(height: 12),
+        ElevatedButton.icon(
+          onPressed: _handleGoogleSignIn,
+          icon: const Icon(Icons.login),
+          label: const Text('Sign in with Google'),
+          style: ElevatedButton.styleFrom(
+            backgroundColor: Colors.white,
+            foregroundColor: Colors.black,
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -51,84 +144,13 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontSize: 14, color: Colors.grey),
               ),
               const SizedBox(height: 24),
-              DropdownButtonFormField<TokenType>(
-                value: _selectedType, // ignore: deprecated_member_use
-                decoration: const InputDecoration(
-                  labelText: 'Token Type',
-                  border: OutlineInputBorder(),
-                ),
-                items: const [
-                  DropdownMenuItem(
-                    value: TokenType.accessToken,
-                    child: Text('OAuth Access Token'),
-                  ),
-                  DropdownMenuItem(
-                    value: TokenType.apiKey,
-                    child: Text('API Key'),
-                  ),
-                ],
-                onChanged: (TokenType? value) {
-                  setState(() {
-                    _selectedType = value!;
-                  });
-                },
-              ),
+              _buildTokenTypeSelector(),
               const SizedBox(height: 16),
-              TextFormField(
-                controller: _tokenController,
-                decoration: InputDecoration(
-                  labelText: _selectedType == TokenType.apiKey
-                      ? 'API Key'
-                      : 'Access Token',
-                  border: const OutlineInputBorder(),
-                  hintText: _selectedType == TokenType.apiKey
-                      ? 'Enter your API Key'
-                      : 'Enter your Bearer token',
-                ),
-                validator: (value) {
-                  if (value == null || value.isEmpty) {
-                    return 'Please enter a token';
-                  }
-                  return null;
-                },
-              ),
+              _buildTokenInput(),
               const SizedBox(height: 24),
-              ElevatedButton(
-                onPressed: _saveToken,
-                child: const Text('Connect'),
-              ),
+              _buildPrimaryAction(),
               const SizedBox(height: 16),
-              const Divider(),
-              const SizedBox(height: 16),
-              const Text(
-                'Or sign in with Google',
-                textAlign: TextAlign.center,
-                style: TextStyle(color: Colors.grey),
-              ),
-              const SizedBox(height: 12),
-              ElevatedButton.icon(
-                onPressed: () async {
-                  try {
-                    final authProvider = Provider.of<AuthProvider>(
-                      context,
-                      listen: false,
-                    );
-                    await authProvider.signInWithGoogle();
-                  } catch (e) {
-                    if (context.mounted) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text('Google Sign-In failed: $e')),
-                      );
-                    }
-                  }
-                },
-                icon: const Icon(Icons.login),
-                label: const Text('Sign in with Google'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.white,
-                  foregroundColor: Colors.black,
-                ),
-              ),
+              _buildGoogleSignInSection(),
             ],
           ),
         ),
