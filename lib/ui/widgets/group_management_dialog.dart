@@ -20,24 +20,20 @@ class _GroupManagementDialogState extends State<GroupManagementDialog> {
     );
   }
 
-  void _deleteGroup(SourceGroup group) {
-    showDialog(
+  Future<bool> _confirmDeleteGroup(SourceGroup group) async {
+    final shouldDelete = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
         title: const Text('Delete Group'),
         content: Text('Are you sure you want to delete ${group.name}?'),
         actions: [
           TextButton(
-            onPressed: () => Navigator.pop(context),
+            onPressed: () => Navigator.pop(context, false),
             child: const Text('Cancel'),
           ),
           TextButton(
             onPressed: () {
-              Provider.of<SettingsProvider>(
-                context,
-                listen: false,
-              ).deleteSourceGroup(group.name);
-              Navigator.pop(context);
+              Navigator.pop(context, true);
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text('Delete'),
@@ -45,6 +41,21 @@ class _GroupManagementDialogState extends State<GroupManagementDialog> {
         ],
       ),
     );
+    return shouldDelete ?? false;
+  }
+
+  Future<void> _deleteGroup(SourceGroup group) async {
+    final shouldDelete = await _confirmDeleteGroup(group);
+    if (!shouldDelete) {
+      return;
+    }
+    if (!mounted) {
+      return;
+    }
+    await Provider.of<SettingsProvider>(
+      context,
+      listen: false,
+    ).deleteSourceGroup(group.name);
   }
 
   @override
@@ -205,35 +216,47 @@ class _GroupEditorDialogState extends State<_GroupEditorDialog> {
           mainAxisSize: MainAxisSize.min,
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            TextField(
-              controller: _nameController,
-              decoration: const InputDecoration(
-                labelText: 'Group Name',
-                hintText: '@groupname',
-                border: OutlineInputBorder(),
-              ),
-            ),
+            _buildNameField(),
             const SizedBox(height: 16),
-            Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Text('${_selectedSourceNames.length} repositories selected'),
-                TextButton(
-                  onPressed: _selectSources,
-                  child: const Text('Select Repositories'),
-                ),
-              ],
-            ),
+            _buildSourceSelectorRow(),
           ],
         ),
       ),
-      actions: [
+      actions: _buildActions(),
+    );
+  }
+
+  Widget _buildNameField() {
+    return TextField(
+      controller: _nameController,
+      decoration: const InputDecoration(
+        labelText: 'Group Name',
+        hintText: '@groupname',
+        border: OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildSourceSelectorRow() {
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+      children: [
+        Text('${_selectedSourceNames.length} repositories selected'),
         TextButton(
-          onPressed: () => Navigator.pop(context),
-          child: const Text('Cancel'),
+          onPressed: _selectSources,
+          child: const Text('Select Repositories'),
         ),
-        FilledButton(onPressed: _save, child: const Text('Save')),
       ],
     );
+  }
+
+  List<Widget> _buildActions() {
+    return [
+      TextButton(
+        onPressed: () => Navigator.pop(context),
+        child: const Text('Cancel'),
+      ),
+      FilledButton(onPressed: _save, child: const Text('Save')),
+    ];
   }
 }
