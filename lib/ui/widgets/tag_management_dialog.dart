@@ -28,12 +28,7 @@ class TagManagementDialogState extends State<TagManagementDialog> {
   @override
   Widget build(BuildContext context) {
     final allTags = Provider.of<TagsProvider>(context).allTags;
-    final availableTags = allTags
-        .where(
-          (tag) =>
-              !_currentTags.any((t) => t.toLowerCase() == tag.toLowerCase()),
-        )
-        .toList();
+    final availableTags = _getAvailableTags(allTags);
 
     return AlertDialog(
       title: const Text('Manage Tags'),
@@ -44,21 +39,11 @@ class TagManagementDialogState extends State<TagManagementDialog> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              CurrentTagsSection(
-                tags: _currentTags,
-                onRemoveTag: _removeTag,
-              ),
+              _buildCurrentTagsSection(),
               const SizedBox(height: 20),
-              NewTagInput(
-                controller: _newTagController,
-                onSubmitted: _addNewTag,
-                onAddPressed: () => _addNewTag(_newTagController.text),
-              ),
+              _buildNewTagInput(),
               const SizedBox(height: 20),
-              AvailableTagsSection(
-                availableTags: availableTags,
-                onTagSelected: _addNewTag,
-              ),
+              _buildAvailableTagsSection(availableTags),
             ],
           ),
         ),
@@ -70,6 +55,37 @@ class TagManagementDialogState extends State<TagManagementDialog> {
         ),
         TextButton(onPressed: _saveTags, child: const Text('Save')),
       ],
+    );
+  }
+
+  List<String> _getAvailableTags(List<String> allTags) {
+    return allTags
+        .where(
+          (tag) =>
+              !_currentTags.any((t) => t.toLowerCase() == tag.toLowerCase()),
+        )
+        .toList();
+  }
+
+  Widget _buildCurrentTagsSection() {
+    return CurrentTagsSection(
+      tags: _currentTags,
+      onRemoveTag: _removeTag,
+    );
+  }
+
+  Widget _buildNewTagInput() {
+    return NewTagInput(
+      controller: _newTagController,
+      onSubmitted: _addNewTag,
+      onAddPressed: () => _addNewTag(_newTagController.text),
+    );
+  }
+
+  Widget _buildAvailableTagsSection(List<String> availableTags) {
+    return AvailableTagsSection(
+      availableTags: availableTags,
+      onTagSelected: _addNewTag,
     );
   }
 
