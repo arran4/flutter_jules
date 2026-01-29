@@ -35,7 +35,7 @@ class _LoginScreenState extends State<LoginScreen> {
       );
       await authProvider.signInWithGoogle();
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Google Sign-In failed: $e')),
         );

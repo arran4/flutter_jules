@@ -213,11 +213,15 @@ class SessionMetadataDialog extends StatelessWidget {
 
       final dirUri = Uri.directory(cacheFile!.parent.path);
       final openedDir = await _launchUriIfPossible(dirUri);
+      if (!context.mounted) return;
+
       if (!openedDir) {
         _showSnackBar(context, const Text('Cannot open file or directory'));
       }
     } catch (e) {
-      _showSnackBar(context, Text('Error opening file: $e'));
+      if (context.mounted) {
+        _showSnackBar(context, Text('Error opening file: $e'));
+      }
     }
   }
 
