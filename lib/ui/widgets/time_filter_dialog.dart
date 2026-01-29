@@ -49,6 +49,101 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
     }
   }
 
+  Future<void> _pickSpecificTime() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (selectedDate != null && context.mounted) {
+      final selectedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+      );
+      if (selectedTime != null && mounted) {
+        setState(() {
+          _selectedDateTime = DateTime(
+            selectedDate.year,
+            selectedDate.month,
+            selectedDate.day,
+            selectedTime.hour,
+            selectedTime.minute,
+          );
+        });
+      }
+    }
+  }
+
+  Future<void> _pickEndTime() async {
+    final selectedDate = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime(2000),
+      lastDate: DateTime(2101),
+    );
+    if (selectedDate != null && context.mounted) {
+      final selectedTime = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.fromDateTime(DateTime.now()),
+      );
+      if (selectedTime != null && mounted) {
+        setState(() {
+          _selectedDateTimeEnd = DateTime(
+            selectedDate.year,
+            selectedDate.month,
+            selectedDate.day,
+            selectedTime.hour,
+            selectedTime.minute,
+          );
+        });
+      }
+    }
+  }
+
+  Widget _buildRangeInput() {
+    return Column(
+      children: [
+        TextField(
+          controller: _rangeController,
+          decoration: const InputDecoration(
+            labelText: 'Range (e.g., "5 days", "last week")',
+          ),
+        ),
+        const SizedBox(height: 8),
+        Wrap(
+          spacing: 8.0,
+          children: ['15 minutes', '1 hour', '1 day', '7 days', '30 days']
+              .map(
+                (range) => FilterChip(
+                  label: Text(range),
+                  onSelected: (selected) {
+                    _rangeController.text = range;
+                  },
+                ),
+              )
+              .toList(),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBetweenSection() {
+    return Column(
+      children: [
+        const SizedBox(height: 8),
+        ElevatedButton(
+          onPressed: _pickEndTime,
+          child: Text(
+            _selectedDateTimeEnd == null
+                ? 'Select End Time'
+                : 'End Time: ${_selectedDateTimeEnd.toString()}',
+          ),
+        ),
+      ],
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
@@ -96,99 +191,17 @@ class _TimeFilterDialogState extends State<TimeFilterDialog> {
             if (_selectedType == TimeFilterType.inRange ||
                 _selectedType == TimeFilterType.newerThan ||
                 _selectedType == TimeFilterType.olderThan)
-              Column(
-                children: [
-                  TextField(
-                    controller: _rangeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Range (e.g., "5 days", "last week")',
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  Wrap(
-                    spacing: 8.0,
-                    children:
-                        ['15 minutes', '1 hour', '1 day', '7 days', '30 days']
-                            .map(
-                              (range) => FilterChip(
-                                label: Text(range),
-                                onSelected: (selected) {
-                                  _rangeController.text = range;
-                                },
-                              ),
-                            )
-                            .toList(),
-                  ),
-                ],
-              ),
+              _buildRangeInput(),
             const SizedBox(height: 16),
             ElevatedButton(
-              onPressed: () async {
-                final selectedDate = await showDatePicker(
-                  context: context,
-                  initialDate: DateTime.now(),
-                  firstDate: DateTime(2000),
-                  lastDate: DateTime(2101),
-                );
-                if (selectedDate != null && context.mounted) {
-                  final selectedTime = await showTimePicker(
-                    context: context,
-                    initialTime: TimeOfDay.fromDateTime(DateTime.now()),
-                  );
-                  if (selectedTime != null) {
-                    setState(() {
-                      _selectedDateTime = DateTime(
-                        selectedDate.year,
-                        selectedDate.month,
-                        selectedDate.day,
-                        selectedTime.hour,
-                        selectedTime.minute,
-                      );
-                    });
-                  }
-                }
-              },
+              onPressed: _pickSpecificTime,
               child: Text(
                 _selectedDateTime == null
                     ? 'Select Specific Time'
                     : 'Time: ${_selectedDateTime.toString()}',
               ),
             ),
-            if (_selectedType == TimeFilterType.between) ...[
-              const SizedBox(height: 8),
-              ElevatedButton(
-                onPressed: () async {
-                  final selectedDate = await showDatePicker(
-                    context: context,
-                    initialDate: DateTime.now(),
-                    firstDate: DateTime(2000),
-                    lastDate: DateTime(2101),
-                  );
-                  if (selectedDate != null && context.mounted) {
-                    final selectedTime = await showTimePicker(
-                      context: context,
-                      initialTime: TimeOfDay.fromDateTime(DateTime.now()),
-                    );
-                    if (selectedTime != null) {
-                      setState(() {
-                        _selectedDateTimeEnd = DateTime(
-                          selectedDate.year,
-                          selectedDate.month,
-                          selectedDate.day,
-                          selectedTime.hour,
-                          selectedTime.minute,
-                        );
-                      });
-                    }
-                  }
-                },
-                child: Text(
-                  _selectedDateTimeEnd == null
-                      ? 'Select End Time'
-                      : 'End Time: ${_selectedDateTimeEnd.toString()}',
-                ),
-              ),
-            ],
+            if (_selectedType == TimeFilterType.between) _buildBetweenSection(),
           ],
         ),
       ),
