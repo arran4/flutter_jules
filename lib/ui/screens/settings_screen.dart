@@ -22,41 +22,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
-          GithubProvider>(
-        builder: (context, settings, devMode, auth, github, child) {
-          return ListView(
-            children: [
-              _buildSessionUpdatesSection(context, settings),
-              const Divider(),
-              _buildListUpdatesSection(context, settings),
-              const Divider(),
-              _buildRefreshActionsSection(context, settings),
-              const Divider(),
-              _buildAppearanceSection(context, settings),
-              const Divider(),
-              _buildSourceListSection(context, settings),
-              _buildKeybindingsSection(context, settings),
-              const Divider(),
-              _buildAutomaticRefreshSection(context, settings),
-              const Divider(),
-              _buildNotificationsSection(context, settings),
-              const Divider(),
-              _buildSystemTraySection(context, settings),
-              const Divider(),
-              _buildPerformanceSection(context, settings),
-              const Divider(),
-              _buildDiagnosticsSection(context),
-              const Divider(),
-              _buildDeveloperSection(context, settings, devMode),
-              const Divider(),
-              _buildAuthenticationSection(context, auth),
-              const Divider(),
-              _buildGitHubSection(context, settings, github),
-            ],
-          );
-        },
-      ),
+      body:
+          Consumer4<
+            SettingsProvider,
+            DevModeProvider,
+            AuthProvider,
+            GithubProvider
+          >(
+            builder: (context, settings, devMode, auth, github, child) {
+              return ListView(
+                children: [
+                  _buildSessionUpdatesSection(context, settings),
+                  const Divider(),
+                  _buildListUpdatesSection(context, settings),
+                  const Divider(),
+                  _buildRefreshActionsSection(context, settings),
+                  const Divider(),
+                  _buildAppearanceSection(context, settings),
+                  const Divider(),
+                  _buildSourceListSection(context, settings),
+                  _buildKeybindingsSection(context, settings),
+                  const Divider(),
+                  _buildAutomaticRefreshSection(context, settings),
+                  const Divider(),
+                  _buildNotificationsSection(context, settings),
+                  const Divider(),
+                  _buildSystemTraySection(context, settings),
+                  const Divider(),
+                  _buildPerformanceSection(context, settings),
+                  const Divider(),
+                  _buildDiagnosticsSection(context),
+                  const Divider(),
+                  _buildDeveloperSection(context, settings, devMode),
+                  const Divider(),
+                  _buildAuthenticationSection(context, auth),
+                  const Divider(),
+                  _buildGitHubSection(context, settings, github),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -175,9 +180,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -402,17 +407,13 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         SwitchListTile(
           title: const Text('Task Fails'),
-          subtitle: const Text(
-            'Receive a notification when a task fails.',
-          ),
+          subtitle: const Text('Receive a notification when a task fails.'),
           value: settings.notifyOnFailure,
           onChanged: (value) => settings.setNotifyOnFailure(value),
         ),
         SwitchListTile(
           title: const Text('Refresh Started'),
-          subtitle: const Text(
-            'Receive a notification when a refresh starts.',
-          ),
+          subtitle: const Text('Receive a notification when a refresh starts.'),
           value: settings.notifyOnRefreshStart,
           onChanged: (value) => settings.setNotifyOnRefreshStart(value),
         ),
@@ -426,9 +427,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         SwitchListTile(
           title: const Text('Errors'),
-          subtitle: const Text(
-            'Receive a notification when an error occurs.',
-          ),
+          subtitle: const Text('Receive a notification when an error occurs.'),
           value: settings.notifyOnErrors,
           onChanged: (value) => settings.setNotifyOnErrors(value),
         ),
@@ -501,9 +500,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           leading: const Icon(Icons.history),
           onTap: () => Navigator.push(
             context,
-            MaterialPageRoute(
-              builder: (context) => const ActivityLogScreen(),
-            ),
+            MaterialPageRoute(builder: (context) => const ActivityLogScreen()),
           ),
         ),
       ],
@@ -527,9 +524,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
         ),
         SwitchListTile(
           title: const Text('API Logging'),
-          subtitle: const Text(
-            'Log API requests and responses to console',
-          ),
+          subtitle: const Text('Log API requests and responses to console'),
           value: devMode.enableApiLogging,
           onChanged: (value) => devMode.toggleApiLogging(value),
         ),
@@ -545,10 +540,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
     );
   }
 
-  Widget _buildAuthenticationSection(
-    BuildContext context,
-    AuthProvider auth,
-  ) {
+  Widget _buildAuthenticationSection(BuildContext context, AuthProvider auth) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
@@ -568,10 +560,7 @@ class _SettingsScreenState extends State<SettingsScreen> {
           onTap: () => _showApiKeyDialog(context, auth),
         ),
         ListTile(
-          title: const Text(
-            'Sign Out',
-            style: TextStyle(color: Colors.red),
-          ),
+          title: const Text('Sign Out', style: TextStyle(color: Colors.red)),
           leading: const Icon(Icons.logout, color: Colors.red),
           onTap: () => _showSignOutDialog(context, auth),
         ),
@@ -630,9 +619,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -868,8 +857,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   sendMessagesMode:
                       taskType == RefreshTaskType.sendPendingMessages
-                          ? sendMessagesMode
-                          : null,
+                      ? sendMessagesMode
+                      : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 
