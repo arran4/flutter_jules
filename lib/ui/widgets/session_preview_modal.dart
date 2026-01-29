@@ -28,16 +28,10 @@ class SessionPreviewModal extends StatelessWidget {
       color: Colors.purple.shade50,
       margin: const EdgeInsets.only(bottom: 16),
       child: ExpansionTile(
-        leading: const Icon(
-          Icons.merge_type,
-          color: Colors.purple,
-        ),
+        leading: const Icon(Icons.merge_type, color: Colors.purple),
         title: const Text(
           "Pull Request Available",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            color: Colors.purple,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, color: Colors.purple),
         ),
         children: [
           Padding(
@@ -47,24 +41,16 @@ class SessionPreviewModal extends StatelessWidget {
               children: [
                 Text(
                   prOutput.pullRequest!.title,
-                  style: const TextStyle(
-                    fontWeight: FontWeight.bold,
-                  ),
+                  style: const TextStyle(fontWeight: FontWeight.bold),
                 ),
                 const SizedBox(height: 4),
-                MarkdownBody(
-                  data: prOutput.pullRequest!.description,
-                ),
+                MarkdownBody(data: prOutput.pullRequest!.description),
                 const SizedBox(height: 8),
                 ElevatedButton.icon(
-                  icon: const Icon(
-                    Icons.open_in_new,
-                    size: 16,
-                  ),
+                  icon: const Icon(Icons.open_in_new, size: 16),
                   label: const Text("Open Pull Request"),
-                  onPressed: () => launchUrl(
-                    Uri.parse(prOutput.pullRequest!.url),
-                  ),
+                  onPressed: () =>
+                      launchUrl(Uri.parse(prOutput.pullRequest!.url)),
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.purple,
                     foregroundColor: Colors.white,
@@ -94,18 +80,18 @@ class SessionPreviewModal extends StatelessWidget {
         children: [
           ListTile(
             title: const Text("Source"),
-            subtitle: Text(
-              session.sourceContext?.source ?? 'N/A',
-            ),
+            subtitle: Text(session.sourceContext?.source ?? 'N/A'),
           ),
           if (session.sourceContext?.githubRepoContext != null) ...[
-            if (session.sourceContext!.githubRepoContext!.startingBranch
+            if (session
+                .sourceContext!
+                .githubRepoContext!
+                .startingBranch
                 .isNotEmpty)
               ListTile(
                 title: const Text("Branch"),
                 subtitle: Text(
-                  session
-                      .sourceContext!.githubRepoContext!.startingBranch,
+                  session.sourceContext!.githubRepoContext!.startingBranch,
                 ),
               ),
           ],
@@ -120,10 +106,7 @@ class SessionPreviewModal extends StatelessWidget {
       children: [
         const Text(
           "Prompt",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 16,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
         ),
         const Divider(),
         MarkdownBody(data: session.prompt, selectable: true),
