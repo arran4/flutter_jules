@@ -9,6 +9,8 @@ import 'bulk_action_progress_dialog.dart';
 import '../../services/session_provider.dart';
 import '../../services/message_queue_provider.dart';
 import '../../models/filter_element.dart';
+import '../../models/session.dart';
+import '../../models/cache_metadata.dart';
 
 class BulkActionPresetDialog extends StatelessWidget {
   final bool isPicker;
@@ -31,17 +33,7 @@ class BulkActionPresetDialog extends StatelessWidget {
                 itemCount: provider.presets.length,
                 itemBuilder: (context, index) {
                   final preset = provider.presets[index];
-                  return ListTile(
-                    title: Text(preset.name),
-                    subtitle: Text(preset.description ?? 'No description'),
-                    onTap: () {
-                      if (isPicker) {
-                        Navigator.pop(context, preset);
-                      } else {
-                        _runPreset(context, preset);
-                      }
-                    },
-                  );
+                  return _buildPresetTile(context, preset);
                 },
               ),
       ),
@@ -79,29 +71,14 @@ class BulkActionPresetDialog extends StatelessWidget {
     final queueProvider = context.read<MessageQueueProvider>();
 
     var targets = sessionProvider.items
-        .where((item) {
-          final session = item.data;
-          final metadata = item.metadata;
-
-          final initialState = metadata.isHidden
-              ? FilterState.implicitOut
-              : FilterState.implicitIn;
-
-          if (config.filterTree == null) {
-            return initialState.isIn;
-          }
-
-          final treeResult = config.filterTree!.evaluate(
-            FilterContext(
-              session: session,
-              metadata: metadata,
-              queueProvider: queueProvider,
-            ),
-          );
-
-          final finalState = FilterState.combineAnd(initialState, treeResult);
-          return finalState.isIn;
-        })
+        .where(
+          (item) => _matchesPresetFilter(
+            config: config,
+            session: item.data,
+            metadata: item.metadata,
+            queueProvider: queueProvider,
+          ),
+        )
         .map((item) => item.data)
         .toList();
 
@@ -113,5 +90,44 @@ class BulkActionPresetDialog extends StatelessWidget {
       builder: (context) =>
           BulkActionProgressDialog(config: config, targets: targets),
     );
+  }
+
+  Widget _buildPresetTile(BuildContext context, BulkActionPreset preset) {
+    return ListTile(
+      title: Text(preset.name),
+      subtitle: Text(preset.description ?? 'No description'),
+      onTap: () {
+        if (isPicker) {
+          Navigator.pop(context, preset);
+        } else {
+          _runPreset(context, preset);
+        }
+      },
+    );
+  }
+
+  bool _matchesPresetFilter({
+    required BulkJobConfig config,
+    required Session session,
+    required CacheMetadata metadata,
+    required MessageQueueProvider queueProvider,
+  }) {
+    final initialState =
+        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+
+    if (config.filterTree == null) {
+      return initialState.isIn;
+    }
+
+    final treeResult = config.filterTree!.evaluate(
+      FilterContext(
+        session: session,
+        metadata: metadata,
+        queueProvider: queueProvider,
+      ),
+    );
+
+    final finalState = FilterState.combineAnd(initialState, treeResult);
+    return finalState.isIn;
   }
 }
