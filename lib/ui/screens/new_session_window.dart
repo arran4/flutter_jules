@@ -42,10 +42,14 @@ class _NewSessionWindowState extends State<NewSessionWindow> {
                 ),
               },
               child: MaterialApp(
-                theme:
-                    JulesTheme.getTheme(settings.themeType, Brightness.light),
-                darkTheme:
-                    JulesTheme.getTheme(settings.themeType, Brightness.dark),
+                theme: JulesTheme.getTheme(
+                  settings.themeType,
+                  Brightness.light,
+                ),
+                darkTheme: JulesTheme.getTheme(
+                  settings.themeType,
+                  Brightness.dark,
+                ),
                 themeMode: settings.themeMode,
                 home: Scaffold(
                   body: NewSessionDialogWrapper(windowId: widget.windowId),
