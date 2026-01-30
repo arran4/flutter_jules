@@ -8,6 +8,7 @@ import '../../services/settings_provider.dart';
 import 'model_viewer.dart';
 import 'activity_helper.dart';
 import 'change_set_details.dart';
+import 'activity_image.dart';
 
 class ActivityItem extends StatefulWidget {
   final Activity activity;
@@ -57,25 +58,6 @@ class _ActivityItemState extends State<ActivityItem> {
       margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
       clipBehavior: Clip.antiAlias,
       child: Column(children: [_buildHeader(), if (_isExpanded) _buildBody()]),
-    );
-  }
-
-  Widget _buildMissingMediaDataRow(String mimeType) {
-    return Padding(
-      padding: const EdgeInsets.symmetric(vertical: 8),
-      child: Row(
-        children: [
-          const Icon(Icons.image, color: Colors.grey),
-          const SizedBox(width: 8),
-          Text(
-            "Image ($mimeType) - No Data",
-            style: const TextStyle(
-              color: Colors.grey,
-              fontStyle: FontStyle.italic,
-            ),
-          ),
-        ],
-      ),
     );
   }
 
@@ -426,38 +408,9 @@ class _ActivityItemState extends State<ActivityItem> {
                   ),
                 ],
                 if (artifact.media != null) ...[
-                  if (artifact.media!.data.isNotEmpty) ...[
-                    const SizedBox(height: 8),
-                    Container(
-                      decoration: BoxDecoration(
-                        border: Border.all(color: Colors.grey[300]!),
-                        borderRadius: BorderRadius.circular(8),
-                      ),
-                      clipBehavior: Clip.antiAlias,
-                      child: Image.memory(
-                        base64Decode(artifact.media!.data),
-                        fit: BoxFit.contain,
-                        errorBuilder: (context, error, stackTrace) {
-                          return const Padding(
-                            padding: EdgeInsets.all(16.0),
-                            child: Row(
-                              children: [
-                                Icon(Icons.broken_image, color: Colors.grey),
-                                SizedBox(width: 8),
-                                Text(
-                                  "Failed to load image",
-                                  style: TextStyle(color: Colors.grey),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                  ] else ...[
-                    _buildMissingMediaDataRow(artifact.media!.mimeType),
-                  ],
+                  const SizedBox(height: 8),
+                  ActivityImage(media: artifact.media!),
+                  const SizedBox(height: 8),
                 ],
               ],
             if (activity.unmappedProps.isNotEmpty) ...[

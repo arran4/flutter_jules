@@ -4,7 +4,9 @@
 
 list(APPEND FLUTTER_PLUGIN_LIST
   desktop_multi_window
+  file_selector_windows
   flutter_secure_storage_windows
+  pasteboard
   screen_retriever
   tray_manager
   url_launcher_windows

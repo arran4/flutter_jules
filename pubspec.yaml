@@ -29,6 +29,8 @@ dependencies:
   desktop_multi_window: ^0.2.0
 
   duration: any
+  file_selector: ^1.1.0
+  pasteboard: ^0.4.0
 dev_dependencies:
   flutter_test:
     sdk: flutter
