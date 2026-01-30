@@ -24,11 +24,11 @@ class PlanStep {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'title': title,
-        'description': description,
-        'index': index,
-      };
+    'id': id,
+    'title': title,
+    'description': description,
+    'index': index,
+  };
 }
 
 class Plan {
@@ -52,10 +52,10 @@ class Plan {
   }
 
   Map<String, dynamic> toJson() => {
-        'id': id,
-        'steps': steps.map((e) => e.toJson()).toList(),
-        'createTime': createTime,
-      };
+    'id': id,
+    'steps': steps.map((e) => e.toJson()).toList(),
+    'createTime': createTime,
+  };
 }
 
 class AgentMessaged {
@@ -78,8 +78,8 @@ class PlanGenerated {
   final Plan plan;
   PlanGenerated({required this.plan});
   factory PlanGenerated.fromJson(Map<String, dynamic> json) => PlanGenerated(
-        plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson),
-      );
+    plan: getObjectFunctionPropOrThrow(json, 'plan', Plan.fromJson),
+  );
   Map<String, dynamic> toJson() => {'plan': plan.toJson()};
 }
 
@@ -144,10 +144,10 @@ class GitPatch {
   }
 
   Map<String, dynamic> toJson() => {
-        'unidiffPatch': unidiffPatch,
-        'baseCommitId': baseCommitId,
-        'suggestedCommitMessage': suggestedCommitMessage,
-      };
+    'unidiffPatch': unidiffPatch,
+    'baseCommitId': baseCommitId,
+    'suggestedCommitMessage': suggestedCommitMessage,
+  };
 }
 
 class ChangeSet {
@@ -185,15 +185,15 @@ class BashOutput {
     required this.exitCode,
   });
   factory BashOutput.fromJson(Map<String, dynamic> json) => BashOutput(
-        command: getStringPropOrThrow(json, 'command'),
-        output: getStringPropOrThrow(json, 'output'),
-        exitCode: getNumberPropOrThrow(json, 'exitCode')!.toInt(),
-      );
+    command: getStringPropOrThrow(json, 'command'),
+    output: getStringPropOrThrow(json, 'output'),
+    exitCode: getNumberPropOrThrow(json, 'exitCode')!.toInt(),
+  );
   Map<String, dynamic> toJson() => {
-        'command': command,
-        'output': output,
-        'exitCode': exitCode,
-      };
+    'command': command,
+    'output': output,
+    'exitCode': exitCode,
+  };
 }
 
 class Artifact {
