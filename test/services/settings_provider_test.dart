@@ -16,14 +16,16 @@ void main() {
 
     test('Refresh actions default to simple refresh', () {
       expect(
-          provider.appBarRefreshActions, contains(RefreshButtonAction.refresh));
+        provider.appBarRefreshActions,
+        contains(RefreshButtonAction.refresh),
+      );
       expect(provider.appBarRefreshActions.length, 1);
     });
 
     test('Can update and persist refresh actions', () async {
       final newActions = {
         RefreshButtonAction.fullRefresh,
-        RefreshButtonAction.refreshDirty
+        RefreshButtonAction.refreshDirty,
       };
       await provider.setAppBarRefreshActions(newActions);
 
