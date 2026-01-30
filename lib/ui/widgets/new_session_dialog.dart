@@ -1,10 +1,13 @@
 // ignore_for_file: deprecated_member_use
 
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:flutter/services.dart';
 import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import '../../services/shortcut_registry.dart';
+import '../../utils/platform_utils.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
 import '../../services/source_provider.dart';
@@ -101,10 +104,19 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   // Size of the text field to match overlay
   double? _dropdownWidth;
 
+  // Focus Nodes
+  late final FocusNode _promptFocusNode;
+  late final FocusNode _branchFocusNode;
+
+  // Shortcuts
+  StreamSubscription<AppShortcutAction>? _actionSubscription;
+
   @override
   void initState() {
     super.initState();
     _promptController = TextEditingController();
+    _promptFocusNode = FocusNode();
+    _branchFocusNode = FocusNode();
 
     if (widget.mode == SessionDialogMode.edit &&
         widget.initialSession != null) {
@@ -148,16 +160,130 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       _initialize();
       _fetchSources();
+      _registerShortcuts();
     });
   }
 
   @override
   void dispose() {
+    _unregisterShortcuts();
     _removeSourceOverlay();
     _sourceController.dispose();
     _sourceFocusNode.dispose();
     _promptController.dispose();
+    _promptFocusNode.dispose();
+    _branchFocusNode.dispose();
     super.dispose();
+  }
+
+  List<Shortcut> _activeShortcuts = [];
+
+  void _registerShortcuts() {
+    if (!mounted) return;
+    final shortcutRegistry =
+        Provider.of<ShortcutRegistry>(context, listen: false);
+    final isMacOS = PlatformUtils.isMacOS;
+
+    _activeShortcuts = [
+      Shortcut(
+        SingleActivator(
+          LogicalKeyboardKey.keyL,
+          control: !isMacOS,
+          meta: isMacOS,
+        ),
+        AppShortcutAction.focusContext,
+        'Focus Context',
+      ),
+      Shortcut(
+        SingleActivator(
+          LogicalKeyboardKey.keyB,
+          control: !isMacOS,
+          meta: isMacOS,
+        ),
+        AppShortcutAction.focusBranch,
+        'Focus Branch',
+      ),
+      Shortcut(
+        SingleActivator(
+          LogicalKeyboardKey.keyK,
+          control: !isMacOS,
+          meta: isMacOS,
+        ),
+        AppShortcutAction.focusPrompt,
+        'Focus Prompt',
+      ),
+      Shortcut(
+        const SingleActivator(LogicalKeyboardKey.keyQ, alt: true),
+        AppShortcutAction.modeQuestion,
+        'Switch to Question Mode',
+      ),
+      Shortcut(
+        const SingleActivator(LogicalKeyboardKey.keyP, alt: true),
+        AppShortcutAction.modePlan,
+        'Switch to Plan Mode',
+      ),
+      Shortcut(
+        const SingleActivator(LogicalKeyboardKey.keyC, alt: true),
+        AppShortcutAction.modeStart,
+        'Switch to Start Coding Mode',
+      ),
+      Shortcut(
+        const SingleActivator(LogicalKeyboardKey.keyA, alt: true),
+        AppShortcutAction.toggleAutoPr,
+        'Toggle Auto PR',
+      ),
+    ];
+
+    for (final s in _activeShortcuts) {
+      shortcutRegistry.register(s);
+    }
+
+    _actionSubscription =
+        shortcutRegistry.onAction.listen(_handleShortcutAction);
+  }
+
+  void _unregisterShortcuts() {
+    _actionSubscription?.cancel();
+    try {
+      final shortcutRegistry =
+          Provider.of<ShortcutRegistry>(context, listen: false);
+      for (final s in _activeShortcuts) {
+        shortcutRegistry.unregister(s);
+      }
+    } catch (_) {
+      // Ignore if provider not found
+    }
+  }
+
+  void _handleShortcutAction(AppShortcutAction action) {
+    if (!mounted) return;
+    switch (action) {
+      case AppShortcutAction.focusContext:
+        _sourceFocusNode.requestFocus();
+        break;
+      case AppShortcutAction.focusBranch:
+        _branchFocusNode.requestFocus();
+        break;
+      case AppShortcutAction.focusPrompt:
+        _promptFocusNode.requestFocus();
+        break;
+      case AppShortcutAction.modeQuestion:
+        _handleModeSelection(0);
+        break;
+      case AppShortcutAction.modePlan:
+        _handleModeSelection(1);
+        break;
+      case AppShortcutAction.modeStart:
+        _handleModeSelection(2);
+        break;
+      case AppShortcutAction.toggleAutoPr:
+        if (_selectedModeIndex == 2) {
+          _handleAutoCreatePrChanged(!_autoCreatePr);
+        }
+        break;
+      default:
+        break;
+    }
   }
 
   KeyEventResult _handleSourceFocusKey(FocusNode node, KeyEvent event) {
@@ -1212,6 +1338,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 branches: branches,
                                 sourceController: _sourceController,
                                 sourceFocusNode: _sourceFocusNode,
+                                branchFocusNode: _branchFocusNode,
                                 sourceLayerLink: _sourceLayerLink,
                                 onOpenBulkDialog: () =>
                                     _showBulkDialog(sources),
@@ -1263,6 +1390,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                     },
                                     child: TextField(
                                       controller: _promptController,
+                                      focusNode: _promptFocusNode,
                                       autofocus: true,
                                       expands: true,
                                       maxLines: null,
@@ -1534,6 +1662,7 @@ class _SourceSelectorSection extends StatelessWidget {
   final List<String> branches;
   final TextEditingController sourceController;
   final FocusNode sourceFocusNode;
+  final FocusNode branchFocusNode;
   final LayerLink sourceLayerLink;
   final VoidCallback onOpenBulkDialog;
   final VoidCallback onRefresh;
@@ -1553,6 +1682,7 @@ class _SourceSelectorSection extends StatelessWidget {
     required this.branches,
     required this.sourceController,
     required this.sourceFocusNode,
+    required this.branchFocusNode,
     required this.sourceLayerLink,
     required this.onOpenBulkDialog,
     required this.onRefresh,
@@ -1619,6 +1749,7 @@ class _SourceSelectorSection extends StatelessWidget {
           _SingleSourceSelector(
             sourceController: sourceController,
             sourceFocusNode: sourceFocusNode,
+            branchFocusNode: branchFocusNode,
             sourceLayerLink: sourceLayerLink,
             selectedSource: selectedSource,
             selectedBranch: selectedBranch,
@@ -1723,6 +1854,7 @@ class _BulkSelectionPanel extends StatelessWidget {
 class _SingleSourceSelector extends StatelessWidget {
   final TextEditingController sourceController;
   final FocusNode sourceFocusNode;
+  final FocusNode branchFocusNode;
   final LayerLink sourceLayerLink;
   final Source? selectedSource;
   final String? selectedBranch;
@@ -1735,6 +1867,7 @@ class _SingleSourceSelector extends StatelessWidget {
   const _SingleSourceSelector({
     required this.sourceController,
     required this.sourceFocusNode,
+    required this.branchFocusNode,
     required this.sourceLayerLink,
     required this.selectedSource,
     required this.selectedBranch,
@@ -1789,6 +1922,7 @@ class _SingleSourceSelector extends StatelessWidget {
         Expanded(
           flex: 1,
           child: DropdownButtonFormField<String>(
+            focusNode: branchFocusNode,
             isExpanded: true,
             decoration: const InputDecoration(
               labelText: 'Branch',

@@ -1,1 +1,11 @@
-enum AppShortcutAction { showHelp, newSession }
+enum AppShortcutAction {
+  showHelp,
+  newSession,
+  focusPrompt,
+  focusContext,
+  focusBranch,
+  modeQuestion,
+  modePlan,
+  modeStart,
+  toggleAutoPr,
+}
