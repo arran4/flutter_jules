@@ -121,10 +121,7 @@ class _ActivityCardBody extends StatelessWidget {
           if (activity.description.isNotEmpty)
             Text(
               activity.description,
-              style: const TextStyle(
-                fontSize: 12,
-                fontStyle: FontStyle.italic,
-              ),
+              style: const TextStyle(fontSize: 12, fontStyle: FontStyle.italic),
             ),
         ],
       ),

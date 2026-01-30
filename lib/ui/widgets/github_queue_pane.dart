@@ -198,10 +198,7 @@ class GithubQueuePane extends StatelessWidget {
 }
 
 class _QueueList extends StatelessWidget {
-  const _QueueList({
-    required this.queue,
-    required this.buildStatusIcon,
-  });
+  const _QueueList({required this.queue, required this.buildStatusIcon});
 
   final List<GithubJob> queue;
   final Widget Function(GithubJobStatus status) buildStatusIcon;
@@ -212,10 +209,7 @@ class _QueueList extends StatelessWidget {
       return const Padding(
         padding: EdgeInsets.symmetric(vertical: 16.0),
         child: Center(
-          child: Text(
-            "Queue is empty",
-            style: TextStyle(color: Colors.grey),
-          ),
+          child: Text("Queue is empty", style: TextStyle(color: Colors.grey)),
         ),
       );
     }
@@ -237,16 +231,12 @@ class _QueueList extends StatelessWidget {
             return ListTile(
               leading: buildStatusIcon(job.status),
               title: Text(job.description),
-              subtitle: Text(
-                job.status.toString().split('.').last,
-              ),
+              subtitle: Text(job.status.toString().split('.').last),
               trailing: job.status == GithubJobStatus.running
                   ? const SizedBox(
                       width: 16,
                       height: 16,
-                      child: CircularProgressIndicator(
-                        strokeWidth: 2,
-                      ),
+                      child: CircularProgressIndicator(strokeWidth: 2),
                     )
                   : null,
             );
