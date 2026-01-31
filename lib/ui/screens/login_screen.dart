@@ -29,16 +29,13 @@ class _LoginScreenState extends State<LoginScreen> {
 
   Future<void> _handleGoogleSignIn() async {
     try {
-      final authProvider = Provider.of<AuthProvider>(
-        context,
-        listen: false,
-      );
+      final authProvider = Provider.of<AuthProvider>(context, listen: false);
       await authProvider.signInWithGoogle();
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Google Sign-In failed: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Google Sign-In failed: $e')));
       }
     }
   }
@@ -55,10 +52,7 @@ class _LoginScreenState extends State<LoginScreen> {
           value: TokenType.accessToken,
           child: Text('OAuth Access Token'),
         ),
-        DropdownMenuItem(
-          value: TokenType.apiKey,
-          child: Text('API Key'),
-        ),
+        DropdownMenuItem(value: TokenType.apiKey, child: Text('API Key')),
       ],
       onChanged: (TokenType? value) {
         setState(() {
@@ -72,8 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextFormField(
       controller: _tokenController,
       decoration: InputDecoration(
-        labelText:
-            _selectedType == TokenType.apiKey ? 'API Key' : 'Access Token',
+        labelText: _selectedType == TokenType.apiKey
+            ? 'API Key'
+            : 'Access Token',
         border: const OutlineInputBorder(),
         hintText: _selectedType == TokenType.apiKey
             ? 'Enter your API Key'
@@ -89,10 +84,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Widget _buildPrimaryAction() {
-    return ElevatedButton(
-      onPressed: _saveToken,
-      child: const Text('Connect'),
-    );
+    return ElevatedButton(onPressed: _saveToken, child: const Text('Connect'));
   }
 
   Widget _buildGoogleSignInSection() {
