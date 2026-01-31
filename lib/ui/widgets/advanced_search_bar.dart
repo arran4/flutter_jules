@@ -25,7 +25,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
 
   final List<FilterToken>
-      availableSuggestions; // All possible filters for autocomplete
+  availableSuggestions; // All possible filters for autocomplete
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -110,8 +110,9 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _updateFormulaText() {
     final filterExpression = widget.filterTree?.toExpression() ?? '';
-    final sortExpression =
-        widget.activeSorts.map((s) => s.toExpression()).join(', ');
+    final sortExpression = widget.activeSorts
+        .map((s) => s.toExpression())
+        .join(', ');
     final fullExpression =
         '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
             .trim();
@@ -459,20 +460,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   _SuggestionGroups _groupSuggestionsByType(List<FilterToken> suggestions) {
     return _SuggestionGroups(
-      flagSuggestions:
-          suggestions.where((s) => s.type == FilterType.flag).toList(),
-      statusSuggestions:
-          suggestions.where((s) => s.type == FilterType.status).toList(),
-      sourceSuggestions:
-          suggestions.where((s) => s.type == FilterType.source).toList(),
-      prStatusSuggestions:
-          suggestions.where((s) => s.type == FilterType.prStatus).toList(),
-      ciStatusSuggestions:
-          suggestions.where((s) => s.type == FilterType.ciStatus).toList(),
-      timeSuggestions:
-          suggestions.where((s) => s.type == FilterType.time).toList(),
-      otherSuggestions:
-          suggestions.where((s) => s.type == FilterType.text).toList(),
+      flagSuggestions: suggestions
+          .where((s) => s.type == FilterType.flag)
+          .toList(),
+      statusSuggestions: suggestions
+          .where((s) => s.type == FilterType.status)
+          .toList(),
+      sourceSuggestions: suggestions
+          .where((s) => s.type == FilterType.source)
+          .toList(),
+      prStatusSuggestions: suggestions
+          .where((s) => s.type == FilterType.prStatus)
+          .toList(),
+      ciStatusSuggestions: suggestions
+          .where((s) => s.type == FilterType.ciStatus)
+          .toList(),
+      timeSuggestions: suggestions
+          .where((s) => s.type == FilterType.time)
+          .toList(),
+      otherSuggestions: suggestions
+          .where((s) => s.type == FilterType.text)
+          .toList(),
     );
   }
 
@@ -520,11 +528,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
   Widget _buildSuggestionRow(FilterToken suggestion, Color accentColor) {
     return Row(
       children: [
-        Icon(
-          _getIconForType(suggestion.type),
-          size: 14,
-          color: accentColor,
-        ),
+        Icon(_getIconForType(suggestion.type), size: 14, color: accentColor),
         const SizedBox(width: 6),
         Expanded(
           child: Text(
@@ -608,27 +612,27 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
       final presetConfigs = <String, (TimeFilterType, TimeFilterField)>{
         'time_updated_before': (
           TimeFilterType.olderThan,
-          TimeFilterField.updated
+          TimeFilterField.updated,
         ),
         'time_updated_after': (
           TimeFilterType.newerThan,
-          TimeFilterField.updated
+          TimeFilterField.updated,
         ),
         'time_created_before': (
           TimeFilterType.olderThan,
-          TimeFilterField.created
+          TimeFilterField.created,
         ),
         'time_created_after': (
           TimeFilterType.newerThan,
-          TimeFilterField.created
+          TimeFilterField.created,
         ),
         'time_updated_between': (
           TimeFilterType.between,
-          TimeFilterField.updated
+          TimeFilterField.updated,
         ),
         'time_created_between': (
           TimeFilterType.between,
-          TimeFilterField.created
+          TimeFilterField.created,
         ),
         'time_updated_on': (TimeFilterType.between, TimeFilterField.updated),
         'time_created_on': (TimeFilterType.between, TimeFilterField.created),
@@ -848,9 +852,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                     : null,
                 border: OutlineInputBorder(
                   borderRadius: BorderRadius.circular(20),
-                  borderSide: BorderSide(
-                    color: Colors.grey.shade300,
-                  ),
+                  borderSide: BorderSide(color: Colors.grey.shade300),
                 ),
                 contentPadding: const EdgeInsets.symmetric(
                   horizontal: 16,
@@ -1016,10 +1018,7 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   const SizedBox(width: 8),
                   const Text(
                     'Filter Presets',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
                   ),
                   const Spacer(),
                   IconButton(
@@ -1086,21 +1085,18 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
                   TextButton.icon(
                     onPressed: () {
                       _removePresetOverlay();
-                      Future.delayed(
-                        const Duration(milliseconds: 100),
-                        () {
-                          if (mounted) {
-                            Navigator.of(context).push(
-                              MaterialPageRoute(
-                                builder: (context) => BookmarkManagerScreen(
-                                  availableSuggestions:
-                                      widget.availableSuggestions,
-                                ),
+                      Future.delayed(const Duration(milliseconds: 100), () {
+                        if (mounted) {
+                          Navigator.of(context).push(
+                            MaterialPageRoute(
+                              builder: (context) => BookmarkManagerScreen(
+                                availableSuggestions:
+                                    widget.availableSuggestions,
                               ),
-                            );
-                          }
-                        },
-                      );
+                            ),
+                          );
+                        }
+                      });
                     },
                     icon: const Icon(Icons.settings, size: 16),
                     label: const Text('Manage'),
@@ -1415,10 +1411,7 @@ class _SuggestionGroups {
 }
 
 class _BookmarkDetails extends StatelessWidget {
-  const _BookmarkDetails({
-    required this.bookmark,
-    required this.sortsText,
-  });
+  const _BookmarkDetails({required this.bookmark, required this.sortsText});
 
   final FilterBookmark bookmark;
   final String sortsText;
@@ -1433,10 +1426,7 @@ class _BookmarkDetails extends StatelessWidget {
       children: [
         Text(
           bookmark.name,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            fontSize: 14,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
         ),
         if (hasDescription) ...[
           const SizedBox(height: 2),
@@ -1490,11 +1480,7 @@ class _BookmarkDetails extends StatelessWidget {
                 const SizedBox(height: 2),
                 Row(
                   children: [
-                    Icon(
-                      Icons.sort,
-                      size: 12,
-                      color: Colors.grey.shade500,
-                    ),
+                    Icon(Icons.sort, size: 12, color: Colors.grey.shade500),
                     const SizedBox(width: 4),
                     Expanded(
                       child: Text(
@@ -1520,18 +1506,18 @@ class _BookmarkDetails extends StatelessWidget {
 
 class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
   const PopupMenuHeader({super.key, required super.child})
-      : super(enabled: false, height: 32);
+    : super(enabled: false, height: 32);
 
   @override
   Widget? get child => MouseRegion(
-        cursor: SystemMouseCursors.basic,
-        child: DefaultTextStyle(
-          style: const TextStyle(
-            fontSize: 12,
-            fontWeight: FontWeight.bold,
-            color: Colors.grey,
-          ),
-          child: super.child!,
-        ),
-      );
+    cursor: SystemMouseCursors.basic,
+    child: DefaultTextStyle(
+      style: const TextStyle(
+        fontSize: 12,
+        fontWeight: FontWeight.bold,
+        color: Colors.grey,
+      ),
+      child: super.child!,
+    ),
+  );
 }
