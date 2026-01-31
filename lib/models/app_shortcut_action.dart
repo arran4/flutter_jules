@@ -8,4 +8,5 @@ enum AppShortcutAction {
   modePlan,
   modeStart,
   toggleAutoPr,
+  focusSearch,
 }
