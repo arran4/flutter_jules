@@ -21,6 +21,20 @@ void registerGlobalShortcuts(
     ),
   );
 
+  // Help: Ctrl+/ (Windows/Linux) or Cmd+/ (macOS)
+  registry.register(
+    Shortcut(
+      SingleActivator(
+        LogicalKeyboardKey.slash,
+        control: !isMacOS,
+        meta: isMacOS,
+        shift: false,
+      ),
+      AppShortcutAction.showHelp,
+      'Show Help',
+    ),
+  );
+
   // New Session: Ctrl+N (Windows/Linux) or Cmd+N (macOS)
   registry.register(
     Shortcut(
