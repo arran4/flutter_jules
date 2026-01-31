@@ -132,10 +132,7 @@ class SourceTile extends StatelessWidget {
         value: 'refresh_sessions',
         child: Text('Refresh Sessions'),
       ),
-      const PopupMenuItem(
-        value: 'stats',
-        child: Text('Show Stats'),
-      ),
+      const PopupMenuItem(value: 'stats', child: Text('Show Stats')),
       const PopupMenuItem(
         value: 'view_cache_file',
         child: Text('View Cache File'),
@@ -181,10 +178,7 @@ class SourceTile extends StatelessWidget {
       children: [
         if (usageCount > 0)
           Container(
-            padding: const EdgeInsets.symmetric(
-              horizontal: 6,
-              vertical: 2,
-            ),
+            padding: const EdgeInsets.symmetric(horizontal: 6, vertical: 2),
             decoration: BoxDecoration(
               color: Theme.of(context).colorScheme.surfaceContainerHighest,
               borderRadius: BorderRadius.circular(4),
@@ -400,8 +394,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     ),
