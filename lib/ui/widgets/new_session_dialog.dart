@@ -213,6 +213,15 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         'Focus Prompt',
       ),
       Shortcut(
+        SingleActivator(
+          LogicalKeyboardKey.keyP,
+          control: !isMacOS,
+          meta: isMacOS,
+        ),
+        AppShortcutAction.focusPrompt,
+        'Focus Prompt',
+      ),
+      Shortcut(
         const SingleActivator(LogicalKeyboardKey.keyQ, alt: true),
         AppShortcutAction.modeQuestion,
         'Switch to Question Mode',
