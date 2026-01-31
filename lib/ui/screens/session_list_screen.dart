@@ -52,6 +52,7 @@ class SessionListScreen extends StatefulWidget {
 
 class _SessionListScreenState extends State<SessionListScreen> {
   final FocusNode _focusNode = FocusNode();
+  final GlobalKey<AdvancedSearchBarState> _searchBarKey = GlobalKey();
   // Search & Filter State
   // Search & Filter State
   FilterElement? _filterTree;
@@ -160,6 +161,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
 
         if (action == AppShortcutAction.newSession) {
           _createSession();
+        } else if (action == AppShortcutAction.focusSearch) {
+          _searchBarKey.currentState?.requestFocus();
         }
       });
 
@@ -2158,6 +2161,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                               Padding(
                                 padding: const EdgeInsets.all(8.0),
                                 child: AdvancedSearchBar(
+                                  key: _searchBarKey,
                                   filterTree: _filterTree,
                                   onFilterTreeChanged: (tree) {
                                     setState(() {

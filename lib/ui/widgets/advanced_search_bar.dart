@@ -44,10 +44,10 @@ class AdvancedSearchBar extends StatefulWidget {
   });
 
   @override
-  State<AdvancedSearchBar> createState() => _AdvancedSearchBarState();
+  State<AdvancedSearchBar> createState() => AdvancedSearchBarState();
 }
 
-class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
+class AdvancedSearchBarState extends State<AdvancedSearchBar> {
   final TextEditingController _textController = TextEditingController();
   final TextEditingController _expressionController = TextEditingController();
   final TextEditingController _formulaController = TextEditingController();
@@ -79,6 +79,10 @@ class _AdvancedSearchBarState extends State<AdvancedSearchBar> {
         });
       }
     });
+  }
+
+  void requestFocus() {
+    _focusNode.requestFocus();
   }
 
   @override

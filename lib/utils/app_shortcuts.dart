@@ -47,4 +47,17 @@ void registerGlobalShortcuts(
       'New Session',
     ),
   );
+
+  // Focus Search: Ctrl+K (Windows/Linux) or Cmd+K (macOS)
+  registry.register(
+    Shortcut(
+      SingleActivator(
+        LogicalKeyboardKey.keyK,
+        control: !isMacOS,
+        meta: isMacOS,
+      ),
+      AppShortcutAction.focusSearch,
+      'Focus Search',
+    ),
+  );
 }

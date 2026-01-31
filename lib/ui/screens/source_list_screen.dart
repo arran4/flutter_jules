@@ -1,7 +1,8 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:provider/provider.dart';
 import 'package:intl/intl.dart';
+import '../../services/shortcut_registry.dart' as custom_shortcuts;
 import '../../utils/time_helper.dart';
 import '../../services/auth_provider.dart';
 import '../../services/github_provider.dart';
@@ -26,6 +27,8 @@ class SourceListScreen extends StatefulWidget {
 
 class _SourceListScreenState extends State<SourceListScreen> {
   final ScrollController _scrollController = ScrollController();
+  final GlobalKey<AdvancedSearchBarState> _searchBarKey = GlobalKey();
+  StreamSubscription<AppShortcutAction>? _actionSubscription;
 
   // Filter and sort state
   FilterElement? _filterTree;
@@ -50,12 +53,23 @@ class _SourceListScreenState extends State<SourceListScreen> {
       }
     });
     WidgetsBinding.instance.addPostFrameCallback((_) {
+      final shortcutRegistry = Provider.of<custom_shortcuts.ShortcutRegistry>(
+        context,
+        listen: false,
+      );
+      _actionSubscription = shortcutRegistry.onAction.listen((action) {
+        if (!mounted) return;
+        if (action == AppShortcutAction.focusSearch) {
+          _searchBarKey.currentState?.requestFocus();
+        }
+      });
       _loadInitialData();
     });
   }
 
   @override
   void dispose() {
+    _actionSubscription?.cancel();
     _lastRefreshedTimer?.cancel();
     _scrollController.dispose();
     super.dispose();
@@ -478,6 +492,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
 
   Widget _buildFilterBar() {
     return AdvancedSearchBar(
+      key: _searchBarKey,
       filterTree: _filterTree,
       onFilterTreeChanged: (tree) {
         setState(() {
