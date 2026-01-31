@@ -3277,6 +3277,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
       position: finalPosition,
       items: <PopupMenuEntry<dynamic>>[
         PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.reply),
+              SizedBox(width: 8),
+              Text('Quick Reply'),
+            ],
+          ),
+          onTap: () => _quickReply(session),
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.note_add),
+              SizedBox(width: 8),
+              Text('Edit Note'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) _editNote(session);
+            });
+          },
+        ),
+        PopupMenuItem(
           child: Row(
             children: [
               Icon(metadata.isHidden ? Icons.visibility : Icons.visibility_off),
@@ -3292,6 +3316,74 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ).toggleHidden(session.id, auth.token!);
           },
         ),
+        PopupMenuItem(
+          child: Row(
+            children: [
+              Icon(
+                metadata.isWatched
+                    ? Icons.notifications_off
+                    : Icons.notifications_active,
+              ),
+              const SizedBox(width: 8),
+              Text(metadata.isWatched ? 'Stop Watching' : 'Watch Session'),
+            ],
+          ),
+          onTap: () {
+            final auth = Provider.of<AuthProvider>(context, listen: false);
+            Provider.of<SessionProvider>(
+              context,
+              listen: false,
+            ).toggleWatch(session.id, auth.token!);
+          },
+        ),
+        if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.mark_email_read),
+                SizedBox(width: 8),
+                Text('Mark as Read'),
+              ],
+            ),
+            onTap: () => _markAsRead(session),
+          ),
+        if (!metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.mark_email_unread),
+                SizedBox(width: 8),
+                Text('Mark as Unread'),
+              ],
+            ),
+            onTap: () {
+              final auth = Provider.of<AuthProvider>(context, listen: false);
+              Provider.of<SessionProvider>(
+                context,
+                listen: false,
+              ).markAsUnread(session.id, auth.token!);
+            },
+          ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.label, color: Colors.grey),
+              SizedBox(width: 8),
+              Text('Manage Tags'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                showDialog(
+                  context: context,
+                  builder: (context) => TagManagementDialog(session: session),
+                );
+              }
+            });
+          },
+        ),
+        const PopupMenuDivider(),
         if (session.url != null) ...[
           PopupMenuItem(
             child: const Row(
@@ -3352,17 +3444,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
               launchUrl(Uri.parse(session.diffUrl!));
             },
           ),
-        if (metadata.isUnread || metadata.isNew || metadata.isUpdated)
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.mark_email_read),
-                SizedBox(width: 8),
-                Text('Mark as Read'),
-              ],
-            ),
-            onTap: () => _markAsRead(session),
-          ),
         if (session.outputs != null &&
             session.outputs!.any((o) => o.pullRequest != null)) ...[
           PopupMenuItem(
@@ -3402,6 +3483,67 @@ class _SessionListScreenState extends State<SessionListScreen> {
               );
             },
           ),
+        ],
+        const PopupMenuItem(
+          value: 'source',
+          child: Row(
+            children: [
+              Icon(Icons.source),
+              SizedBox(width: 8),
+              Text('View Source Repo'),
+            ],
+          ),
+        ),
+        const PopupMenuDivider(),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit as new session'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: false);
+              }
+            });
+          },
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.visibility_off_outlined),
+              SizedBox(width: 8),
+              Text('Resubmit as new session and hide'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (context.mounted) {
+                resubmitSession(context, session, hideOriginal: true);
+              }
+            });
+          },
+        ),
+        if (!session.id.startsWith('DRAFT_CREATION_'))
+          PopupMenuItem(
+            child: const Row(
+              children: [
+                Icon(Icons.refresh),
+                SizedBox(width: 8),
+                Text('Refresh Session'),
+              ],
+            ),
+            onTap: () {
+              Future.delayed(Duration.zero, () {
+                if (context.mounted) _refreshSession(session);
+              });
+            },
+          ),
+        if (session.outputs != null &&
+            session.outputs!.any((o) => o.pullRequest != null))
           PopupMenuItem(
             child: const Row(
               children: [
@@ -3412,31 +3554,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ),
             onTap: () => _refreshGitStatus(session),
           ),
-        ],
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.reply),
-              SizedBox(width: 8),
-              Text('Quick Reply'),
-            ],
-          ),
-          onTap: () => _quickReply(session),
-        ),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.note_add),
-              SizedBox(width: 8),
-              Text('Edit Note'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (mounted) _editNote(session);
-            });
-          },
-        ),
         const PopupMenuDivider(),
         PopupMenuItem(
           child: const Row(
@@ -3475,54 +3592,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
             });
           },
         ),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.visibility_off_outlined),
-              SizedBox(width: 8),
-              Text('Resubmit as new session'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) {
-                resubmitSession(context, session, hideOriginal: false);
-              }
-            });
-          },
-        ),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.visibility_off_outlined),
-              SizedBox(width: 8),
-              Text('Resubmit as new session and hide'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) {
-                resubmitSession(context, session, hideOriginal: true);
-              }
-            });
-          },
-        ),
-        const PopupMenuDivider(),
-        if (!session.id.startsWith('DRAFT_CREATION_'))
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.refresh),
-                SizedBox(width: 8),
-                Text('Refresh Session'),
-              ],
-            ),
-            onTap: () {
-              Future.delayed(Duration.zero, () {
-                if (context.mounted) _refreshSession(session);
-              });
-            },
-          ),
         PopupMenuItem(
           child: const Row(
             children: [
@@ -3571,53 +3640,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
             });
           },
         ),
-        PopupMenuItem(
-          child: Row(
-            children: [
-              Icon(
-                metadata.isWatched
-                    ? Icons.notifications_off
-                    : Icons.notifications_active,
-              ),
-              const SizedBox(width: 8),
-              Text(metadata.isWatched ? 'Stop Watching' : 'Watch Session'),
-            ],
-          ),
-          onTap: () {
-            final auth = Provider.of<AuthProvider>(context, listen: false);
-            Provider.of<SessionProvider>(
-              context,
-              listen: false,
-            ).toggleWatch(session.id, auth.token!);
-          },
-        ),
-        if (!metadata.isUnread && !metadata.isNew && !metadata.isUpdated)
-          PopupMenuItem(
-            child: const Row(
-              children: [
-                Icon(Icons.mark_email_unread),
-                SizedBox(width: 8),
-                Text('Mark as Unread'),
-              ],
-            ),
-            onTap: () {
-              final auth = Provider.of<AuthProvider>(context, listen: false);
-              Provider.of<SessionProvider>(
-                context,
-                listen: false,
-              ).markAsUnread(session.id, auth.token!);
-            },
-          ),
-        const PopupMenuItem(
-          value: 'source',
-          child: Row(
-            children: [
-              Icon(Icons.source),
-              SizedBox(width: 8),
-              Text('View Source Repo'),
-            ],
-          ),
-        ),
         if (isDevMode) ...[
           PopupMenuItem(
             child: const Row(
@@ -3637,26 +3659,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
             },
           ),
         ],
-        const PopupMenuDivider(),
-        PopupMenuItem(
-          child: const Row(
-            children: [
-              Icon(Icons.label, color: Colors.grey),
-              SizedBox(width: 8),
-              Text('Manage Tags'),
-            ],
-          ),
-          onTap: () {
-            Future.delayed(Duration.zero, () {
-              if (context.mounted) {
-                showDialog(
-                  context: context,
-                  builder: (context) => TagManagementDialog(session: session),
-                );
-              }
-            });
-          },
-        ),
       ],
     ).then((value) {
       if (!context.mounted) return;
