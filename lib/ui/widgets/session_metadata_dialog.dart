@@ -78,10 +78,7 @@ class SessionMetadataDialog extends StatelessWidget {
     if (session.metadata == null || session.metadata!.isEmpty) {
       return const Text(
         "No server metadata available.",
-        style: TextStyle(
-          fontStyle: FontStyle.italic,
-          color: Colors.grey,
-        ),
+        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
       );
     }
 
@@ -100,9 +97,9 @@ class SessionMetadataDialog extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
       ),
     );
   }
@@ -171,8 +168,9 @@ class SessionMetadataDialog extends StatelessWidget {
       border: TableBorder.all(color: Colors.grey.shade300),
       columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children:
-          session.metadata!.map((m) => _buildRow(m.key, m.value)).toList(),
+      children: session.metadata!
+          .map((m) => _buildRow(m.key, m.value))
+          .toList(),
     );
   }
 

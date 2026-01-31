@@ -204,8 +204,9 @@ class SessionProvider extends ChangeNotifier {
               bool shouldRefresh = false;
 
               // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl =
-                  oldSession != null ? _getPrUrl(oldSession) : null;
+              final oldPrUrl = oldSession != null
+                  ? _getPrUrl(oldSession)
+                  : null;
               final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
               // 1. New PR Url OR (No Status & No Queue)
@@ -486,7 +487,8 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress =
+        (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -702,8 +704,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -979,8 +982,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123

@@ -68,10 +68,7 @@ class TagManagementDialogState extends State<TagManagementDialog> {
   }
 
   Widget _buildCurrentTagsSection() {
-    return CurrentTagsSection(
-      tags: _currentTags,
-      onRemoveTag: _removeTag,
-    );
+    return CurrentTagsSection(tags: _currentTags, onRemoveTag: _removeTag);
   }
 
   Widget _buildNewTagInput() {
@@ -183,10 +180,7 @@ class NewTagInput extends StatelessWidget {
             onSubmitted: onSubmitted,
           ),
         ),
-        IconButton(
-          icon: const Icon(Icons.add),
-          onPressed: onAddPressed,
-        ),
+        IconButton(icon: const Icon(Icons.add), onPressed: onAddPressed),
       ],
     );
   }

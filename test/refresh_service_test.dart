@@ -194,14 +194,16 @@ void main() {
 
       async.elapse(const Duration(minutes: 1));
 
-      verify(mockSessionProvider.fetchSessions(
-        any,
-        force: true,
-        shallow: false,
-        pageSize: anyNamed('pageSize'),
-        authToken: anyNamed('authToken'),
-        onRefreshFallback: anyNamed('onRefreshFallback'),
-      )).called(1);
+      verify(
+        mockSessionProvider.fetchSessions(
+          any,
+          force: true,
+          shallow: false,
+          pageSize: anyNamed('pageSize'),
+          authToken: anyNamed('authToken'),
+          onRefreshFallback: anyNamed('onRefreshFallback'),
+        ),
+      ).called(1);
     });
   });
 }
