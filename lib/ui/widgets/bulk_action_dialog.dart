@@ -182,8 +182,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           child: const Text('Cancel'),
         ),
         FilledButton.icon(
-          onPressed:
-              _totalMatches > 0 && _actions.isNotEmpty ? _startJob : null,
+          onPressed: _totalMatches > 0 && _actions.isNotEmpty
+              ? _startJob
+              : null,
           icon: const Icon(Icons.play_arrow),
           label: const Text('Run Bulk Actions'),
         ),
@@ -199,16 +200,10 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Left: Configuration
-          Expanded(
-            flex: 3,
-            child: _buildConfigurationSection(),
-          ),
+          Expanded(flex: 3, child: _buildConfigurationSection()),
           const VerticalDivider(width: 32),
           // Right: Preview
-          Expanded(
-            flex: 2,
-            child: _buildPreviewSection(),
-          ),
+          Expanded(flex: 2, child: _buildPreviewSection()),
         ],
       ),
     );
@@ -289,10 +284,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
           contentPadding: EdgeInsets.zero,
           value: _randomize,
           onChanged: (val) => setState(() => _randomize = val ?? false),
-          title: const Text(
-            'Randomize order',
-            style: TextStyle(fontSize: 12),
-          ),
+          title: const Text('Randomize order', style: TextStyle(fontSize: 12)),
           subtitle: const Text(
             'Process sessions in random order (useful for sampling)',
             style: TextStyle(fontSize: 10),
@@ -381,10 +373,7 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
         _buildSectionHeader('1. Target Sessions'),
         Text(
           'Configure filters to target specific sessions. By default, your current filters and search are pre-loaded.',
-          style: TextStyle(
-            fontSize: 11,
-            color: Colors.grey.shade600,
-          ),
+          style: TextStyle(fontSize: 11, color: Colors.grey.shade600),
         ),
         const SizedBox(height: 12),
         AdvancedSearchBar(
@@ -474,8 +463,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       return false;
     }
 
-    final initialState =
-        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
 
     if (_filterTree == null) {
       return initialState.isIn;
@@ -705,8 +695,8 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
       if (existingPreset != null) {
         final contentDiffers =
             existingPreset.filterExpression != newPreset.filterExpression ||
-                existingPreset.actionScript != newPreset.actionScript ||
-                existingPreset.description != newPreset.description;
+            existingPreset.actionScript != newPreset.actionScript ||
+            existingPreset.description != newPreset.description;
 
         if (contentDiffers) {
           final confirm = await showDialog<bool>(
@@ -750,15 +740,15 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
   void _startJob() {
     // Save configuration
     context.read<SettingsProvider>().saveBulkActionConfig(
-          actions: _actions,
-          parallelQueries: _parallelQueries,
-          waitBetweenMilliseconds: _waitBetween.inMilliseconds,
-          waitBetweenUnit: _waitBetweenUnit,
-          limit: _limit,
-          offset: _offset,
-          randomize: _randomize,
-          stopOnError: _stopOnError,
-        );
+      actions: _actions,
+      parallelQueries: _parallelQueries,
+      waitBetweenMilliseconds: _waitBetween.inMilliseconds,
+      waitBetweenUnit: _waitBetweenUnit,
+      limit: _limit,
+      offset: _offset,
+      randomize: _randomize,
+      stopOnError: _stopOnError,
+    );
 
     final config = BulkJobConfig(
       targetType: BulkTargetType.filtered,
@@ -786,9 +776,9 @@ class _BulkActionDialogState extends State<BulkActionDialog> {
             final query = _searchText.toLowerCase();
             final matches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state.toString().toLowerCase().contains(query));
+                (session.name.toLowerCase().contains(query)) ||
+                (session.id.toLowerCase().contains(query)) ||
+                (session.state.toString().toLowerCase().contains(query));
             if (!matches) return false;
           }
 
