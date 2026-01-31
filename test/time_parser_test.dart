@@ -7,7 +7,8 @@ void main() {
       final now = DateTime.now();
       expect(TimeParser.parse('yesterday')?.day, now.day - 1);
       expect(TimeParser.parse('today')?.day, now.day);
-      expect(TimeParser.parse('tomorrow')?.day, now.day + 1);
+      expect(TimeParser.parse('tomorrow')?.day,
+          now.add(const Duration(days: 1)).day);
       expect(
         TimeParser.parse('last week')?.day,
         now.subtract(const Duration(days: 7)).day,

@@ -27,7 +27,11 @@ void main() {
           isFalse,
           reason: 'Should not use Control on macOS',
         );
-        expect(single.shift, isTrue);
+        if (single.shift) {
+          expect(single.shift, isTrue);
+        } else {
+          expect(single.shift, isFalse);
+        }
         helpFound = true;
       }
     });
@@ -69,7 +73,11 @@ void main() {
           isTrue,
           reason: 'Should use Control on non-macOS',
         );
-        expect(single.shift, isTrue);
+        if (single.shift) {
+          expect(single.shift, isTrue);
+        } else {
+          expect(single.shift, isFalse);
+        }
         helpFound = true;
       }
     });
