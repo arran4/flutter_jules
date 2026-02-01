@@ -2197,60 +2197,61 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                   ),
                                   child: Align(
                                     alignment: Alignment.centerLeft,
-                                    child: (_refreshStatus != null)
-                                        ? Text(
-                                            _refreshStatus!,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
-                                          )
-                                        : Consumer<RefreshService>(
-                                            builder:
-                                                (context, refreshService, _) {
-                                              final next = refreshService
-                                                  .getNextScheduledRefresh();
-                                              String nextText = '';
-                                              if (next != null) {
-                                                String type = 'Refresh';
-                                                if (next.schedule.taskType ==
-                                                    RefreshTaskType.refresh) {
-                                                  final policyName = next
-                                                          .schedule
-                                                          .refreshPolicy
-                                                          ?.name ??
-                                                      '';
-                                                  if (policyName.isNotEmpty) {
-                                                    type =
-                                                        "${policyName[0].toUpperCase()}${policyName.substring(1)}";
-                                                  }
-                                                } else {
-                                                  type = 'Send Messages';
-                                                }
-                                                nextText =
-                                                    ' · Next: $type ${timeUntil(next.time)} (${DateFormat.Hms().format(next.time)})';
-                                              }
+                                    child: Consumer<RefreshService>(
+                                      builder: (context, refreshService, _) {
+                                        final next = refreshService
+                                            .getNextScheduledRefresh();
+                                        String nextText = '';
 
-                                              return Text(
-                                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})${sessionProvider.lastFetchType != null ? " - ${sessionProvider.lastFetchType}" : ""}$nextText',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color: DateTime.now()
-                                                                  .difference(
-                                                                    lastFetchTime,
-                                                                  )
-                                                                  .inMinutes >
-                                                              15
-                                                          ? Colors.orange
-                                                          : Theme.of(context)
-                                                              .textTheme
-                                                              .bodySmall
-                                                              ?.color,
-                                                    ),
-                                              );
-                                            },
-                                          ),
+                                        if (_refreshStatus != null) {
+                                          nextText = ' · Next: In progress';
+                                        } else if (next != null) {
+                                          String type = 'Refresh';
+                                          if (next.schedule.taskType ==
+                                              RefreshTaskType.refresh) {
+                                            final policyName = next
+                                                    .schedule.refreshPolicy
+                                                    ?.name ??
+                                                '';
+                                            if (policyName.isNotEmpty) {
+                                              type =
+                                                  "${policyName[0].toUpperCase()}${policyName.substring(1)}";
+                                            }
+                                          } else {
+                                            type = 'Send Messages';
+                                          }
+                                          nextText =
+                                              ' · Next: $type ${timeUntil(next.time)} (${DateFormat.Hms().format(next.time)})';
+                                        }
+
+                                        String statusText =
+                                            'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})${sessionProvider.lastFetchType != null ? " - ${sessionProvider.lastFetchType}" : ""}$nextText';
+
+                                        if (_refreshStatus != null) {
+                                          statusText += ' · $_refreshStatus';
+                                        }
+
+                                        return Text(
+                                          statusText,
+                                          style: Theme.of(context)
+                                              .textTheme
+                                              .bodySmall
+                                              ?.copyWith(
+                                                color: DateTime.now()
+                                                            .difference(
+                                                              lastFetchTime,
+                                                            )
+                                                            .inMinutes >
+                                                        15
+                                                    ? Colors.orange
+                                                    : Theme.of(context)
+                                                        .textTheme
+                                                        .bodySmall
+                                                        ?.color,
+                                              ),
+                                        );
+                                      },
+                                    ),
                                   ),
                                 ),
                               Expanded(
