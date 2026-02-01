@@ -5,14 +5,16 @@ void main() {
   group('TimeParser', () {
     test('should parse relative time phrases', () {
       final now = DateTime.now();
-      expect(TimeParser.parse('yesterday')?.day, now.day - 1);
+      final yesterday = now.subtract(const Duration(days: 1));
+      expect(TimeParser.parse('yesterday')?.day, yesterday.day);
+
       expect(TimeParser.parse('today')?.day, now.day);
-      expect(TimeParser.parse('tomorrow')?.day,
-          now.add(const Duration(days: 1)).day);
-      expect(
-        TimeParser.parse('last week')?.day,
-        now.subtract(const Duration(days: 7)).day,
-      );
+
+      final tomorrow = now.add(const Duration(days: 1));
+      expect(TimeParser.parse('tomorrow')?.day, tomorrow.day);
+
+      final lastWeek = now.subtract(const Duration(days: 7));
+      expect(TimeParser.parse('last week')?.day, lastWeek.day);
 
       final expectedMonth = now.month == 1 ? 12 : now.month - 1;
       expect(TimeParser.parse('last month')?.month, expectedMonth);
