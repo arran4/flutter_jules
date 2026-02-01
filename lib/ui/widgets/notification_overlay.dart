@@ -28,9 +28,8 @@ class NotificationOverlay extends StatelessWidget {
                       .map(
                         (notification) => _NotificationBanner(
                           notification: notification,
-                          onDismiss: () => provider.removeNotification(
-                            notification.id,
-                          ),
+                          onDismiss: () =>
+                              provider.removeNotification(notification.id),
                         ),
                       )
                       .toList(),
