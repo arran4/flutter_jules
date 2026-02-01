@@ -208,9 +208,7 @@ class SessionProvider extends ChangeNotifier {
   void _mergeSessions(List<Session> sessions, String? authToken) {
     if (sessions.isEmpty) return;
 
-    _progressStreamController.add(
-      'Merging ${sessions.length} sessions...',
-    );
+    _progressStreamController.add('Merging ${sessions.length} sessions...');
     for (var session in sessions) {
       final index = _items.indexWhere((i) => i.data.id == session.id);
       final oldItem = index != -1 ? _items[index] : null;
@@ -221,8 +219,7 @@ class SessionProvider extends ChangeNotifier {
         session = session.copyWith(
           prStatus: session.prStatus ?? oldSession.prStatus,
           ciStatus: session.ciStatus ?? oldSession.ciStatus,
-          mergeableState:
-              session.mergeableState ?? oldSession.mergeableState,
+          mergeableState: session.mergeableState ?? oldSession.mergeableState,
           additions: session.additions ?? oldSession.additions,
           deletions: session.deletions ?? oldSession.deletions,
           changedFiles: session.changedFiles ?? oldSession.changedFiles,
@@ -273,8 +270,7 @@ class SessionProvider extends ChangeNotifier {
           bool shouldRefresh = false;
 
           // Rules apply to any session list refresh (full, normal, etc)
-          final oldPrUrl =
-              oldSession != null ? _getPrUrl(oldSession) : null;
+          final oldPrUrl = oldSession != null ? _getPrUrl(oldSession) : null;
           final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
 
           // 1. New PR Url OR (No Status & No Queue)
@@ -288,8 +284,7 @@ class SessionProvider extends ChangeNotifier {
             shouldRefresh = true;
           }
           // 3. Existing PR status is Draft or Open
-          else if (session.prStatus == 'Draft' ||
-              session.prStatus == 'Open') {
+          else if (session.prStatus == 'Draft' || session.prStatus == 'Open') {
             shouldRefresh = true;
           }
 
@@ -498,7 +493,8 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress =
+        (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -714,8 +710,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -991,8 +988,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
