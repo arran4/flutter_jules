@@ -54,7 +54,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   final FocusNode _focusNode = FocusNode();
   final GlobalKey<AdvancedSearchBarState> _searchBarKey = GlobalKey();
   // Search & Filter State
-  // Search & Filter State
   FilterElement? _filterTree;
   String _searchText = '';
   // Multi-column sorting
@@ -107,40 +106,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
     _notificationService = context.read<NotificationService>();
     _notificationSubscription = _notificationService
         .onNotificationResponseStream
-        .listen((response) async {
-      if (!mounted) return;
-      if (response.payload != null) {
-        try {
-          final session = _displayItems
-              .firstWhere((item) => item.data.name == response.payload)
-              .data;
-
-          if (response.actionId == 'open_pr') {
-            if (session.outputs != null &&
-                session.outputs!.any((o) => o.pullRequest != null)) {
-              final pr = session.outputs!
-                  .firstWhere((o) => o.pullRequest != null)
-                  .pullRequest!;
-              launchUrl(Uri.parse(pr.url));
-            }
-          } else {
-            final result = await Navigator.push(
-              context,
-              MaterialPageRoute(
-                builder: (_) => SessionDetailScreen(session: session),
-              ),
-            );
-            if (result == true) {
-              if (mounted) {
-                _createSession();
-              }
-            }
-          }
-        } catch (_) {
-          // Session not loaded or found
-        }
-      }
-    });
+        .listen(_handleNotificationResponse);
 
     _focusNode.requestFocus();
     if (widget.initialFilter != null) {
@@ -167,59 +133,16 @@ class _SessionListScreenState extends State<SessionListScreen> {
       });
 
       Future<void> loadFilterAndSessions() async {
-        // Load last used filter if no explicit filter is set
-        if (widget.sourceFilter == null && widget.initialFilter == null) {
-          if (settings.lastFilter != _filterTree) {
-            setState(() {
-              _filterTree = settings.lastFilter;
-            });
-          }
-        }
+        _loadLastFilter(settings);
 
         final auth = Provider.of<AuthProvider>(context, listen: false);
-        if (auth.token != null) {
-          final sessionProvider = Provider.of<SessionProvider>(
-            context,
-            listen: false,
-          );
+        if (auth.token == null) return;
 
-          switch (settings.refreshOnAppStart) {
-            case ListRefreshPolicy.none:
-              await _fetchSessions(force: false, shallow: false);
-              break;
-            case ListRefreshPolicy.quick:
-              await _fetchSessions(force: false, shallow: true);
-              break;
-            case ListRefreshPolicy.full:
-              await _fetchSessions(force: true, shallow: false);
-              break;
-            case ListRefreshPolicy.dirty:
-              await _fetchSessions(force: false, shallow: false);
-              if (mounted) {
-                await sessionProvider.refreshDirtySessions(
-                  auth.client,
-                  authToken: auth.token!,
-                );
-              }
-              break;
-            case ListRefreshPolicy.watched:
-              await _fetchSessions(force: false, shallow: false);
-              if (mounted) {
-                await sessionProvider.refreshWatchedSessions(
-                  auth.client,
-                  authToken: auth.token!,
-                );
-              }
-              break;
-          }
+        await _refreshSessionsOnStart(settings, auth);
+        await _refreshWatchedOrDirty(settings, auth);
 
-          if (mounted) {
-            // Background load sources
-            Provider.of<SourceProvider>(
-              context,
-              listen: false,
-            ).fetchSources(auth.client, authToken: auth.token);
-          }
+        if (mounted) {
+          _fetchSources(auth);
         }
       }
 
@@ -250,6 +173,114 @@ class _SessionListScreenState extends State<SessionListScreen> {
     _progressSubscription?.cancel();
     _focusNode.dispose();
     super.dispose();
+  }
+
+  Future<void> _handleNotificationResponse(
+    NotificationResponse response,
+  ) async {
+    if (!mounted) return;
+    if (response.payload == null) return;
+
+    try {
+      final session = _displayItems
+          .firstWhere((item) => item.data.name == response.payload)
+          .data;
+
+      if (response.actionId == 'open_pr') {
+        if (session.outputs != null &&
+            session.outputs!.any((o) => o.pullRequest != null)) {
+          final pr = session.outputs!
+              .firstWhere((o) => o.pullRequest != null)
+              .pullRequest!;
+          launchUrl(Uri.parse(pr.url));
+        }
+        return;
+      }
+
+      final result = await Navigator.push(
+        context,
+        MaterialPageRoute(
+          builder: (_) => SessionDetailScreen(session: session),
+        ),
+      );
+      if (result == true && mounted) {
+        _createSession();
+      }
+    } catch (_) {
+      // Session not loaded or found
+    }
+  }
+
+  void _loadLastFilter(SettingsProvider settings) {
+    if (widget.sourceFilter != null || widget.initialFilter != null) {
+      return;
+    }
+
+    if (settings.lastFilter != _filterTree) {
+      setState(() {
+        _filterTree = settings.lastFilter;
+      });
+    }
+  }
+
+  Future<void> _refreshSessionsOnStart(
+    SettingsProvider settings,
+    AuthProvider auth,
+  ) async {
+    switch (settings.refreshOnAppStart) {
+      case ListRefreshPolicy.none:
+        await _fetchSessions(force: false, shallow: false);
+        break;
+      case ListRefreshPolicy.quick:
+        await _fetchSessions(force: false, shallow: true);
+        break;
+      case ListRefreshPolicy.full:
+        await _fetchSessions(force: true, shallow: false);
+        break;
+      case ListRefreshPolicy.dirty:
+      case ListRefreshPolicy.watched:
+        await _fetchSessions(force: false, shallow: false);
+        break;
+    }
+  }
+
+  Future<void> _refreshWatchedOrDirty(
+    SettingsProvider settings,
+    AuthProvider auth,
+  ) async {
+    if (!mounted) return;
+
+    final sessionProvider = Provider.of<SessionProvider>(
+      context,
+      listen: false,
+    );
+
+    switch (settings.refreshOnAppStart) {
+      case ListRefreshPolicy.dirty:
+        await sessionProvider.refreshDirtySessions(
+          auth.client,
+          authToken: auth.token!,
+        );
+        break;
+      case ListRefreshPolicy.watched:
+        await sessionProvider.refreshWatchedSessions(
+          auth.client,
+          authToken: auth.token!,
+        );
+        break;
+      case ListRefreshPolicy.none:
+      case ListRefreshPolicy.quick:
+      case ListRefreshPolicy.full:
+        break;
+    }
+  }
+
+  void _fetchSources(AuthProvider auth) {
+    // Background load sources
+    Provider.of<SourceProvider>(
+      context,
+      listen: false,
+    ).fetchSources(auth.client, authToken: auth.token);
   }
 
   void _onGithubError() {
@@ -1761,6 +1792,1094 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }).toList();
   }
 
+  PreferredSizeWidget _buildAppBar(
+    SettingsProvider settings,
+    bool isLoading,
+  ) {
+    return AppBar(
+      title: const Text('Sessions'),
+      bottom: isLoading
+          ? const PreferredSize(
+              preferredSize: Size.fromHeight(4.0),
+              child: LinearProgressIndicator(),
+            )
+          : null,
+      actions: _buildAppBarActions(settings),
+    );
+  }
+
+  List<Widget> _buildAppBarActions(SettingsProvider settings) {
+    return [
+      _buildGithubStatusAction(),
+      _buildQueueActionRow(settings),
+      IconButton(
+        icon: const Icon(Icons.source),
+        tooltip: 'Manage Sources',
+        onPressed: () {
+          Navigator.pushNamed(context, '/sources_raw');
+        },
+      ),
+      if (settings.fabVisibility == FabVisibility.appBar)
+        IconButton(
+          icon: const Icon(Icons.add),
+          tooltip: 'New Session',
+          onPressed: _createSession,
+        ),
+      _buildOverflowMenu(settings),
+    ];
+  }
+
+  Widget _buildGithubStatusAction() {
+    return Consumer<GithubProvider>(
+      builder: (context, github, _) {
+        if (github.hasBadCredentials) {
+          return IconButton(
+            icon: const Icon(Icons.error, color: Colors.red),
+            tooltip: 'GitHub Error: Bad Credentials',
+            onPressed: () {
+              showDialog(
+                context: context,
+                builder: (_) => AlertDialog(
+                  title: const Text('GitHub Authentication Error'),
+                  content: Text(
+                    github.authError ??
+                        'Failed to access GitHub. Your Personal Access Token appears to be invalid or expired.',
+                  ),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.pop(context),
+                      child: const Text('Close'),
+                    ),
+                    FilledButton(
+                      onPressed: () {
+                        Navigator.pop(context);
+                        Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (_) => const SettingsScreen(),
+                          ),
+                        );
+                      },
+                      child: const Text('Update Settings'),
+                    ),
+                  ],
+                ),
+              );
+            },
+          );
+        }
+        return const SizedBox.shrink();
+      },
+    );
+  }
+
+  Widget _buildQueueActionRow(SettingsProvider settings) {
+    return Consumer<MessageQueueProvider>(
+      builder: (context, queueProvider, _) {
+        if (queueProvider.isOffline) {
+          if (queueProvider.isConnecting) {
+            return const Padding(
+              padding: EdgeInsets.all(12.0),
+              child: SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(
+                  strokeWidth: 2,
+                  color: Colors.white,
+                ),
+              ),
+            );
+          }
+          return IconButton(
+            icon: const Icon(Icons.wifi_off),
+            tooltip: "Go Online",
+            onPressed: () async {
+              final auth = Provider.of<AuthProvider>(
+                context,
+                listen: false,
+              );
+              final online = await queueProvider.goOnline(auth.client);
+              if (online && mounted) {
+                _fetchSessions(force: true);
+              } else if (context.mounted) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text("Still offline")),
+                );
+              }
+            },
+          );
+        }
+        return Row(
+          mainAxisSize: MainAxisSize.min,
+          children: RefreshButtonAction.values
+              .where((action) => settings.appBarRefreshActions.contains(action))
+              .map((action) {
+            switch (action) {
+              case RefreshButtonAction.refresh:
+                return IconButton(
+                  icon: const Icon(Icons.refresh),
+                  tooltip: 'Refresh (Quick)',
+                  onPressed: () => _fetchSessions(force: true, shallow: true),
+                );
+              case RefreshButtonAction.fullRefresh:
+                return IconButton(
+                  icon: const Icon(Icons.sync),
+                  tooltip: 'Full Refresh',
+                  onPressed: () => _fetchSessions(force: true, shallow: false),
+                );
+              case RefreshButtonAction.refreshDirty:
+                return IconButton(
+                  icon: const Icon(Icons.sync_problem),
+                  tooltip: 'Refresh Dirty Sessions',
+                  onPressed: _refreshDirtySessions,
+                );
+            }
+          }).toList(),
+        );
+      },
+    );
+  }
+
+  Widget _buildOverflowMenu(SettingsProvider settings) {
+    return PopupMenuButton<String>(
+      onSelected: (value) async {
+        if (value == 'new_session') {
+          _createSession();
+        } else if (value == 'refresh') {
+          _fetchSessions(force: true, shallow: true);
+        } else if (value == 'full_refresh') {
+          _fetchSessions(force: true, shallow: false);
+        } else if (value == 'refresh_dirty') {
+          _refreshDirtySessions();
+        } else if (value == 'bulk_actions') {
+          _openBulkActionDialog();
+        } else if (value == 'settings') {
+          Navigator.pushNamed(context, '/settings');
+        } else if (value == 'sources') {
+          Navigator.pushNamed(context, '/sources_raw');
+        } else if (value == 'raw_data') {
+          _viewRawData(context);
+        } else if (value == 'open_cache_folder') {
+          await _openCacheFolder();
+        } else if (value == 'go_offline') {
+          final queueProvider = Provider.of<MessageQueueProvider>(
+            context,
+            listen: false,
+          );
+          if (!queueProvider.isOffline) {
+            queueProvider.setOffline(true);
+            ScaffoldMessenger.of(context).showSnackBar(
+              const SnackBar(
+                content: Text("Switched to Offline Mode"),
+              ),
+            );
+          }
+        } else if (value == 'open_by_id') {
+          _openSessionById();
+        } else if (value == 'github_status') {
+          showModalBottomSheet(
+            context: context,
+            builder: (context) => const GithubQueuePane(),
+          );
+        }
+      },
+      itemBuilder: (context) {
+        final isOffline = Provider.of<MessageQueueProvider>(
+          context,
+          listen: false,
+        ).isOffline;
+        return [
+          if (settings.fabVisibility == FabVisibility.inMenu)
+            const PopupMenuItem(
+              value: 'new_session',
+              child: Row(
+                children: [
+                  Icon(Icons.add),
+                  SizedBox(width: 8),
+                  Text('New Session'),
+                ],
+              ),
+            ),
+          if (settings.fabVisibility == FabVisibility.inMenu)
+            const PopupMenuDivider(),
+          if (!isOffline) ...[
+            const PopupMenuItem(
+              value: 'refresh',
+              child: Row(
+                children: [
+                  Icon(Icons.refresh),
+                  SizedBox(width: 8),
+                  Text('Refresh (Quick)'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'full_refresh',
+              child: Row(
+                children: [
+                  Icon(Icons.sync),
+                  SizedBox(width: 8),
+                  Text('Full Refresh'),
+                ],
+              ),
+            ),
+            const PopupMenuItem(
+              value: 'refresh_dirty',
+              child: Row(
+                children: [
+                  Icon(Icons.sync_problem),
+                  SizedBox(width: 8),
+                  Text('Refresh Dirty Sessions'),
+                ],
+              ),
+            ),
+            const PopupMenuDivider(),
+          ],
+          const PopupMenuItem(
+            value: 'bulk_actions',
+            child: Row(
+              children: [
+                Icon(Icons.checklist),
+                SizedBox(width: 8),
+                Text('Bulk Actions...'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'open_by_id',
+            child: Row(
+              children: [
+                Icon(Icons.input),
+                SizedBox(width: 8),
+                Text('Open by Session ID'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'github_status',
+            child: Row(
+              children: [
+                Icon(Icons.dashboard_customize),
+                SizedBox(width: 8),
+                Text('GitHub Status & Queue'),
+              ],
+            ),
+          ),
+          if (!isOffline)
+            const PopupMenuItem(
+              value: 'go_offline',
+              child: Row(
+                children: [
+                  Icon(Icons.wifi_off),
+                  SizedBox(width: 8),
+                  Text('Go Offline'),
+                ],
+              ),
+            ),
+          if (!isOffline)
+            const PopupMenuItem(
+              value: 'refresh_dirty',
+              child: Row(
+                children: [
+                  Icon(Icons.sync_problem),
+                  SizedBox(width: 8),
+                  Text('Refresh Dirty Sessions'),
+                ],
+              ),
+            ),
+          const PopupMenuItem(
+            value: 'raw_data',
+            child: Row(
+              children: [
+                Icon(Icons.data_object),
+                SizedBox(width: 8),
+                Text('View Raw Data'),
+              ],
+            ),
+          ),
+          if (PlatformUtils.isDesktop)
+            const PopupMenuItem(
+              value: 'open_cache_folder',
+              child: Row(
+                children: [
+                  Icon(Icons.folder_open),
+                  SizedBox(width: 8),
+                  Text('Open Cache Folder'),
+                ],
+              ),
+            ),
+          const PopupMenuItem(
+            value: 'settings',
+            child: Row(
+              children: [
+                Icon(Icons.settings),
+                SizedBox(width: 8),
+                Text('Settings'),
+              ],
+            ),
+          ),
+          const PopupMenuItem(
+            value: 'sources',
+            child: Row(
+              children: [
+                Icon(Icons.source),
+                SizedBox(width: 8),
+                Text('Manage Sources'),
+              ],
+            ),
+          ),
+        ];
+      },
+    );
+  }
+
+  Widget _buildSearchBar() {
+    return Padding(
+      padding: const EdgeInsets.all(8.0),
+      child: AdvancedSearchBar(
+        key: _searchBarKey,
+        filterTree: _filterTree,
+        onFilterTreeChanged: (tree) {
+          setState(() {
+            _filterTree = tree;
+          });
+          // Also save to settings
+          final settings = Provider.of<SettingsProvider>(
+            context,
+            listen: false,
+          );
+          settings.setLastFilter(tree);
+        },
+        searchText: _searchText,
+        onSearchChanged: (text) {
+          setState(() {
+            _searchText = text;
+          });
+        },
+        availableSuggestions: _availableSuggestions,
+        activeSorts: _activeSorts,
+        onSortsChanged: (sorts) {
+          setState(() {
+            _activeSorts = sorts;
+          });
+        },
+      ),
+    );
+  }
+
+  Widget _buildRefreshStatus(
+    SessionProvider sessionProvider,
+    DateTime lastFetchTime,
+  ) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 16),
+      child: Align(
+        alignment: Alignment.centerLeft,
+        child: (_refreshStatus != null)
+            ? Text(
+                _refreshStatus!,
+                style: Theme.of(context).textTheme.bodySmall,
+              )
+            : Consumer<RefreshService>(
+                builder: (context, refreshService, _) {
+                  final next = refreshService.getNextScheduledRefresh();
+                  String nextText = '';
+                  if (next != null) {
+                    String type = 'Refresh';
+                    if (next.schedule.taskType == RefreshTaskType.refresh) {
+                      final policyName =
+                          next.schedule.refreshPolicy?.name ?? '';
+                      if (policyName.isNotEmpty) {
+                        type =
+                            "${policyName[0].toUpperCase()}${policyName.substring(1)}";
+                      }
+                    } else {
+                      type = 'Send Messages';
+                    }
+                    nextText =
+                        ' · Next: $type ${timeUntil(next.time)} (${DateFormat.Hms().format(next.time)})';
+                  }
+
+                  return Text(
+                    'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})${sessionProvider.lastFetchType != null ? " - ${sessionProvider.lastFetchType}" : ""}$nextText',
+                    style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                          color: DateTime.now()
+                                      .difference(lastFetchTime)
+                                      .inMinutes >
+                                  15
+                              ? Colors.orange
+                              : Theme.of(context).textTheme.bodySmall?.color,
+                        ),
+                  );
+                },
+              ),
+      ),
+    );
+  }
+
+  Widget _buildSessionCard(
+    CachedItem<Session> cachedItem,
+    MessageQueueProvider queueProvider,
+  ) {
+    final session = cachedItem.data;
+    final metadata = cachedItem.metadata;
+    final isDevMode = Provider.of<DevModeProvider>(context).isDevMode;
+
+    return Card(
+      margin: const EdgeInsets.symmetric(
+        horizontal: 8,
+        vertical: 4,
+      ),
+      child: InkWell(
+        onTap: () async {
+          if (session.id.startsWith('DRAFT_CREATION_')) {
+            final realId = session.id.substring(15);
+
+            try {
+              final queueItem =
+                  queueProvider.queue.firstWhere((m) => m.id == realId);
+
+              if (queueItem.state == QueueState.sending) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Session creation in progress...'),
+                  ),
+                );
+                return;
+              }
+              if (queueItem.state == QueueState.sent) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Session sent. Waiting for sync...'),
+                  ),
+                );
+                return;
+              }
+              if (queueItem.state == QueueState.queued) {
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Retrying send...')),
+                );
+                final auth = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
+                queueProvider.sendQueue(
+                  auth.client,
+                  onSessionCreated: (newSession) {
+                    Provider.of<SessionProvider>(
+                      context,
+                      listen: false,
+                    ).fetchSessions(
+                      auth.client,
+                      force: true,
+                    );
+                  },
+                );
+                return;
+              }
+            } catch (_) {
+              return;
+            }
+
+            final result = await showDialog<NewSessionResult>(
+              context: context,
+              builder: (context) => NewSessionDialog(
+                initialSession: session,
+                mode: SessionDialogMode.edit,
+              ),
+            );
+
+            if (result == null || !context.mounted) {
+              return;
+            }
+
+            if (result.isDelete) {
+              queueProvider.deleteMessage(realId);
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Draft deleted")),
+              );
+            } else if (result.isDraft) {
+              queueProvider.updateCreateSessionRequest(
+                realId,
+                result.session,
+                isDraft: true,
+              );
+              ScaffoldMessenger.of(context).showSnackBar(
+                const SnackBar(content: Text("Draft updated")),
+              );
+            } else {
+              queueProvider.deleteMessage(realId);
+              queueProvider.addCreateSessionRequest(
+                result.session,
+                isDraft: false,
+              );
+              if (context.mounted) {
+                final auth = Provider.of<AuthProvider>(
+                  context,
+                  listen: false,
+                );
+                queueProvider.sendQueue(
+                  auth.client,
+                  onSessionCreated: (_) {
+                    Provider.of<SessionProvider>(
+                      context,
+                      listen: false,
+                    ).fetchSessions(
+                      auth.client,
+                      force: true,
+                    );
+                  },
+                );
+              }
+            }
+            return;
+          }
+
+          _openSessionDetail(session);
+        },
+        onLongPress: () async {
+          bool handled = false;
+          if (session.id.startsWith('DRAFT_CREATION_')) {
+            final realId = session.id.substring(15);
+            QueueState? itemState;
+            try {
+              final item =
+                  queueProvider.queue.firstWhere((m) => m.id == realId);
+              itemState = item.state;
+            } catch (_) {}
+
+            if (itemState == QueueState.queued ||
+                itemState == QueueState.failed) {
+              handled = true;
+              final action = await showModalBottomSheet<String>(
+                context: context,
+                builder: (context) => Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    ListTile(
+                      leading: const Icon(Icons.edit),
+                      title: const Text('Edit in New Session'),
+                      onTap: () => Navigator.pop(context, 'edit'),
+                    ),
+                    ListTile(
+                      leading: const Icon(Icons.delete),
+                      title: const Text('Delete'),
+                      onTap: () => Navigator.pop(context, 'delete'),
+                    ),
+                  ],
+                ),
+              );
+
+              if (action == 'edit' && context.mounted) {
+                final result = await showDialog<NewSessionResult>(
+                  context: context,
+                  builder: (context) => NewSessionDialog(
+                    initialSession: session,
+                    mode: SessionDialogMode.edit,
+                  ),
+                );
+                if (result != null && context.mounted) {
+                  if (result.isDelete) {
+                    queueProvider.deleteMessage(realId);
+                  } else if (result.isDraft) {
+                    queueProvider.updateCreateSessionRequest(
+                      realId,
+                      result.session,
+                      isDraft: true,
+                      reason: "User edited queued item",
+                    );
+                  } else {
+                    queueProvider.updateCreateSessionRequest(
+                      realId,
+                      result.session,
+                      isDraft: false,
+                      reason: "User edited and re-queued",
+                    );
+                  }
+                }
+              } else if (action == 'delete') {
+                queueProvider.deleteMessage(realId);
+              }
+            }
+          }
+
+          if (!handled && context.mounted) {
+            _showTileMenu(context, session, metadata, isDevMode);
+          }
+        },
+        onSecondaryTapUp: (details) {
+          _showTileMenu(
+            context,
+            session,
+            metadata,
+            isDevMode,
+            position: details.globalPosition,
+          );
+        },
+        child: Padding(
+          padding: const EdgeInsets.all(12),
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
+                children: [
+                  Expanded(
+                    child: Row(
+                      children: [
+                        if (Provider.of<MessageQueueProvider>(context)
+                            .getDrafts(session.id)
+                            .isNotEmpty)
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'DRAFT',
+                            backgroundColor: Colors.orange,
+                            textColor: Colors.white,
+                            filterToken: const FilterToken(
+                              id: 'flag:draft',
+                              type: FilterType.flag,
+                              label: 'Has Drafts',
+                              value: 'draft',
+                            ),
+                          ),
+                        if (metadata.isNew)
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'NEW',
+                            backgroundColor: Colors.green,
+                            textColor: Colors.white,
+                            filterToken: const FilterToken(
+                              id: 'flag:new',
+                              type: FilterType.flag,
+                              label: 'New',
+                              value: 'new',
+                            ),
+                            sortField: SortField.created,
+                          ),
+                        if (metadata.isUpdated && !metadata.isNew)
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'UPDATED',
+                            backgroundColor: Colors.amber,
+                            textColor: Colors.black,
+                            filterToken: const FilterToken(
+                              id: 'flag:updated',
+                              type: FilterType.flag,
+                              label: 'Updated',
+                              value: 'updated',
+                            ),
+                            sortField: SortField.updated,
+                          ),
+                        if (metadata.isUnread &&
+                            !metadata.isNew &&
+                            !metadata.isUpdated)
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'UNREAD',
+                            backgroundColor: Colors.blueAccent,
+                            textColor: Colors.white,
+                            filterToken: const FilterToken(
+                              id: 'flag:unread',
+                              type: FilterType.flag,
+                              label: 'Unread',
+                              value: 'unread',
+                            ),
+                          ),
+                        if (metadata.isWatched)
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'WATCHING',
+                            backgroundColor: Colors.deepPurple,
+                            textColor: Colors.white,
+                            filterToken: const FilterToken(
+                              id: 'flag:watched',
+                              type: FilterType.flag,
+                              label: 'Watching',
+                              value: 'watched',
+                            ),
+                          ),
+                        // PR Status - only for final states (Closed/Merged)
+                        if (session.prStatus != null &&
+                            (session.prStatus == 'Closed' ||
+                                session.prStatus == 'Merged'))
+                          _buildPill(
+                            context,
+                            metadata: metadata,
+                            session: session,
+                            label: '${session.prStatus}',
+                            backgroundColor: session.prStatus == 'Merged'
+                                ? Colors.green
+                                : Colors.red,
+                            textColor: Colors.white,
+                            filterToken: FilterToken(
+                              id: 'prStatus:${session.prStatus}',
+                              type: FilterType.prStatus,
+                              label: 'PR: ${session.prStatus}',
+                              value: session.prStatus!,
+                            ),
+                          ),
+                        if (metadata.labels.contains('PENDING_CREATION'))
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: 'PENDING',
+                            backgroundColor: Colors.blue,
+                            textColor: Colors.white,
+                            filterToken: const FilterToken(
+                              id: 'flag:pending',
+                              type: FilterType.flag,
+                              label: 'Pending',
+                              value: 'pending',
+                            ),
+                          ),
+                        // Render custom labels
+                        for (final label in metadata.labels.where(
+                          (l) =>
+                              l != 'PENDING_CREATION' &&
+                              l != 'DRAFT_CREATION',
+                        ))
+                          _buildPill(
+                            context,
+                            session: session,
+                            metadata: metadata,
+                            label: label.toUpperCase(),
+                            backgroundColor: Colors.grey.shade700,
+                            textColor: Colors.white,
+                            filterToken: FilterToken(
+                              id: 'text:$label',
+                              type: FilterType.text,
+                              label: label,
+                              value: label,
+                            ),
+                          ),
+                        Expanded(
+                          child: LayoutBuilder(
+                            builder: (context, constraints) {
+                              // Simple responsive logic for max lines
+                              int maxLines = 1;
+                              if (constraints.maxWidth > 800) {
+                                maxLines = 3;
+                              } else if (constraints.maxWidth > 400) {
+                                maxLines = 2;
+                              }
+
+                              return PopupText(
+                                (session.title ?? session.prompt).replaceAll(
+                                  '\n',
+                                  ' ',
+                                ),
+                                maxLines: maxLines,
+                                style: TextStyle(
+                                  fontWeight: (metadata.isUnread)
+                                      ? FontWeight.bold
+                                      : FontWeight.normal,
+                                  fontSize: 16,
+                                ),
+                              );
+                            },
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  // Trailing Menu Button
+                  InkWell(
+                    borderRadius: BorderRadius.circular(16),
+                    onTapDown: (details) {
+                      _showTileMenu(
+                        context,
+                        session,
+                        metadata,
+                        isDevMode,
+                        position: details.globalPosition,
+                      );
+                    },
+                    child: const Padding(
+                      padding: EdgeInsets.all(8.0),
+                      child: Icon(
+                        Icons.more_vert,
+                        size: 20,
+                      ),
+                    ),
+                  ),
+                  if (session.outputs != null &&
+                      session.outputs!.any((o) => o.pullRequest != null))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4.0,
+                      ),
+                      child: GestureDetector(
+                        onSecondaryTapUp: (details) {
+                          final RenderBox overlay =
+                              Overlay.of(context).context.findRenderObject()
+                                  as RenderBox;
+                          final RelativeRect position = RelativeRect.fromRect(
+                            Rect.fromPoints(
+                              details.globalPosition,
+                              details.globalPosition,
+                            ),
+                            Offset.zero & overlay.size,
+                          );
+                          showMenu(
+                            context: context,
+                            position: position,
+                            items: <PopupMenuEntry>[
+                              PopupMenuItem(
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.filter_alt,
+                                      size: 16,
+                                    ),
+                                    SizedBox(
+                                      width: 8,
+                                    ),
+                                    Text(
+                                      "Filter 'Has PR'",
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  _addFilterToken(
+                                    const FilterToken(
+                                      id: 'flag:has_pr',
+                                      type: FilterType.flag,
+                                      label: 'Has Pull Request',
+                                      value: 'has_pr',
+                                      mode: FilterMode.include,
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context)
+                                      .hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Added filter: Has Pull Request",
+                                      ),
+                                      duration: Duration(
+                                        seconds: 1,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              PopupMenuItem(
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.filter_alt_off,
+                                      size: 16,
+                                    ),
+                                    SizedBox(
+                                      width: 8,
+                                    ),
+                                    Text(
+                                      "Exclude 'Has PR'",
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  _addFilterToken(
+                                    const FilterToken(
+                                      id: 'flag:has_pr',
+                                      type: FilterType.flag,
+                                      label: 'Has Pull Request',
+                                      value: 'has_pr',
+                                      mode: FilterMode.exclude,
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context)
+                                      .hideCurrentSnackBar();
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "Added filter: Exclude Has Pull Request",
+                                      ),
+                                      duration: Duration(
+                                        seconds: 1,
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                              const PopupMenuDivider(),
+                              PopupMenuItem(
+                                child: const Row(
+                                  children: [
+                                    Icon(
+                                      Icons.copy,
+                                      size: 16,
+                                    ),
+                                    SizedBox(
+                                      width: 8,
+                                    ),
+                                    Text(
+                                      "Copy PR URL",
+                                    ),
+                                  ],
+                                ),
+                                onTap: () {
+                                  final pr = session.outputs!
+                                      .firstWhere(
+                                        (o) => o.pullRequest != null,
+                                      )
+                                      .pullRequest!;
+                                  Clipboard.setData(
+                                    ClipboardData(
+                                      text: pr.url,
+                                    ),
+                                  );
+                                  ScaffoldMessenger.of(context).showSnackBar(
+                                    const SnackBar(
+                                      content: Text(
+                                        "PR URL copied to clipboard",
+                                      ),
+                                    ),
+                                  );
+                                },
+                              ),
+                            ],
+                          );
+                        },
+                        child: IconButton(
+                          icon: const Icon(
+                            Icons.merge_type,
+                            color: Colors.purple,
+                          ),
+                          tooltip: 'Open Pull Request',
+                          onPressed: () {
+                            final pr = session.outputs!
+                                .firstWhere(
+                                  (o) => o.pullRequest != null,
+                                )
+                                .pullRequest!;
+                            launchUrl(
+                              Uri.parse(pr.url),
+                            );
+                          },
+                        ),
+                      ),
+                    ),
+                  if ((session.prStatus == null || session.prStatus!.isEmpty) &&
+                      (session.diffUrl != null ||
+                          (session.changedFiles != null &&
+                              session.changedFiles! > 0)))
+                    Padding(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 4.0,
+                      ),
+                      child: IconButton(
+                        icon: const Icon(
+                          Icons.add_box_outlined,
+                          color: Colors.green,
+                        ),
+                        tooltip: 'Create PR & Mark Read',
+                        onPressed: () {
+                          _markAsRead(session);
+                          if (session.url != null) {
+                            launchUrl(
+                              Uri.parse(
+                                session.url!,
+                              ),
+                            );
+                          } else if (session.sourceContext != null) {
+                            final source = session.sourceContext!.source;
+                            if (source.startsWith(
+                              "sources/github/",
+                            )) {
+                              final parts = source.split('/');
+                              if (parts.length >= 4) {
+                                final owner = parts[2];
+                                final repo = parts[3];
+                                launchUrl(
+                                  Uri.parse(
+                                    "https://github.com/$owner/$repo/pulls",
+                                  ),
+                                );
+                              }
+                            }
+                          }
+                        },
+                      ),
+                    ),
+                ],
+              ),
+              const SizedBox(height: 8),
+              SessionMetaPills(
+                session: session,
+                compact: true,
+                onAddFilter: (token) {
+                  _addFilterToken(token);
+                  ScaffoldMessenger.of(context).hideCurrentSnackBar();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text(
+                        "Added filter: ${token.label}",
+                      ),
+                      duration: const Duration(
+                        seconds: 1,
+                      ),
+                    ),
+                  );
+                },
+                onAddSort: _addSortOption,
+              ),
+              const SizedBox(height: 4),
+              Row(
+                children: [
+                  Text(
+                    'Updated: ${timeAgo(_getEffectiveTime(cachedItem))}',
+                    style: Theme.of(
+                      context,
+                    ).textTheme.bodySmall,
+                  ),
+                  if (metadata.lastOpened != null) ...[
+                    const SizedBox(width: 8),
+                    Text(
+                      '·',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall,
+                    ),
+                    const SizedBox(width: 8),
+                    Text(
+                      'Opened: ${timeAgo(metadata.lastOpened!)}',
+                      style: Theme.of(
+                        context,
+                      ).textTheme.bodySmall,
+                    ),
+                  ],
+                ],
+              ),
+              // Progress bar if running
+              if (session.state == SessionState.IN_PROGRESS &&
+                  session.totalSteps != null &&
+                  session.totalSteps! > 0)
+                Padding(
+                  padding: const EdgeInsets.only(
+                    top: 8.0,
+                  ),
+                  child: LinearProgressIndicator(
+                    value: session.currentStep! / session.totalSteps!,
+                  ),
+                ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     // Listen to TimerService to trigger periodic rebuilds for relative time updates
@@ -1837,319 +2956,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         child: const Icon(Icons.add),
                       )
                     : null,
-            appBar: AppBar(
-              title: const Text('Sessions'),
-              bottom: isLoading
-                  ? const PreferredSize(
-                      preferredSize: Size.fromHeight(4.0),
-                      child: LinearProgressIndicator(),
-                    )
-                  : null,
-              actions: [
-                Consumer<GithubProvider>(
-                  builder: (context, github, _) {
-                    if (github.hasBadCredentials) {
-                      return IconButton(
-                        icon: const Icon(Icons.error, color: Colors.red),
-                        tooltip: 'GitHub Error: Bad Credentials',
-                        onPressed: () {
-                          showDialog(
-                            context: context,
-                            builder: (_) => AlertDialog(
-                              title: const Text('GitHub Authentication Error'),
-                              content: Text(
-                                github.authError ??
-                                    'Failed to access GitHub. Your Personal Access Token appears to be invalid or expired.',
-                              ),
-                              actions: [
-                                TextButton(
-                                  onPressed: () => Navigator.pop(context),
-                                  child: const Text('Close'),
-                                ),
-                                FilledButton(
-                                  onPressed: () {
-                                    Navigator.pop(context);
-                                    Navigator.push(
-                                      context,
-                                      MaterialPageRoute(
-                                        builder: (_) => const SettingsScreen(),
-                                      ),
-                                    );
-                                  },
-                                  child: const Text('Update Settings'),
-                                ),
-                              ],
-                            ),
-                          );
-                        },
-                      );
-                    }
-                    return const SizedBox.shrink();
-                  },
-                ),
-                Consumer<MessageQueueProvider>(
-                  builder: (context, queueProvider, _) {
-                    if (queueProvider.isOffline) {
-                      if (queueProvider.isConnecting) {
-                        return const Padding(
-                          padding: EdgeInsets.all(12.0),
-                          child: SizedBox(
-                            width: 20,
-                            height: 20,
-                            child: CircularProgressIndicator(
-                              strokeWidth: 2,
-                              color: Colors.white,
-                            ),
-                          ),
-                        );
-                      }
-                      return IconButton(
-                        icon: const Icon(Icons.wifi_off),
-                        tooltip: "Go Online",
-                        onPressed: () async {
-                          final auth = Provider.of<AuthProvider>(
-                            context,
-                            listen: false,
-                          );
-                          final online = await queueProvider.goOnline(
-                            auth.client,
-                          );
-                          if (online && mounted) {
-                            _fetchSessions(force: true);
-                          } else if (context.mounted) {
-                            ScaffoldMessenger.of(context).showSnackBar(
-                              const SnackBar(content: Text("Still offline")),
-                            );
-                          }
-                        },
-                      );
-                    }
-                    return Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: RefreshButtonAction.values
-                          .where((action) =>
-                              settings.appBarRefreshActions.contains(action))
-                          .map((action) {
-                        switch (action) {
-                          case RefreshButtonAction.refresh:
-                            return IconButton(
-                              icon: const Icon(Icons.refresh),
-                              tooltip: 'Refresh (Quick)',
-                              onPressed: () =>
-                                  _fetchSessions(force: true, shallow: true),
-                            );
-                          case RefreshButtonAction.fullRefresh:
-                            return IconButton(
-                              icon: const Icon(Icons.sync),
-                              tooltip: 'Full Refresh',
-                              onPressed: () =>
-                                  _fetchSessions(force: true, shallow: false),
-                            );
-                          case RefreshButtonAction.refreshDirty:
-                            return IconButton(
-                              icon: const Icon(Icons.sync_problem),
-                              tooltip: 'Refresh Dirty Sessions',
-                              onPressed: _refreshDirtySessions,
-                            );
-                        }
-                      }).toList(),
-                    );
-                  },
-                ),
-                IconButton(
-                  icon: const Icon(Icons.source),
-                  tooltip: 'Manage Sources',
-                  onPressed: () {
-                    Navigator.pushNamed(context, '/sources_raw');
-                  },
-                ),
-                if (settings.fabVisibility == FabVisibility.appBar)
-                  IconButton(
-                    icon: const Icon(Icons.add),
-                    tooltip: 'New Session',
-                    onPressed: _createSession,
-                  ),
-                PopupMenuButton<String>(
-                  onSelected: (value) async {
-                    if (value == 'new_session') {
-                      _createSession();
-                    } else if (value == 'refresh') {
-                      _fetchSessions(force: true, shallow: true);
-                    } else if (value == 'full_refresh') {
-                      _fetchSessions(force: true, shallow: false);
-                    } else if (value == 'refresh_dirty') {
-                      _refreshDirtySessions();
-                    } else if (value == 'bulk_actions') {
-                      _openBulkActionDialog();
-                    } else if (value == 'settings') {
-                      Navigator.pushNamed(context, '/settings');
-                    } else if (value == 'sources') {
-                      Navigator.pushNamed(context, '/sources_raw');
-                    } else if (value == 'raw_data') {
-                      _viewRawData(context);
-                    } else if (value == 'open_cache_folder') {
-                      await _openCacheFolder();
-                    } else if (value == 'go_offline') {
-                      final queueProvider = Provider.of<MessageQueueProvider>(
-                        context,
-                        listen: false,
-                      );
-                      if (!queueProvider.isOffline) {
-                        queueProvider.setOffline(true);
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Switched to Offline Mode"),
-                          ),
-                        );
-                      }
-                    } else if (value == 'open_by_id') {
-                      _openSessionById();
-                    } else if (value == 'github_status') {
-                      showModalBottomSheet(
-                        context: context,
-                        builder: (context) => const GithubQueuePane(),
-                      );
-                    }
-                  },
-                  itemBuilder: (context) {
-                    final isOffline = Provider.of<MessageQueueProvider>(
-                      context,
-                      listen: false,
-                    ).isOffline;
-                    return [
-                      if (settings.fabVisibility == FabVisibility.inMenu)
-                        const PopupMenuItem(
-                          value: 'new_session',
-                          child: Row(
-                            children: [
-                              Icon(Icons.add),
-                              SizedBox(width: 8),
-                              Text('New Session'),
-                            ],
-                          ),
-                        ),
-                      if (settings.fabVisibility == FabVisibility.inMenu)
-                        const PopupMenuDivider(),
-                      if (!isOffline) ...[
-                        const PopupMenuItem(
-                          value: 'refresh',
-                          child: Row(
-                            children: [
-                              Icon(Icons.refresh),
-                              SizedBox(width: 8),
-                              Text('Refresh (Quick)'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'full_refresh',
-                          child: Row(
-                            children: [
-                              Icon(Icons.sync),
-                              SizedBox(width: 8),
-                              Text('Full Refresh'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuItem(
-                          value: 'refresh_dirty',
-                          child: Row(
-                            children: [
-                              Icon(Icons.sync_problem),
-                              SizedBox(width: 8),
-                              Text('Refresh Dirty Sessions'),
-                            ],
-                          ),
-                        ),
-                        const PopupMenuDivider(),
-                      ],
-                      const PopupMenuItem(
-                        value: 'bulk_actions',
-                        child: Row(
-                          children: [
-                            Icon(Icons.checklist),
-                            SizedBox(width: 8),
-                            Text('Bulk Actions...'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'open_by_id',
-                        child: Row(
-                          children: [
-                            Icon(Icons.input),
-                            SizedBox(width: 8),
-                            Text('Open by Session ID'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'github_status',
-                        child: Row(
-                          children: [
-                            Icon(Icons.dashboard_customize),
-                            SizedBox(width: 8),
-                            Text('GitHub Status & Queue'),
-                          ],
-                        ),
-                      ),
-                      if (!isOffline)
-                        const PopupMenuItem(
-                          value: 'go_offline',
-                          child: Row(
-                            children: [
-                              Icon(Icons.wifi_off),
-                              SizedBox(width: 8),
-                              Text('Go Offline'),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuItem(
-                        value: 'raw_data',
-                        child: Row(
-                          children: [
-                            Icon(Icons.data_object),
-                            SizedBox(width: 8),
-                            Text('View Raw Data'),
-                          ],
-                        ),
-                      ),
-                      if (PlatformUtils.isDesktop)
-                        const PopupMenuItem(
-                          value: 'open_cache_folder',
-                          child: Row(
-                            children: [
-                              Icon(Icons.folder_open),
-                              SizedBox(width: 8),
-                              Text('Open Cache Folder'),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuItem(
-                        value: 'settings',
-                        child: Row(
-                          children: [
-                            Icon(Icons.settings),
-                            SizedBox(width: 8),
-                            Text('Settings'),
-                          ],
-                        ),
-                      ),
-                      const PopupMenuItem(
-                        value: 'sources',
-                        child: Row(
-                          children: [
-                            Icon(Icons.source),
-                            SizedBox(width: 8),
-                            Text('Manage Sources'),
-                          ],
-                        ),
-                      ),
-                    ];
-                  },
-                ),
-              ],
-            ),
+            appBar: _buildAppBar(settings, isLoading),
             body: Consumer<SettingsProvider>(
               builder: (context, settings, _) {
                 return (cachedItems.isEmpty && isLoading)
@@ -2158,100 +2965,11 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         ? Center(child: Text('Error: $error'))
                         : Column(
                             children: [
-                              Padding(
-                                padding: const EdgeInsets.all(8.0),
-                                child: AdvancedSearchBar(
-                                  key: _searchBarKey,
-                                  filterTree: _filterTree,
-                                  onFilterTreeChanged: (tree) {
-                                    setState(() {
-                                      _filterTree = tree;
-                                    });
-                                    // Also save to settings
-                                    final settings =
-                                        Provider.of<SettingsProvider>(
-                                      context,
-                                      listen: false,
-                                    );
-                                    settings.setLastFilter(tree);
-                                  },
-                                  searchText: _searchText,
-                                  onSearchChanged: (text) {
-                                    setState(() {
-                                      _searchText = text;
-                                    });
-                                  },
-                                  availableSuggestions: _availableSuggestions,
-                                  activeSorts: _activeSorts,
-                                  onSortsChanged: (sorts) {
-                                    setState(() {
-                                      _activeSorts = sorts;
-                                    });
-                                  },
-                                ),
-                              ),
+                              _buildSearchBar(),
                               if (lastFetchTime != null)
-                                Padding(
-                                  padding: const EdgeInsets.symmetric(
-                                    horizontal: 16,
-                                  ),
-                                  child: Align(
-                                    alignment: Alignment.centerLeft,
-                                    child: (_refreshStatus != null)
-                                        ? Text(
-                                            _refreshStatus!,
-                                            style: Theme.of(
-                                              context,
-                                            ).textTheme.bodySmall,
-                                          )
-                                        : Consumer<RefreshService>(
-                                            builder:
-                                                (context, refreshService, _) {
-                                              final next = refreshService
-                                                  .getNextScheduledRefresh();
-                                              String nextText = '';
-                                              if (next != null) {
-                                                String type = 'Refresh';
-                                                if (next.schedule.taskType ==
-                                                    RefreshTaskType.refresh) {
-                                                  final policyName = next
-                                                          .schedule
-                                                          .refreshPolicy
-                                                          ?.name ??
-                                                      '';
-                                                  if (policyName.isNotEmpty) {
-                                                    type =
-                                                        "${policyName[0].toUpperCase()}${policyName.substring(1)}";
-                                                  }
-                                                } else {
-                                                  type = 'Send Messages';
-                                                }
-                                                nextText =
-                                                    ' · Next: $type ${timeUntil(next.time)} (${DateFormat.Hms().format(next.time)})';
-                                              }
-
-                                              return Text(
-                                                'Last refreshed: ${DateFormat.Hms().format(lastFetchTime)} (${timeAgo(lastFetchTime)})${sessionProvider.lastFetchType != null ? " - ${sessionProvider.lastFetchType}" : ""}$nextText',
-                                                style: Theme.of(context)
-                                                    .textTheme
-                                                    .bodySmall
-                                                    ?.copyWith(
-                                                      color: DateTime.now()
-                                                                  .difference(
-                                                                    lastFetchTime,
-                                                                  )
-                                                                  .inMinutes >
-                                                              15
-                                                          ? Colors.orange
-                                                          : Theme.of(context)
-                                                              .textTheme
-                                                              .bodySmall
-                                                              ?.color,
-                                                    ),
-                                              );
-                                            },
-                                          ),
-                                  ),
+                                _buildRefreshStatus(
+                                  sessionProvider,
+                                  lastFetchTime,
                                 ),
                               Expanded(
                                 child: RefreshIndicator(
@@ -2261,909 +2979,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                                     itemCount: _displayItems.length,
                                     itemBuilder: (context, index) {
                                       final cachedItem = _displayItems[index];
-                                      final session = cachedItem.data;
-                                      final metadata = cachedItem.metadata;
-                                      final isDevMode =
-                                          Provider.of<DevModeProvider>(
-                                        context,
-                                      ).isDevMode;
-
-                                      return Card(
-                                        margin: const EdgeInsets.symmetric(
-                                          horizontal: 8,
-                                          vertical: 4,
-                                        ),
-                                        child: InkWell(
-                                          onTap: () async {
-                                            if (session.id.startsWith(
-                                                'DRAFT_CREATION_')) {
-                                              final realId =
-                                                  session.id.substring(15);
-
-                                              try {
-                                                final queueItem = queueProvider
-                                                    .queue
-                                                    .firstWhere(
-                                                        (m) => m.id == realId);
-
-                                                if (queueItem.state ==
-                                                    QueueState.sending) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Session creation in progress...')));
-                                                  return;
-                                                }
-                                                if (queueItem.state ==
-                                                    QueueState.sent) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Session sent. Waiting for sync...')));
-                                                  return;
-                                                }
-                                                if (queueItem.state ==
-                                                    QueueState.queued) {
-                                                  ScaffoldMessenger.of(context)
-                                                      .showSnackBar(const SnackBar(
-                                                          content: Text(
-                                                              'Retrying send...')));
-                                                  final auth =
-                                                      Provider.of<AuthProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  queueProvider
-                                                      .sendQueue(auth.client,
-                                                          onSessionCreated:
-                                                              (newSession) {
-                                                    Provider.of<SessionProvider>(
-                                                            context,
-                                                            listen: false)
-                                                        .fetchSessions(
-                                                            auth.client,
-                                                            force: true);
-                                                  });
-                                                  return;
-                                                }
-                                              } catch (_) {
-                                                return;
-                                              }
-
-                                              final result = await showDialog<
-                                                  NewSessionResult>(
-                                                context: context,
-                                                builder: (context) =>
-                                                    NewSessionDialog(
-                                                        initialSession: session,
-                                                        mode: SessionDialogMode
-                                                            .edit),
-                                              );
-
-                                              if (result == null ||
-                                                  !context.mounted) {
-                                                return;
-                                              }
-
-                                              if (result.isDelete) {
-                                                queueProvider
-                                                    .deleteMessage(realId);
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(const SnackBar(
-                                                        content: Text(
-                                                            "Draft deleted")));
-                                              } else if (result.isDraft) {
-                                                queueProvider
-                                                    .updateCreateSessionRequest(
-                                                        realId, result.session,
-                                                        isDraft: true);
-                                                ScaffoldMessenger.of(context)
-                                                    .showSnackBar(const SnackBar(
-                                                        content: Text(
-                                                            "Draft updated")));
-                                              } else {
-                                                queueProvider
-                                                    .deleteMessage(realId);
-                                                queueProvider
-                                                    .addCreateSessionRequest(
-                                                        result.session,
-                                                        isDraft: false);
-                                                if (context.mounted) {
-                                                  final auth =
-                                                      Provider.of<AuthProvider>(
-                                                          context,
-                                                          listen: false);
-                                                  queueProvider.sendQueue(
-                                                      auth.client,
-                                                      onSessionCreated: (_) {
-                                                    Provider.of<SessionProvider>(
-                                                            context,
-                                                            listen: false)
-                                                        .fetchSessions(
-                                                            auth.client,
-                                                            force: true);
-                                                  });
-                                                }
-                                              }
-                                              return;
-                                            }
-
-                                            _openSessionDetail(session);
-                                          },
-                                          onLongPress: () async {
-                                            bool handled = false;
-                                            if (session.id.startsWith(
-                                                'DRAFT_CREATION_')) {
-                                              final realId =
-                                                  session.id.substring(15);
-                                              QueueState? itemState;
-                                              try {
-                                                final item = queueProvider.queue
-                                                    .firstWhere(
-                                                        (m) => m.id == realId);
-                                                itemState = item.state;
-                                              } catch (_) {}
-
-                                              if (itemState ==
-                                                      QueueState.queued ||
-                                                  itemState ==
-                                                      QueueState.failed) {
-                                                handled = true;
-                                                final action =
-                                                    await showModalBottomSheet<
-                                                        String>(
-                                                  context: context,
-                                                  builder: (context) => Column(
-                                                    mainAxisSize:
-                                                        MainAxisSize.min,
-                                                    children: [
-                                                      ListTile(
-                                                          leading: const Icon(
-                                                              Icons.edit),
-                                                          title: const Text(
-                                                              'Edit in New Session'),
-                                                          onTap: () =>
-                                                              Navigator.pop(
-                                                                  context,
-                                                                  'edit')),
-                                                      ListTile(
-                                                          leading: const Icon(
-                                                              Icons.delete),
-                                                          title: const Text(
-                                                              'Delete'),
-                                                          onTap: () =>
-                                                              Navigator.pop(
-                                                                  context,
-                                                                  'delete')),
-                                                    ],
-                                                  ),
-                                                );
-
-                                                if (action == 'edit' &&
-                                                    context.mounted) {
-                                                  final result = await showDialog<
-                                                          NewSessionResult>(
-                                                      context: context,
-                                                      builder: (context) =>
-                                                          NewSessionDialog(
-                                                              initialSession:
-                                                                  session,
-                                                              mode:
-                                                                  SessionDialogMode
-                                                                      .edit));
-                                                  if (result != null &&
-                                                      context.mounted) {
-                                                    if (result.isDelete) {
-                                                      queueProvider
-                                                          .deleteMessage(
-                                                              realId);
-                                                    } else if (result.isDraft) {
-                                                      queueProvider
-                                                          .updateCreateSessionRequest(
-                                                              realId,
-                                                              result.session,
-                                                              isDraft: true,
-                                                              reason:
-                                                                  "User edited queued item");
-                                                    } else {
-                                                      queueProvider
-                                                          .updateCreateSessionRequest(
-                                                              realId,
-                                                              result.session,
-                                                              isDraft: false,
-                                                              reason:
-                                                                  "User edited and re-queued");
-                                                    }
-                                                  }
-                                                } else if (action == 'delete') {
-                                                  queueProvider
-                                                      .deleteMessage(realId);
-                                                }
-                                              }
-                                            }
-
-                                            if (!handled && context.mounted) {
-                                              _showTileMenu(context, session,
-                                                  metadata, isDevMode);
-                                            }
-                                          },
-                                          onSecondaryTapUp: (details) {
-                                            _showTileMenu(
-                                              context,
-                                              session,
-                                              metadata,
-                                              isDevMode,
-                                              position: details.globalPosition,
-                                            );
-                                          },
-                                          child: Padding(
-                                            padding: const EdgeInsets.all(12),
-                                            child: Column(
-                                              crossAxisAlignment:
-                                                  CrossAxisAlignment.start,
-                                              children: [
-                                                Row(
-                                                  children: [
-                                                    Expanded(
-                                                      child: Row(
-                                                        children: [
-                                                          if (Provider.of<
-                                                                      MessageQueueProvider>(
-                                                                  context)
-                                                              .getDrafts(
-                                                                  session.id)
-                                                              .isNotEmpty)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'DRAFT',
-                                                              backgroundColor:
-                                                                  Colors.orange,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:draft',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Has Drafts',
-                                                                value: 'draft',
-                                                              ),
-                                                            ),
-                                                          if (metadata.isNew)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'NEW',
-                                                              backgroundColor:
-                                                                  Colors.green,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:new',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label: 'New',
-                                                                value: 'new',
-                                                              ),
-                                                              sortField:
-                                                                  SortField
-                                                                      .created,
-                                                            ),
-                                                          if (metadata
-                                                                  .isUpdated &&
-                                                              !metadata.isNew)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'UPDATED',
-                                                              backgroundColor:
-                                                                  Colors.amber,
-                                                              textColor:
-                                                                  Colors.black,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:updated',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Updated',
-                                                                value:
-                                                                    'updated',
-                                                              ),
-                                                              sortField:
-                                                                  SortField
-                                                                      .updated,
-                                                            ),
-                                                          if (metadata
-                                                                  .isUnread &&
-                                                              !metadata.isNew &&
-                                                              !metadata
-                                                                  .isUpdated)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'UNREAD',
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .blueAccent,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:unread',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label: 'Unread',
-                                                                value: 'unread',
-                                                              ),
-                                                            ),
-                                                          if (metadata
-                                                              .isWatched)
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'WATCHING',
-                                                              backgroundColor:
-                                                                  Colors
-                                                                      .deepPurple,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:watched',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Watching',
-                                                                value:
-                                                                    'watched',
-                                                              ),
-                                                            ),
-                                                          // PR Status - only for final states (Closed/Merged)
-                                                          if (session.prStatus !=
-                                                                  null &&
-                                                              (session.prStatus ==
-                                                                      'Closed' ||
-                                                                  session.prStatus ==
-                                                                      'Merged'))
-                                                            _buildPill(
-                                                              context,
-                                                              metadata:
-                                                                  metadata,
-                                                              session: session,
-                                                              label:
-                                                                  '${session.prStatus}',
-                                                              backgroundColor:
-                                                                  session.prStatus ==
-                                                                          'Merged'
-                                                                      ? Colors
-                                                                          .green
-                                                                      : Colors
-                                                                          .red,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  FilterToken(
-                                                                id: 'prStatus:${session.prStatus}',
-                                                                type: FilterType
-                                                                    .prStatus,
-                                                                label:
-                                                                    'PR: ${session.prStatus}',
-                                                                value: session
-                                                                    .prStatus!,
-                                                              ),
-                                                            ),
-
-                                                          if (metadata.labels
-                                                              .contains(
-                                                            'PENDING_CREATION',
-                                                          ))
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: 'PENDING',
-                                                              backgroundColor:
-                                                                  Colors.blue,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  const FilterToken(
-                                                                id: 'flag:pending',
-                                                                type: FilterType
-                                                                    .flag,
-                                                                label:
-                                                                    'Pending',
-                                                                value:
-                                                                    'pending',
-                                                              ),
-                                                            ),
-
-                                                          // Render custom labels
-                                                          for (final label
-                                                              in metadata.labels
-                                                                  .where(
-                                                            (l) =>
-                                                                l !=
-                                                                    'PENDING_CREATION' &&
-                                                                l !=
-                                                                    'DRAFT_CREATION',
-                                                          ))
-                                                            _buildPill(
-                                                              context,
-                                                              session: session,
-                                                              metadata:
-                                                                  metadata,
-                                                              label: label
-                                                                  .toUpperCase(),
-                                                              backgroundColor:
-                                                                  Colors.grey
-                                                                      .shade700,
-                                                              textColor:
-                                                                  Colors.white,
-                                                              filterToken:
-                                                                  FilterToken(
-                                                                id: 'text:$label',
-                                                                type: FilterType
-                                                                    .text,
-                                                                label: label,
-                                                                value: label,
-                                                              ),
-                                                            ),
-
-                                                          Expanded(
-                                                            child:
-                                                                LayoutBuilder(
-                                                              builder: (context,
-                                                                  constraints) {
-                                                                // Simple responsive logic for max lines
-                                                                int maxLines =
-                                                                    1;
-                                                                if (constraints
-                                                                        .maxWidth >
-                                                                    800) {
-                                                                  maxLines = 3;
-                                                                } else if (constraints
-                                                                        .maxWidth >
-                                                                    400) {
-                                                                  maxLines = 2;
-                                                                }
-
-                                                                return PopupText(
-                                                                  (session.title ??
-                                                                          session
-                                                                              .prompt)
-                                                                      .replaceAll(
-                                                                    '\n',
-                                                                    ' ',
-                                                                  ),
-                                                                  maxLines:
-                                                                      maxLines,
-                                                                  style:
-                                                                      TextStyle(
-                                                                    fontWeight: (metadata.isUnread)
-                                                                        ? FontWeight
-                                                                            .bold
-                                                                        : FontWeight
-                                                                            .normal,
-                                                                    fontSize:
-                                                                        16,
-                                                                  ),
-                                                                );
-                                                              },
-                                                            ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    // Trailing Menu Button
-                                                    InkWell(
-                                                      borderRadius:
-                                                          BorderRadius.circular(
-                                                              16),
-                                                      onTapDown: (details) {
-                                                        _showTileMenu(
-                                                          context,
-                                                          session,
-                                                          metadata,
-                                                          isDevMode,
-                                                          position: details
-                                                              .globalPosition,
-                                                        );
-                                                      },
-                                                      child: const Padding(
-                                                        padding: EdgeInsets.all(
-                                                          8.0,
-                                                        ),
-                                                        child: Icon(
-                                                          Icons.more_vert,
-                                                          size: 20,
-                                                        ),
-                                                      ),
-                                                    ),
-                                                    if (session.outputs !=
-                                                            null &&
-                                                        session.outputs!.any(
-                                                          (o) =>
-                                                              o.pullRequest !=
-                                                              null,
-                                                        ))
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 4.0,
-                                                        ),
-                                                        child: GestureDetector(
-                                                          onSecondaryTapUp:
-                                                              (details) {
-                                                            final RenderBox
-                                                                overlay =
-                                                                Overlay.of(context)
-                                                                        .context
-                                                                        .findRenderObject()
-                                                                    as RenderBox;
-                                                            final RelativeRect
-                                                                position =
-                                                                RelativeRect
-                                                                    .fromRect(
-                                                              Rect.fromPoints(
-                                                                details
-                                                                    .globalPosition,
-                                                                details
-                                                                    .globalPosition,
-                                                              ),
-                                                              Offset.zero &
-                                                                  overlay.size,
-                                                            );
-                                                            showMenu(
-                                                              context: context,
-                                                              position:
-                                                                  position,
-                                                              items: <PopupMenuEntry>[
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .filter_alt,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Filter 'Has PR'",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    _addFilterToken(
-                                                                      const FilterToken(
-                                                                        id: 'flag:has_pr',
-                                                                        type: FilterType
-                                                                            .flag,
-                                                                        label:
-                                                                            'Has Pull Request',
-                                                                        value:
-                                                                            'has_pr',
-                                                                        mode: FilterMode
-                                                                            .include,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).hideCurrentSnackBar();
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "Added filter: Has Pull Request",
-                                                                        ),
-                                                                        duration:
-                                                                            Duration(
-                                                                          seconds:
-                                                                              1,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .filter_alt_off,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Exclude 'Has PR'",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    _addFilterToken(
-                                                                      const FilterToken(
-                                                                        id: 'flag:has_pr',
-                                                                        type: FilterType
-                                                                            .flag,
-                                                                        label:
-                                                                            'Has Pull Request',
-                                                                        value:
-                                                                            'has_pr',
-                                                                        mode: FilterMode
-                                                                            .exclude,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).hideCurrentSnackBar();
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "Added filter: Exclude Has Pull Request",
-                                                                        ),
-                                                                        duration:
-                                                                            Duration(
-                                                                          seconds:
-                                                                              1,
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                                const PopupMenuDivider(),
-                                                                PopupMenuItem(
-                                                                  child:
-                                                                      const Row(
-                                                                    children: [
-                                                                      Icon(
-                                                                        Icons
-                                                                            .copy,
-                                                                        size:
-                                                                            16,
-                                                                      ),
-                                                                      SizedBox(
-                                                                        width:
-                                                                            8,
-                                                                      ),
-                                                                      Text(
-                                                                        "Copy PR URL",
-                                                                      ),
-                                                                    ],
-                                                                  ),
-                                                                  onTap: () {
-                                                                    final pr = session
-                                                                        .outputs!
-                                                                        .firstWhere(
-                                                                          (o) =>
-                                                                              o.pullRequest !=
-                                                                              null,
-                                                                        )
-                                                                        .pullRequest!;
-                                                                    Clipboard
-                                                                        .setData(
-                                                                      ClipboardData(
-                                                                        text: pr
-                                                                            .url,
-                                                                      ),
-                                                                    );
-                                                                    ScaffoldMessenger
-                                                                        .of(
-                                                                      context,
-                                                                    ).showSnackBar(
-                                                                      const SnackBar(
-                                                                        content:
-                                                                            Text(
-                                                                          "PR URL copied to clipboard",
-                                                                        ),
-                                                                      ),
-                                                                    );
-                                                                  },
-                                                                ),
-                                                              ],
-                                                            );
-                                                          },
-                                                          child: IconButton(
-                                                            icon: const Icon(
-                                                              Icons.merge_type,
-                                                              color:
-                                                                  Colors.purple,
-                                                            ),
-                                                            tooltip:
-                                                                'Open Pull Request',
-                                                            onPressed: () {
-                                                              final pr = session
-                                                                  .outputs!
-                                                                  .firstWhere(
-                                                                    (o) =>
-                                                                        o.pullRequest !=
-                                                                        null,
-                                                                  )
-                                                                  .pullRequest!;
-                                                              launchUrl(
-                                                                Uri.parse(
-                                                                    pr.url),
-                                                              );
-                                                            },
-                                                          ),
-                                                        ),
-                                                      ),
-                                                    if ((session.prStatus ==
-                                                                null ||
-                                                            session.prStatus!
-                                                                .isEmpty) &&
-                                                        (session.diffUrl !=
-                                                                null ||
-                                                            (session.changedFiles !=
-                                                                    null &&
-                                                                session.changedFiles! >
-                                                                    0)))
-                                                      Padding(
-                                                        padding:
-                                                            const EdgeInsets
-                                                                .symmetric(
-                                                          horizontal: 4.0,
-                                                        ),
-                                                        child: IconButton(
-                                                          icon: const Icon(
-                                                            Icons
-                                                                .add_box_outlined,
-                                                            color: Colors.green,
-                                                          ),
-                                                          tooltip:
-                                                              'Create PR & Mark Read',
-                                                          onPressed: () {
-                                                            _markAsRead(
-                                                                session);
-                                                            if (session.url !=
-                                                                null) {
-                                                              launchUrl(
-                                                                Uri.parse(
-                                                                  session.url!,
-                                                                ),
-                                                              );
-                                                            } else if (session
-                                                                    .sourceContext !=
-                                                                null) {
-                                                              final source = session
-                                                                  .sourceContext!
-                                                                  .source;
-                                                              if (source
-                                                                  .startsWith(
-                                                                "sources/github/",
-                                                              )) {
-                                                                final parts =
-                                                                    source.split(
-                                                                        '/');
-                                                                if (parts
-                                                                        .length >=
-                                                                    4) {
-                                                                  final owner =
-                                                                      parts[2];
-                                                                  final repo =
-                                                                      parts[3];
-                                                                  launchUrl(
-                                                                    Uri.parse(
-                                                                      "https://github.com/$owner/$repo/pulls",
-                                                                    ),
-                                                                  );
-                                                                }
-                                                              }
-                                                            }
-                                                          },
-                                                        ),
-                                                      ),
-                                                  ],
-                                                ),
-                                                const SizedBox(height: 8),
-                                                SessionMetaPills(
-                                                  session: session,
-                                                  compact: true,
-                                                  onAddFilter: (token) {
-                                                    _addFilterToken(token);
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).hideCurrentSnackBar();
-                                                    ScaffoldMessenger.of(
-                                                      context,
-                                                    ).showSnackBar(
-                                                      SnackBar(
-                                                        content: Text(
-                                                          "Added filter: ${token.label}",
-                                                        ),
-                                                        duration:
-                                                            const Duration(
-                                                          seconds: 1,
-                                                        ),
-                                                      ),
-                                                    );
-                                                  },
-                                                  onAddSort: _addSortOption,
-                                                ),
-                                                const SizedBox(height: 4),
-                                                Row(
-                                                  children: [
-                                                    Text(
-                                                      'Updated: ${timeAgo(_getEffectiveTime(cachedItem))}',
-                                                      style: Theme.of(
-                                                        context,
-                                                      ).textTheme.bodySmall,
-                                                    ),
-                                                    if (metadata.lastOpened !=
-                                                        null) ...[
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        '·',
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.bodySmall,
-                                                      ),
-                                                      const SizedBox(width: 8),
-                                                      Text(
-                                                        'Opened: ${timeAgo(metadata.lastOpened!)}',
-                                                        style: Theme.of(
-                                                          context,
-                                                        ).textTheme.bodySmall,
-                                                      ),
-                                                    ],
-                                                  ],
-                                                ),
-                                                // Progress bar if running
-                                                if (session.state ==
-                                                        SessionState
-                                                            .IN_PROGRESS &&
-                                                    session.totalSteps !=
-                                                        null &&
-                                                    session.totalSteps! > 0)
-                                                  Padding(
-                                                    padding:
-                                                        const EdgeInsets.only(
-                                                      top: 8.0,
-                                                    ),
-                                                    child:
-                                                        LinearProgressIndicator(
-                                                      value: session
-                                                              .currentStep! /
-                                                          session.totalSteps!,
-                                                    ),
-                                                  ),
-                                              ],
-                                            ),
-                                          ),
-                                        ),
+                                      return _buildSessionCard(
+                                        cachedItem,
+                                        queueProvider,
                                       );
                                     },
                                   ),
