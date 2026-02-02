@@ -2289,7 +2289,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
               ),
             );
 
-            if (result == null || !context.mounted) {
+            if (result == null || !mounted) {
               return;
             }
 
@@ -2313,7 +2313,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 result.session,
                 isDraft: false,
               );
-              if (context.mounted) {
+              if (mounted) {
                 final auth = Provider.of<AuthProvider>(
                   context,
                   listen: false,
@@ -2370,7 +2370,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                 ),
               );
 
-              if (action == 'edit' && context.mounted) {
+              if (action == 'edit' && mounted) {
                 final result = await showDialog<NewSessionResult>(
                   context: context,
                   builder: (context) => NewSessionDialog(
@@ -2378,7 +2378,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                     mode: SessionDialogMode.edit,
                   ),
                 );
-                if (result != null && context.mounted) {
+                if (result != null && mounted) {
                   if (result.isDelete) {
                     queueProvider.deleteMessage(realId);
                   } else if (result.isDraft) {
@@ -2403,7 +2403,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
             }
           }
 
-          if (!handled && context.mounted) {
+          if (!handled && mounted) {
             _showTileMenu(context, session, metadata, isDevMode);
           }
         },
@@ -2545,8 +2545,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
                         // Render custom labels
                         for (final label in metadata.labels.where(
                           (l) =>
-                              l != 'PENDING_CREATION' &&
-                              l != 'DRAFT_CREATION',
+                              l != 'PENDING_CREATION' && l != 'DRAFT_CREATION',
                         ))
                           _buildPill(
                             context,
@@ -2620,9 +2619,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       ),
                       child: GestureDetector(
                         onSecondaryTapUp: (details) {
-                          final RenderBox overlay =
-                              Overlay.of(context).context.findRenderObject()
-                                  as RenderBox;
+                          final RenderBox overlay = Overlay.of(context)
+                              .context
+                              .findRenderObject() as RenderBox;
                           final RelativeRect position = RelativeRect.fromRect(
                             Rect.fromPoints(
                               details.globalPosition,
