@@ -204,9 +204,7 @@ class SessionProvider extends ChangeNotifier {
   void _mergeSessions(List<Session> sessions, String? authToken) {
     if (sessions.isEmpty) return;
 
-    _progressStreamController.add(
-      'Merging ${sessions.length} sessions...',
-    );
+    _progressStreamController.add('Merging ${sessions.length} sessions...');
     for (var session in sessions) {
       final index = _items.indexWhere((i) => i.data.id == session.id);
       final oldItem = index != -1 ? _items[index] : null;
@@ -491,7 +489,8 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress =
+        (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -707,8 +706,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -984,8 +984,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123

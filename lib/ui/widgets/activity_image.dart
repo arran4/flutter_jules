@@ -49,11 +49,7 @@ class ActivityImage extends StatelessWidget {
                   color: Colors.black.withValues(alpha: 0.5),
                   shape: BoxShape.circle,
                 ),
-                child: const Icon(
-                  Icons.zoom_in,
-                  color: Colors.white,
-                  size: 16,
-                ),
+                child: const Icon(Icons.zoom_in, color: Colors.white, size: 16),
               ),
             ),
           ],
@@ -141,7 +137,8 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
       if (kIsWeb) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-              content: Text('Saving not fully supported on Web yet.')),
+            content: Text('Saving not fully supported on Web yet.'),
+          ),
         );
         return;
       }
@@ -173,9 +170,9 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to save image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to save image: $e')));
       }
     }
   }
@@ -190,9 +187,9 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
       }
     } catch (e) {
       if (mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Failed to copy image: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Failed to copy image: $e')));
       }
     }
   }
@@ -231,8 +228,8 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
                     icon: const Icon(Icons.zoom_in, color: Colors.white),
                     tooltip: 'Zoom In',
                     onPressed: () {
-                      final Matrix4 matrix =
-                          _transformationController.value.clone();
+                      final Matrix4 matrix = _transformationController.value
+                          .clone();
                       // ignore: deprecated_member_use
                       matrix.scale(1.2);
                       _transformationController.value = matrix;
@@ -242,8 +239,8 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
                     icon: const Icon(Icons.zoom_out, color: Colors.white),
                     tooltip: 'Zoom Out',
                     onPressed: () {
-                      final Matrix4 matrix =
-                          _transformationController.value.clone();
+                      final Matrix4 matrix = _transformationController.value
+                          .clone();
                       // ignore: deprecated_member_use
                       matrix.scale(1 / 1.2);
                       _transformationController.value = matrix;

@@ -21,15 +21,17 @@ class FakeJulesClient extends Fake implements JulesClient {
       return ListSessionsResponse(
         sessions: [
           Session(
-              id: '1',
-              name: 'session1',
-              prompt: 'prompt1',
-              createTime: DateTime.now().toIso8601String()),
+            id: '1',
+            name: 'session1',
+            prompt: 'prompt1',
+            createTime: DateTime.now().toIso8601String(),
+          ),
           Session(
-              id: '2',
-              name: 'session2',
-              prompt: 'prompt2',
-              createTime: DateTime.now().toIso8601String()),
+            id: '2',
+            name: 'session2',
+            prompt: 'prompt2',
+            createTime: DateTime.now().toIso8601String(),
+          ),
         ],
         nextPageToken: 'page2',
       );
@@ -38,10 +40,11 @@ class FakeJulesClient extends Fake implements JulesClient {
       return ListSessionsResponse(
         sessions: [
           Session(
-              id: '3',
-              name: 'session3',
-              prompt: 'prompt3',
-              createTime: DateTime.now().toIso8601String()),
+            id: '3',
+            name: 'session3',
+            prompt: 'prompt3',
+            createTime: DateTime.now().toIso8601String(),
+          ),
         ],
         nextPageToken: null, // End
       );
@@ -58,7 +61,9 @@ class FakeCacheService extends Fake implements CacheService {
 
   @override
   Future<void> saveSessions(
-      String authToken, List<CachedItem<Session>> items) async {
+    String authToken,
+    List<CachedItem<Session>> items,
+  ) async {
     return;
   }
 }
@@ -77,8 +82,12 @@ void main() {
       itemCounts.add(provider.items.length);
     });
 
-    await provider.fetchSessions(client,
-        authToken: 'token', force: true, shallow: false);
+    await provider.fetchSessions(
+      client,
+      authToken: 'token',
+      force: true,
+      shallow: false,
+    );
 
     // Verify notifications happened.
     // We expect itemCounts to contain intermediate values.
