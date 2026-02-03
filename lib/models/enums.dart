@@ -90,8 +90,4 @@ enum FabVisibility { appBar, floating, off, inMenu }
 
 enum DelayUnit { ms, s, min }
 
-enum RefreshButtonAction {
-  refresh,
-  fullRefresh,
-  refreshDirty,
-}
+enum RefreshButtonAction { refresh, fullRefresh, refreshDirty }

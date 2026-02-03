@@ -133,107 +133,16 @@ class SessionProvider extends ChangeNotifier {
               : null,
         );
 
+        // Process new sessions immediately to update UI incrementally
+        if (response.sessions.isNotEmpty) {
+          _mergeSessions(response.sessions, authToken);
+          _sortItems();
+          notifyListeners();
+        }
+
         newSessions.addAll(response.sessions);
         pageToken = response.nextPageToken;
       } while (pageToken != null);
-
-      // Merge logic
-      if (newSessions.isNotEmpty) {
-        _progressStreamController.add(
-          'Merging ${newSessions.length} sessions...',
-        );
-        for (var session in newSessions) {
-          final index = _items.indexWhere((i) => i.data.id == session.id);
-          final oldItem = index != -1 ? _items[index] : null;
-          final oldSession = oldItem?.data;
-
-          // Preserve PR status from cache if backend doesn't provide it
-          if (oldSession != null) {
-            session = session.copyWith(
-              prStatus: session.prStatus ?? oldSession.prStatus,
-              ciStatus: session.ciStatus ?? oldSession.ciStatus,
-              mergeableState:
-                  session.mergeableState ?? oldSession.mergeableState,
-              additions: session.additions ?? oldSession.additions,
-              deletions: session.deletions ?? oldSession.deletions,
-              changedFiles: session.changedFiles ?? oldSession.changedFiles,
-              diffUrl: session.diffUrl ?? oldSession.diffUrl,
-              patchUrl: session.patchUrl ?? oldSession.patchUrl,
-            );
-          }
-
-          CacheMetadata metadata;
-          if (oldItem != null) {
-            _items.removeAt(index);
-
-            final evaluation = _evaluateUpdateRules(oldSession, session);
-
-            DateTime? lastUpdated = oldItem.metadata.lastUpdated;
-            DateTime? lastOpened = oldItem.metadata.lastOpened;
-            String? reasonForLastUnread = oldItem.metadata.reasonForLastUnread;
-
-            if (evaluation.shouldMarkUnread) {
-              lastUpdated = DateTime.now();
-              if (evaluation.reason != null) {
-                reasonForLastUnread = evaluation.reason;
-              }
-            }
-            if (evaluation.shouldMarkRead) {
-              lastOpened = DateTime.now();
-            }
-
-            metadata = oldItem.metadata.copyWith(
-              lastRetrieved: DateTime.now(),
-              lastUpdated: lastUpdated,
-              lastOpened: lastOpened,
-              reasonForLastUnread: reasonForLastUnread,
-            );
-          } else {
-            metadata = CacheMetadata(
-              firstSeen: DateTime.now(),
-              lastRetrieved: DateTime.now(),
-              lastUpdated: DateTime.now(),
-            );
-          }
-          _items.add(CachedItem(session, metadata));
-
-          // PR Refresh Logic
-          if (_githubProvider != null && authToken != null) {
-            final prUrl = _getPrUrl(session);
-            if (prUrl != null) {
-              bool shouldRefresh = false;
-
-              // Rules apply to any session list refresh (full, normal, etc)
-              final oldPrUrl =
-                  oldSession != null ? _getPrUrl(oldSession) : null;
-              final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
-
-              // 1. New PR Url OR (No Status & No Queue)
-              if (isNewPr ||
-                  (session.prStatus == null && !_isPrFetchQueued(prUrl))) {
-                shouldRefresh = true;
-              }
-              // 2. Status changed to Completed & Has PR
-              else if (session.state == SessionState.COMPLETED &&
-                  oldSession.state != SessionState.COMPLETED) {
-                shouldRefresh = true;
-              }
-              // 3. Existing PR status is Draft or Open
-              else if (session.prStatus == 'Draft' ||
-                  session.prStatus == 'Open') {
-                shouldRefresh = true;
-              }
-
-              if (shouldRefresh) {
-                _progressStreamController.add(
-                  'Refreshing Git status for ${session.title ?? session.id}',
-                );
-                _refreshGitStatusInBackground(session.id, prUrl, authToken);
-              }
-            }
-          }
-        }
-      }
 
       if (newSessions.isNotEmpty) {
         // ... logic captured by context ...
@@ -288,6 +197,100 @@ class SessionProvider extends ChangeNotifier {
         _isLoading = false;
         _progressStreamController.add('Done.');
         notifyListeners();
+      }
+    }
+  }
+
+  void _mergeSessions(List<Session> sessions, String? authToken) {
+    if (sessions.isEmpty) return;
+
+    _progressStreamController.add('Merging ${sessions.length} sessions...');
+    for (var session in sessions) {
+      final index = _items.indexWhere((i) => i.data.id == session.id);
+      final oldItem = index != -1 ? _items[index] : null;
+      final oldSession = oldItem?.data;
+
+      // Preserve PR status from cache if backend doesn't provide it
+      if (oldSession != null) {
+        session = session.copyWith(
+          prStatus: session.prStatus ?? oldSession.prStatus,
+          ciStatus: session.ciStatus ?? oldSession.ciStatus,
+          mergeableState: session.mergeableState ?? oldSession.mergeableState,
+          additions: session.additions ?? oldSession.additions,
+          deletions: session.deletions ?? oldSession.deletions,
+          changedFiles: session.changedFiles ?? oldSession.changedFiles,
+          diffUrl: session.diffUrl ?? oldSession.diffUrl,
+          patchUrl: session.patchUrl ?? oldSession.patchUrl,
+        );
+      }
+
+      CacheMetadata metadata;
+      if (oldItem != null) {
+        _items.removeAt(index);
+
+        final evaluation = _evaluateUpdateRules(oldSession, session);
+
+        DateTime? lastUpdated = oldItem.metadata.lastUpdated;
+        DateTime? lastOpened = oldItem.metadata.lastOpened;
+        String? reasonForLastUnread = oldItem.metadata.reasonForLastUnread;
+
+        if (evaluation.shouldMarkUnread) {
+          lastUpdated = DateTime.now();
+          if (evaluation.reason != null) {
+            reasonForLastUnread = evaluation.reason;
+          }
+        }
+        if (evaluation.shouldMarkRead) {
+          lastOpened = DateTime.now();
+        }
+
+        metadata = oldItem.metadata.copyWith(
+          lastRetrieved: DateTime.now(),
+          lastUpdated: lastUpdated,
+          lastOpened: lastOpened,
+          reasonForLastUnread: reasonForLastUnread,
+        );
+      } else {
+        metadata = CacheMetadata(
+          firstSeen: DateTime.now(),
+          lastRetrieved: DateTime.now(),
+          lastUpdated: DateTime.now(),
+        );
+      }
+      _items.add(CachedItem(session, metadata));
+
+      // PR Refresh Logic
+      if (_githubProvider != null && authToken != null) {
+        final prUrl = _getPrUrl(session);
+        if (prUrl != null) {
+          bool shouldRefresh = false;
+
+          // Rules apply to any session list refresh (full, normal, etc)
+          final oldPrUrl = oldSession != null ? _getPrUrl(oldSession) : null;
+          final isNewPr = (oldSession == null) || (prUrl != oldPrUrl);
+
+          // 1. New PR Url OR (No Status & No Queue)
+          if (isNewPr ||
+              (session.prStatus == null && !_isPrFetchQueued(prUrl))) {
+            shouldRefresh = true;
+          }
+          // 2. Status changed to Completed & Has PR
+          else if (session.state == SessionState.COMPLETED &&
+              oldSession.state != SessionState.COMPLETED) {
+            shouldRefresh = true;
+          }
+          // 3. Existing PR status is Draft or Open
+          else if (session.prStatus == 'Draft' || session.prStatus == 'Open') {
+            shouldRefresh = true;
+          }
+
+          if (shouldRefresh) {
+            _progressStreamController.add(
+              'Refreshing Git status for ${session.title ?? session.id}',
+            );
+            _refreshGitStatusInBackground(session.id, prUrl, authToken);
+          }
+        }
       }
     }
   }
@@ -486,7 +489,8 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress =
+        (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -702,8 +706,9 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems =
-          _items.where((item) => item.metadata.isWatched).toList();
+      final watchedItems = _items
+          .where((item) => item.metadata.isWatched)
+          .toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -979,8 +984,9 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr =
-        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
+    final pr = session.outputs!
+        .firstWhere((o) => o.pullRequest != null)
+        .pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
