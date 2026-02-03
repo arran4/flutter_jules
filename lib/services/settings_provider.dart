@@ -512,11 +512,52 @@ class SettingsProvider extends ChangeNotifier {
         _unreadRules =
             decodedList.map((json) => UnreadRule.fromJson(json)).toList();
       } catch (e) {
-        _unreadRules = [];
+        _unreadRules = _defaultUnreadRules();
       }
     } else {
-      _unreadRules = [];
+      _unreadRules = _defaultUnreadRules();
     }
+  }
+
+  List<UnreadRule> _defaultUnreadRules() {
+    return [
+      UnreadRule(
+        id: 'default_session_state',
+        type: RuleType.sessionState,
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_step_change',
+        type: RuleType.stepChange,
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_pr_draft_open',
+        type: RuleType.prStatus,
+        fromValue: 'Draft',
+        toValue: 'Open',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_pr_open_closed',
+        type: RuleType.prStatus,
+        fromValue: 'Open',
+        toValue: 'Closed',
+        action: RuleAction.markRead,
+      ),
+      UnreadRule(
+        id: 'default_ci_failure',
+        type: RuleType.ciStatus,
+        toValue: 'Failure',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_ci_success',
+        type: RuleType.ciStatus,
+        toValue: 'Success',
+        action: RuleAction.markUnread,
+      ),
+    ];
   }
 
   Future<void> _saveUnreadRules() async {
@@ -541,6 +582,12 @@ class SettingsProvider extends ChangeNotifier {
 
   Future<void> deleteUnreadRule(String id) async {
     _unreadRules.removeWhere((r) => r.id == id);
+    await _saveUnreadRules();
+    notifyListeners();
+  }
+
+  Future<void> restoreDefaultUnreadRules() async {
+    _unreadRules = _defaultUnreadRules();
     await _saveUnreadRules();
     notifyListeners();
   }
