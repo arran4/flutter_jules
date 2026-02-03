@@ -18,7 +18,8 @@ class MockSettingsProvider extends SettingsProvider {
 
 class MockCacheService extends CacheService {
   @override
-  Future<void> saveSessions(String token, List<CachedItem<Session>> sessions) async {}
+  Future<void> saveSessions(
+      String token, List<CachedItem<Session>> sessions) async {}
 
   @override
   Future<void> markSessionAsRead(String token, String sessionId) async {}
@@ -78,7 +79,9 @@ void main() {
       // Should be unread now
       expect(item.metadata.lastUpdated, isNotNull);
       if (item.metadata.lastOpened != null) {
-         expect(item.metadata.lastUpdated!.isAfter(item.metadata.lastOpened!), isTrue, reason: "Last updated should be after last opened");
+        expect(item.metadata.lastUpdated!.isAfter(item.metadata.lastOpened!),
+            isTrue,
+            reason: "Last updated should be after last opened");
       }
       expect(item.metadata.reasonForLastUnread, contains("State changed"));
     });
@@ -109,7 +112,8 @@ void main() {
       await sessionProvider.updateSession(session2);
 
       final item = sessionProvider.items.first;
-      expect(item.metadata.lastUpdated!.isAfter(item.metadata.lastOpened!), isTrue);
+      expect(item.metadata.lastUpdated!.isAfter(item.metadata.lastOpened!),
+          isTrue);
       expect(item.metadata.reasonForLastUnread, contains("Session progressed"));
     });
 
@@ -150,7 +154,8 @@ void main() {
       // markAsRead set lastOpened > lastUpdated.
       // So if lastUpdated is not changed, it is still < lastOpened.
 
-      expect(item.metadata.lastUpdated!.isBefore(item.metadata.lastOpened!), isTrue);
+      expect(item.metadata.lastUpdated!.isBefore(item.metadata.lastOpened!),
+          isTrue);
     });
   });
 }
