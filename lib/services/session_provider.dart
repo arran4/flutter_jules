@@ -67,6 +67,10 @@ class SessionProvider extends ChangeNotifier {
 
   void setSettingsProvider(SettingsProvider service) {
     _settingsProvider = service;
+    if (_lastFetchTime == null) {
+      _lastFetchTime = service.lastFetchTime;
+      _lastFetchType = service.lastFetchType;
+    }
   }
 
   Future<void> fetchSessions(
@@ -166,6 +170,7 @@ class SessionProvider extends ChangeNotifier {
 
       _lastFetchType = shallow ? 'Quick' : 'Full';
       _lastFetchTime = DateTime.now();
+      _settingsProvider?.setLastFetchInfo(_lastFetchTime, _lastFetchType);
       _error = null;
       _progressStreamController.add('Refresh complete.');
     } catch (e) {
