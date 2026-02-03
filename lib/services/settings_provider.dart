@@ -298,9 +298,8 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _schedules = decodedList
-            .map((json) => RefreshSchedule.fromJson(json))
-            .toList();
+        _schedules =
+            decodedList.map((json) => RefreshSchedule.fromJson(json)).toList();
       } catch (e) {
         _schedules = _defaultSchedules();
       }
@@ -493,15 +492,54 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _unreadRules = decodedList
-            .map((json) => UnreadRule.fromJson(json))
-            .toList();
+        _unreadRules =
+            decodedList.map((json) => UnreadRule.fromJson(json)).toList();
       } catch (e) {
-        _unreadRules = [];
+        _unreadRules = _defaultUnreadRules();
       }
     } else {
-      _unreadRules = [];
+      _unreadRules = _defaultUnreadRules();
     }
+  }
+
+  List<UnreadRule> _defaultUnreadRules() {
+    return [
+      UnreadRule(
+        id: 'default-session-state',
+        type: RuleType.sessionState,
+        action: RuleAction.markUnread,
+        enabled: true,
+      ),
+      UnreadRule(
+        id: 'default-step-change',
+        type: RuleType.stepChange,
+        action: RuleAction.markUnread,
+        enabled: true,
+      ),
+      UnreadRule(
+        id: 'default-pr-draft-open',
+        type: RuleType.prStatus,
+        fromValue: 'Draft',
+        toValue: 'Open',
+        action: RuleAction.markUnread,
+        enabled: true,
+      ),
+      UnreadRule(
+        id: 'default-pr-open-closed',
+        type: RuleType.prStatus,
+        fromValue: 'Open',
+        toValue: 'Closed',
+        action: RuleAction.markUnread,
+        enabled: true,
+      ),
+      UnreadRule(
+        id: 'default-ci-failure',
+        type: RuleType.ciStatus,
+        toValue: 'Failure',
+        action: RuleAction.markUnread,
+        enabled: true,
+      ),
+    ];
   }
 
   Future<void> _saveUnreadRules() async {
@@ -650,9 +688,8 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _githubExclusions = decodedList
-            .map((json) => GithubExclusion.fromJson(json))
-            .toList();
+        _githubExclusions =
+            decodedList.map((json) => GithubExclusion.fromJson(json)).toList();
       } catch (e) {
         _githubExclusions = [];
       }
@@ -732,9 +769,8 @@ class SettingsProvider extends ChangeNotifier {
     if (jsonString != null) {
       try {
         final List<dynamic> decodedList = jsonDecode(jsonString);
-        _sourceGroups = decodedList
-            .map((json) => SourceGroup.fromJson(json))
-            .toList();
+        _sourceGroups =
+            decodedList.map((json) => SourceGroup.fromJson(json)).toList();
       } catch (e) {
         _sourceGroups = [];
       }

@@ -46,9 +46,18 @@ void main() {
       expect(provider2.appBarRefreshActions, isEmpty);
     });
 
+    test('Unread rules are populated with defaults on first load', () {
+      expect(provider.unreadRules, isNotEmpty);
+      expect(provider.unreadRules.length, 5); // 5 default rules
+      expect(provider.unreadRules.any((r) => r.type == RuleType.sessionState),
+          isTrue);
+      expect(provider.unreadRules.any((r) => r.type == RuleType.stepChange),
+          isTrue);
+    });
+
     test('Can update and persist unread rules', () async {
-      // Default is empty
-      expect(provider.unreadRules, isEmpty);
+      // Should have defaults
+      expect(provider.unreadRules, isNotEmpty);
 
       final rule = UnreadRule(
         id: 'test-rule',
@@ -59,14 +68,11 @@ void main() {
       );
 
       await provider.addUnreadRule(rule);
-      expect(provider.unreadRules.length, 1);
-      expect(provider.unreadRules.first.id, 'test-rule');
+      expect(provider.unreadRules.any((r) => r.id == 'test-rule'), isTrue);
 
       final provider2 = SettingsProvider();
       await provider2.init();
-      expect(provider2.unreadRules.length, 1);
-      expect(provider2.unreadRules.first.id, 'test-rule');
-      expect(provider2.unreadRules.first.type, RuleType.prStatus);
+      expect(provider2.unreadRules.any((r) => r.id == 'test-rule'), isTrue);
     });
   });
 }

@@ -481,23 +481,7 @@ class SessionProvider extends ChangeNotifier {
     bool shouldMarkUnread = false;
     bool shouldMarkRead = false;
 
-    // 1. Check Intrinsic Jules Progress (Always Unread)
-    if (oldSession.state != newSession.state) {
-      final oldState = oldSession.state.toString().split('.').last;
-      final newState = newSession.state.toString().split('.').last;
-      reasons.add("Status changed from $oldState to $newState");
-      shouldMarkUnread = true;
-    }
-
-    bool julesProgress =
-        (oldSession.currentStep != newSession.currentStep) ||
-        (oldSession.currentAction != newSession.currentAction);
-    if (julesProgress) {
-      reasons.add("Session progressed");
-      shouldMarkUnread = true;
-    }
-
-    // 2. Evaluate User Rules
+    // Evaluate User Rules
     final rules = _settingsProvider?.unreadRules ?? [];
     for (var rule in rules) {
       if (!rule.enabled) continue;
@@ -526,16 +510,38 @@ class SessionProvider extends ChangeNotifier {
             }
           }
           break;
-        // case RuleType.sessionState:
-        //   final oldState = oldSession.state.toString().split('.').last;
-        //   final newState = newSession.state.toString().split('.').last;
-        //   if (oldState != newState) {
-        //     matched = _matchesTransition(rule, oldState, newState);
-        //     if (matched) {
-        //       ruleReason = "State changed from $oldState to $newState";
-        //     }
-        //   }
-        //   break;
+        case RuleType.sessionState:
+          final oldState = oldSession.state.toString().split('.').last;
+          final newState = newSession.state.toString().split('.').last;
+          if (oldState != newState) {
+            matched = _matchesTransition(rule, oldState, newState);
+            if (matched) {
+              ruleReason = "State changed from $oldState to $newState";
+            }
+          }
+          break;
+        case RuleType.stepChange:
+          final stepChanged = oldSession.currentStep != newSession.currentStep;
+          final actionChanged =
+              oldSession.currentAction != newSession.currentAction;
+
+          if (stepChanged || actionChanged) {
+            String oldVal = "";
+            String newVal = "";
+
+            if (stepChanged) {
+              oldVal = oldSession.currentStep.toString();
+              newVal = newSession.currentStep.toString();
+              ruleReason = "Step changed from $oldVal to $newVal";
+            } else {
+              oldVal = oldSession.currentAction.toString();
+              newVal = newSession.currentAction.toString();
+              ruleReason = "Action changed from $oldVal to $newVal";
+            }
+
+            matched = _matchesTransition(rule, oldVal, newVal);
+          }
+          break;
         case RuleType.contentUpdate:
           if (oldSession.updateTime != newSession.updateTime) {
             matched = true;
@@ -706,9 +712,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems = _items
-          .where((item) => item.metadata.isWatched)
-          .toList();
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -984,9 +989,8 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr = session.outputs!
-        .firstWhere((o) => o.pullRequest != null)
-        .pullRequest!;
+    final pr =
+        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
