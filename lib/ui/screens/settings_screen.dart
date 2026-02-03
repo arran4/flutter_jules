@@ -297,9 +297,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           case RuleType.ciStatus:
                             label = 'CI Status Change';
                             break;
-                          // case RuleType.sessionState:
-                          //   label = 'Session State Change';
-                          //   break;
+                          case RuleType.sessionState:
+                            label = 'Session State Change';
+                            break;
+                          case RuleType.stepChange:
+                            label = 'Step Change';
+                            break;
                           case RuleType.contentUpdate:
                             label = 'Content Update (Generic)';
                             break;
@@ -310,7 +313,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                         if (val != null) setState(() => type = val);
                       },
                     ),
-                    if (type != RuleType.contentUpdate) ...[
+                    if (type != RuleType.contentUpdate &&
+                        type != RuleType.stepChange) ...[
                       const SizedBox(height: 8),
                       TextField(
                         controller: fromController,

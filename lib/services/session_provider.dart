@@ -486,22 +486,7 @@ class SessionProvider extends ChangeNotifier {
     bool shouldMarkUnread = false;
     bool shouldMarkRead = false;
 
-    // 1. Check Intrinsic Jules Progress (Always Unread)
-    if (oldSession.state != newSession.state) {
-      final oldState = oldSession.state.toString().split('.').last;
-      final newState = newSession.state.toString().split('.').last;
-      reasons.add("Status changed from $oldState to $newState");
-      shouldMarkUnread = true;
-    }
-
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
-        (oldSession.currentAction != newSession.currentAction);
-    if (julesProgress) {
-      reasons.add("Session progressed");
-      shouldMarkUnread = true;
-    }
-
-    // 2. Evaluate User Rules
+    // Evaluate User Rules
     final rules = _settingsProvider?.unreadRules ?? [];
     for (var rule in rules) {
       if (!rule.enabled) continue;
@@ -530,16 +515,32 @@ class SessionProvider extends ChangeNotifier {
             }
           }
           break;
-        // case RuleType.sessionState:
-        //   final oldState = oldSession.state.toString().split('.').last;
-        //   final newState = newSession.state.toString().split('.').last;
-        //   if (oldState != newState) {
-        //     matched = _matchesTransition(rule, oldState, newState);
-        //     if (matched) {
-        //       ruleReason = "State changed from $oldState to $newState";
-        //     }
-        //   }
-        //   break;
+        case RuleType.sessionState:
+          final oldState = oldSession.state.toString().split('.').last;
+          final newState = newSession.state.toString().split('.').last;
+          if (oldState != newState) {
+            matched = _matchesTransition(rule, oldState, newState);
+            if (matched) {
+              ruleReason = "State changed from $oldState to $newState";
+            }
+          }
+          break;
+        case RuleType.stepChange:
+          bool julesProgress =
+              (oldSession.currentStep != newSession.currentStep) ||
+                  (oldSession.currentAction != newSession.currentAction);
+          if (julesProgress) {
+            // For step changes, we currently don't support specific transitions
+            // (e.g. step 1 -> step 2), so we treat it as "Any change".
+            // However, we still check _matchesTransition to respect "enabled"
+            // and potentially empty from/to values if user set them blindly.
+            // Passing nulls effectively checks if fromValue/toValue are empty.
+            matched = _matchesTransition(rule, null, null);
+            if (matched) {
+              ruleReason = "Session progressed";
+            }
+          }
+          break;
         case RuleType.contentUpdate:
           if (oldSession.updateTime != newSession.updateTime) {
             matched = true;
@@ -569,7 +570,7 @@ class SessionProvider extends ChangeNotifier {
     );
   }
 
-  bool _matchesTransition(UnreadRule rule, String oldValue, String newValue) {
+  bool _matchesTransition(UnreadRule rule, String? oldValue, String? newValue) {
     if (rule.fromValue != null &&
         rule.fromValue!.isNotEmpty &&
         rule.fromValue != oldValue) {
