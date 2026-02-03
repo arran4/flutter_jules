@@ -1,7 +1,5 @@
-import 'dart:convert';
 import 'dart:async';
 
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:flutter/material.dart' hide ShortcutRegistry;
 import 'package:provider/provider.dart';
 import 'services/auth_provider.dart';
@@ -18,7 +16,6 @@ import 'services/global_shortcut_focus_manager.dart';
 import 'services/shortcut_registry.dart';
 import 'ui/app_container.dart';
 import 'ui/themes.dart';
-import 'ui/screens/new_session_window.dart';
 import 'ui/screens/session_list_screen.dart';
 import 'ui/screens/login_screen.dart';
 import 'ui/screens/settings_screen.dart';
@@ -34,20 +31,15 @@ import 'utils/platform_utils.dart';
 final navigatorKey = GlobalKey<NavigatorState>();
 
 void main(List<String> args) async {
-  if (args.firstOrNull == 'multi_window') {
-    final windowId = int.parse(args[1]);
-    runApp(NewSessionWindow(windowId: windowId));
-  } else {
-    WidgetsFlutterBinding.ensureInitialized();
-    if (PlatformUtils.isDesktop) {
-      await windowManager.ensureInitialized();
-    }
-    await NotificationService().init();
-
-    runApp(
-      const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())),
-    );
+  WidgetsFlutterBinding.ensureInitialized();
+  if (PlatformUtils.isDesktop) {
+    await windowManager.ensureInitialized();
   }
+  await NotificationService().init();
+
+  runApp(
+    const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())),
+  );
 }
 
 class MyApp extends StatefulWidget {
@@ -131,14 +123,15 @@ class _MyAppState extends State<MyApp> with WindowListener {
     if (!PlatformUtils.isDesktop) return;
     _trayService = TrayService(
       onNewSession: () async {
-        final window = await DesktopMultiWindow.createWindow(
-          jsonEncode({'type': 'new_session'}),
-        );
-        window
-          ..setFrame(const Offset(0, 0) & const Size(800, 600))
-          ..center()
-          ..setTitle('New Session')
-          ..show();
+        await windowManager.show();
+        await windowManager.focus();
+        if (!mounted) return;
+        final auth = context.read<AuthProvider>();
+        if (auth.isAuthenticated) {
+          context
+              .read<ShortcutRegistry>()
+              .dispatch(AppShortcutAction.newSession);
+        }
       },
       onRefresh: () {
         final auth = context.read<AuthProvider>();
