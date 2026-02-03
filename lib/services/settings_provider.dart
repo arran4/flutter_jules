@@ -543,12 +543,18 @@ class SettingsProvider extends ChangeNotifier {
         type: RuleType.prStatus,
         fromValue: 'Open',
         toValue: 'Closed',
-        action: RuleAction.markUnread,
+        action: RuleAction.markRead,
       ),
       UnreadRule(
         id: 'default_ci_failure',
         type: RuleType.ciStatus,
         toValue: 'Failure',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_ci_success',
+        type: RuleType.ciStatus,
+        toValue: 'Success',
         action: RuleAction.markUnread,
       ),
     ];

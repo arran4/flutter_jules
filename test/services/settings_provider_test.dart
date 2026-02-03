@@ -59,12 +59,12 @@ void main() {
       );
 
       await provider.addUnreadRule(rule);
-      expect(provider.unreadRules.length, 6);
+      expect(provider.unreadRules.length, 7);
       expect(provider.unreadRules.last.id, 'test-rule');
 
       final provider2 = SettingsProvider();
       await provider2.init();
-      expect(provider2.unreadRules.length, 6);
+      expect(provider2.unreadRules.length, 7);
       expect(provider2.unreadRules.last.id, 'test-rule');
       expect(provider2.unreadRules.last.type, RuleType.prStatus);
     });
