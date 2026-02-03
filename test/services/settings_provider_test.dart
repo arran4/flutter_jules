@@ -45,8 +45,9 @@ void main() {
     });
 
     test('Can update and persist unread rules', () async {
-      // Default is empty
-      expect(provider.unreadRules, isEmpty);
+      // Default is NOT empty now
+      expect(provider.unreadRules, isNotEmpty);
+      final defaultCount = provider.unreadRules.length;
 
       final rule = UnreadRule(
         id: 'test-rule',
@@ -57,14 +58,14 @@ void main() {
       );
 
       await provider.addUnreadRule(rule);
-      expect(provider.unreadRules.length, 1);
-      expect(provider.unreadRules.first.id, 'test-rule');
+      expect(provider.unreadRules.length, defaultCount + 1);
+      expect(provider.unreadRules.last.id, 'test-rule');
 
       final provider2 = SettingsProvider();
       await provider2.init();
-      expect(provider2.unreadRules.length, 1);
-      expect(provider2.unreadRules.first.id, 'test-rule');
-      expect(provider2.unreadRules.first.type, RuleType.prStatus);
+      expect(provider2.unreadRules.length, defaultCount + 1);
+      expect(provider2.unreadRules.last.id, 'test-rule');
+      expect(provider2.unreadRules.last.type, RuleType.prStatus);
     });
   });
 }

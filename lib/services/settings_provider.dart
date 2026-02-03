@@ -497,11 +497,53 @@ class SettingsProvider extends ChangeNotifier {
         _unreadRules =
             decodedList.map((json) => UnreadRule.fromJson(json)).toList();
       } catch (e) {
-        _unreadRules = [];
+        _unreadRules = _defaultUnreadRules();
       }
     } else {
-      _unreadRules = [];
+      _unreadRules = _defaultUnreadRules();
     }
+  }
+
+  List<UnreadRule> _defaultUnreadRules() {
+    return [
+      UnreadRule(
+        id: 'default_session_state',
+        type: RuleType.sessionState,
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_step_change',
+        type: RuleType.stepChange,
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_pr_draft_open',
+        type: RuleType.prStatus,
+        fromValue: 'Draft',
+        toValue: 'Open',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_pr_open_closed',
+        type: RuleType.prStatus,
+        fromValue: 'Open',
+        toValue: 'Closed',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_pr_open_merged',
+        type: RuleType.prStatus,
+        fromValue: 'Open',
+        toValue: 'Merged',
+        action: RuleAction.markUnread,
+      ),
+      UnreadRule(
+        id: 'default_ci_failure',
+        type: RuleType.ciStatus,
+        toValue: 'Failure',
+        action: RuleAction.markUnread,
+      ),
+    ];
   }
 
   Future<void> _saveUnreadRules() async {

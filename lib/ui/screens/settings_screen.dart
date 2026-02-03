@@ -299,9 +299,12 @@ class _SettingsScreenState extends State<SettingsScreen> {
                           case RuleType.ciStatus:
                             label = 'CI Status Change';
                             break;
-                          // case RuleType.sessionState:
-                          //   label = 'Session State Change';
-                          //   break;
+                          case RuleType.sessionState:
+                            label = 'Session State Change';
+                            break;
+                          case RuleType.stepChange:
+                            label = 'Step Change';
+                            break;
                           case RuleType.contentUpdate:
                             label = 'Content Update (Generic)';
                             break;

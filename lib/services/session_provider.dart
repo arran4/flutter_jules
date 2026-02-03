@@ -478,22 +478,7 @@ class SessionProvider extends ChangeNotifier {
     bool shouldMarkUnread = false;
     bool shouldMarkRead = false;
 
-    // 1. Check Intrinsic Jules Progress (Always Unread)
-    if (oldSession.state != newSession.state) {
-      final oldState = oldSession.state.toString().split('.').last;
-      final newState = newSession.state.toString().split('.').last;
-      reasons.add("Status changed from $oldState to $newState");
-      shouldMarkUnread = true;
-    }
-
-    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
-        (oldSession.currentAction != newSession.currentAction);
-    if (julesProgress) {
-      reasons.add("Session progressed");
-      shouldMarkUnread = true;
-    }
-
-    // 2. Evaluate User Rules
+    // 1. Evaluate User Rules
     final rules = _settingsProvider?.unreadRules ?? [];
     for (var rule in rules) {
       if (!rule.enabled) continue;
@@ -522,16 +507,25 @@ class SessionProvider extends ChangeNotifier {
             }
           }
           break;
-        // case RuleType.sessionState:
-        //   final oldState = oldSession.state.toString().split('.').last;
-        //   final newState = newSession.state.toString().split('.').last;
-        //   if (oldState != newState) {
-        //     matched = _matchesTransition(rule, oldState, newState);
-        //     if (matched) {
-        //       ruleReason = "State changed from $oldState to $newState";
-        //     }
-        //   }
-        //   break;
+        case RuleType.sessionState:
+          final oldState = oldSession.state.toString().split('.').last;
+          final newState = newSession.state.toString().split('.').last;
+          if (oldState != newState) {
+            matched = _matchesTransition(rule, oldState, newState);
+            if (matched) {
+              ruleReason = "State changed from $oldState to $newState";
+            }
+          }
+          break;
+        case RuleType.stepChange:
+          bool julesProgress =
+              (oldSession.currentStep != newSession.currentStep) ||
+                  (oldSession.currentAction != newSession.currentAction);
+          if (julesProgress) {
+            matched = true;
+            ruleReason = "Session progressed";
+          }
+          break;
         case RuleType.contentUpdate:
           if (oldSession.updateTime != newSession.updateTime) {
             matched = true;
