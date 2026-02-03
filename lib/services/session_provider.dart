@@ -489,8 +489,7 @@ class SessionProvider extends ChangeNotifier {
       shouldMarkUnread = true;
     }
 
-    bool julesProgress =
-        (oldSession.currentStep != newSession.currentStep) ||
+    bool julesProgress = (oldSession.currentStep != newSession.currentStep) ||
         (oldSession.currentAction != newSession.currentAction);
     if (julesProgress) {
       reasons.add("Session progressed");
@@ -706,9 +705,8 @@ class SessionProvider extends ChangeNotifier {
     notifyListeners();
 
     try {
-      final watchedItems = _items
-          .where((item) => item.metadata.isWatched)
-          .toList();
+      final watchedItems =
+          _items.where((item) => item.metadata.isWatched).toList();
       await Future.wait(
         watchedItems.map((item) async {
           try {
@@ -984,9 +982,8 @@ class SessionProvider extends ChangeNotifier {
     }
 
     // Get PR URL from session
-    final pr = session.outputs!
-        .firstWhere((o) => o.pullRequest != null)
-        .pullRequest!;
+    final pr =
+        session.outputs!.firstWhere((o) => o.pullRequest != null).pullRequest!;
 
     // Extract owner, repo, and PR number from URL
     // URL format: https://github.com/owner/repo/pull/123
