@@ -44,10 +44,7 @@ void main(List<String> args) async {
     }
     await NotificationService().init();
 
-    runApp(
-      const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())),
-    );
-  }
+  runApp(const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())));
 }
 
 class MyApp extends StatefulWidget {
@@ -131,28 +128,29 @@ class _MyAppState extends State<MyApp> with WindowListener {
     if (!PlatformUtils.isDesktop) return;
     _trayService = TrayService(
       onNewSession: () async {
-        final window = await DesktopMultiWindow.createWindow(
-          jsonEncode({'type': 'new_session'}),
-        );
-        window
-          ..setFrame(const Offset(0, 0) & const Size(800, 600))
-          ..center()
-          ..setTitle('New Session')
-          ..show();
+        await windowManager.show();
+        await windowManager.focus();
+        if (!mounted) return;
+        final auth = context.read<AuthProvider>();
+        if (auth.isAuthenticated) {
+          context.read<ShortcutRegistry>().dispatch(
+            AppShortcutAction.newSession,
+          );
+        }
       },
       onRefresh: () {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
           context.read<SourceProvider>().fetchSources(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
         }
       },
     );

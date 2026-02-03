@@ -90,7 +90,10 @@ void main() {
       // Restore defaults
       await provider.restoreDefaultUnreadRules();
       expect(provider.unreadRules.length, 6);
-      expect(provider.unreadRules.any((r) => r.id == 'default_session_state'), isTrue);
+      expect(
+        provider.unreadRules.any((r) => r.id == 'default_session_state'),
+        isTrue,
+      );
     });
   });
 }
