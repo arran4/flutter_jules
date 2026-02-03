@@ -68,5 +68,29 @@ void main() {
       expect(provider2.unreadRules.last.id, 'test-rule');
       expect(provider2.unreadRules.last.type, RuleType.prStatus);
     });
+
+    test('Can restore default unread rules', () async {
+      await provider.setAppBarRefreshActions({}); // Just to change something
+
+      // Add a custom rule
+      final rule = UnreadRule(
+        id: 'custom-rule',
+        type: RuleType.contentUpdate,
+        action: RuleAction.markRead,
+      );
+      await provider.addUnreadRule(rule);
+      expect(provider.unreadRules.length, 7); // 6 defaults + 1 custom
+
+      // Delete all rules
+      for (var r in List.of(provider.unreadRules)) {
+        await provider.deleteUnreadRule(r.id);
+      }
+      expect(provider.unreadRules, isEmpty);
+
+      // Restore defaults
+      await provider.restoreDefaultUnreadRules();
+      expect(provider.unreadRules.length, 6);
+      expect(provider.unreadRules.any((r) => r.id == 'default_session_state'), isTrue);
+    });
   });
 }

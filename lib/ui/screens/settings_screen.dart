@@ -218,9 +218,19 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 'Unread Rules',
                 style: Theme.of(context).textTheme.titleSmall,
               ),
-              IconButton(
-                icon: const Icon(Icons.add),
-                onPressed: () => _showRuleEditor(context, settings),
+              Row(
+                children: [
+                  IconButton(
+                    icon: const Icon(Icons.restore),
+                    tooltip: 'Restore Defaults',
+                    onPressed: () => _confirmRestoreDefaults(context, settings),
+                  ),
+                  IconButton(
+                    icon: const Icon(Icons.add),
+                    tooltip: 'Add Rule',
+                    onPressed: () => _showRuleEditor(context, settings),
+                  ),
+                ],
               ),
             ],
           ),
@@ -259,6 +269,35 @@ class _SettingsScreenState extends State<SettingsScreen> {
         }),
       ],
     );
+  }
+
+  Future<void> _confirmRestoreDefaults(
+    BuildContext context,
+    SettingsProvider settings,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Restore Default Rules?'),
+        content: const Text(
+          'This will replace all your current unread rules with the default set. This action cannot be undone.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text('Cancel'),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text('Restore'),
+          ),
+        ],
+      ),
+    );
+
+    if (confirmed == true) {
+      await settings.restoreDefaultUnreadRules();
+    }
   }
 
   void _showRuleEditor(

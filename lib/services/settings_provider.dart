@@ -586,6 +586,12 @@ class SettingsProvider extends ChangeNotifier {
     notifyListeners();
   }
 
+  Future<void> restoreDefaultUnreadRules() async {
+    _unreadRules = _defaultUnreadRules();
+    await _saveUnreadRules();
+    notifyListeners();
+  }
+
   // Keybinding Setters
   Future<void> setEnterKeyAction(MessageSubmitAction action) async {
     _enterKeyAction = action;
