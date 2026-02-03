@@ -6,11 +6,7 @@ enum RuleType {
   contentUpdate, // Generic update (comment, commit, etc)
 }
 
-enum RuleAction {
-  markUnread,
-  markRead,
-  doNothing,
-}
+enum RuleAction { markUnread, markRead, doNothing }
 
 class UnreadRule {
   final String id;

@@ -41,23 +41,13 @@ import 'package:mockito/mockito.dart' as _i1;
 // ignore_for_file: invalid_use_of_internal_member
 
 class _FakeDirectory_0 extends _i1.SmartFake implements _i2.Directory {
-  _FakeDirectory_0(
-    Object parent,
-    Invocation parentInvocation,
-  ) : super(
-          parent,
-          parentInvocation,
-        );
+  _FakeDirectory_0(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
 }
 
 class _FakeFile_1 extends _i1.SmartFake implements _i2.File {
-  _FakeFile_1(
-    Object parent,
-    Invocation parentInvocation,
-  ) : super(
-          parent,
-          parentInvocation,
-        );
+  _FakeFile_1(Object parent, Invocation parentInvocation)
+    : super(parent, parentInvocation);
 }
 
 /// A class which mocks [SettingsProvider].
@@ -69,644 +59,648 @@ class MockSettingsProvider extends _i1.Mock implements _i3.SettingsProvider {
   }
 
   @override
-  _i4.ListRefreshPolicy get refreshOnAppStart => (super.noSuchMethod(
-        Invocation.getter(#refreshOnAppStart),
-        returnValue: _i4.ListRefreshPolicy.none,
-      ) as _i4.ListRefreshPolicy);
+  _i4.ListRefreshPolicy get refreshOnAppStart =>
+      (super.noSuchMethod(
+            Invocation.getter(#refreshOnAppStart),
+            returnValue: _i4.ListRefreshPolicy.none,
+          )
+          as _i4.ListRefreshPolicy);
 
   @override
-  _i4.SessionRefreshPolicy get refreshOnOpen => (super.noSuchMethod(
-        Invocation.getter(#refreshOnOpen),
-        returnValue: _i4.SessionRefreshPolicy.none,
-      ) as _i4.SessionRefreshPolicy);
+  _i4.SessionRefreshPolicy get refreshOnOpen =>
+      (super.noSuchMethod(
+            Invocation.getter(#refreshOnOpen),
+            returnValue: _i4.SessionRefreshPolicy.none,
+          )
+          as _i4.SessionRefreshPolicy);
 
   @override
-  _i4.SessionRefreshPolicy get refreshOnMessage => (super.noSuchMethod(
-        Invocation.getter(#refreshOnMessage),
-        returnValue: _i4.SessionRefreshPolicy.none,
-      ) as _i4.SessionRefreshPolicy);
+  _i4.SessionRefreshPolicy get refreshOnMessage =>
+      (super.noSuchMethod(
+            Invocation.getter(#refreshOnMessage),
+            returnValue: _i4.SessionRefreshPolicy.none,
+          )
+          as _i4.SessionRefreshPolicy);
 
   @override
-  _i4.ListRefreshPolicy get refreshOnReturn => (super.noSuchMethod(
-        Invocation.getter(#refreshOnReturn),
-        returnValue: _i4.ListRefreshPolicy.none,
-      ) as _i4.ListRefreshPolicy);
+  _i4.ListRefreshPolicy get refreshOnReturn =>
+      (super.noSuchMethod(
+            Invocation.getter(#refreshOnReturn),
+            returnValue: _i4.ListRefreshPolicy.none,
+          )
+          as _i4.ListRefreshPolicy);
 
   @override
-  _i4.ListRefreshPolicy get refreshOnCreate => (super.noSuchMethod(
-        Invocation.getter(#refreshOnCreate),
-        returnValue: _i4.ListRefreshPolicy.none,
-      ) as _i4.ListRefreshPolicy);
+  _i4.ListRefreshPolicy get refreshOnCreate =>
+      (super.noSuchMethod(
+            Invocation.getter(#refreshOnCreate),
+            returnValue: _i4.ListRefreshPolicy.none,
+          )
+          as _i4.ListRefreshPolicy);
 
   @override
-  int get sessionPageSize => (super.noSuchMethod(
-        Invocation.getter(#sessionPageSize),
-        returnValue: 0,
-      ) as int);
+  int get sessionPageSize =>
+      (super.noSuchMethod(Invocation.getter(#sessionPageSize), returnValue: 0)
+          as int);
 
   @override
-  List<_i5.RefreshSchedule> get schedules => (super.noSuchMethod(
-        Invocation.getter(#schedules),
-        returnValue: <_i5.RefreshSchedule>[],
-      ) as List<_i5.RefreshSchedule>);
+  List<_i5.RefreshSchedule> get schedules =>
+      (super.noSuchMethod(
+            Invocation.getter(#schedules),
+            returnValue: <_i5.RefreshSchedule>[],
+          )
+          as List<_i5.RefreshSchedule>);
 
   @override
-  bool get isInitialized => (super.noSuchMethod(
-        Invocation.getter(#isInitialized),
-        returnValue: false,
-      ) as bool);
+  bool get isInitialized =>
+      (super.noSuchMethod(Invocation.getter(#isInitialized), returnValue: false)
+          as bool);
 
   @override
-  bool get notifyOnAttention => (super.noSuchMethod(
-        Invocation.getter(#notifyOnAttention),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnAttention =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnAttention),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get notifyOnCompletion => (super.noSuchMethod(
-        Invocation.getter(#notifyOnCompletion),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnCompletion =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnCompletion),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get notifyOnWatch => (super.noSuchMethod(
-        Invocation.getter(#notifyOnWatch),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnWatch =>
+      (super.noSuchMethod(Invocation.getter(#notifyOnWatch), returnValue: false)
+          as bool);
 
   @override
-  bool get notifyOnFailure => (super.noSuchMethod(
-        Invocation.getter(#notifyOnFailure),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnFailure =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnFailure),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get notifyOnRefreshStart => (super.noSuchMethod(
-        Invocation.getter(#notifyOnRefreshStart),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnRefreshStart =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnRefreshStart),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get notifyOnRefreshComplete => (super.noSuchMethod(
-        Invocation.getter(#notifyOnRefreshComplete),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnRefreshComplete =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnRefreshComplete),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get notifyOnErrors => (super.noSuchMethod(
-        Invocation.getter(#notifyOnErrors),
-        returnValue: false,
-      ) as bool);
+  bool get notifyOnErrors =>
+      (super.noSuchMethod(
+            Invocation.getter(#notifyOnErrors),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get trayEnabled => (super.noSuchMethod(
-        Invocation.getter(#trayEnabled),
-        returnValue: false,
-      ) as bool);
+  bool get trayEnabled =>
+      (super.noSuchMethod(Invocation.getter(#trayEnabled), returnValue: false)
+          as bool);
 
   @override
-  bool get hideToTray => (super.noSuchMethod(
-        Invocation.getter(#hideToTray),
-        returnValue: false,
-      ) as bool);
+  bool get hideToTray =>
+      (super.noSuchMethod(Invocation.getter(#hideToTray), returnValue: false)
+          as bool);
 
   @override
-  _i4.FabVisibility get fabVisibility => (super.noSuchMethod(
-        Invocation.getter(#fabVisibility),
-        returnValue: _i4.FabVisibility.appBar,
-      ) as _i4.FabVisibility);
+  _i4.FabVisibility get fabVisibility =>
+      (super.noSuchMethod(
+            Invocation.getter(#fabVisibility),
+            returnValue: _i4.FabVisibility.appBar,
+          )
+          as _i4.FabVisibility);
 
   @override
-  bool get hideArchivedAndReadOnly => (super.noSuchMethod(
-        Invocation.getter(#hideArchivedAndReadOnly),
-        returnValue: false,
-      ) as bool);
+  bool get hideArchivedAndReadOnly =>
+      (super.noSuchMethod(
+            Invocation.getter(#hideArchivedAndReadOnly),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  List<_i6.GithubExclusion> get githubExclusions => (super.noSuchMethod(
-        Invocation.getter(#githubExclusions),
-        returnValue: <_i6.GithubExclusion>[],
-      ) as List<_i6.GithubExclusion>);
+  List<_i6.GithubExclusion> get githubExclusions =>
+      (super.noSuchMethod(
+            Invocation.getter(#githubExclusions),
+            returnValue: <_i6.GithubExclusion>[],
+          )
+          as List<_i6.GithubExclusion>);
 
   @override
-  List<_i7.SourceGroup> get sourceGroups => (super.noSuchMethod(
-        Invocation.getter(#sourceGroups),
-        returnValue: <_i7.SourceGroup>[],
-      ) as List<_i7.SourceGroup>);
+  List<_i7.SourceGroup> get sourceGroups =>
+      (super.noSuchMethod(
+            Invocation.getter(#sourceGroups),
+            returnValue: <_i7.SourceGroup>[],
+          )
+          as List<_i7.SourceGroup>);
 
   @override
-  bool get useCorpJulesUrl => (super.noSuchMethod(
-        Invocation.getter(#useCorpJulesUrl),
-        returnValue: false,
-      ) as bool);
+  bool get useCorpJulesUrl =>
+      (super.noSuchMethod(
+            Invocation.getter(#useCorpJulesUrl),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  _i8.JulesThemeType get themeType => (super.noSuchMethod(
-        Invocation.getter(#themeType),
-        returnValue: _i8.JulesThemeType.blue,
-      ) as _i8.JulesThemeType);
+  _i8.JulesThemeType get themeType =>
+      (super.noSuchMethod(
+            Invocation.getter(#themeType),
+            returnValue: _i8.JulesThemeType.blue,
+          )
+          as _i8.JulesThemeType);
 
   @override
-  _i9.ThemeMode get themeMode => (super.noSuchMethod(
-        Invocation.getter(#themeMode),
-        returnValue: _i9.ThemeMode.system,
-      ) as _i9.ThemeMode);
+  _i9.ThemeMode get themeMode =>
+      (super.noSuchMethod(
+            Invocation.getter(#themeMode),
+            returnValue: _i9.ThemeMode.system,
+          )
+          as _i9.ThemeMode);
 
   @override
-  bool get enableNotificationDebounce => (super.noSuchMethod(
-        Invocation.getter(#enableNotificationDebounce),
-        returnValue: false,
-      ) as bool);
+  bool get enableNotificationDebounce =>
+      (super.noSuchMethod(
+            Invocation.getter(#enableNotificationDebounce),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  int get notificationDebounceDuration => (super.noSuchMethod(
-        Invocation.getter(#notificationDebounceDuration),
-        returnValue: 0,
-      ) as int);
+  int get notificationDebounceDuration =>
+      (super.noSuchMethod(
+            Invocation.getter(#notificationDebounceDuration),
+            returnValue: 0,
+          )
+          as int);
 
   @override
-  Set<_i4.RefreshButtonAction> get appBarRefreshActions => (super.noSuchMethod(
-        Invocation.getter(#appBarRefreshActions),
-        returnValue: <_i4.RefreshButtonAction>{},
-      ) as Set<_i4.RefreshButtonAction>);
+  Set<_i4.RefreshButtonAction> get appBarRefreshActions =>
+      (super.noSuchMethod(
+            Invocation.getter(#appBarRefreshActions),
+            returnValue: <_i4.RefreshButtonAction>{},
+          )
+          as Set<_i4.RefreshButtonAction>);
 
   @override
-  List<_i10.UnreadRule> get unreadRules => (super.noSuchMethod(
-        Invocation.getter(#unreadRules),
-        returnValue: <_i10.UnreadRule>[],
-      ) as List<_i10.UnreadRule>);
+  List<_i10.UnreadRule> get unreadRules =>
+      (super.noSuchMethod(
+            Invocation.getter(#unreadRules),
+            returnValue: <_i10.UnreadRule>[],
+          )
+          as List<_i10.UnreadRule>);
 
   @override
-  _i4.MessageSubmitAction get enterKeyAction => (super.noSuchMethod(
-        Invocation.getter(#enterKeyAction),
-        returnValue: _i4.MessageSubmitAction.addNewLine,
-      ) as _i4.MessageSubmitAction);
+  _i4.MessageSubmitAction get enterKeyAction =>
+      (super.noSuchMethod(
+            Invocation.getter(#enterKeyAction),
+            returnValue: _i4.MessageSubmitAction.addNewLine,
+          )
+          as _i4.MessageSubmitAction);
 
   @override
-  _i4.MessageSubmitAction get shiftEnterKeyAction => (super.noSuchMethod(
-        Invocation.getter(#shiftEnterKeyAction),
-        returnValue: _i4.MessageSubmitAction.addNewLine,
-      ) as _i4.MessageSubmitAction);
+  _i4.MessageSubmitAction get shiftEnterKeyAction =>
+      (super.noSuchMethod(
+            Invocation.getter(#shiftEnterKeyAction),
+            returnValue: _i4.MessageSubmitAction.addNewLine,
+          )
+          as _i4.MessageSubmitAction);
 
   @override
-  _i4.MessageSubmitAction get ctrlEnterKeyAction => (super.noSuchMethod(
-        Invocation.getter(#ctrlEnterKeyAction),
-        returnValue: _i4.MessageSubmitAction.addNewLine,
-      ) as _i4.MessageSubmitAction);
+  _i4.MessageSubmitAction get ctrlEnterKeyAction =>
+      (super.noSuchMethod(
+            Invocation.getter(#ctrlEnterKeyAction),
+            returnValue: _i4.MessageSubmitAction.addNewLine,
+          )
+          as _i4.MessageSubmitAction);
 
   @override
-  _i4.MessageSubmitAction get ctrlShiftEnterKeyAction => (super.noSuchMethod(
-        Invocation.getter(#ctrlShiftEnterKeyAction),
-        returnValue: _i4.MessageSubmitAction.addNewLine,
-      ) as _i4.MessageSubmitAction);
+  _i4.MessageSubmitAction get ctrlShiftEnterKeyAction =>
+      (super.noSuchMethod(
+            Invocation.getter(#ctrlShiftEnterKeyAction),
+            returnValue: _i4.MessageSubmitAction.addNewLine,
+          )
+          as _i4.MessageSubmitAction);
 
   @override
-  _i4.EscKeyAction get escKeyAction => (super.noSuchMethod(
-        Invocation.getter(#escKeyAction),
-        returnValue: _i4.EscKeyAction.savesDraftAndGoesBack,
-      ) as _i4.EscKeyAction);
+  _i4.EscKeyAction get escKeyAction =>
+      (super.noSuchMethod(
+            Invocation.getter(#escKeyAction),
+            returnValue: _i4.EscKeyAction.savesDraftAndGoesBack,
+          )
+          as _i4.EscKeyAction);
 
   @override
-  List<_i11.BulkActionStep> get lastBulkActions => (super.noSuchMethod(
-        Invocation.getter(#lastBulkActions),
-        returnValue: <_i11.BulkActionStep>[],
-      ) as List<_i11.BulkActionStep>);
+  List<_i11.BulkActionStep> get lastBulkActions =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkActions),
+            returnValue: <_i11.BulkActionStep>[],
+          )
+          as List<_i11.BulkActionStep>);
 
   @override
-  int get lastBulkParallelQueries => (super.noSuchMethod(
-        Invocation.getter(#lastBulkParallelQueries),
-        returnValue: 0,
-      ) as int);
+  int get lastBulkParallelQueries =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkParallelQueries),
+            returnValue: 0,
+          )
+          as int);
 
   @override
-  int get lastBulkWaitBetweenMilliseconds => (super.noSuchMethod(
-        Invocation.getter(#lastBulkWaitBetweenMilliseconds),
-        returnValue: 0,
-      ) as int);
+  int get lastBulkWaitBetweenMilliseconds =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkWaitBetweenMilliseconds),
+            returnValue: 0,
+          )
+          as int);
 
   @override
-  _i4.DelayUnit get lastBulkWaitBetweenUnit => (super.noSuchMethod(
-        Invocation.getter(#lastBulkWaitBetweenUnit),
-        returnValue: _i4.DelayUnit.ms,
-      ) as _i4.DelayUnit);
+  _i4.DelayUnit get lastBulkWaitBetweenUnit =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkWaitBetweenUnit),
+            returnValue: _i4.DelayUnit.ms,
+          )
+          as _i4.DelayUnit);
 
   @override
-  int get lastBulkOffset => (super.noSuchMethod(
-        Invocation.getter(#lastBulkOffset),
-        returnValue: 0,
-      ) as int);
+  int get lastBulkOffset =>
+      (super.noSuchMethod(Invocation.getter(#lastBulkOffset), returnValue: 0)
+          as int);
 
   @override
-  bool get lastBulkRandomize => (super.noSuchMethod(
-        Invocation.getter(#lastBulkRandomize),
-        returnValue: false,
-      ) as bool);
+  bool get lastBulkRandomize =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkRandomize),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get lastBulkStopOnError => (super.noSuchMethod(
-        Invocation.getter(#lastBulkStopOnError),
-        returnValue: false,
-      ) as bool);
+  bool get lastBulkStopOnError =>
+      (super.noSuchMethod(
+            Invocation.getter(#lastBulkStopOnError),
+            returnValue: false,
+          )
+          as bool);
 
   @override
-  bool get hasListeners => (super.noSuchMethod(
-        Invocation.getter(#hasListeners),
-        returnValue: false,
-      ) as bool);
+  bool get hasListeners =>
+      (super.noSuchMethod(Invocation.getter(#hasListeners), returnValue: false)
+          as bool);
 
   @override
-  _i12.Future<void> init() => (super.noSuchMethod(
-        Invocation.method(
-          #init,
-          [],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> init() =>
+      (super.noSuchMethod(
+            Invocation.method(#init, []),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> applySchedulerPreset(_i13.SchedulerPreset? preset) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #applySchedulerPreset,
-          [preset],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#applySchedulerPreset, [preset]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> addSchedule(_i5.RefreshSchedule? schedule) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #addSchedule,
-          [schedule],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#addSchedule, [schedule]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> updateSchedule(_i5.RefreshSchedule? schedule) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #updateSchedule,
-          [schedule],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#updateSchedule, [schedule]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> deleteSchedule(String? scheduleId) => (super.noSuchMethod(
-        Invocation.method(
-          #deleteSchedule,
-          [scheduleId],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> deleteSchedule(String? scheduleId) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteSchedule, [scheduleId]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setSessionPageSize(int? size) => (super.noSuchMethod(
-        Invocation.method(
-          #setSessionPageSize,
-          [size],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setSessionPageSize(int? size) =>
+      (super.noSuchMethod(
+            Invocation.method(#setSessionPageSize, [size]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setRefreshOnAppStart(_i4.ListRefreshPolicy? policy) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setRefreshOnAppStart,
-          [policy],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setRefreshOnAppStart, [policy]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setRefreshOnOpen(_i4.SessionRefreshPolicy? policy) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setRefreshOnOpen,
-          [policy],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setRefreshOnOpen, [policy]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setRefreshOnMessage(_i4.SessionRefreshPolicy? policy) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setRefreshOnMessage,
-          [policy],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setRefreshOnMessage, [policy]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setRefreshOnReturn(_i4.ListRefreshPolicy? policy) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setRefreshOnReturn,
-          [policy],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setRefreshOnReturn, [policy]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setRefreshOnCreate(_i4.ListRefreshPolicy? policy) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setRefreshOnCreate,
-          [policy],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setRefreshOnCreate, [policy]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnAttention(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnAttention,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnAttention(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnAttention, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnCompletion(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnCompletion,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnCompletion(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnCompletion, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnWatch(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnWatch,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnWatch(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnWatch, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnFailure(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnFailure,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnFailure(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnFailure, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnRefreshStart(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnRefreshStart,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnRefreshStart(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnRefreshStart, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setNotifyOnRefreshComplete(bool? value) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnRefreshComplete,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setNotifyOnRefreshComplete, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setNotifyOnErrors(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setNotifyOnErrors,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setNotifyOnErrors(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setNotifyOnErrors, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setTrayEnabled(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setTrayEnabled,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setTrayEnabled(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setTrayEnabled, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setHideToTray(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setHideToTray,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setHideToTray(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setHideToTray, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setFabVisibility(_i4.FabVisibility? visibility) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setFabVisibility,
-          [visibility],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setFabVisibility, [visibility]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setHideArchivedAndReadOnly(bool? value) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setHideArchivedAndReadOnly,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setHideArchivedAndReadOnly, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setUseCorpJulesUrl(bool? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setUseCorpJulesUrl,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setUseCorpJulesUrl(bool? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setUseCorpJulesUrl, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setThemeType(_i8.JulesThemeType? value) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setThemeType,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setThemeType, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> setThemeMode(_i9.ThemeMode? value) => (super.noSuchMethod(
-        Invocation.method(
-          #setThemeMode,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> setThemeMode(_i9.ThemeMode? value) =>
+      (super.noSuchMethod(
+            Invocation.method(#setThemeMode, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setEnableNotificationDebounce(bool? value) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setEnableNotificationDebounce,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setEnableNotificationDebounce, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setNotificationDebounceDuration(int? value) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setNotificationDebounceDuration,
-          [value],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setNotificationDebounceDuration, [value]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setAppBarRefreshActions(
-          Set<_i4.RefreshButtonAction>? actions) =>
+    Set<_i4.RefreshButtonAction>? actions,
+  ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setAppBarRefreshActions,
-          [actions],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setAppBarRefreshActions, [actions]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> addUnreadRule(_i10.UnreadRule? rule) => (super.noSuchMethod(
-        Invocation.method(
-          #addUnreadRule,
-          [rule],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> addUnreadRule(_i10.UnreadRule? rule) =>
+      (super.noSuchMethod(
+            Invocation.method(#addUnreadRule, [rule]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> updateUnreadRule(_i10.UnreadRule? rule) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #updateUnreadRule,
-          [rule],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#updateUnreadRule, [rule]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> deleteUnreadRule(String? id) => (super.noSuchMethod(
-        Invocation.method(
-          #deleteUnreadRule,
-          [id],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> deleteUnreadRule(String? id) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteUnreadRule, [id]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setEnterKeyAction(_i4.MessageSubmitAction? action) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setEnterKeyAction,
-          [action],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setEnterKeyAction, [action]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setShiftEnterKeyAction(_i4.MessageSubmitAction? action) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setShiftEnterKeyAction,
-          [action],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setShiftEnterKeyAction, [action]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setCtrlEnterKeyAction(_i4.MessageSubmitAction? action) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setCtrlEnterKeyAction,
-          [action],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setCtrlEnterKeyAction, [action]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setCtrlShiftEnterKeyAction(
-          _i4.MessageSubmitAction? action) =>
+    _i4.MessageSubmitAction? action,
+  ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setCtrlShiftEnterKeyAction,
-          [action],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setCtrlShiftEnterKeyAction, [action]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setEscKeyAction(_i4.EscKeyAction? action) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setEscKeyAction,
-          [action],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setEscKeyAction, [action]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> setLastFilter(_i14.FilterElement? filter) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #setLastFilter,
-          [filter],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#setLastFilter, [filter]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> saveBulkActionConfig({
@@ -720,34 +714,29 @@ class MockSettingsProvider extends _i1.Mock implements _i3.SettingsProvider {
     required bool? stopOnError,
   }) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #saveBulkActionConfig,
-          [],
-          {
-            #actions: actions,
-            #parallelQueries: parallelQueries,
-            #waitBetweenMilliseconds: waitBetweenMilliseconds,
-            #waitBetweenUnit: waitBetweenUnit,
-            #limit: limit,
-            #offset: offset,
-            #randomize: randomize,
-            #stopOnError: stopOnError,
-          },
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#saveBulkActionConfig, [], {
+              #actions: actions,
+              #parallelQueries: parallelQueries,
+              #waitBetweenMilliseconds: waitBetweenMilliseconds,
+              #waitBetweenUnit: waitBetweenUnit,
+              #limit: limit,
+              #offset: offset,
+              #randomize: randomize,
+              #stopOnError: stopOnError,
+            }),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> addGithubExclusion(_i6.GithubExclusion? exclusion) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #addGithubExclusion,
-          [exclusion],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#addGithubExclusion, [exclusion]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> removeGithubExclusion(
@@ -755,93 +744,70 @@ class MockSettingsProvider extends _i1.Mock implements _i3.SettingsProvider {
     _i6.GithubExclusionType? type,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #removeGithubExclusion,
-          [
-            value,
-            type,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#removeGithubExclusion, [value, type]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  bool isExcluded(String? userOrgRepo) => (super.noSuchMethod(
-        Invocation.method(
-          #isExcluded,
-          [userOrgRepo],
-        ),
-        returnValue: false,
-      ) as bool);
+  bool isExcluded(String? userOrgRepo) =>
+      (super.noSuchMethod(
+            Invocation.method(#isExcluded, [userOrgRepo]),
+            returnValue: false,
+          )
+          as bool);
 
   @override
   _i12.Future<void> addSourceGroup(_i7.SourceGroup? group) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #addSourceGroup,
-          [group],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#addSourceGroup, [group]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> updateSourceGroup(_i7.SourceGroup? group) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #updateSourceGroup,
-          [group],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#updateSourceGroup, [group]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> deleteSourceGroup(String? groupName) => (super.noSuchMethod(
-        Invocation.method(
-          #deleteSourceGroup,
-          [groupName],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+  _i12.Future<void> deleteSourceGroup(String? groupName) =>
+      (super.noSuchMethod(
+            Invocation.method(#deleteSourceGroup, [groupName]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   void addListener(_i15.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(
-          #addListener,
-          [listener],
-        ),
-        returnValueForMissingStub: null,
-      );
+    Invocation.method(#addListener, [listener]),
+    returnValueForMissingStub: null,
+  );
 
   @override
   void removeListener(_i15.VoidCallback? listener) => super.noSuchMethod(
-        Invocation.method(
-          #removeListener,
-          [listener],
-        ),
-        returnValueForMissingStub: null,
-      );
+    Invocation.method(#removeListener, [listener]),
+    returnValueForMissingStub: null,
+  );
 
   @override
   void dispose() => super.noSuchMethod(
-        Invocation.method(
-          #dispose,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
+    Invocation.method(#dispose, []),
+    returnValueForMissingStub: null,
+  );
 
   @override
   void notifyListeners() => super.noSuchMethod(
-        Invocation.method(
-          #notifyListeners,
-          [],
-        ),
-        returnValueForMissingStub: null,
-      );
+    Invocation.method(#notifyListeners, []),
+    returnValueForMissingStub: null,
+  );
 }
 
 /// A class which mocks [CacheService].
@@ -853,58 +819,48 @@ class MockCacheService extends _i1.Mock implements _i16.CacheService {
   }
 
   @override
-  bool get isDevMode => (super.noSuchMethod(
-        Invocation.getter(#isDevMode),
-        returnValue: false,
-      ) as bool);
+  bool get isDevMode =>
+      (super.noSuchMethod(Invocation.getter(#isDevMode), returnValue: false)
+          as bool);
 
   @override
   _i12.Future<_i2.Directory> getCacheDirectory(String? token) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #getCacheDirectory,
-          [token],
-        ),
-        returnValue: _i12.Future<_i2.Directory>.value(_FakeDirectory_0(
-          this,
-          Invocation.method(
-            #getCacheDirectory,
-            [token],
-          ),
-        )),
-      ) as _i12.Future<_i2.Directory>);
+            Invocation.method(#getCacheDirectory, [token]),
+            returnValue: _i12.Future<_i2.Directory>.value(
+              _FakeDirectory_0(
+                this,
+                Invocation.method(#getCacheDirectory, [token]),
+              ),
+            ),
+          )
+          as _i12.Future<_i2.Directory>);
 
   @override
   _i12.Future<_i2.File> getMessageQueueFileForToken(String? token) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #getMessageQueueFileForToken,
-          [token],
-        ),
-        returnValue: _i12.Future<_i2.File>.value(_FakeFile_1(
-          this,
-          Invocation.method(
-            #getMessageQueueFileForToken,
-            [token],
-          ),
-        )),
-      ) as _i12.Future<_i2.File>);
+            Invocation.method(#getMessageQueueFileForToken, [token]),
+            returnValue: _i12.Future<_i2.File>.value(
+              _FakeFile_1(
+                this,
+                Invocation.method(#getMessageQueueFileForToken, [token]),
+              ),
+            ),
+          )
+          as _i12.Future<_i2.File>);
 
   @override
   _i12.Future<_i2.File> getGithubFailuresLogFile(String? token) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #getGithubFailuresLogFile,
-          [token],
-        ),
-        returnValue: _i12.Future<_i2.File>.value(_FakeFile_1(
-          this,
-          Invocation.method(
-            #getGithubFailuresLogFile,
-            [token],
-          ),
-        )),
-      ) as _i12.Future<_i2.File>);
+            Invocation.method(#getGithubFailuresLogFile, [token]),
+            returnValue: _i12.Future<_i2.File>.value(
+              _FakeFile_1(
+                this,
+                Invocation.method(#getGithubFailuresLogFile, [token]),
+              ),
+            ),
+          )
+          as _i12.Future<_i2.File>);
 
   @override
   _i12.Future<void> saveSessions(
@@ -912,174 +868,104 @@ class MockCacheService extends _i1.Mock implements _i16.CacheService {
     List<_i16.CachedItem<_i17.Session>>? items,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #saveSessions,
-          [
-            token,
-            items,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#saveSessions, [token, items]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<List<_i16.CachedItem<_i17.Session>>> loadSessions(
-          String? token) =>
-      (super.noSuchMethod(
-        Invocation.method(
-          #loadSessions,
-          [token],
-        ),
-        returnValue: _i12.Future<List<_i16.CachedItem<_i17.Session>>>.value(
-            <_i16.CachedItem<_i17.Session>>[]),
-      ) as _i12.Future<List<_i16.CachedItem<_i17.Session>>>);
-
-  @override
-  _i12.Future<void> saveSources(
     String? token,
-    List<_i18.Source>? newSources,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #saveSources,
-          [
-            token,
-            newSources,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#loadSessions, [token]),
+            returnValue: _i12.Future<List<_i16.CachedItem<_i17.Session>>>.value(
+              <_i16.CachedItem<_i17.Session>>[],
+            ),
+          )
+          as _i12.Future<List<_i16.CachedItem<_i17.Session>>>);
+
+  @override
+  _i12.Future<void> saveSources(String? token, List<_i18.Source>? newSources) =>
+      (super.noSuchMethod(
+            Invocation.method(#saveSources, [token, newSources]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<List<_i16.CachedItem<_i18.Source>>> loadSources(String? token) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #loadSources,
-          [token],
-        ),
-        returnValue: _i12.Future<List<_i16.CachedItem<_i18.Source>>>.value(
-            <_i16.CachedItem<_i18.Source>>[]),
-      ) as _i12.Future<List<_i16.CachedItem<_i18.Source>>>);
+            Invocation.method(#loadSources, [token]),
+            returnValue: _i12.Future<List<_i16.CachedItem<_i18.Source>>>.value(
+              <_i16.CachedItem<_i18.Source>>[],
+            ),
+          )
+          as _i12.Future<List<_i16.CachedItem<_i18.Source>>>);
 
   @override
-  _i12.Future<_i2.File> getSessionCacheFile(
-    String? token,
-    String? sessionId,
-  ) =>
+  _i12.Future<_i2.File> getSessionCacheFile(String? token, String? sessionId) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #getSessionCacheFile,
-          [
-            token,
-            sessionId,
-          ],
-        ),
-        returnValue: _i12.Future<_i2.File>.value(_FakeFile_1(
-          this,
-          Invocation.method(
-            #getSessionCacheFile,
-            [
-              token,
-              sessionId,
-            ],
-          ),
-        )),
-      ) as _i12.Future<_i2.File>);
+            Invocation.method(#getSessionCacheFile, [token, sessionId]),
+            returnValue: _i12.Future<_i2.File>.value(
+              _FakeFile_1(
+                this,
+                Invocation.method(#getSessionCacheFile, [token, sessionId]),
+              ),
+            ),
+          )
+          as _i12.Future<_i2.File>);
 
   @override
-  _i12.Future<_i2.File> getSourceCacheFile(
-    String? token,
-    String? sourceId,
-  ) =>
+  _i12.Future<_i2.File> getSourceCacheFile(String? token, String? sourceId) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #getSourceCacheFile,
-          [
-            token,
-            sourceId,
-          ],
-        ),
-        returnValue: _i12.Future<_i2.File>.value(_FakeFile_1(
-          this,
-          Invocation.method(
-            #getSourceCacheFile,
-            [
-              token,
-              sourceId,
-            ],
-          ),
-        )),
-      ) as _i12.Future<_i2.File>);
+            Invocation.method(#getSourceCacheFile, [token, sourceId]),
+            returnValue: _i12.Future<_i2.File>.value(
+              _FakeFile_1(
+                this,
+                Invocation.method(#getSourceCacheFile, [token, sourceId]),
+              ),
+            ),
+          )
+          as _i12.Future<_i2.File>);
 
   @override
-  _i12.Future<void> markSessionAsRead(
-    String? token,
-    String? sessionId,
-  ) =>
+  _i12.Future<void> markSessionAsRead(String? token, String? sessionId) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #markSessionAsRead,
-          [
-            token,
-            sessionId,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#markSessionAsRead, [token, sessionId]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> markSessionAsUnread(
-    String? token,
-    String? sessionId,
-  ) =>
+  _i12.Future<void> markSessionAsUnread(String? token, String? sessionId) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #markSessionAsUnread,
-          [
-            token,
-            sessionId,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#markSessionAsUnread, [token, sessionId]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> markPrAsOpened(
-    String? token,
-    String? sessionId,
-  ) =>
+  _i12.Future<void> markPrAsOpened(String? token, String? sessionId) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #markPrAsOpened,
-          [
-            token,
-            sessionId,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#markPrAsOpened, [token, sessionId]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
-  _i12.Future<void> updateSession(
-    String? token,
-    _i17.Session? session,
-  ) =>
+  _i12.Future<void> updateSession(String? token, _i17.Session? session) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #updateSession,
-          [
-            token,
-            session,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#updateSession, [token, session]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<void> saveSessionDetails(
@@ -1088,17 +974,15 @@ class MockCacheService extends _i1.Mock implements _i16.CacheService {
     List<_i19.Activity>? activities,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #saveSessionDetails,
-          [
-            token,
-            session,
-            activities,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#saveSessionDetails, [
+              token,
+              session,
+              activities,
+            ]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<_i16.CachedSessionDetails?> loadSessionDetails(
@@ -1106,15 +990,10 @@ class MockCacheService extends _i1.Mock implements _i16.CacheService {
     String? sessionId,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #loadSessionDetails,
-          [
-            token,
-            sessionId,
-          ],
-        ),
-        returnValue: _i12.Future<_i16.CachedSessionDetails?>.value(),
-      ) as _i12.Future<_i16.CachedSessionDetails?>);
+            Invocation.method(#loadSessionDetails, [token, sessionId]),
+            returnValue: _i12.Future<_i16.CachedSessionDetails?>.value(),
+          )
+          as _i12.Future<_i16.CachedSessionDetails?>);
 
   @override
   _i12.Future<void> saveMessageQueue(
@@ -1122,25 +1001,19 @@ class MockCacheService extends _i1.Mock implements _i16.CacheService {
     List<_i20.QueuedMessage>? queue,
   ) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #saveMessageQueue,
-          [
-            token,
-            queue,
-          ],
-        ),
-        returnValue: _i12.Future<void>.value(),
-        returnValueForMissingStub: _i12.Future<void>.value(),
-      ) as _i12.Future<void>);
+            Invocation.method(#saveMessageQueue, [token, queue]),
+            returnValue: _i12.Future<void>.value(),
+            returnValueForMissingStub: _i12.Future<void>.value(),
+          )
+          as _i12.Future<void>);
 
   @override
   _i12.Future<List<_i20.QueuedMessage>> loadMessageQueue(String? token) =>
       (super.noSuchMethod(
-        Invocation.method(
-          #loadMessageQueue,
-          [token],
-        ),
-        returnValue:
-            _i12.Future<List<_i20.QueuedMessage>>.value(<_i20.QueuedMessage>[]),
-      ) as _i12.Future<List<_i20.QueuedMessage>>);
+            Invocation.method(#loadMessageQueue, [token]),
+            returnValue: _i12.Future<List<_i20.QueuedMessage>>.value(
+              <_i20.QueuedMessage>[],
+            ),
+          )
+          as _i12.Future<List<_i20.QueuedMessage>>);
 }

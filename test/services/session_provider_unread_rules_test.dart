@@ -44,8 +44,9 @@ void main() {
         name: 'sessions/$id',
         prompt: 'test prompt',
         state: SessionState.values.firstWhere(
-            (e) => e.toString().split('.').last == state,
-            orElse: () => SessionState.IN_PROGRESS),
+          (e) => e.toString().split('.').last == state,
+          orElse: () => SessionState.IN_PROGRESS,
+        ),
         currentStep: currentStep,
         currentAction: currentAction,
         prStatus: prStatus,
@@ -65,7 +66,10 @@ void main() {
         ),
       ]);
 
-      final session1 = createSession(state: 'IN_PROGRESS', updateTime: '2023-01-01T10:00:00Z');
+      final session1 = createSession(
+        state: 'IN_PROGRESS',
+        updateTime: '2023-01-01T10:00:00Z',
+      );
 
       // 1. Initial update (New session)
       await sessionProvider.updateSession(session1);
@@ -73,19 +77,27 @@ void main() {
       // Simulate reading it
       // Since we can't easily modify private _items, we assume markAsRead updates it.
       // markAsRead calls cacheService.markSessionAsRead
-      when(mockCacheService.markSessionAsRead(any, any)).thenAnswer((_) async {});
+      when(
+        mockCacheService.markSessionAsRead(any, any),
+      ).thenAnswer((_) async {});
       await sessionProvider.markAsRead(session1.id, 'token');
 
       // Verify it's read (lastOpened is recent)
       expect(sessionProvider.items.first.metadata.isUnread, isFalse);
 
       // 2. Update with state change
-      final session2 = createSession(state: 'COMPLETED', updateTime: '2023-01-01T11:00:00Z');
+      final session2 = createSession(
+        state: 'COMPLETED',
+        updateTime: '2023-01-01T11:00:00Z',
+      );
       await sessionProvider.updateSession(session2);
 
       // Verify it's unread
       expect(sessionProvider.items.first.metadata.isUnread, isTrue);
-      expect(sessionProvider.items.first.metadata.reasonForLastUnread, contains('State changed'));
+      expect(
+        sessionProvider.items.first.metadata.reasonForLastUnread,
+        contains('State changed'),
+      );
     });
 
     test('Session state change does NOT trigger unread if rule disabled', () async {
@@ -107,10 +119,15 @@ void main() {
         // So to test "nothing happens", we need to disable contentUpdate too or use same updateTime.
       ]);
 
-      final session1 = createSession(state: 'IN_PROGRESS', updateTime: '2023-01-01T10:00:00Z');
+      final session1 = createSession(
+        state: 'IN_PROGRESS',
+        updateTime: '2023-01-01T10:00:00Z',
+      );
       await sessionProvider.updateSession(session1);
 
-      when(mockCacheService.markSessionAsRead(any, any)).thenAnswer((_) async {});
+      when(
+        mockCacheService.markSessionAsRead(any, any),
+      ).thenAnswer((_) async {});
       await sessionProvider.markAsRead(session1.id, 'token');
       expect(sessionProvider.items.first.metadata.isUnread, isFalse);
 
@@ -123,7 +140,10 @@ void main() {
 
       // So if no rules match, shouldMarkUnread remains false.
 
-      final session2 = createSession(state: 'COMPLETED', updateTime: '2023-01-01T11:00:00Z');
+      final session2 = createSession(
+        state: 'COMPLETED',
+        updateTime: '2023-01-01T11:00:00Z',
+      );
 
       // Re-configure rules to be empty (or all disabled)
       when(mockSettingsProvider.unreadRules).thenReturn([]);
@@ -145,18 +165,29 @@ void main() {
         ),
       ]);
 
-      final session1 = createSession(currentStep: 1, updateTime: '2023-01-01T10:00:00Z');
+      final session1 = createSession(
+        currentStep: 1,
+        updateTime: '2023-01-01T10:00:00Z',
+      );
       await sessionProvider.updateSession(session1);
 
-      when(mockCacheService.markSessionAsRead(any, any)).thenAnswer((_) async {});
+      when(
+        mockCacheService.markSessionAsRead(any, any),
+      ).thenAnswer((_) async {});
       await sessionProvider.markAsRead(session1.id, 'token');
       expect(sessionProvider.items.first.metadata.isUnread, isFalse);
 
-      final session2 = createSession(currentStep: 2, updateTime: '2023-01-01T11:00:00Z');
+      final session2 = createSession(
+        currentStep: 2,
+        updateTime: '2023-01-01T11:00:00Z',
+      );
       await sessionProvider.updateSession(session2);
 
       expect(sessionProvider.items.first.metadata.isUnread, isTrue);
-      expect(sessionProvider.items.first.metadata.reasonForLastUnread, contains('Session progressed'));
+      expect(
+        sessionProvider.items.first.metadata.reasonForLastUnread,
+        contains('Session progressed'),
+      );
     });
 
     test('PR status Draft -> Open triggers unread', () async {
@@ -170,18 +201,29 @@ void main() {
         ),
       ]);
 
-      final session1 = createSession(prStatus: 'Draft', updateTime: '2023-01-01T10:00:00Z');
+      final session1 = createSession(
+        prStatus: 'Draft',
+        updateTime: '2023-01-01T10:00:00Z',
+      );
       await sessionProvider.updateSession(session1);
 
-      when(mockCacheService.markSessionAsRead(any, any)).thenAnswer((_) async {});
+      when(
+        mockCacheService.markSessionAsRead(any, any),
+      ).thenAnswer((_) async {});
       await sessionProvider.markAsRead(session1.id, 'token');
       expect(sessionProvider.items.first.metadata.isUnread, isFalse);
 
-      final session2 = createSession(prStatus: 'Open', updateTime: '2023-01-01T11:00:00Z');
+      final session2 = createSession(
+        prStatus: 'Open',
+        updateTime: '2023-01-01T11:00:00Z',
+      );
       await sessionProvider.updateSession(session2);
 
       expect(sessionProvider.items.first.metadata.isUnread, isTrue);
-      expect(sessionProvider.items.first.metadata.reasonForLastUnread, contains('PR Status changed from Draft to Open'));
+      expect(
+        sessionProvider.items.first.metadata.reasonForLastUnread,
+        contains('PR Status changed from Draft to Open'),
+      );
     });
   });
 }

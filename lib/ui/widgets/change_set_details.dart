@@ -54,10 +54,7 @@ class ChangeSetDetails extends StatelessWidget {
         if (gitPatch.suggestedCommitMessage.isNotEmpty) ...[
           const Text(
             "Commit Message:",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 12,
-            ),
+            style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
           ),
           const SizedBox(height: 4),
           Container(
@@ -109,9 +106,7 @@ class ChangeSetDetails extends StatelessWidget {
         onPressed: () {
           launchUrl(Uri.parse(prUrl!));
         },
-        style: ElevatedButton.styleFrom(
-          visualDensity: VisualDensity.compact,
-        ),
+        style: ElevatedButton.styleFrom(visualDensity: VisualDensity.compact),
       ),
     );
   }
@@ -129,10 +124,7 @@ class _PatchPreview extends StatelessWidget {
       children: [
         const Text(
           "Patch:",
-          style: TextStyle(
-            fontWeight: FontWeight.bold,
-            fontSize: 12,
-          ),
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12),
         ),
         const SizedBox(height: 4),
         Container(
@@ -140,10 +132,7 @@ class _PatchPreview extends StatelessWidget {
           color: Colors.black.withValues(alpha: 0.05),
           child: Text(
             gitPatch.unidiffPatch,
-            style: const TextStyle(
-              fontFamily: 'monospace',
-              fontSize: 11,
-            ),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 11),
             maxLines: 15,
             overflow: TextOverflow.ellipsis,
           ),
