@@ -44,6 +44,8 @@ class SettingsProvider extends ChangeNotifier {
       'notification_debounce_duration';
   static const String keyAppBarRefreshActions = 'app_bar_refresh_actions';
   static const String keyUnreadRules = 'unread_rules';
+  static const String _lastFetchTimeKey = 'last_fetch_time';
+  static const String _lastFetchTypeKey = 'last_fetch_type';
 
   // Keybindings
   static const String keyEnterKeyAction = 'enter_key_action';
@@ -55,6 +57,10 @@ class SettingsProvider extends ChangeNotifier {
 
   // Filter Memory
   FilterElement? _lastFilter;
+
+  // Fetch Info Memory
+  DateTime? _lastFetchTime;
+  String? _lastFetchType;
 
   // Bulk Action Memory
   List<BulkActionStep> _lastBulkActions = [];
@@ -145,6 +151,10 @@ class SettingsProvider extends ChangeNotifier {
 
   // Filter Getters
   FilterElement? get lastFilter => _lastFilter;
+
+  // Fetch Info Getters
+  DateTime? get lastFetchTime => _lastFetchTime;
+  String? get lastFetchType => _lastFetchType;
 
   // Bulk Action Getters
   List<BulkActionStep> get lastBulkActions => _lastBulkActions;
@@ -276,6 +286,13 @@ class SettingsProvider extends ChangeNotifier {
         // Could log this error
       }
     }
+
+    // Load fetch info
+    final lastFetchTimeStr = _prefs!.getString(_lastFetchTimeKey);
+    if (lastFetchTimeStr != null) {
+      _lastFetchTime = DateTime.tryParse(lastFetchTimeStr);
+    }
+    _lastFetchType = _prefs!.getString(_lastFetchTypeKey);
 
     _isInitialized = true;
 
@@ -565,6 +582,22 @@ class SettingsProvider extends ChangeNotifier {
       await _prefs?.remove(_lastFilterKey);
     } else {
       await _prefs?.setString(_lastFilterKey, jsonEncode(filter.toJson()));
+    }
+    notifyListeners();
+  }
+
+  Future<void> setLastFetchInfo(DateTime? time, String? type) async {
+    _lastFetchTime = time;
+    _lastFetchType = type;
+    if (time == null) {
+      await _prefs?.remove(_lastFetchTimeKey);
+    } else {
+      await _prefs?.setString(_lastFetchTimeKey, time.toIso8601String());
+    }
+    if (type == null) {
+      await _prefs?.remove(_lastFetchTypeKey);
+    } else {
+      await _prefs?.setString(_lastFetchTypeKey, type);
     }
     notifyListeners();
   }
