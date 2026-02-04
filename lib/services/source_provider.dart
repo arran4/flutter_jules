@@ -9,6 +9,7 @@ import 'session_provider.dart';
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];
   bool _isLoading = false;
+  int _pendingGithubRefreshes = 0;
   String? _error;
   CacheService? _cacheService;
   DateTime? _lastFetchTime;
@@ -16,6 +17,7 @@ class SourceProvider extends ChangeNotifier {
 
   List<CachedItem<Source>> get items => _items;
   bool get isLoading => _isLoading;
+  int get pendingGithubRefreshes => _pendingGithubRefreshes;
   String? get error => _error;
   DateTime? get lastFetchTime => _lastFetchTime;
 
@@ -28,7 +30,7 @@ class SourceProvider extends ChangeNotifier {
     bool force = false,
     String? authToken,
     GithubProvider? githubProvider,
-    void Function(int total)? onProgress,
+    void Function(int count, String message)? onProgress,
     SessionProvider? sessionProvider,
   }) async {
     // 1. Initial Load from Cache
@@ -46,42 +48,47 @@ class SourceProvider extends ChangeNotifier {
     if (_isLoading) return;
     _isLoading = true;
     _error = null;
+    if (onProgress != null) {
+      onProgress(0, "Fetching sources...");
+    }
     notifyListeners();
 
     try {
-      List<Source> allSources = [];
       String? pageToken;
       int page = 0;
+      int totalFetched = 0;
+
       do {
         page++;
         if (onProgress != null) {
-          onProgress(page);
+          onProgress(totalFetched, "Fetching page $page...");
         }
+
         final response = await client.listSources(pageToken: pageToken);
-        allSources.addAll(response.sources);
-        pageToken = response.nextPageToken;
+        final newSources = response.sources;
+        totalFetched += newSources.length;
+
+        // Merge incrementally
+        _mergeSources(newSources, authToken);
+
         if (onProgress != null) {
-          onProgress(allSources.length);
+          onProgress(totalFetched, "Loaded $totalFetched sources...");
         }
+        notifyListeners();
+
+        pageToken = response.nextPageToken;
       } while (pageToken != null && pageToken.isNotEmpty);
 
       if (_cacheService != null && authToken != null) {
+        final allSources = _items.map((item) => item.data).toList();
         await _cacheService!.saveSources(authToken, allSources);
-        _items = await _cacheService!.loadSources(authToken);
-      } else {
-        final now = DateTime.now();
-        _items = allSources
-            .map(
-              (s) => CachedItem(
-                s,
-                CacheMetadata(firstSeen: now, lastRetrieved: now),
-              ),
-            )
-            .toList();
       }
 
       // After loading sources, queue the github refresh
       if (githubProvider != null) {
+        if (onProgress != null) {
+          onProgress(totalFetched, "Queueing GitHub updates...");
+        }
         queueAllSourcesGithubRefresh(
           githubProvider: githubProvider,
           authToken: authToken,
@@ -97,6 +104,33 @@ class SourceProvider extends ChangeNotifier {
     }
   }
 
+  void _mergeSources(List<Source> sources, String? authToken) {
+    if (sources.isEmpty) return;
+
+    for (var source in sources) {
+      final index = _items.indexWhere((i) => i.data.name == source.name);
+      final oldItem = index != -1 ? _items[index] : null;
+
+      CacheMetadata metadata;
+      if (oldItem != null) {
+        metadata = oldItem.metadata.copyWith(lastRetrieved: DateTime.now());
+      } else {
+        metadata = CacheMetadata(
+          firstSeen: DateTime.now(),
+          lastRetrieved: DateTime.now(),
+        );
+      }
+
+      final newItem = CachedItem(source, metadata);
+
+      if (index != -1) {
+        _items[index] = newItem;
+      } else {
+        _items.add(newItem);
+      }
+    }
+  }
+
   void queueAllSourcesGithubRefresh({
     required GithubProvider githubProvider,
     String? authToken,
@@ -108,29 +142,37 @@ class SourceProvider extends ChangeNotifier {
     for (final item in _items) {
       final source = item.data;
       if (source.githubRepo != null) {
+        _pendingGithubRefreshes++;
         final job = githubProvider.createRepoDetailsJob(
           source.githubRepo!.owner,
           source.githubRepo!.repo,
         );
 
-        job.completer.future.then((_) {
-          if (job.status == GithubJobStatus.completed) {
-            final details = job.result as Map<String, dynamic>?;
-            if (details != null) {
-              _updateSourceWithGithubDetails(
-                source.name,
-                details,
-                authToken,
-              );
-            }
-          }
-        }).catchError((err) {
-          // Silently ignore, errors are handled in the provider
-        });
+        job.completer.future
+            .then((_) {
+              _pendingGithubRefreshes--;
+              if (job.status == GithubJobStatus.completed) {
+                final details = job.result as Map<String, dynamic>?;
+                if (details != null) {
+                  _updateSourceWithGithubDetails(
+                    source.name,
+                    details,
+                    authToken,
+                  );
+                }
+              }
+              notifyListeners();
+            })
+            .catchError((err) {
+              _pendingGithubRefreshes--;
+              notifyListeners();
+              // Silently ignore, errors are handled in the provider
+            });
 
         githubProvider.enqueue(job);
       }
     }
+    notifyListeners();
   }
 
   Future<void> _updateSourceWithGithubDetails(
@@ -149,18 +191,19 @@ class SourceProvider extends ChangeNotifier {
       owner: oldSource.githubRepo!.owner,
       repo: oldSource.githubRepo!.repo,
       isPrivate: oldSource.githubRepo!.isPrivate,
-      defaultBranch: oldSource.githubRepo!.defaultBranch ??
+      defaultBranch:
+          oldSource.githubRepo!.defaultBranch ??
           (details['defaultBranch'] != null
               ? GitHubBranch(displayName: details['defaultBranch'])
               : null),
       branches: (oldSource.githubRepo!.branches?.isNotEmpty ?? false)
           ? oldSource.githubRepo!.branches
           : (details['branches'] != null &&
-                  (details['branches'] as List).isNotEmpty
-              ? (details['branches'] as List)
-                  .map((b) => GitHubBranch(displayName: b['displayName']))
-                  .toList()
-              : oldSource.githubRepo!.branches),
+                    (details['branches'] as List).isNotEmpty
+                ? (details['branches'] as List)
+                      .map((b) => GitHubBranch(displayName: b['displayName']))
+                      .toList()
+                : oldSource.githubRepo!.branches),
       repoName: details['repoName'],
       repoId: details['repoId'],
       isPrivateGithub: details['isPrivateGithub'],
