@@ -1467,14 +1467,82 @@ class _SettingsScreenState extends State<SettingsScreen> {
               DataCell(Text(exclusion.reason)),
               DataCell(Text(exclusion.date.toIso8601String().split('T')[0])),
               DataCell(
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                  onPressed: () {
-                    settings.removeGithubExclusion(
-                      exclusion.value,
-                      exclusion.type,
-                    );
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.play_arrow, size: 20),
+                      tooltip: 'Test Access Now',
+                      onPressed: () async {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Testing access...'),
+                            duration: Duration(seconds: 1),
+                          ),
+                        );
+                        final accessible = await Provider.of<GithubProvider>(
+                          context,
+                          listen: false,
+                        ).testExclusionAccess(exclusion);
+
+                        if (context.mounted) {
+                          if (accessible) {
+                            settings.removeGithubExclusion(
+                              exclusion.value,
+                              exclusion.type,
+                            );
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Access restored! Exclusion removed.',
+                                ),
+                                backgroundColor: Colors.green,
+                              ),
+                            );
+                          } else {
+                            ScaffoldMessenger.of(context).showSnackBar(
+                              const SnackBar(
+                                content: Text(
+                                  'Still inaccessible. Exclusion kept.',
+                                ),
+                                backgroundColor: Colors.orange,
+                              ),
+                            );
+                          }
+                        }
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: 'Retry Next Sync',
+                      onPressed: () {
+                        settings.removeGithubExclusion(
+                          exclusion.value,
+                          exclusion.type,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Exclusion removed. Item will be retried on next sync.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        settings.removeGithubExclusion(
+                          exclusion.value,
+                          exclusion.type,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
