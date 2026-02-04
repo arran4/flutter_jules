@@ -9,6 +9,7 @@ import 'session_provider.dart';
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];
   bool _isLoading = false;
+  String _loadingStatus = '';
   String? _error;
   CacheService? _cacheService;
   DateTime? _lastFetchTime;
@@ -16,6 +17,7 @@ class SourceProvider extends ChangeNotifier {
 
   List<CachedItem<Source>> get items => _items;
   bool get isLoading => _isLoading;
+  String get loadingStatus => _loadingStatus;
   String? get error => _error;
   DateTime? get lastFetchTime => _lastFetchTime;
 
@@ -45,6 +47,7 @@ class SourceProvider extends ChangeNotifier {
 
     if (_isLoading) return;
     _isLoading = true;
+    _loadingStatus = 'Refreshing...';
     _error = null;
     notifyListeners();
 
@@ -59,6 +62,8 @@ class SourceProvider extends ChangeNotifier {
         }
         final response = await client.listSources(pageToken: pageToken);
         allSources.addAll(response.sources);
+        _loadingStatus = 'Loaded ${allSources.length} sources...';
+        notifyListeners();
         pageToken = response.nextPageToken;
         if (onProgress != null) {
           onProgress(allSources.length);

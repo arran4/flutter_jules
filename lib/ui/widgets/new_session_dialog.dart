@@ -90,9 +90,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   bool _autoCreatePr = true;
 
   // Refresh State
-  bool _isRefreshing = false;
-  String _refreshStatus = '';
-
   // Custom Dropdown State
   final TextEditingController _sourceController = TextEditingController();
   late final FocusNode _sourceFocusNode;
@@ -337,24 +334,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _fetchSources({bool force = false}) async {
-    if (_isRefreshing) return;
-
     final deps = _sourceFetchDependencies();
-
-    // Only show loading state on explicit user action
-    if (force) {
-      _startRefresh();
-    }
+    if (deps.sourceProvider.isLoading && !force) return;
 
     try {
       await _fetchSourcesFromProvider(deps, force: force);
       if (mounted) {
-        _applyLoadedSources(deps.sourceProvider, force: force);
+        _applyLoadedSources(deps.sourceProvider);
       }
     } catch (e) {
-      _handleSourceFetchError(e);
-    } finally {
-      await _finalizeRefreshState(deps.sourceProvider, force: force);
+      // Errors handled by provider
     }
   }
 
@@ -524,13 +513,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     );
   }
 
-  void _startRefresh() {
-    setState(() {
-      _isRefreshing = true;
-      _refreshStatus = 'Refreshing...';
-    });
-  }
-
   Future<void> _fetchSourcesFromProvider(
     _SourceFetchDependencies deps, {
     required bool force,
@@ -545,20 +527,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       force: force,
       githubProvider: deps.githubProvider,
       sessionProvider: deps.sessionProvider,
-      onProgress: (total) {
-        if (mounted) {
-          setState(() {
-            _refreshStatus = 'Loaded $total sources...';
-          });
-        }
-      },
     );
   }
 
-  void _applyLoadedSources(
-    SourceProvider sourceProvider, {
-    required bool force,
-  }) {
+  void _applyLoadedSources(SourceProvider sourceProvider) {
     final settingsProvider = Provider.of<SettingsProvider>(
       context,
       listen: false,
@@ -568,51 +540,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       sources = sources.where((s) => !s.isArchived && !s.isReadOnly).toList();
     }
     _initializeSelection(sources);
-    if (force) {
-      setState(() {
-        _refreshStatus = 'Updated just now';
-      });
-    }
-  }
-
-  void _handleSourceFetchError(Object error) {
-    if (!mounted) return;
-    setState(() {
-      _refreshStatus = 'Error: ${error.toString().substring(0, 30)}...';
-    });
-  }
-
-  Future<void> _finalizeRefreshState(
-    SourceProvider sourceProvider, {
-    required bool force,
-  }) async {
-    if (!mounted) return;
-    if (force) {
-      setState(() {
-        _isRefreshing = false;
-      });
-      await _resetRefreshStatusAfterDelay(sourceProvider);
-    } else {
-      _updateRefreshStatusFromLastFetch(sourceProvider);
-    }
-  }
-
-  Future<void> _resetRefreshStatusAfterDelay(
-    SourceProvider sourceProvider,
-  ) async {
-    // Reset status after a few seconds
-    await Future.delayed(const Duration(seconds: 5));
-    if (!mounted || _isRefreshing) return;
-    _updateRefreshStatusFromLastFetch(sourceProvider);
-  }
-
-  void _updateRefreshStatusFromLastFetch(SourceProvider sourceProvider) {
-    final lastFetchTime = sourceProvider.lastFetchTime;
-    setState(() {
-      _refreshStatus = lastFetchTime != null
-          ? 'Last updated: ${DateFormat.Hms().format(lastFetchTime)}'
-          : '';
-    });
   }
 
   void _restoreModeFromSession() {
@@ -1344,8 +1271,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
                               // Context (Source & Branch)
                               _SourceSelectorSection(
-                                isRefreshing: _isRefreshing,
-                                refreshStatus: _refreshStatus,
+                                isRefreshing: sourceProvider.isLoading,
+                                refreshStatus: sourceProvider.isLoading
+                                    ? (sourceProvider.loadingStatus.isNotEmpty
+                                        ? sourceProvider.loadingStatus
+                                        : 'Refreshing...')
+                                    : (sourceProvider.error != null
+                                        ? 'Error: ${sourceProvider.error!.length > 30 ? '${sourceProvider.error!.substring(0, 30)}...' : sourceProvider.error}'
+                                        : (sourceProvider.lastFetchTime != null
+                                            ? 'Last updated: ${DateFormat.Hms().format(sourceProvider.lastFetchTime!)}'
+                                            : '')),
                                 bulkSelections: _bulkSelections,
                                 selectedSource: _selectedSource,
                                 selectedBranch: _selectedBranch,
