@@ -6,6 +6,12 @@
 
 A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.
 
+## Project Status
+
+🚧 **Active Development**
+
+This project is currently under active development. Features are being added and refined continuously.
+
 ## Features
 
 ### 🔐 Authentication & Security
@@ -19,7 +25,7 @@ A comprehensive Flutter-based client application for interacting with the Google
 - **Smart Creation:** Specialized dialog for creating sessions with specific modes:
     - **Question:** Standard Q&A.
     - **Plan:** Enforces a plan approval step (`requirePlanApproval`).
-    - **Start:** Automation mode triggering `AUTO_CREATE_PR`.
+    - **Start Coding:** Automation mode triggering `AUTO_CREATE_PR`.
 - **Plan Approval:** Built-in UI to review and approve execution plans directly within the chat stream.
 - **Progress Tracking:** Real-time updates on long-running tasks, showing step-by-step progress.
 - **Pagination:** Infinite scrolling implementation to seamlessly load session history.
@@ -39,59 +45,45 @@ A comprehensive Flutter-based client application for interacting with the Google
 - **Real-time Monitoring:** Activity logs, progress bars, and estimated time remaining calculations keep you informed.
 - **Action Sequencing:** Chain multiple operations (e.g., *Refresh -> Quick Reply -> Mark as Read*) for each session.
 
+### ⚙️ Enhanced Settings  
+- **Unread Rules:** Configure specific state changes (e.g., "PR Status to Open") to automatically mark sessions as unread.  
+- **Smart Notifications:** Toggle system tray alerts for task updates, failures, or completions.  
+- **Auto-Refresh:** Set intervals for quick or full refreshes to keep your dashboard in sync.  
+- **System Tray:** Minimize the app to the tray to keep it running in the background.
+
 ## Screenshots
 
 ### Main Dashboard
-The session list provides a comprehensive overview of your active tasks, including real-time status updates.
-![Main Dashboard](docs/Screenshot_20260110_200843.png)
+The session list features a powerful query builder for filtering by status, tags, and properties.
+![Main Dashboard](docs/dashboard_sessions.png)
 
-### Session Details & Chat
-Engage with the agent using a rich chat interface that supports markdown and media.
-![Session Chat](docs/Screenshot_20260110_200716.png)
+### Compact Filters
+Complex queries can be collapsed to save screen space while keeping the active filters visible.
+![Collapsed Query](docs/dashboard_collapsed_query.png)
 
-### Activity Log
-View detailed activity logs and steps taken by the agent during a session.
-![Activity View](docs/Screenshot_20260110_200722.png)
+### Main Menu
+Quickly access bulk actions, refresh dirty sessions, or open sessions by ID.
+![Main Menu](docs/dashboard_menu.png)
 
-### Context Management
-Manage and view the source context associated with your sessions.
-![Context View](docs/Screenshot_20260110_200728.png)
+### New Session
+Launch new tasks with context, specific modes, and optional PR automation.
+![New Session](docs/new_session_dialog.png)
 
-### App Settings
-Configure your preferences, API keys, and enable Developer Mode.
-![Settings](docs/Screenshot_20260110_200739.png)
+### Bulk Actions
+Execute workflows across multiple sessions with advanced targeting and concurrency controls.
+![Bulk Actions](docs/bulk_actions_dialog.png)
 
-### User Interactions
-Rich dialogs handle user input, approvals, and confirmations securely.
-![Interactions](docs/Screenshot_20260110_200822.png)
+### Settings: Unread Rules
+Define custom rules to automatically manage session read/unread states.
+![Unread Rules](docs/settings_unread_rules.png)
 
-### PR Status Tracking
-Monitor your Pull Requests (Open, Merged, Draft) effortlessly from the session list.
-![PR Integration](docs/Screenshot_20260110_200847.png)
+### Settings: Notifications & Refresh
+Control how often the app syncs and when it should notify you.
+![Notifications](docs/settings_notifications.png)
 
-### Advanced Filtering
-Create and save filter presets to organize your workspace efficiently.
-![Filter Presets](docs/Screenshot_20260110_200853.png)
-
-### Complex Query Visualization
-Visualize and construct intricate logical queries (AND/OR/NOT groups) to pinpoint exact sessions.
-![Complex Queries](docs/complex_query_builder.png)
-
-### Session Creation
-Start new tasks with specific modes (Plan, Question, Automate) using the creation wizard.
-![New Session](docs/Screenshot_20260110_201004.png)
-
-### Bulk Actions Configuration
-Configure complex automation workflows with advanced targeting and execution controls.
-![Bulk Actions Config](docs/Screenshot_20260110_234928.png)
-
-### Bulk Execution Progress
-Monitor real-time progress, logs, and estimated time for long-running bulk operations.
-![Bulk Progress](docs/Screenshot_20260110_235057.png)
-
-### Action Library
-Choose from a wide variety of supported actions to build your automation sequence.
-![Action Library](docs/Screenshot_20260110_235146.png)
+### Settings: System
+Manage system tray behavior, performance tweaks, and developer options.
+![System Settings](docs/settings_system.png)
 
 ## Setup & Development
 
