@@ -1467,14 +1467,40 @@ class _SettingsScreenState extends State<SettingsScreen> {
               DataCell(Text(exclusion.reason)),
               DataCell(Text(exclusion.date.toIso8601String().split('T')[0])),
               DataCell(
-                IconButton(
-                  icon: const Icon(Icons.delete, color: Colors.red, size: 20),
-                  onPressed: () {
-                    settings.removeGithubExclusion(
-                      exclusion.value,
-                      exclusion.type,
-                    );
-                  },
+                Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    IconButton(
+                      icon: const Icon(Icons.refresh, size: 20),
+                      tooltip: 'Retry',
+                      onPressed: () {
+                        settings.removeGithubExclusion(
+                          exclusion.value,
+                          exclusion.type,
+                        );
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'Exclusion removed. Item will be retried on next sync.',
+                            ),
+                          ),
+                        );
+                      },
+                    ),
+                    IconButton(
+                      icon: const Icon(
+                        Icons.delete,
+                        color: Colors.red,
+                        size: 20,
+                      ),
+                      onPressed: () {
+                        settings.removeGithubExclusion(
+                          exclusion.value,
+                          exclusion.type,
+                        );
+                      },
+                    ),
+                  ],
                 ),
               ),
             ],
