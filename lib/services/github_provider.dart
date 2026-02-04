@@ -76,6 +76,43 @@ class GithubProvider extends ChangeNotifier {
 
   Future<String?> getToken() async => apiKey;
 
+  Future<bool> testExclusionAccess(GithubExclusion exclusion) async {
+    final token = apiKey;
+    if (token == null) return false;
+
+    try {
+      switch (exclusion.type) {
+        case GithubExclusionType.org:
+          return await _checkOrgAccess(exclusion.value);
+        case GithubExclusionType.repo:
+          final parts = exclusion.value.split('/');
+          if (parts.length >= 2) {
+            return await _checkRepoAccess(parts[0], parts[1]);
+          }
+          break;
+        case GithubExclusionType.pullRequest:
+          final parts = exclusion.value.split('/');
+          if (parts.length >= 3) {
+            // Check specific PR access
+            final response = await http.get(
+              Uri.parse(
+                'https://api.github.com/repos/${parts[0]}/${parts[1]}/pulls/${parts[2]}',
+              ),
+              headers: {
+                'Authorization': 'token $token',
+                'Accept': 'application/vnd.github.v3+json',
+              },
+            );
+            return response.statusCode == 200;
+          }
+          break;
+      }
+    } catch (e) {
+      debugPrint('Error testing exclusion access: $e');
+    }
+    return false;
+  }
+
   Future<void> setApiKey(String key) async {
     await _authService.saveGithubToken(key);
     _githubToken = key;
