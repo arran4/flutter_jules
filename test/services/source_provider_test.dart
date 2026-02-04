@@ -27,9 +27,7 @@ class FakeJulesClient extends Fake implements JulesClient {
     } else if (pageToken == 'page2') {
       // Second page
       return ListSourcesResponse(
-        sources: [
-          Source(name: 'source3', id: '3'),
-        ],
+        sources: [Source(name: 'source3', id: '3')],
         nextPageToken: null, // End
       );
     }
@@ -44,10 +42,7 @@ class FakeCacheService extends Fake implements CacheService {
   }
 
   @override
-  Future<void> saveSources(
-    String authToken,
-    List<Source> items,
-  ) async {
+  Future<void> saveSources(String authToken, List<Source> items) async {
     return;
   }
 }
@@ -68,11 +63,7 @@ void main() {
       statuses.add(provider.loadingStatus);
     });
 
-    await provider.fetchSources(
-      client,
-      authToken: 'token',
-      force: true,
-    );
+    await provider.fetchSources(client, authToken: 'token', force: true);
 
     expect(provider.items.length, 3);
 

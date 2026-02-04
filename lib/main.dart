@@ -37,9 +37,7 @@ void main(List<String> args) async {
   }
   await NotificationService().init();
 
-  runApp(
-    const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())),
-  );
+  runApp(const AppContainer(child: GlobalShortcutFocusManager(child: MyApp())));
 }
 
 class MyApp extends StatefulWidget {
@@ -128,24 +126,24 @@ class _MyAppState extends State<MyApp> with WindowListener {
         if (!mounted) return;
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
-          context
-              .read<ShortcutRegistry>()
-              .dispatch(AppShortcutAction.newSession);
+          context.read<ShortcutRegistry>().dispatch(
+            AppShortcutAction.newSession,
+          );
         }
       },
       onRefresh: () {
         final auth = context.read<AuthProvider>();
         if (auth.isAuthenticated) {
           context.read<SessionProvider>().fetchSessions(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
           context.read<SourceProvider>().fetchSources(
-                auth.client,
-                authToken: auth.token,
-                force: true,
-              );
+            auth.client,
+            authToken: auth.token,
+            force: true,
+          );
         }
       },
     );
