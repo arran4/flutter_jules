@@ -207,9 +207,8 @@ class BulkActionExecutor extends ChangeNotifier {
   }
 
   Future<void> undoAll() async {
-    final undoableLogs = _logs
-        .where((l) => l.undoActionType != null && !l.isUndone)
-        .toList();
+    final undoableLogs =
+        _logs.where((l) => l.undoActionType != null && !l.isUndone).toList();
 
     if (undoableLogs.isEmpty) return;
 
