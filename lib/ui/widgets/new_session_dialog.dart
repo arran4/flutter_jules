@@ -90,8 +90,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   bool _autoCreatePr = true;
 
   // Refresh State
-  bool _isRefreshing = false;
-  String _refreshStatus = '';
+  bool _showJustUpdated = false;
 
   // Custom Dropdown State
   final TextEditingController _sourceController = TextEditingController();
@@ -338,13 +337,12 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }
 
   Future<void> _fetchSources({bool force = false}) async {
-    if (_isRefreshing) return;
-
     final deps = _sourceFetchDependencies();
 
-    // Only show loading state on explicit user action
-    if (force) {
-      _startRefresh();
+    // If already loading and not forced, we don't need to do anything as the UI
+    // will reflect the provider state.
+    if (deps.sourceProvider.isLoading && !force) {
+      return;
     }
 
     try {
@@ -353,7 +351,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         _applyLoadedSources(deps.sourceProvider, force: force);
       }
     } catch (e) {
-      _handleSourceFetchError(e);
+      // Error handled by provider state
     } finally {
       await _finalizeRefreshState(deps.sourceProvider, force: force);
     }
@@ -529,13 +527,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     );
   }
 
-  void _startRefresh() {
-    setState(() {
-      _isRefreshing = true;
-      _refreshStatus = 'Refreshing...';
-    });
-  }
-
   Future<void> _fetchSourcesFromProvider(
     _SourceFetchDependencies deps, {
     required bool force,
@@ -550,13 +541,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       force: force,
       githubProvider: deps.githubProvider,
       sessionProvider: deps.sessionProvider,
-      onProgress: (count, message) {
-        if (mounted) {
-          setState(() {
-            _refreshStatus = message;
-          });
-        }
-      },
     );
   }
 
@@ -575,16 +559,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _initializeSelection(sources);
     if (force) {
       setState(() {
-        _refreshStatus = 'Updated just now';
+        _showJustUpdated = true;
       });
     }
-  }
-
-  void _handleSourceFetchError(Object error) {
-    if (!mounted) return;
-    setState(() {
-      _refreshStatus = 'Error: ${error.toString().substring(0, 30)}...';
-    });
   }
 
   Future<void> _finalizeRefreshState(
@@ -593,31 +570,13 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   }) async {
     if (!mounted) return;
     if (force) {
-      setState(() {
-        _isRefreshing = false;
-      });
-      await _resetRefreshStatusAfterDelay(sourceProvider);
-    } else {
-      _updateRefreshStatusFromLastFetch(sourceProvider);
+      await Future.delayed(const Duration(seconds: 5));
+      if (mounted) {
+        setState(() {
+          _showJustUpdated = false;
+        });
+      }
     }
-  }
-
-  Future<void> _resetRefreshStatusAfterDelay(
-    SourceProvider sourceProvider,
-  ) async {
-    // Reset status after a few seconds
-    await Future.delayed(const Duration(seconds: 5));
-    if (!mounted || _isRefreshing) return;
-    _updateRefreshStatusFromLastFetch(sourceProvider);
-  }
-
-  void _updateRefreshStatusFromLastFetch(SourceProvider sourceProvider) {
-    final lastFetchTime = sourceProvider.lastFetchTime;
-    setState(() {
-      _refreshStatus = lastFetchTime != null
-          ? 'Last updated: ${DateFormat.Hms().format(lastFetchTime)}'
-          : '';
-    });
   }
 
   void _restoreModeFromSession() {
@@ -1173,11 +1132,23 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   Widget build(BuildContext context) {
     return Consumer2<SourceProvider, SettingsProvider>(
       builder: (context, sourceProvider, settingsProvider, _) {
-        // Derive status display from provider state if not actively in the main fetch loop
-        String displayStatus = _refreshStatus;
-        if (!_isRefreshing && sourceProvider.pendingGithubRefreshes > 0) {
+        String displayStatus = '';
+        if (sourceProvider.isLoading) {
+          displayStatus = sourceProvider.loadingStatus;
+        } else if (_showJustUpdated) {
+          displayStatus = 'Updated just now';
+        } else if (sourceProvider.pendingGithubRefreshes > 0) {
           displayStatus =
               'Updating GitHub details (${sourceProvider.pendingGithubRefreshes} remaining)...';
+        } else if (sourceProvider.lastFetchTime != null) {
+          displayStatus =
+              'Last updated: ${DateFormat.Hms().format(sourceProvider.lastFetchTime!)}';
+        }
+
+        if (sourceProvider.error != null && !sourceProvider.isLoading) {
+          final err = sourceProvider.error!;
+          displayStatus =
+              'Error: ${err.length > 30 ? '${err.substring(0, 30)}...' : err}';
         }
 
         var sources = sourceProvider.items.map((i) => i.data).toList();
@@ -1364,7 +1335,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
                               // Context (Source & Branch)
                               _SourceSelectorSection(
-                                isRefreshing: _isRefreshing,
+                                isRefreshing: sourceProvider.isLoading,
                                 refreshStatus: displayStatus,
                                 bulkSelections: _bulkSelections,
                                 selectedSource: _selectedSource,
