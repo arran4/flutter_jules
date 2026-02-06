@@ -24,12 +24,22 @@ class SchedulerPreset {
           schedulesFactory: _createBatterySaverSchedules,
         ),
         const SchedulerPreset(
-          name: 'Daily Only',
+          name: 'Hourly',
+          description: 'Refreshes data every hour.',
+          schedulesFactory: _createHourlySchedules,
+        ),
+        const SchedulerPreset(
+          name: 'Daily',
           description: 'Refreshes data only once a day.',
           schedulesFactory: _createDailySchedules,
         ),
         const SchedulerPreset(
-          name: 'Manual Only',
+          name: 'Aggressive',
+          description: 'Very frequent updates for heavy usage.',
+          schedulesFactory: _createAggressiveSchedules,
+        ),
+        const SchedulerPreset(
+          name: 'Never (Manual Only)',
           description:
               'No automatic data refresh. Only sends pending messages.',
           schedulesFactory: _createManualSchedules,
@@ -114,6 +124,58 @@ class SchedulerPreset {
       RefreshSchedule(
         name: 'Send Pending Messages',
         intervalInMinutes: 5,
+        taskType: RefreshTaskType.sendPendingMessages,
+        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
+      ),
+    ];
+  }
+
+  static List<RefreshSchedule> _createHourlySchedules() {
+    return [
+      RefreshSchedule(
+        name: 'Full Refresh',
+        intervalInMinutes: 60,
+        refreshPolicy: ListRefreshPolicy.full,
+      ),
+      RefreshSchedule(
+        name: 'Watched Refresh',
+        intervalInMinutes: 10,
+        refreshPolicy: ListRefreshPolicy.watched,
+      ),
+      RefreshSchedule(
+        name: 'Quick Refresh',
+        intervalInMinutes: 30,
+        refreshPolicy: ListRefreshPolicy.quick,
+      ),
+      RefreshSchedule(
+        name: 'Send Pending Messages',
+        intervalInMinutes: 5,
+        taskType: RefreshTaskType.sendPendingMessages,
+        sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
+      ),
+    ];
+  }
+
+  static List<RefreshSchedule> _createAggressiveSchedules() {
+    return [
+      RefreshSchedule(
+        name: 'Full Refresh',
+        intervalInMinutes: 15,
+        refreshPolicy: ListRefreshPolicy.full,
+      ),
+      RefreshSchedule(
+        name: 'Watched Refresh',
+        intervalInMinutes: 2,
+        refreshPolicy: ListRefreshPolicy.watched,
+      ),
+      RefreshSchedule(
+        name: 'Quick Refresh',
+        intervalInMinutes: 5,
+        refreshPolicy: ListRefreshPolicy.quick,
+      ),
+      RefreshSchedule(
+        name: 'Send Pending Messages',
+        intervalInMinutes: 1,
         taskType: RefreshTaskType.sendPendingMessages,
         sendMessagesMode: SendMessagesMode.sendAllUntilFailure,
       ),
