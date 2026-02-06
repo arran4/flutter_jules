@@ -205,7 +205,6 @@ void main() {
       };
 
       // Mock createRepoDetailsJob to return a job that resolves with githubDetails
-      final jobCompleter = Completer<void>();
       final job = GithubJob(
         id: 'job1',
         description: 'desc',
