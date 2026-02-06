@@ -1,4 +1,3 @@
-import 'dart:async';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:flutter_jules/services/source_provider.dart';
@@ -54,17 +53,14 @@ class MockGithubProvider extends Mock implements GithubProvider {
   @override
   GithubJob createRepoDetailsJob(String owner, String repo) {
     // Return a dummy job that completes immediately
-    return GithubJob(
-        id: 'mock',
-        description: 'mock',
-        action: () async => {}
-    )..status = GithubJobStatus.completed
-     ..result = <String, dynamic>{};
+    return GithubJob(id: 'mock', description: 'mock', action: () async => {})
+      ..status = GithubJobStatus.completed
+      ..result = <String, dynamic>{};
   }
 
   @override
   Future<Map<String, dynamic>?> getRepoDetails(String owner, String repo) {
-     return super.noSuchMethod(
+    return super.noSuchMethod(
       Invocation.method(#getRepoDetails, [owner, repo]),
       returnValue: Future.value(null),
     );
@@ -88,15 +84,17 @@ void main() {
           .thenAnswer((_) async => <CachedItem<Source>>[]);
 
       // Stub saveSources
-      when(mockCacheService.saveSources(any, any))
-          .thenAnswer((_) async {});
+      when(mockCacheService.saveSources(any, any)).thenAnswer((_) async {});
 
       mockGithubProvider = MockGithubProvider();
       provider.setCacheService(mockCacheService);
     });
 
     test('fetchSources parses and saves options', () async {
-      final options = {'key': 'value', 'nested': {'foo': 'bar'}};
+      final options = {
+        'key': 'value',
+        'nested': {'foo': 'bar'}
+      };
       final sources = <Source>[
         Source(
           name: 'source1',
@@ -152,7 +150,9 @@ void main() {
       await provider.fetchSources(mockClient, authToken: 'auth_token');
 
       // Setup refresh
-      final newBranches = [{'displayName': 'new-branch'}];
+      final newBranches = [
+        {'displayName': 'new-branch'}
+      ];
       final details = {
         'repoName': 'repo',
         'branches': newBranches,
@@ -171,11 +171,8 @@ void main() {
           .thenAnswer((_) async => details);
 
       // Act
-      await provider.refreshSource(
-        source,
-        authToken: 'auth_token',
-        githubProvider: mockGithubProvider
-      );
+      await provider.refreshSource(source,
+          authToken: 'auth_token', githubProvider: mockGithubProvider);
 
       // Verify
       final updatedSource = provider.items[0].data;
@@ -189,7 +186,8 @@ void main() {
       expect(updatedSource.options, equals(options));
 
       // Verify save called
-      verify(mockCacheService.saveSources('auth_token', any)).called(greaterThan(1)); // Initial fetch + refresh
+      verify(mockCacheService.saveSources('auth_token', any))
+          .called(greaterThan(1)); // Initial fetch + refresh
     });
   });
 }
