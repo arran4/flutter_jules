@@ -79,6 +79,10 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
   Source? _selectedSource;
   String? _selectedBranch;
 
+  // Branch Text Controller
+  late final TextEditingController _branchController;
+  bool _isRefreshingSource = false;
+
   // Bulk Selection State
   List<BulkSelection> _bulkSelections = [];
 
@@ -115,7 +119,16 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     super.initState();
     _promptController = TextEditingController();
     _promptFocusNode = FocusNode();
+    _branchController = TextEditingController();
     _branchFocusNode = FocusNode();
+
+    _branchController.addListener(() {
+      if (_selectedBranch != _branchController.text) {
+        setState(() {
+          _selectedBranch = _branchController.text;
+        });
+      }
+    });
 
     if (widget.mode == SessionDialogMode.edit &&
         widget.initialSession != null) {
@@ -169,6 +182,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     _removeSourceOverlay();
     _sourceController.dispose();
     _sourceFocusNode.dispose();
+    _branchController.dispose();
     _promptController.dispose();
     _promptFocusNode.dispose();
     _branchFocusNode.dispose();
@@ -427,6 +441,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
         if (widget.initialSession!.sourceContext!.githubRepoContext != null) {
           _selectedBranch = widget
               .initialSession!.sourceContext!.githubRepoContext!.startingBranch;
+          _branchController.text = _selectedBranch ?? '';
         }
       } else {
         // Set default branch
@@ -768,12 +783,14 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     // If selected source is null, clear branch
     if (_selectedSource == null) {
       _selectedBranch = 'main';
+      _branchController.text = 'main';
       return;
     }
 
     final repo = _selectedSource!.githubRepo;
     if (repo == null) {
       _selectedBranch = 'main';
+      _branchController.text = 'main';
       return;
     }
 
@@ -794,14 +811,55 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
     }
 
+    String nextBranch = 'main';
     if (restoredBranch != null) {
-      _selectedBranch = restoredBranch;
+      nextBranch = restoredBranch;
     } else if (repo.defaultBranch != null) {
-      _selectedBranch = repo.defaultBranch!.displayName;
+      nextBranch = repo.defaultBranch!.displayName;
     } else if (branches.isNotEmpty) {
-      _selectedBranch = branches.first;
-    } else {
-      _selectedBranch = 'main';
+      nextBranch = branches.first;
+    }
+
+    _selectedBranch = nextBranch;
+    _branchController.text = nextBranch;
+  }
+
+  Future<void> _refreshSelectedSource() async {
+    if (_selectedSource == null || _isRefreshingSource) return;
+
+    setState(() {
+      _isRefreshingSource = true;
+    });
+
+    try {
+      final deps = _sourceFetchDependencies();
+      await deps.sourceProvider.refreshSource(
+        _selectedSource!,
+        authToken: deps.auth.token,
+        githubProvider: deps.githubProvider,
+      );
+      // Re-apply branch selection logic in case new branches appeared
+      // or just ensure controller matches if something changed
+      if (mounted && _selectedSource != null) {
+        // We might want to keep the current text if the user was typing?
+        // Or update if the current text is now valid?
+        // Generally, refresh just updates the list. We don't necessarily change the selection
+        // unless it's invalid?
+        // For now, let's leave the text as is, assuming the user might be looking for a branch.
+        setState(() {}); // Trigger rebuild to update autocomplete options
+      }
+    } catch (e) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to refresh branch list: $e')),
+        );
+      }
+    } finally {
+      if (mounted) {
+        setState(() {
+          _isRefreshingSource = false;
+        });
+      }
     }
   }
 
@@ -1332,6 +1390,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 sourceFocusNode: _sourceFocusNode,
                                 branchFocusNode: _branchFocusNode,
                                 sourceLayerLink: _sourceLayerLink,
+                                branchController: _branchController,
+                                isRefreshingBranch: _isRefreshingSource,
+                                onRefreshBranch: _refreshSelectedSource,
                                 onOpenBulkDialog: () =>
                                     _showBulkDialog(sources),
                                 onRefresh: () => _fetchSources(force: true),
@@ -1656,6 +1717,9 @@ class _SourceSelectorSection extends StatelessWidget {
   final FocusNode sourceFocusNode;
   final FocusNode branchFocusNode;
   final LayerLink sourceLayerLink;
+  final TextEditingController branchController;
+  final bool isRefreshingBranch;
+  final VoidCallback onRefreshBranch;
   final VoidCallback onOpenBulkDialog;
   final VoidCallback onRefresh;
   final void Function(int index, String branch) onBulkBranchChanged;
@@ -1676,6 +1740,9 @@ class _SourceSelectorSection extends StatelessWidget {
     required this.sourceFocusNode,
     required this.branchFocusNode,
     required this.sourceLayerLink,
+    required this.branchController,
+    required this.isRefreshingBranch,
+    required this.onRefreshBranch,
     required this.onOpenBulkDialog,
     required this.onRefresh,
     required this.onBulkBranchChanged,
@@ -1738,6 +1805,9 @@ class _SourceSelectorSection extends StatelessWidget {
             sourceFocusNode: sourceFocusNode,
             branchFocusNode: branchFocusNode,
             sourceLayerLink: sourceLayerLink,
+            branchController: branchController,
+            isRefreshingBranch: isRefreshingBranch,
+            onRefreshBranch: onRefreshBranch,
             selectedSource: selectedSource,
             selectedBranch: selectedBranch,
             branches: branches,
@@ -1837,6 +1907,9 @@ class _SingleSourceSelector extends StatelessWidget {
   final FocusNode sourceFocusNode;
   final FocusNode branchFocusNode;
   final LayerLink sourceLayerLink;
+  final TextEditingController branchController;
+  final bool isRefreshingBranch;
+  final VoidCallback onRefreshBranch;
   final Source? selectedSource;
   final String? selectedBranch;
   final List<String> branches;
@@ -1850,6 +1923,9 @@ class _SingleSourceSelector extends StatelessWidget {
     required this.sourceFocusNode,
     required this.branchFocusNode,
     required this.sourceLayerLink,
+    required this.branchController,
+    required this.isRefreshingBranch,
+    required this.onRefreshBranch,
     required this.selectedSource,
     required this.selectedBranch,
     required this.branches,
@@ -1893,23 +1969,90 @@ class _SingleSourceSelector extends StatelessWidget {
         const SizedBox(width: 16),
         Expanded(
           flex: 1,
-          child: DropdownButtonFormField<String>(
+          child: RawAutocomplete<String>(
             focusNode: branchFocusNode,
-            isExpanded: true,
-            decoration: const InputDecoration(
-              labelText: 'Branch',
-              border: OutlineInputBorder(),
-            ),
-            value: selectedBranch,
-            items: branches
-                .map(
-                  (b) => DropdownMenuItem(
-                    value: b,
-                    child: Text(b, overflow: TextOverflow.ellipsis),
+            textEditingController: branchController,
+            optionsBuilder: (TextEditingValue textEditingValue) {
+              if (textEditingValue.text == '') {
+                return branches;
+              }
+              return branches.where((String option) {
+                return option
+                    .toLowerCase()
+                    .contains(textEditingValue.text.toLowerCase());
+              });
+            },
+            onSelected: (String selection) {
+              onBranchChanged(selection);
+            },
+            fieldViewBuilder: (
+              BuildContext context,
+              TextEditingController fieldTextEditingController,
+              FocusNode fieldFocusNode,
+              VoidCallback onFieldSubmitted,
+            ) {
+              return TextField(
+                controller: fieldTextEditingController,
+                focusNode: fieldFocusNode,
+                decoration: InputDecoration(
+                  labelText: 'Branch',
+                  border: const OutlineInputBorder(),
+                  suffixIcon: isRefreshingBranch
+                      ? const SizedBox(
+                          width: 16,
+                          height: 16,
+                          child: Padding(
+                            padding: EdgeInsets.all(12.0),
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          ),
+                        )
+                      : IconButton(
+                          icon: const Icon(Icons.refresh, size: 16),
+                          onPressed: onRefreshBranch,
+                          tooltip: 'Refresh branches',
+                        ),
+                ),
+                onSubmitted: (String value) {
+                  onFieldSubmitted();
+                  onBranchChanged(value);
+                },
+              );
+            },
+            optionsViewBuilder: (
+              BuildContext context,
+              AutocompleteOnSelected<String> onSelected,
+              Iterable<String> options,
+            ) {
+              return Align(
+                alignment: Alignment.topLeft,
+                child: Material(
+                  elevation: 4.0,
+                  child: ConstrainedBox(
+                    constraints: const BoxConstraints(
+                      maxHeight: 200.0,
+                      maxWidth: 300.0,
+                    ),
+                    child: ListView.builder(
+                      padding: EdgeInsets.zero,
+                      shrinkWrap: true,
+                      itemCount: options.length,
+                      itemBuilder: (BuildContext context, int index) {
+                        final String option = options.elementAt(index);
+                        return InkWell(
+                          onTap: () {
+                            onSelected(option);
+                          },
+                          child: Padding(
+                            padding: const EdgeInsets.all(16.0),
+                            child: Text(option),
+                          ),
+                        );
+                      },
+                    ),
                   ),
-                )
-                .toList(),
-            onChanged: onBranchChanged,
+                ),
+              );
+            },
           ),
         ),
       ],
