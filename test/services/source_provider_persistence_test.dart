@@ -54,17 +54,14 @@ class MockGithubProvider extends Mock implements GithubProvider {
   @override
   GithubJob createRepoDetailsJob(String owner, String repo) {
     // Return a dummy job that completes immediately
-    return GithubJob(
-        id: 'mock',
-        description: 'mock',
-        action: () async => {}
-    )..status = GithubJobStatus.completed
-     ..result = <String, dynamic>{};
+    return GithubJob(id: 'mock', description: 'mock', action: () async => {})
+      ..status = GithubJobStatus.completed
+      ..result = <String, dynamic>{};
   }
 
   @override
   Future<Map<String, dynamic>?> getRepoDetails(String owner, String repo) {
-     return super.noSuchMethod(
+    return super.noSuchMethod(
       Invocation.method(#getRepoDetails, [owner, repo]),
       returnValue: Future.value(null),
     );
@@ -84,25 +81,24 @@ void main() {
       mockCacheService = MockCacheService();
 
       // Stub loadSources
-      when(mockCacheService.loadSources(any))
-          .thenAnswer((_) async => <CachedItem<Source>>[]);
+      when(
+        mockCacheService.loadSources(any),
+      ).thenAnswer((_) async => <CachedItem<Source>>[]);
 
       // Stub saveSources
-      when(mockCacheService.saveSources(any, any))
-          .thenAnswer((_) async {});
+      when(mockCacheService.saveSources(any, any)).thenAnswer((_) async {});
 
       mockGithubProvider = MockGithubProvider();
       provider.setCacheService(mockCacheService);
     });
 
     test('fetchSources parses and saves options', () async {
-      final options = {'key': 'value', 'nested': {'foo': 'bar'}};
+      final options = {
+        'key': 'value',
+        'nested': {'foo': 'bar'},
+      };
       final sources = <Source>[
-        Source(
-          name: 'source1',
-          id: 'id1',
-          options: options,
-        ),
+        Source(name: 'source1', id: 'id1', options: options),
       ];
       final response = ListSourcesResponse(
         sources: sources,
@@ -131,7 +127,11 @@ void main() {
     test('refreshSource updates branches and preserves options', () async {
       final options = {'key': 'preserved'};
       final oldRepo = GitHubRepo(
-          owner: 'owner', repo: 'repo', isPrivate: false, branches: []);
+        owner: 'owner',
+        repo: 'repo',
+        isPrivate: false,
+        branches: [],
+      );
       final source = Source(
         name: 'source1',
         id: 'id1',
@@ -147,12 +147,15 @@ void main() {
         sources: [source],
         nextPageToken: null,
       );
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async => response);
+      when(
+        mockClient.listSources(pageToken: anyNamed('pageToken')),
+      ).thenAnswer((_) async => response);
       await provider.fetchSources(mockClient, authToken: 'auth_token');
 
       // Setup refresh
-      final newBranches = [{'displayName': 'new-branch'}];
+      final newBranches = [
+        {'displayName': 'new-branch'},
+      ];
       final details = {
         'repoName': 'repo',
         'branches': newBranches,
@@ -167,14 +170,15 @@ void main() {
         'forkParent': null,
       };
 
-      when(mockGithubProvider.getRepoDetails('owner', 'repo'))
-          .thenAnswer((_) async => details);
+      when(
+        mockGithubProvider.getRepoDetails('owner', 'repo'),
+      ).thenAnswer((_) async => details);
 
       // Act
       await provider.refreshSource(
         source,
         authToken: 'auth_token',
-        githubProvider: mockGithubProvider
+        githubProvider: mockGithubProvider,
       );
 
       // Verify
@@ -189,7 +193,9 @@ void main() {
       expect(updatedSource.options, equals(options));
 
       // Verify save called
-      verify(mockCacheService.saveSources('auth_token', any)).called(greaterThan(1)); // Initial fetch + refresh
+      verify(
+        mockCacheService.saveSources('auth_token', any),
+      ).called(greaterThan(1)); // Initial fetch + refresh
     });
   });
 }

@@ -161,24 +161,26 @@ class SourceProvider extends ChangeNotifier {
           source.githubRepo!.repo,
         );
 
-        job.completer.future.then((_) {
-          _pendingGithubRefreshes--;
-          if (job.status == GithubJobStatus.completed) {
-            final details = job.result as Map<String, dynamic>?;
-            if (details != null) {
-              _updateSourceWithGithubDetails(
-                source.name,
-                details,
-                authToken,
-              );
-            }
-          }
-          notifyListeners();
-        }).catchError((err) {
-          _pendingGithubRefreshes--;
-          notifyListeners();
-          // Silently ignore, errors are handled in the provider
-        });
+        job.completer.future
+            .then((_) {
+              _pendingGithubRefreshes--;
+              if (job.status == GithubJobStatus.completed) {
+                final details = job.result as Map<String, dynamic>?;
+                if (details != null) {
+                  _updateSourceWithGithubDetails(
+                    source.name,
+                    details,
+                    authToken,
+                  );
+                }
+              }
+              notifyListeners();
+            })
+            .catchError((err) {
+              _pendingGithubRefreshes--;
+              notifyListeners();
+              // Silently ignore, errors are handled in the provider
+            });
 
         githubProvider.enqueue(job);
       }
@@ -207,11 +209,11 @@ class SourceProvider extends ChangeNotifier {
           : oldSource.githubRepo!.defaultBranch,
       branches:
           (details['branches'] != null &&
-                  (details['branches'] as List).isNotEmpty)
-              ? (details['branches'] as List)
-                  .map((b) => GitHubBranch(displayName: b['displayName']))
-                  .toList()
-              : oldSource.githubRepo!.branches,
+              (details['branches'] as List).isNotEmpty)
+          ? (details['branches'] as List)
+                .map((b) => GitHubBranch(displayName: b['displayName']))
+                .toList()
+          : oldSource.githubRepo!.branches,
       repoName: details['repoName'],
       repoId: details['repoId'],
       isPrivateGithub: details['isPrivateGithub'],
@@ -302,11 +304,12 @@ class SourceProvider extends ChangeNotifier {
           defaultBranch: details['defaultBranch'] != null
               ? GitHubBranch(displayName: details['defaultBranch'])
               : sourceToRefresh.githubRepo!.defaultBranch,
-          branches: (details['branches'] != null &&
+          branches:
+              (details['branches'] != null &&
                   (details['branches'] as List).isNotEmpty)
               ? (details['branches'] as List)
-                  .map((b) => GitHubBranch(displayName: b['displayName']))
-                  .toList()
+                    .map((b) => GitHubBranch(displayName: b['displayName']))
+                    .toList()
               : sourceToRefresh.githubRepo!.branches,
           repoName: details['repoName'],
           repoId: details['repoId'],
