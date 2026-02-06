@@ -205,12 +205,12 @@ class SourceProvider extends ChangeNotifier {
       defaultBranch: details['defaultBranch'] != null
           ? GitHubBranch(displayName: details['defaultBranch'])
           : oldSource.githubRepo!.defaultBranch,
-      branches: (details['branches'] != null &&
-              (details['branches'] as List).isNotEmpty)
-          ? (details['branches'] as List)
-              .map((b) => GitHubBranch(displayName: b['displayName']))
-              .toList()
-          : oldSource.githubRepo!.branches,
+      branches: _combineBranches(
+        oldSource.githubRepo!.branches,
+        (details['branches'] as List?)
+            ?.map((b) => GitHubBranch(displayName: b['displayName']))
+            .toList(),
+      ),
       repoName: details['repoName'],
       repoId: details['repoId'],
       isPrivateGithub: details['isPrivateGithub'],
@@ -301,12 +301,12 @@ class SourceProvider extends ChangeNotifier {
           defaultBranch: details['defaultBranch'] != null
               ? GitHubBranch(displayName: details['defaultBranch'])
               : sourceToRefresh.githubRepo!.defaultBranch,
-          branches: (details['branches'] != null &&
-                  (details['branches'] as List).isNotEmpty)
-              ? (details['branches'] as List)
-                  .map((b) => GitHubBranch(displayName: b['displayName']))
-                  .toList()
-              : sourceToRefresh.githubRepo!.branches,
+          branches: _combineBranches(
+            sourceToRefresh.githubRepo!.branches,
+            (details['branches'] as List?)
+                ?.map((b) => GitHubBranch(displayName: b['displayName']))
+                .toList(),
+          ),
           repoName: details['repoName'],
           repoId: details['repoId'],
           isPrivateGithub: details['isPrivateGithub'],
@@ -352,5 +352,22 @@ class SourceProvider extends ChangeNotifier {
     } finally {
       _refreshingSources.remove(sourceToRefresh.name);
     }
+  }
+
+  List<GitHubBranch>? _combineBranches(
+    List<GitHubBranch>? existing,
+    List<GitHubBranch>? incoming,
+  ) {
+    if (incoming == null || incoming.isEmpty) return existing;
+    if (existing == null || existing.isEmpty) return incoming;
+
+    final branchMap = <String, GitHubBranch>{};
+    for (final b in existing) {
+      branchMap[b.displayName] = b;
+    }
+    for (final b in incoming) {
+      branchMap[b.displayName] = b;
+    }
+    return branchMap.values.toList();
   }
 }
