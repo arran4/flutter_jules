@@ -180,6 +180,7 @@ class Source {
   final GitHubRepo? githubRepo;
   final bool isArchived;
   final bool isReadOnly;
+  final Map<String, dynamic>? options;
 
   Source({
     required this.name,
@@ -187,6 +188,7 @@ class Source {
     this.githubRepo,
     this.isArchived = false,
     this.isReadOnly = false,
+    this.options,
   });
 
   factory Source.fromJson(Map<String, dynamic> json) {
@@ -201,6 +203,7 @@ class Source {
       ),
       isArchived: getBooleanPropOrDefault(json, 'isArchived', false),
       isReadOnly: getBooleanPropOrDefault(json, 'isReadOnly', false),
+      options: json['options'] as Map<String, dynamic>?,
     );
   }
 
@@ -213,6 +216,9 @@ class Source {
     };
     if (githubRepo != null) {
       map['githubRepo'] = githubRepo!.toJson();
+    }
+    if (options != null) {
+      map['options'] = options;
     }
     return map;
   }

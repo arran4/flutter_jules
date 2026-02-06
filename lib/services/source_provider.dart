@@ -202,18 +202,16 @@ class SourceProvider extends ChangeNotifier {
       owner: oldSource.githubRepo!.owner,
       repo: oldSource.githubRepo!.repo,
       isPrivate: oldSource.githubRepo!.isPrivate,
-      defaultBranch: oldSource.githubRepo!.defaultBranch ??
-          (details['defaultBranch'] != null
-              ? GitHubBranch(displayName: details['defaultBranch'])
-              : null),
-      branches: (oldSource.githubRepo!.branches?.isNotEmpty ?? false)
-          ? oldSource.githubRepo!.branches
-          : (details['branches'] != null &&
-                  (details['branches'] as List).isNotEmpty
+      defaultBranch: details['defaultBranch'] != null
+          ? GitHubBranch(displayName: details['defaultBranch'])
+          : oldSource.githubRepo!.defaultBranch,
+      branches:
+          (details['branches'] != null &&
+                  (details['branches'] as List).isNotEmpty)
               ? (details['branches'] as List)
                   .map((b) => GitHubBranch(displayName: b['displayName']))
                   .toList()
-              : oldSource.githubRepo!.branches),
+              : oldSource.githubRepo!.branches,
       repoName: details['repoName'],
       repoId: details['repoId'],
       isPrivateGithub: details['isPrivateGithub'],
@@ -231,6 +229,7 @@ class SourceProvider extends ChangeNotifier {
       githubRepo: enrichedRepo,
       isArchived: oldSource.isArchived,
       isReadOnly: oldSource.isReadOnly,
+      options: oldSource.options,
     );
 
     final newItem = CachedItem(
@@ -300,8 +299,15 @@ class SourceProvider extends ChangeNotifier {
           owner: sourceToRefresh.githubRepo!.owner,
           repo: sourceToRefresh.githubRepo!.repo,
           isPrivate: sourceToRefresh.githubRepo!.isPrivate,
-          defaultBranch: sourceToRefresh.githubRepo!.defaultBranch,
-          branches: sourceToRefresh.githubRepo!.branches,
+          defaultBranch: details['defaultBranch'] != null
+              ? GitHubBranch(displayName: details['defaultBranch'])
+              : sourceToRefresh.githubRepo!.defaultBranch,
+          branches: (details['branches'] != null &&
+                  (details['branches'] as List).isNotEmpty)
+              ? (details['branches'] as List)
+                  .map((b) => GitHubBranch(displayName: b['displayName']))
+                  .toList()
+              : sourceToRefresh.githubRepo!.branches,
           repoName: details['repoName'],
           repoId: details['repoId'],
           isPrivateGithub: details['isPrivateGithub'],
@@ -319,6 +325,7 @@ class SourceProvider extends ChangeNotifier {
           githubRepo: enrichedRepo,
           isArchived: sourceToRefresh.isArchived,
           isReadOnly: sourceToRefresh.isReadOnly,
+          options: sourceToRefresh.options,
         );
 
         final oldItem = _items[index];
