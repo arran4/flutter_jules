@@ -14,6 +14,7 @@ class CacheMetadata {
       hasPendingUpdates; // True if message sent but not yet fully refreshed/synced response
   final List<PendingMessage> pendingMessages;
   final String? reasonForLastUnread;
+  final List<String> recentErrors;
 
   factory CacheMetadata.empty() =>
       CacheMetadata(firstSeen: DateTime.now(), lastRetrieved: DateTime.now());
@@ -30,6 +31,7 @@ class CacheMetadata {
     this.isHidden = false,
     this.pendingMessages = const [],
     this.reasonForLastUnread,
+    this.recentErrors = const [],
   });
 
   // Convenience Getters
@@ -91,6 +93,7 @@ class CacheMetadata {
         'reasonForLastUnread',
         null,
       ),
+      recentErrors: getStringArrayPropOrDefault(json, 'recentErrors', []),
     );
   }
 
@@ -108,6 +111,7 @@ class CacheMetadata {
       'pendingMessages': pendingMessages.map((e) => e.toJson()).toList(),
       if (reasonForLastUnread != null)
         'reasonForLastUnread': reasonForLastUnread,
+      'recentErrors': recentErrors,
     };
   }
 
@@ -123,6 +127,7 @@ class CacheMetadata {
     bool? isHidden, // Fixed
     List<PendingMessage>? pendingMessages,
     String? reasonForLastUnread,
+    List<String>? recentErrors,
   }) {
     return CacheMetadata(
       firstSeen: firstSeen ?? this.firstSeen,
@@ -136,6 +141,7 @@ class CacheMetadata {
       isHidden: isHidden ?? this.isHidden,
       pendingMessages: pendingMessages ?? this.pendingMessages,
       reasonForLastUnread: reasonForLastUnread ?? this.reasonForLastUnread,
+      recentErrors: recentErrors ?? this.recentErrors,
     );
   }
 }

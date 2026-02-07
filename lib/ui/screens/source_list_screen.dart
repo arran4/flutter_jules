@@ -254,13 +254,12 @@ class _SourceListScreenState extends State<SourceListScreen> {
     );
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
-    // This will trigger both source and session refreshes
+    // This will trigger source refreshes
     await sourceProvider.fetchSources(
       auth.client,
       authToken: auth.token,
       force: true,
       githubProvider: githubProvider,
-      sessionProvider: sessionProvider,
     );
 
     _processSessions();

@@ -204,6 +204,7 @@ class SourceTile extends StatelessWidget {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     try {
       await sourceProvider.refreshSource(
+        auth.client,
         source,
         authToken: auth.token,
         githubProvider: githubProvider,
