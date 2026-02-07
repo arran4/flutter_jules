@@ -64,15 +64,18 @@ class MockGithubProvider extends Mock implements GithubProvider {
   @override
   void enqueue(GithubJob job) {
     // Execute immediately for testing purposes
-    job.action().then((result) {
-      job.result = result;
-      job.status = GithubJobStatus.completed;
-      job.completer.complete();
-    }).catchError((e) {
-      job.status = GithubJobStatus.failed;
-      job.error = e.toString();
-      job.completer.completeError(e);
-    });
+    job
+        .action()
+        .then((result) {
+          job.result = result;
+          job.status = GithubJobStatus.completed;
+          job.completer.complete();
+        })
+        .catchError((e) {
+          job.status = GithubJobStatus.failed;
+          job.error = e.toString();
+          job.completer.completeError(e);
+        });
   }
 
   @override
@@ -109,8 +112,9 @@ void main() {
       mockCacheService = MockCacheService();
       mockGithubProvider = MockGithubProvider();
 
-      when(mockCacheService.loadSources(any))
-          .thenAnswer((_) async => <CachedItem<Source>>[]);
+      when(
+        mockCacheService.loadSources(any),
+      ).thenAnswer((_) async => <CachedItem<Source>>[]);
       when(mockCacheService.saveSources(any, any)).thenAnswer((_) async {});
 
       provider.setCacheService(mockCacheService);
@@ -125,25 +129,22 @@ void main() {
         isPrivate: false,
         branches: [julesBranch],
       );
-      final source = Source(
-        name: 'source1',
-        id: 'id1',
-        githubRepo: oldRepo,
-      );
+      final source = Source(name: 'source1', id: 'id1', githubRepo: oldRepo);
 
       final response = ListSourcesResponse(
         sources: [source],
         nextPageToken: null,
       );
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async => response);
+      when(
+        mockClient.listSources(pageToken: anyNamed('pageToken')),
+      ).thenAnswer((_) async => response);
       await provider.fetchSources(mockClient, authToken: 'auth_token');
 
       // Setup GitHub provider to return "github-branch"
       final githubDetails = {
         'repoName': 'repo',
         'branches': [
-          {'displayName': 'github-branch'}
+          {'displayName': 'github-branch'},
         ],
         'defaultBranch': 'main',
         'repoId': 123,
@@ -156,13 +157,15 @@ void main() {
         'forkParent': null,
       };
 
-      when(mockGithubProvider.getRepoDetails('owner', 'repo'))
-          .thenAnswer((_) async => githubDetails);
+      when(
+        mockGithubProvider.getRepoDetails('owner', 'repo'),
+      ).thenAnswer((_) async => githubDetails);
 
       // Act
       // We need to mock getSource to return the source (or a version of it)
-      when(mockClient.getSource(source.name))
-          .thenAnswer((_) async => source); // Return original source from Jules API
+      when(mockClient.getSource(source.name)).thenAnswer(
+        (_) async => source,
+      ); // Return original source from Jules API
 
       await provider.refreshSource(
         mockClient,
@@ -173,8 +176,9 @@ void main() {
 
       // Verify
       final updatedSource = provider.items[0].data;
-      final branchNames =
-          updatedSource.githubRepo!.branches!.map((b) => b.displayName).toSet();
+      final branchNames = updatedSource.githubRepo!.branches!
+          .map((b) => b.displayName)
+          .toSet();
 
       expect(branchNames, containsAll(['jules-branch', 'github-branch']));
     });
@@ -188,25 +192,22 @@ void main() {
         isPrivate: false,
         branches: [julesBranch],
       );
-      final source = Source(
-        name: 'source1',
-        id: 'id1',
-        githubRepo: oldRepo,
-      );
+      final source = Source(name: 'source1', id: 'id1', githubRepo: oldRepo);
 
       final response = ListSourcesResponse(
         sources: [source],
         nextPageToken: null,
       );
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async => response);
+      when(
+        mockClient.listSources(pageToken: anyNamed('pageToken')),
+      ).thenAnswer((_) async => response);
       await provider.fetchSources(mockClient, authToken: 'auth_token');
 
       // Setup GitHub provider to return "github-branch"
       final githubDetails = {
         'repoName': 'repo',
         'branches': [
-          {'displayName': 'github-branch'}
+          {'displayName': 'github-branch'},
         ],
         'defaultBranch': 'main',
         'repoId': 123,
@@ -228,8 +229,9 @@ void main() {
       // We need to simulate the job running.
       // In our mock enqueue, we execute it.
 
-      when(mockGithubProvider.createRepoDetailsJob('owner', 'repo'))
-          .thenReturn(job);
+      when(
+        mockGithubProvider.createRepoDetailsJob('owner', 'repo'),
+      ).thenReturn(job);
 
       // Act
       provider.queueAllSourcesGithubRefresh(
@@ -247,8 +249,9 @@ void main() {
 
       // Verify
       final updatedSource = provider.items[0].data;
-      final branchNames =
-          updatedSource.githubRepo!.branches!.map((b) => b.displayName).toSet();
+      final branchNames = updatedSource.githubRepo!.branches!
+          .map((b) => b.displayName)
+          .toSet();
 
       expect(branchNames, containsAll(['jules-branch', 'github-branch']));
     });

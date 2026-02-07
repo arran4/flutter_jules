@@ -395,8 +395,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     ),
