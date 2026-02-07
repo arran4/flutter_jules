@@ -3,18 +3,18 @@ import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
-import '../../models.dart';
 import 'package:intl/intl.dart';
+import '../../models.dart';
 
-class SessionMetadataDialog extends StatelessWidget {
-  final Session session;
+class SourceMetadataDialog extends StatelessWidget {
+  final Source source;
   final CacheMetadata? cacheMetadata;
   final File? cacheFile;
   final String? rawContent;
 
-  const SessionMetadataDialog({
+  const SourceMetadataDialog({
     super.key,
-    required this.session,
+    required this.source,
     this.cacheMetadata,
     this.cacheFile,
     this.rawContent,
@@ -23,7 +23,7 @@ class SessionMetadataDialog extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return AlertDialog(
-      title: const Text('Session Metadata'),
+      title: const Text('Source Metadata'),
       content: SizedBox(
         width: double.maxFinite,
         child: SingleChildScrollView(
@@ -33,7 +33,11 @@ class SessionMetadataDialog extends StatelessWidget {
             children: [
               if (cacheFile != null) _buildLocalCacheSection(context),
               if (cacheMetadata != null) _buildCacheMetadataSection(context),
-              _buildServerMetadataSection(context),
+              _buildSourceDetailsSection(context),
+              if (source.githubRepo != null)
+                _buildGitHubDetailsSection(context),
+              if (source.options != null && source.options!.isNotEmpty)
+                _buildOptionsSection(context),
               if (rawContent != null) _buildRawContentSection(context),
             ],
           ),
@@ -49,9 +53,7 @@ class SessionMetadataDialog extends StatelessWidget {
   }
 
   Widget _buildLocalCacheSection(BuildContext context) {
-    if (cacheFile == null) {
-      return const SizedBox.shrink();
-    }
+    if (cacheFile == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -64,9 +66,7 @@ class SessionMetadataDialog extends StatelessWidget {
   }
 
   Widget _buildCacheMetadataSection(BuildContext context) {
-    if (cacheMetadata == null) {
-      return const SizedBox.shrink();
-    }
+    if (cacheMetadata == null) return const SizedBox.shrink();
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
@@ -78,22 +78,82 @@ class SessionMetadataDialog extends StatelessWidget {
     );
   }
 
-  Widget _buildServerMetadataSection(BuildContext context) {
-    if (session.metadata == null || session.metadata!.isEmpty) {
-      return const Padding(
-        padding: EdgeInsets.only(bottom: 16.0),
-        child: Text(
-          "No server metadata available.",
-          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
-        ),
-      );
-    }
-
+  Widget _buildSourceDetailsSection(BuildContext context) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        _buildSectionHeader(context, 'Server Metadata'),
-        _buildServerMetadataTable(context),
+        _buildSectionHeader(context, 'Source Details'),
+        Table(
+          border: TableBorder.all(color: Colors.grey.shade300),
+          columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            _buildRow('Name', source.name),
+            _buildRow('ID', source.id),
+            _buildRow('Archived', source.isArchived.toString()),
+            _buildRow('Read-Only', source.isReadOnly.toString()),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildGitHubDetailsSection(BuildContext context) {
+    final repo = source.githubRepo!;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'GitHub Repository'),
+        Table(
+          border: TableBorder.all(color: Colors.grey.shade300),
+          columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
+          defaultVerticalAlignment: TableCellVerticalAlignment.middle,
+          children: [
+            _buildRow('Owner', repo.owner),
+            _buildRow('Repo', repo.repo),
+            _buildRow('Description', repo.description ?? 'N/A'),
+            _buildRow('Private (Jules)', repo.isPrivate.toString()),
+            if (repo.isPrivateGithub != null)
+              _buildRow('Private (GitHub)', repo.isPrivateGithub.toString()),
+            if (repo.htmlUrl != null) _buildRow('HTML URL', repo.htmlUrl!),
+            if (repo.primaryLanguage != null)
+              _buildRow('Language', repo.primaryLanguage!),
+            if (repo.license != null) _buildRow('License', repo.license!),
+            if (repo.isFork != null)
+              _buildRow('Is Fork', repo.isFork.toString()),
+            if (repo.forkParent != null)
+              _buildRow('Fork Parent', repo.forkParent!),
+            if (repo.openIssuesCount != null)
+              _buildRow('Open Issues', repo.openIssuesCount.toString()),
+            if (repo.defaultBranch != null)
+              _buildRow('Default Branch', repo.defaultBranch!.displayName),
+            if (repo.branches != null)
+              _buildRow('Branches', '${repo.branches!.length} found'),
+          ],
+        ),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildOptionsSection(BuildContext context) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Options'),
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.all(8.0),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade50,
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: SelectableText(
+            _formatJson(source.options!),
+            style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+          ),
+        ),
         const SizedBox(height: 16),
       ],
     );
@@ -103,8 +163,7 @@ class SessionMetadataDialog extends StatelessWidget {
     String content = rawContent!;
     try {
       final json = jsonDecode(content);
-      const encoder = JsonEncoder.withIndent('  ');
-      content = encoder.convert(json);
+      content = _formatJson(json);
     } catch (_) {
       // Use raw content if not valid JSON
     }
@@ -195,8 +254,6 @@ class SessionMetadataDialog extends StatelessWidget {
       _buildRow('Is Hidden', m.isHidden.toString()),
       if (m.reasonForLastUnread != null)
         _buildRow('Unread Reason', m.reasonForLastUnread!),
-      if (m.recentErrors.isNotEmpty)
-        _buildRow('Recent Errors', m.recentErrors.join('\n\n')),
     ];
 
     return Table(
@@ -204,16 +261,6 @@ class SessionMetadataDialog extends StatelessWidget {
       columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
       defaultVerticalAlignment: TableCellVerticalAlignment.middle,
       children: rows,
-    );
-  }
-
-  Widget _buildServerMetadataTable(BuildContext context) {
-    return Table(
-      border: TableBorder.all(color: Colors.grey.shade300),
-      columnWidths: const {0: IntrinsicColumnWidth(), 1: FlexColumnWidth()},
-      defaultVerticalAlignment: TableCellVerticalAlignment.middle,
-      children:
-          session.metadata!.map((m) => _buildRow(m.key, m.value)).toList(),
     );
   }
 
@@ -239,46 +286,49 @@ class SessionMetadataDialog extends StatelessWidget {
     return DateFormat.yMMMd().add_jm().format(dt.toLocal());
   }
 
+  String _formatJson(dynamic json) {
+    try {
+      const encoder = JsonEncoder.withIndent('  ');
+      return encoder.convert(json);
+    } catch (e) {
+      return json.toString();
+    }
+  }
+
   void _copyCacheFilePath(BuildContext context) {
     Clipboard.setData(ClipboardData(text: cacheFile!.path));
-    _showSnackBar(context, const Text('Path copied'));
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text('Path copied')),
+    );
   }
 
   Future<void> _openCacheFile(BuildContext context) async {
     try {
       final fileUri = Uri.file(cacheFile!.path);
       final openedFile = await _launchUriIfPossible(fileUri);
-      if (openedFile) {
-        return;
-      }
+      if (openedFile) return;
 
       final dirUri = Uri.directory(cacheFile!.parent.path);
       final openedDir = await _launchUriIfPossible(dirUri);
       if (!context.mounted) return;
 
       if (!openedDir) {
-        _showSnackBar(context, const Text('Cannot open file or directory'));
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Cannot open file or directory')),
+        );
       }
     } catch (e) {
       if (context.mounted) {
-        _showSnackBar(context, Text('Error opening file: $e'));
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Error opening file: $e')),
+        );
       }
     }
   }
 
   Future<bool> _launchUriIfPossible(Uri uri) async {
-    if (!await canLaunchUrl(uri)) {
-      return false;
-    }
-
+    if (!await canLaunchUrl(uri)) return false;
     await launchUrl(uri);
     return true;
-  }
-
-  void _showSnackBar(BuildContext context, Widget content) {
-    if (!context.mounted) {
-      return;
-    }
-    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: content));
   }
 }
