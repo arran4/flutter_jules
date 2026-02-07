@@ -63,7 +63,6 @@ class MockSourceProvider extends ChangeNotifier implements SourceProvider {
     bool force = false,
     String? authToken,
     GithubProvider? githubProvider,
-    // SessionProvider? sessionProvider, // Commented out to match source
     void Function(int, String)? onProgress,
   }) async {}
 

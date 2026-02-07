@@ -1034,21 +1034,21 @@ class MockSourceProvider extends _i2.Mock implements _i18.SourceProvider {
         returnValueForMissingStub: _i5.Future<void>.value(),
       ) as _i5.Future<void>);
 
-  // @override
-  // _i5.Future<void> refreshSource(
-  //   _i7.Source? sourceToRefresh, {
-  //   String? authToken,
-  //   _i16.GithubProvider? githubProvider,
-  // }) =>
-  //     (super.noSuchMethod(
-  //       Invocation.method(
-  //         #refreshSource,
-  //         [sourceToRefresh],
-  //         {#authToken: authToken, #githubProvider: githubProvider},
-  //       ),
-  //       returnValue: _i5.Future<void>.value(),
-  //       returnValueForMissingStub: _i5.Future<void>.value(),
-  //     ) as _i5.Future<void>);
+  @override
+  _i5.Future<void> refreshSource(
+    _i7.Source? sourceToRefresh, {
+    String? authToken,
+    _i16.GithubProvider? githubProvider,
+  }) =>
+      (super.noSuchMethod(
+        Invocation.method(
+          #refreshSource,
+          [sourceToRefresh],
+          {#authToken: authToken, #githubProvider: githubProvider},
+        ),
+        returnValue: _i5.Future<void>.value(),
+        returnValueForMissingStub: _i5.Future<void>.value(),
+      ) as _i5.Future<void>);
 
   @override
   void addListener(_i13.VoidCallback? listener) => super.noSuchMethod(
