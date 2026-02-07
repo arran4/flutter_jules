@@ -1,5 +1,4 @@
 import 'package:flutter/material.dart' hide ShortcutRegistry;
-import 'package:flutter/services.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:mockito/mockito.dart';
 import 'package:provider/provider.dart';
@@ -16,9 +15,6 @@ import 'package:flutter_jules/services/shortcut_registry.dart';
 import 'package:flutter_jules/services/jules_client.dart';
 import 'package:flutter_jules/services/cache_service.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-
-// [Mocks omitted for brevity, assuming they are same as before]
-// I need to include them again because write_file overwrites.
 
 class MockAuthProvider extends ChangeNotifier implements AuthProvider {
   @override
@@ -67,7 +63,7 @@ class MockSourceProvider extends ChangeNotifier implements SourceProvider {
     bool force = false,
     String? authToken,
     GithubProvider? githubProvider,
-    SessionProvider? sessionProvider,
+    // SessionProvider? sessionProvider, // Commented out to match source
     void Function(int, String)? onProgress,
   }) async {}
 
@@ -222,8 +218,8 @@ void main() {
           ChangeNotifierProvider<PromptTemplateProvider>.value(value: MockPromptTemplateProvider()),
           ChangeNotifierProvider<ShortcutRegistry>.value(value: MockShortcutRegistry()),
         ],
-        child: MaterialApp(
-          home: const NewSessionDialog(),
+        child: const MaterialApp(
+          home: NewSessionDialog(),
         ),
       ),
     );

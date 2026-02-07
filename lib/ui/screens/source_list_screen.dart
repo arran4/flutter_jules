@@ -248,10 +248,10 @@ class _SourceListScreenState extends State<SourceListScreen> {
   Future<void> _refreshData() async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final sourceProvider = Provider.of<SourceProvider>(context, listen: false);
-    final sessionProvider = Provider.of<SessionProvider>(
-      context,
-      listen: false,
-    );
+    // final sessionProvider = Provider.of<SessionProvider>(
+    //   context,
+    //   listen: false,
+    // );
     final githubProvider = Provider.of<GithubProvider>(context, listen: false);
 
     // This will trigger both source and session refreshes
@@ -260,7 +260,7 @@ class _SourceListScreenState extends State<SourceListScreen> {
       authToken: auth.token,
       force: true,
       githubProvider: githubProvider,
-      sessionProvider: sessionProvider,
+      // sessionProvider: sessionProvider,
     );
 
     _processSessions();
