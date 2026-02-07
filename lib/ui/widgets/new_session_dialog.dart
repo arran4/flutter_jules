@@ -2061,7 +2061,7 @@ class _SingleSourceSelector extends StatelessWidget {
                         final String option = options.elementAt(index);
                         final bool isSuggestion =
                             suggestions.contains(option) &&
-                            !branches.contains(option);
+                                !branches.contains(option);
                         return InkWell(
                           onTap: () {
                             onSelected(option);

@@ -161,8 +161,8 @@ void main() {
 
       // Act
       // We need to mock getSource to return the source (or a version of it)
-      when(mockClient.getSource(source.name))
-          .thenAnswer((_) async => source); // Return original source from Jules API
+      when(mockClient.getSource(source.name)).thenAnswer(
+          (_) async => source); // Return original source from Jules API
 
       await provider.refreshSource(
         mockClient,

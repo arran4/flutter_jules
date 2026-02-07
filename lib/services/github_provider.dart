@@ -71,8 +71,8 @@ class GithubProvider extends ChangeNotifier {
     this._cacheService, {
     AuthService? authService,
     http.Client? client,
-  }) : _authService = authService ?? AuthService(),
-       _client = client ?? http.Client() {
+  })  : _authService = authService ?? AuthService(),
+        _client = client ?? http.Client() {
     _loadToken();
   }
 
