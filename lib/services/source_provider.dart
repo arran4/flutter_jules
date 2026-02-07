@@ -161,24 +161,26 @@ class SourceProvider extends ChangeNotifier {
           source.githubRepo!.repo,
         );
 
-        job.completer.future.then((_) {
-          _pendingGithubRefreshes--;
-          if (job.status == GithubJobStatus.completed) {
-            final details = job.result as Map<String, dynamic>?;
-            if (details != null) {
-              _updateSourceWithGithubDetails(
-                source.name,
-                details,
-                authToken,
-              );
-            }
-          }
-          notifyListeners();
-        }).catchError((err) {
-          _pendingGithubRefreshes--;
-          notifyListeners();
-          // Silently ignore, errors are handled in the provider
-        });
+        job.completer.future
+            .then((_) {
+              _pendingGithubRefreshes--;
+              if (job.status == GithubJobStatus.completed) {
+                final details = job.result as Map<String, dynamic>?;
+                if (details != null) {
+                  _updateSourceWithGithubDetails(
+                    source.name,
+                    details,
+                    authToken,
+                  );
+                }
+              }
+              notifyListeners();
+            })
+            .catchError((err) {
+              _pendingGithubRefreshes--;
+              notifyListeners();
+              // Silently ignore, errors are handled in the provider
+            });
 
         githubProvider.enqueue(job);
       }
