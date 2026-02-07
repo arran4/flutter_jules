@@ -1524,18 +1524,16 @@ class MockSourceProvider extends _i2.Mock implements _i22.SourceProvider {
 
   @override
   _i5.Future<void> refreshSource(
-    _i19.Source? sourceToRefresh, {
+    _i3.JulesClient? client,
+    _i7.Source? sourceToRefresh, {
     String? authToken,
     _i20.GithubProvider? githubProvider,
   }) =>
       (super.noSuchMethod(
         Invocation.method(
           #refreshSource,
-          [sourceToRefresh],
-          {
-            #authToken: authToken,
-            #githubProvider: githubProvider,
-          },
+          [client, sourceToRefresh],
+          {#authToken: authToken, #githubProvider: githubProvider},
         ),
         returnValue: _i5.Future<void>.value(),
         returnValueForMissingStub: _i5.Future<void>.value(),
