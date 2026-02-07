@@ -12,7 +12,7 @@ import '../screens/session_list_screen.dart';
 import 'new_session_dialog.dart';
 import 'source_stats_dialog.dart';
 import '../../services/cache_service.dart';
-import 'session_metadata_dialog.dart';
+import 'source_metadata_dialog.dart';
 
 class SourceTile extends StatelessWidget {
   final CachedItem<Source> item;
@@ -280,13 +280,8 @@ class SourceTile extends StatelessWidget {
       if (context.mounted) {
         showDialog(
           context: context,
-          builder: (context) => SessionMetadataDialog(
-            session: Session(
-              id: source.id,
-              name: source.name,
-              prompt: '',
-              sourceContext: SourceContext(source: source.name),
-            ),
+          builder: (context) => SourceMetadataDialog(
+            source: source,
             cacheMetadata: item.metadata,
             cacheFile: cacheFile,
             rawContent: content,
