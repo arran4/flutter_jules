@@ -1,7 +1,7 @@
 [Desktop Entry]
-Name=Jules
+Name=Arran's Jules Client
 Comment=Arrans Flutter based jules client
-Exec=jules
+Exec=arrans_jules_client
 Icon=com.arran4.flutter_jules
 Terminal=false
 Type=Application

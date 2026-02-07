@@ -90,12 +90,12 @@ BEGIN
         BLOCK "040904e4"
         BEGIN
             VALUE "CompanyName", "com.arran4" "\0"
-            VALUE "FileDescription", "Jules" "\0"
+            VALUE "FileDescription", "Arran's Jules Client" "\0"
             VALUE "FileVersion", VERSION_AS_STRING "\0"
-            VALUE "InternalName", "jules" "\0"
+            VALUE "InternalName", "arrans_jules_client" "\0"
             VALUE "LegalCopyright", "Copyright (C) 2025 com.arran4. All rights reserved." "\0"
-            VALUE "OriginalFilename", "jules.exe" "\0"
-            VALUE "ProductName", "Jules" "\0"
+            VALUE "OriginalFilename", "arrans_jules_client.exe" "\0"
+            VALUE "ProductName", "Arran's Jules Client" "\0"
             VALUE "ProductVersion", VERSION_AS_STRING "\0"
         END
     END
