@@ -4,7 +4,6 @@ import '../models.dart';
 import 'github_provider.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
-import 'session_provider.dart';
 
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];

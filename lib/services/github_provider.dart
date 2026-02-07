@@ -32,7 +32,8 @@ enum AccessCheckResult { userOk, orgOk, repoOk, prOk, badCredentials }
 class GithubProvider extends ChangeNotifier {
   final SettingsProvider _settingsProvider;
   final CacheService _cacheService;
-  final AuthService _authService = AuthService();
+  final AuthService _authService;
+  final http.Client _client;
 
   String? _githubToken;
   String? get apiKey => _githubToken;
@@ -65,7 +66,13 @@ class GithubProvider extends ChangeNotifier {
   bool get hasBadCredentials => _hasBadCredentials;
   String? get authError => _authError;
 
-  GithubProvider(this._settingsProvider, this._cacheService) {
+  GithubProvider(
+    this._settingsProvider,
+    this._cacheService, {
+    AuthService? authService,
+    http.Client? client,
+  }) : _authService = authService ?? AuthService(),
+       _client = client ?? http.Client() {
     _loadToken();
   }
 
@@ -75,6 +82,13 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getToken() async => apiKey;
+
+  Map<String, String> _getHeaders(String token, {String? accept}) {
+    return {
+      'Authorization': 'token $token',
+      'Accept': accept ?? 'application/vnd.github.v3+json',
+    };
+  }
 
   Future<bool> testExclusionAccess(GithubExclusion exclusion) async {
     final token = apiKey;
@@ -94,14 +108,11 @@ class GithubProvider extends ChangeNotifier {
           final parts = exclusion.value.split('/');
           if (parts.length >= 3) {
             // Check specific PR access
-            final response = await http.get(
+            final response = await _client.get(
               Uri.parse(
                 'https://api.github.com/repos/${parts[0]}/${parts[1]}/pulls/${parts[2]}',
               ),
-              headers: {
-                'Authorization': 'token $token',
-                'Accept': 'application/vnd.github.v3+json',
-              },
+              headers: _getHeaders(token),
             );
             return response.statusCode == 200;
           }
@@ -127,12 +138,9 @@ class GithubProvider extends ChangeNotifier {
   Future<bool> _checkUserAccess() async {
     final token = apiKey;
     if (token == null) return false;
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('https://api.github.com/user'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return response.statusCode == 200;
   }
@@ -142,23 +150,17 @@ class GithubProvider extends ChangeNotifier {
     if (token == null) return false;
     // Cheap call to check org membership or existence
     // If user is not member of private org, this might fail with 404 or 403
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('https://api.github.com/orgs/$org'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
 
     if (response.statusCode == 200) return true;
 
     // Also check membership specifically if possible
-    final membershipResponse = await http.get(
+    final membershipResponse = await _client.get(
       Uri.parse('https://api.github.com/user/memberships/orgs/$org'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return membershipResponse.statusCode == 200;
   }
@@ -166,12 +168,9 @@ class GithubProvider extends ChangeNotifier {
   Future<bool> _checkRepoAccess(String owner, String repo) async {
     final token = apiKey;
     if (token == null) return false;
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('https://api.github.com/repos/$owner/$repo'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return response.statusCode == 200;
   }
@@ -304,12 +303,9 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<Map<String, dynamic>?> validateToken(String token) async {
-    final response = await http.get(
+    final response = await _client.get(
       Uri.parse('https://api.github.com/user'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
 
     if (response.statusCode == 200) {
@@ -364,16 +360,15 @@ class GithubProvider extends ChangeNotifier {
       description: 'Check PR Status: $owner/$repo #$prNumber',
       action: () async {
         if (_hasBadCredentials) return null;
+        final token = apiKey;
+        if (token == null) return null;
 
         final url = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
         );
-        final response = await http.get(
+        final response = await _client.get(
           url,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
 
         _updateRateLimits(response.headers);
@@ -417,17 +412,15 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getDiff(String owner, String repo, String prNumber) async {
-    if (apiKey == null || _hasBadCredentials) return null;
+    final token = apiKey;
+    if (token == null || _hasBadCredentials) return null;
     if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
-    final response = await http.get(
+    final response = await _client.get(
       url,
-      headers: {
-        'Authorization': 'token $apiKey',
-        'Accept': 'application/vnd.github.v3.diff',
-      },
+      headers: _getHeaders(token, accept: 'application/vnd.github.v3.diff'),
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
@@ -456,17 +449,15 @@ class GithubProvider extends ChangeNotifier {
   }
 
   Future<String?> getPatch(String owner, String repo, String prNumber) async {
-    if (apiKey == null || _hasBadCredentials) return null;
+    final token = apiKey;
+    if (token == null || _hasBadCredentials) return null;
     if (_settingsProvider.isExcluded('$owner/$repo/$prNumber')) return null;
     final url = Uri.parse(
       'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
     );
-    final response = await http.get(
+    final response = await _client.get(
       url,
-      headers: {
-        'Authorization': 'token $apiKey',
-        'Accept': 'application/vnd.github.v3.patch',
-      },
+      headers: _getHeaders(token, accept: 'application/vnd.github.v3.patch'),
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
@@ -510,17 +501,16 @@ class GithubProvider extends ChangeNotifier {
           return 'Unknown';
         }
         if (_hasBadCredentials) return 'Unknown';
+        final token = apiKey;
+        if (token == null) return 'Unknown';
 
         // 1. Get the PR's head SHA
         final prUrl = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
         );
-        final prResponse = await http.get(
+        final prResponse = await _client.get(
           prUrl,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
         _updateRateLimits(prResponse.headers);
 
@@ -558,12 +548,9 @@ class GithubProvider extends ChangeNotifier {
         final checksUrl = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/commits/$headSha/check-runs',
         );
-        final checksResponse = await http.get(
+        final checksResponse = await _client.get(
           checksUrl,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
         _updateRateLimits(checksResponse.headers);
 
@@ -651,14 +638,13 @@ class GithubProvider extends ChangeNotifier {
       description: 'Get Repo Details: $owner/$repo',
       action: () async {
         if (_hasBadCredentials) throw Exception('Bad credentials');
+        final token = apiKey;
+        if (token == null) throw Exception('Missing GitHub API Key');
 
         final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
-        final response = await http.get(
+        final response = await _client.get(
           url,
-          headers: {
-            'Authorization': 'token $apiKey',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
 
         _updateRateLimits(response.headers);
@@ -688,12 +674,9 @@ class GithubProvider extends ChangeNotifier {
             final branchesUrl = Uri.parse(
               'https://api.github.com/repos/$owner/$repo/branches',
             );
-            final branchesResponse = await http.get(
+            final branchesResponse = await _client.get(
               branchesUrl,
-              headers: {
-                'Authorization': 'token $apiKey',
-                'Accept': 'application/vnd.github.v3+json',
-              },
+              headers: _getHeaders(token),
             );
             _updateRateLimits(branchesResponse.headers);
 
