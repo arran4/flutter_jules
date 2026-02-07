@@ -1470,7 +1470,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           'id': 'flag:create_pr',
           'label': 'Ready for PR',
           'value': 'create_pr',
-          'active': (session.prStatus == null || session.prStatus!.isEmpty) &&
+          'active':
+              (session.prStatus == null || session.prStatus!.isEmpty) &&
               (session.diffUrl != null ||
                   (session.changedFiles != null && session.changedFiles! > 0)),
         },
@@ -1710,89 +1711,92 @@ class _SessionListScreenState extends State<SessionListScreen> {
   ) {
     return queueProvider.queue
         .where(
-      (m) =>
-          m.type == QueuedMessageType.sessionCreation ||
-          m.sessionId == 'new_session',
-    ) // Include legacy or pending
+          (m) =>
+              m.type == QueuedMessageType.sessionCreation ||
+              m.sessionId == 'new_session',
+        ) // Include legacy or pending
         .map((m) {
-      Map<String, dynamic> json;
-      if (m.metadata != null) {
-        json = Map<String, dynamic>.from(m.metadata!);
-      } else {
-        // Fallback for items without metadata
-        json = {
-          'id': 'temp',
-          'name': 'temp',
-          'prompt': m.content,
-          'sourceContext': {'source': 'unknown'},
-        };
-      }
+          Map<String, dynamic> json;
+          if (m.metadata != null) {
+            json = Map<String, dynamic>.from(m.metadata!);
+          } else {
+            // Fallback for items without metadata
+            json = {
+              'id': 'temp',
+              'name': 'temp',
+              'prompt': m.content,
+              'sourceContext': {'source': 'unknown'},
+            };
+          }
 
-      // Override ID to avoid collision
-      json['id'] = 'DRAFT_CREATION_${m.id}';
+          // Override ID to avoid collision
+          json['id'] = 'DRAFT_CREATION_${m.id}';
 
-      // Ensure prompt is set as title
-      if (json['title'] == null || json['title'].toString().isEmpty) {
-        json['title'] = (json['prompt'] as String?) ?? 'New Session (Draft)';
-      }
+          // Ensure prompt is set as title
+          if (json['title'] == null || json['title'].toString().isEmpty) {
+            json['title'] =
+                (json['prompt'] as String?) ?? 'New Session (Draft)';
+          }
 
-      final state = m.state;
-      final isOffline = queueProvider.isOffline; // Uses provider from context
+          final state = m.state;
+          final isOffline =
+              queueProvider.isOffline; // Uses provider from context
 
-      // Inject Flags based on queue state
-      // User Definition: "Pending" is for all new sessions (draft, error, sending).
-      // Status 'QUEUED' maps to "Pending" in UI usually.
+          // Inject Flags based on queue state
+          // User Definition: "Pending" is for all new sessions (draft, error, sending).
+          // Status 'QUEUED' maps to "Pending" in UI usually.
 
-      json['state'] = 'QUEUED'; // Always QUEUED to match "Pending" filter
+          json['state'] = 'QUEUED'; // Always QUEUED to match "Pending" filter
 
-      String statusReason;
-      if (m.processingErrors.isNotEmpty) {
-        final lastError = m.processingErrors.last;
-        if (lastError.contains('429') ||
-            lastError.toLowerCase().contains('quota')) {
-          statusReason = 'Quota limit reached';
-        } else if (lastError.contains('500') ||
-            lastError.contains('502') ||
-            lastError.contains('503')) {
-          statusReason = 'Server error';
-        } else {
-          statusReason = 'Failed: $lastError';
-        }
-      } else if (state == QueueState.draft) {
-        statusReason = m.queueReason ?? 'Saved as draft';
-      } else if (state == QueueState.sending) {
-        statusReason = 'Sending to server...';
-      } else if (state == QueueState.sent) {
-        statusReason = 'Sent (Waiting for sync)';
-      } else if (state == QueueState.failed) {
-        statusReason = 'Sending failed';
-      } else if (isOffline) {
-        // It's pending sending, but we are offline
-        statusReason = 'Pending (Offline)';
-        if (state == QueueState.queued) {
-          statusReason = 'Queued (Offline)';
-        }
-      } else {
-        // Pending sending, online, cached as queued?
-        statusReason = 'Queued';
-      }
+          String statusReason;
+          if (m.processingErrors.isNotEmpty) {
+            final lastError = m.processingErrors.last;
+            if (lastError.contains('429') ||
+                lastError.toLowerCase().contains('quota')) {
+              statusReason = 'Quota limit reached';
+            } else if (lastError.contains('500') ||
+                lastError.contains('502') ||
+                lastError.contains('503')) {
+              statusReason = 'Server error';
+            } else {
+              statusReason = 'Failed: $lastError';
+            }
+          } else if (state == QueueState.draft) {
+            statusReason = m.queueReason ?? 'Saved as draft';
+          } else if (state == QueueState.sending) {
+            statusReason = 'Sending to server...';
+          } else if (state == QueueState.sent) {
+            statusReason = 'Sent (Waiting for sync)';
+          } else if (state == QueueState.failed) {
+            statusReason = 'Sending failed';
+          } else if (isOffline) {
+            // It's pending sending, but we are offline
+            statusReason = 'Pending (Offline)';
+            if (state == QueueState.queued) {
+              statusReason = 'Queued (Offline)';
+            }
+          } else {
+            // Pending sending, online, cached as queued?
+            statusReason = 'Queued';
+          }
 
-      json['currentAction'] = statusReason;
+          json['currentAction'] = statusReason;
 
-      final session = Session.fromJson(json);
+          final session = Session.fromJson(json);
 
-      return CachedItem(
-        session,
-        CacheMetadata(
-          firstSeen: m.createdAt,
-          lastRetrieved: m.createdAt,
-          labels: (state == QueueState.draft)
-              ? ['DRAFT_CREATION']
-              : ['PENDING_CREATION'],
-          hasPendingUpdates: state != QueueState.draft,
-        ),
-      );
-    }).toList();
+          return CachedItem(
+            session,
+            CacheMetadata(
+              firstSeen: m.createdAt,
+              lastRetrieved: m.createdAt,
+              labels: (state == QueueState.draft)
+                  ? ['DRAFT_CREATION']
+                  : ['PENDING_CREATION'],
+              hasPendingUpdates: state != QueueState.draft,
+            ),
+          );
+        })
+        .toList();
   }
 
   PreferredSizeWidget _buildAppBar(SettingsProvider settings, bool isLoading) {
@@ -1911,27 +1915,30 @@ class _SessionListScreenState extends State<SessionListScreen> {
           children: RefreshButtonAction.values
               .where((action) => settings.appBarRefreshActions.contains(action))
               .map((action) {
-            switch (action) {
-              case RefreshButtonAction.refresh:
-                return IconButton(
-                  icon: const Icon(Icons.refresh),
-                  tooltip: 'Refresh (Quick)',
-                  onPressed: () => _fetchSessions(force: true, shallow: true),
-                );
-              case RefreshButtonAction.fullRefresh:
-                return IconButton(
-                  icon: const Icon(Icons.sync),
-                  tooltip: 'Full Refresh',
-                  onPressed: () => _fetchSessions(force: true, shallow: false),
-                );
-              case RefreshButtonAction.refreshDirty:
-                return IconButton(
-                  icon: const Icon(Icons.sync_problem),
-                  tooltip: 'Refresh Dirty Sessions',
-                  onPressed: _refreshDirtySessions,
-                );
-            }
-          }).toList(),
+                switch (action) {
+                  case RefreshButtonAction.refresh:
+                    return IconButton(
+                      icon: const Icon(Icons.refresh),
+                      tooltip: 'Refresh (Quick)',
+                      onPressed: () =>
+                          _fetchSessions(force: true, shallow: true),
+                    );
+                  case RefreshButtonAction.fullRefresh:
+                    return IconButton(
+                      icon: const Icon(Icons.sync),
+                      tooltip: 'Full Refresh',
+                      onPressed: () =>
+                          _fetchSessions(force: true, shallow: false),
+                    );
+                  case RefreshButtonAction.refreshDirty:
+                    return IconButton(
+                      icon: const Icon(Icons.sync_problem),
+                      tooltip: 'Refresh Dirty Sessions',
+                      onPressed: _refreshDirtySessions,
+                    );
+                }
+              })
+              .toList(),
         );
       },
     );
@@ -2202,11 +2209,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
             return Text(
               statusText,
               style: Theme.of(context).textTheme.bodySmall?.copyWith(
-                    color:
-                        DateTime.now().difference(lastFetchTime).inMinutes > 15
-                            ? Colors.orange
-                            : Theme.of(context).textTheme.bodySmall?.color,
-                  ),
+                color: DateTime.now().difference(lastFetchTime).inMinutes > 15
+                    ? Colors.orange
+                    : Theme.of(context).textTheme.bodySmall?.color,
+              ),
             );
           },
         ),
@@ -2598,9 +2604,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
                       padding: const EdgeInsets.symmetric(horizontal: 4.0),
                       child: GestureDetector(
                         onSecondaryTapUp: (details) {
-                          final RenderBox overlay = Overlay.of(context)
-                              .context
-                              .findRenderObject() as RenderBox;
+                          final RenderBox overlay =
+                              Overlay.of(context).context.findRenderObject()
+                                  as RenderBox;
                           final RelativeRect position = RelativeRect.fromRect(
                             Rect.fromPoints(
                               details.globalPosition,
@@ -2838,9 +2844,9 @@ class _SessionListScreenState extends State<SessionListScreen> {
             final query = _searchText.toLowerCase();
             final matches =
                 (session.title?.toLowerCase().contains(query) ?? false) ||
-                    (session.name.toLowerCase().contains(query)) ||
-                    (session.id.toLowerCase().contains(query)) ||
-                    (session.state.toString().toLowerCase().contains(query));
+                (session.name.toLowerCase().contains(query)) ||
+                (session.id.toLowerCase().contains(query)) ||
+                (session.state.toString().toLowerCase().contains(query));
             if (!matches) return false;
           }
 
@@ -2874,43 +2880,42 @@ class _SessionListScreenState extends State<SessionListScreen> {
           child: Scaffold(
             floatingActionButton:
                 settings.fabVisibility == FabVisibility.floating
-                    ? FloatingActionButton(
-                        onPressed: _createSession,
-                        tooltip: 'New Session',
-                        child: const Icon(Icons.add),
-                      )
-                    : null,
+                ? FloatingActionButton(
+                    onPressed: _createSession,
+                    tooltip: 'New Session',
+                    child: const Icon(Icons.add),
+                  )
+                : null,
             appBar: _buildAppBar(settings, isLoading),
             body: Consumer<SettingsProvider>(
               builder: (context, settings, _) {
                 return (cachedItems.isEmpty && isLoading)
                     ? const Center(child: Text("Loading sessions..."))
                     : (cachedItems.isEmpty && error != null)
-                        ? Center(child: Text('Error: $error'))
-                        : Column(
-                            children: [
-                              _buildSearchBar(),
-                              if (lastFetchTime != null)
-                                _buildRefreshStatus(
-                                    sessionProvider, lastFetchTime),
-                              Expanded(
-                                child: RefreshIndicator(
-                                  onRefresh: () => _fetchSessions(
-                                      force: true, shallow: true),
-                                  child: ListView.builder(
-                                    itemCount: _displayItems.length,
-                                    itemBuilder: (context, index) {
-                                      final cachedItem = _displayItems[index];
-                                      return _buildSessionCard(
-                                        cachedItem,
-                                        queueProvider,
-                                      );
-                                    },
-                                  ),
-                                ),
+                    ? Center(child: Text('Error: $error'))
+                    : Column(
+                        children: [
+                          _buildSearchBar(),
+                          if (lastFetchTime != null)
+                            _buildRefreshStatus(sessionProvider, lastFetchTime),
+                          Expanded(
+                            child: RefreshIndicator(
+                              onRefresh: () =>
+                                  _fetchSessions(force: true, shallow: true),
+                              child: ListView.builder(
+                                itemCount: _displayItems.length,
+                                itemBuilder: (context, index) {
+                                  final cachedItem = _displayItems[index];
+                                  return _buildSessionCard(
+                                    cachedItem,
+                                    queueProvider,
+                                  );
+                                },
                               ),
-                            ],
-                          );
+                            ),
+                          ),
+                        ],
+                      );
               },
             ),
           ),

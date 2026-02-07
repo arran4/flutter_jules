@@ -133,10 +133,7 @@ class SourceTile extends StatelessWidget {
         child: Text('Refresh Sessions'),
       ),
       const PopupMenuItem(value: 'stats', child: Text('Show Stats')),
-      const PopupMenuItem(
-        value: 'view_cache_file',
-        child: Text('View Source'),
-      ),
+      const PopupMenuItem(value: 'view_cache_file', child: Text('View Source')),
       if (bookmarks.isNotEmpty) const PopupMenuDivider(),
       ...bookmarks.map(
         (bookmark) => PopupMenuItem(
@@ -395,8 +392,8 @@ Widget _buildInfoPill(BuildContext context, String text, IconData icon) {
         Text(
           text,
           style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+            color: Theme.of(context).colorScheme.onSurfaceVariant,
+          ),
         ),
       ],
     ),
