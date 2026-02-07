@@ -153,6 +153,8 @@ class SessionMetadataDialog extends StatelessWidget {
       _buildRow('Is Hidden', m.isHidden.toString()),
       if (m.reasonForLastUnread != null)
         _buildRow('Unread Reason', m.reasonForLastUnread!),
+      if (m.recentErrors.isNotEmpty)
+        _buildRow('Recent Errors', m.recentErrors.join('\n\n')),
     ];
 
     return Table(

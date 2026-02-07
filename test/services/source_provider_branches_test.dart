@@ -26,6 +26,17 @@ class MockJulesClient extends Mock implements JulesClient {
       ),
     );
   }
+
+  @override
+  Future<Source> getSource(
+    String? name, {
+    void Function(ApiExchange)? onDebug,
+  }) {
+    return super.noSuchMethod(
+      Invocation.method(#getSource, [name], {#onDebug: onDebug}),
+      returnValue: Future.value(Source(name: 'mock', id: 'mock')),
+    );
+  }
 }
 
 class MockCacheService extends Mock implements CacheService {
@@ -149,7 +160,12 @@ void main() {
           .thenAnswer((_) async => githubDetails);
 
       // Act
+      // We need to mock getSource to return the source (or a version of it)
+      when(mockClient.getSource(source.name))
+          .thenAnswer((_) async => source); // Return original source from Jules API
+
       await provider.refreshSource(
+        mockClient,
         source,
         authToken: 'auth_token',
         githubProvider: mockGithubProvider,

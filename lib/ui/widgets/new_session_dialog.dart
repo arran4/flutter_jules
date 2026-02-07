@@ -550,7 +550,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       authToken: deps.auth.token,
       force: force,
       githubProvider: deps.githubProvider,
-      sessionProvider: deps.sessionProvider,
     );
   }
 
@@ -834,6 +833,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     try {
       final deps = _sourceFetchDependencies();
       await deps.sourceProvider.refreshSource(
+        deps.auth.client,
         _selectedSource!,
         authToken: deps.auth.token,
         githubProvider: deps.githubProvider,
