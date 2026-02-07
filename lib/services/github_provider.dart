@@ -83,6 +83,13 @@ class GithubProvider extends ChangeNotifier {
 
   Future<String?> getToken() async => apiKey;
 
+  Map<String, String> _getHeaders(String token, {String? accept}) {
+    return {
+      'Authorization': 'token $token',
+      'Accept': accept ?? 'application/vnd.github.v3+json',
+    };
+  }
+
   Future<bool> testExclusionAccess(GithubExclusion exclusion) async {
     final token = apiKey;
     if (token == null) return false;
@@ -105,10 +112,7 @@ class GithubProvider extends ChangeNotifier {
               Uri.parse(
                 'https://api.github.com/repos/${parts[0]}/${parts[1]}/pulls/${parts[2]}',
               ),
-              headers: {
-                'Authorization': 'token $token',
-                'Accept': 'application/vnd.github.v3+json',
-              },
+              headers: _getHeaders(token),
             );
             return response.statusCode == 200;
           }
@@ -136,10 +140,7 @@ class GithubProvider extends ChangeNotifier {
     if (token == null) return false;
     final response = await _client.get(
       Uri.parse('https://api.github.com/user'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return response.statusCode == 200;
   }
@@ -151,10 +152,7 @@ class GithubProvider extends ChangeNotifier {
     // If user is not member of private org, this might fail with 404 or 403
     final response = await _client.get(
       Uri.parse('https://api.github.com/orgs/$org'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
 
     if (response.statusCode == 200) return true;
@@ -162,10 +160,7 @@ class GithubProvider extends ChangeNotifier {
     // Also check membership specifically if possible
     final membershipResponse = await _client.get(
       Uri.parse('https://api.github.com/user/memberships/orgs/$org'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return membershipResponse.statusCode == 200;
   }
@@ -175,10 +170,7 @@ class GithubProvider extends ChangeNotifier {
     if (token == null) return false;
     final response = await _client.get(
       Uri.parse('https://api.github.com/repos/$owner/$repo'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
     return response.statusCode == 200;
   }
@@ -313,10 +305,7 @@ class GithubProvider extends ChangeNotifier {
   Future<Map<String, dynamic>?> validateToken(String token) async {
     final response = await _client.get(
       Uri.parse('https://api.github.com/user'),
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3+json',
-      },
+      headers: _getHeaders(token),
     );
 
     if (response.statusCode == 200) {
@@ -379,10 +368,7 @@ class GithubProvider extends ChangeNotifier {
         );
         final response = await _client.get(
           url,
-          headers: {
-            'Authorization': 'token $token',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
 
         _updateRateLimits(response.headers);
@@ -434,10 +420,7 @@ class GithubProvider extends ChangeNotifier {
     );
     final response = await _client.get(
       url,
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3.diff',
-      },
+      headers: _getHeaders(token, accept: 'application/vnd.github.v3.diff'),
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
@@ -474,10 +457,7 @@ class GithubProvider extends ChangeNotifier {
     );
     final response = await _client.get(
       url,
-      headers: {
-        'Authorization': 'token $token',
-        'Accept': 'application/vnd.github.v3.patch',
-      },
+      headers: _getHeaders(token, accept: 'application/vnd.github.v3.patch'),
     );
     _updateRateLimits(response.headers);
     if (response.statusCode == 200) {
@@ -530,10 +510,7 @@ class GithubProvider extends ChangeNotifier {
         );
         final prResponse = await _client.get(
           prUrl,
-          headers: {
-            'Authorization': 'token $token',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
         _updateRateLimits(prResponse.headers);
 
@@ -573,10 +550,7 @@ class GithubProvider extends ChangeNotifier {
         );
         final checksResponse = await _client.get(
           checksUrl,
-          headers: {
-            'Authorization': 'token $token',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
         _updateRateLimits(checksResponse.headers);
 
@@ -670,10 +644,7 @@ class GithubProvider extends ChangeNotifier {
         final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
         final response = await _client.get(
           url,
-          headers: {
-            'Authorization': 'token $token',
-            'Accept': 'application/vnd.github.v3+json',
-          },
+          headers: _getHeaders(token),
         );
 
         _updateRateLimits(response.headers);
@@ -705,10 +676,7 @@ class GithubProvider extends ChangeNotifier {
             );
             final branchesResponse = await _client.get(
               branchesUrl,
-              headers: {
-                'Authorization': 'token $token',
-                'Accept': 'application/vnd.github.v3+json',
-              },
+              headers: _getHeaders(token),
             );
             _updateRateLimits(branchesResponse.headers);
 
