@@ -811,13 +811,11 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       }
     }
 
-    String nextBranch = 'main';
+    String nextBranch = '';
     if (restoredBranch != null) {
       nextBranch = restoredBranch;
     } else if (repo.defaultBranch != null) {
       nextBranch = repo.defaultBranch!.displayName;
-    } else if (branches.isNotEmpty) {
-      nextBranch = branches.first;
     }
 
     _selectedBranch = nextBranch;
@@ -1239,17 +1237,27 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
 
         // Determine available branches for the selected source
         List<String> branches = [];
+        bool hasActualBranches = false;
+
         if (_selectedSource != null &&
             _selectedSource!.githubRepo != null &&
-            _selectedSource!.githubRepo!.branches != null) {
+            _selectedSource!.githubRepo!.branches != null &&
+            _selectedSource!.githubRepo!.branches!.isNotEmpty) {
           branches = _selectedSource!.githubRepo!.branches!
               .map((b) => b.displayName)
               .toList();
+          hasActualBranches = true;
         }
-        if (_selectedBranch != null && !branches.contains(_selectedBranch)) {
+        if (_selectedBranch != null &&
+            _selectedBranch!.isNotEmpty &&
+            !branches.contains(_selectedBranch)) {
           branches.add(_selectedBranch!);
         }
-        if (branches.isEmpty) branches.add('main');
+
+        List<String> suggestions = [];
+        if (!hasActualBranches) {
+          suggestions = ['main', 'master'];
+        }
 
         return Dialog(
           insetPadding: const EdgeInsets.all(20),
@@ -1386,6 +1394,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
                                 selectedSource: _selectedSource,
                                 selectedBranch: _selectedBranch,
                                 branches: branches,
+                                suggestions: suggestions,
                                 sourceController: _sourceController,
                                 sourceFocusNode: _sourceFocusNode,
                                 branchFocusNode: _branchFocusNode,
@@ -1713,6 +1722,7 @@ class _SourceSelectorSection extends StatelessWidget {
   final Source? selectedSource;
   final String? selectedBranch;
   final List<String> branches;
+  final List<String> suggestions;
   final TextEditingController sourceController;
   final FocusNode sourceFocusNode;
   final FocusNode branchFocusNode;
@@ -1736,6 +1746,7 @@ class _SourceSelectorSection extends StatelessWidget {
     required this.selectedSource,
     required this.selectedBranch,
     required this.branches,
+    this.suggestions = const [],
     required this.sourceController,
     required this.sourceFocusNode,
     required this.branchFocusNode,
@@ -1811,6 +1822,7 @@ class _SourceSelectorSection extends StatelessWidget {
             selectedSource: selectedSource,
             selectedBranch: selectedBranch,
             branches: branches,
+            suggestions: suggestions,
             onSourceTextChanged: onSourceTextChanged,
             onClearSource: onClearSource,
             onDropdownWidthChange: onDropdownWidthChange,
@@ -1913,6 +1925,7 @@ class _SingleSourceSelector extends StatelessWidget {
   final Source? selectedSource;
   final String? selectedBranch;
   final List<String> branches;
+  final List<String> suggestions;
   final ValueChanged<String> onSourceTextChanged;
   final VoidCallback onClearSource;
   final ValueChanged<double> onDropdownWidthChange;
@@ -1929,6 +1942,7 @@ class _SingleSourceSelector extends StatelessWidget {
     required this.selectedSource,
     required this.selectedBranch,
     required this.branches,
+    this.suggestions = const [],
     required this.onSourceTextChanged,
     required this.onClearSource,
     required this.onDropdownWidthChange,
@@ -1974,13 +1988,20 @@ class _SingleSourceSelector extends StatelessWidget {
             textEditingController: branchController,
             optionsBuilder: (TextEditingValue textEditingValue) {
               if (textEditingValue.text == '') {
-                return branches;
+                if (branches.isNotEmpty) return branches;
+                return suggestions;
               }
-              return branches.where((String option) {
-                return option
-                    .toLowerCase()
-                    .contains(textEditingValue.text.toLowerCase());
+              final query = textEditingValue.text.toLowerCase();
+              final filteredBranches = branches.where((String option) {
+                return option.toLowerCase().contains(query);
               });
+              if (filteredBranches.isEmpty && branches.isEmpty) {
+                // Filter suggestions if we have no actual branches
+                return suggestions.where((String option) {
+                  return option.toLowerCase().contains(query);
+                });
+              }
+              return filteredBranches;
             },
             onSelected: (String selection) {
               onBranchChanged(selection);
@@ -2038,13 +2059,21 @@ class _SingleSourceSelector extends StatelessWidget {
                       itemCount: options.length,
                       itemBuilder: (BuildContext context, int index) {
                         final String option = options.elementAt(index);
+                        final bool isSuggestion =
+                            suggestions.contains(option) &&
+                            !branches.contains(option);
                         return InkWell(
                           onTap: () {
                             onSelected(option);
                           },
                           child: Padding(
                             padding: const EdgeInsets.all(16.0),
-                            child: Text(option),
+                            child: Text(
+                              option,
+                              style: isSuggestion
+                                  ? const TextStyle(fontStyle: FontStyle.italic)
+                                  : null,
+                            ),
                           ),
                         );
                       },
