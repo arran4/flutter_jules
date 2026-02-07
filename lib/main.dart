@@ -188,7 +188,7 @@ class _MyAppState extends State<MyApp> with WindowListener {
               builder: (context, settings, _) {
                 return MaterialApp(
                   navigatorKey: navigatorKey,
-                  title: "Arran's Flutter based jules client",
+                  title: "Jules",
                   debugShowCheckedModeBanner: false,
                   theme: JulesTheme.getTheme(
                     settings.themeType,

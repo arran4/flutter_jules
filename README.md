@@ -2,7 +2,7 @@
   <img src="assets/icon/app_icon.png" width="256" alt="App Icon">
 </p>
 
-# Arran's Flutter based jules client
+# Jules
 
 A comprehensive Flutter-based client application for interacting with the Google Jules API. This application provides a robust, cross-platform interface for managing sessions, browsing sources, and collaborating with the Jules agent.
 
@@ -113,7 +113,7 @@ Release artifacts are generated in specific output directories. The CI pipeline 
 |----------|---------------|-----------------|
 | **Windows** | `flutter build windows` | `build/windows/x64/runner/Release` |
 | **Linux** | `flutter build linux` | `build/linux/x64/release/bundle` |
-| **macOS** | `flutter build macos` | `build/macos/Build/Products/Release/jules_client.app` |
+| **macOS** | `flutter build macos` | `build/macos/Build/Products/Release/Jules.app` |
 
 ### Code Quality & Testing
 
