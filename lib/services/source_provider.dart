@@ -263,6 +263,7 @@ class SourceProvider extends ChangeNotifier {
   }
 
   Future<void> refreshSource(
+    JulesClient client,
     Source sourceToRefresh, {
     String? authToken,
     GithubProvider? githubProvider,

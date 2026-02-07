@@ -68,6 +68,7 @@ class MockSourceProvider extends ChangeNotifier implements SourceProvider {
 
   @override
   Future<void> refreshSource(
+    JulesClient client,
     Source source, {
     String? authToken,
     GithubProvider? githubProvider,
@@ -78,10 +79,10 @@ class MockGithubProvider extends ChangeNotifier implements GithubProvider {
   @override
   dynamic noSuchMethod(Invocation invocation) => super.noSuchMethod(invocation);
 
-  @override
+  // @override
   JulesClient? get client => MockJulesClient();
 
-  @override
+  // @override
   bool get isOffline => false;
 }
 

@@ -171,7 +171,7 @@ void main() {
           .thenAnswer((_) async => details);
 
       // Act
-      await provider.refreshSource(source,
+      await provider.refreshSource(mockClient, source,
           authToken: 'auth_token', githubProvider: mockGithubProvider);
 
       // Verify

@@ -832,6 +832,7 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     try {
       final deps = _sourceFetchDependencies();
       await deps.sourceProvider.refreshSource(
+        deps.auth.client,
         _selectedSource!,
         authToken: deps.auth.token,
         githubProvider: deps.githubProvider,
