@@ -174,8 +174,8 @@ class SourceProvider extends ChangeNotifier {
           notifyListeners();
         }).catchError((err) {
           _pendingGithubRefreshes--;
+          _appendError(source.name, 'GitHub Refresh: $err');
           notifyListeners();
-          // Silently ignore, errors are handled in the provider
         });
 
         githubProvider.enqueue(job);
@@ -272,12 +272,6 @@ class SourceProvider extends ChangeNotifier {
       return;
     }
 
-    if (githubProvider == null ||
-        githubProvider.apiKey == null ||
-        sourceToRefresh.githubRepo == null) {
-      return;
-    }
-
     final index = _items.indexWhere(
       (item) => item.data.name == sourceToRefresh.name,
     );
@@ -285,71 +279,113 @@ class SourceProvider extends ChangeNotifier {
       return; // Source not found in the list
     }
 
-    try {
-      _refreshingSources.add(sourceToRefresh.name);
-      final details = await githubProvider.getRepoDetails(
-        sourceToRefresh.githubRepo!.owner,
-        sourceToRefresh.githubRepo!.repo,
-      );
+    _refreshingSources.add(sourceToRefresh.name);
+    notifyListeners();
 
-      if (details != null) {
+    try {
+      // 1. Fetch from Jules API
+      Source? julesSource;
+      try {
+        julesSource = await client.getSource(sourceToRefresh.name);
+      } catch (e) {
+        _appendError(sourceToRefresh.name, 'Jules API Refresh: $e');
+        // Continue to GitHub refresh even if Jules fails
+      }
+
+      // 2. Fetch from GitHub (if applicable)
+      Map<String, dynamic>? githubDetails;
+      if (githubProvider != null &&
+          githubProvider.apiKey != null &&
+          sourceToRefresh.githubRepo != null) {
+        try {
+          githubDetails = await githubProvider.getRepoDetails(
+            sourceToRefresh.githubRepo!.owner,
+            sourceToRefresh.githubRepo!.repo,
+          );
+        } catch (e) {
+          _appendError(sourceToRefresh.name, 'GitHub Refresh: $e');
+        }
+      }
+
+      // 3. Merge Results
+      var baseSource = julesSource ?? sourceToRefresh;
+
+      if (githubDetails != null && baseSource.githubRepo != null) {
         final enrichedRepo = GitHubRepo(
-          owner: sourceToRefresh.githubRepo!.owner,
-          repo: sourceToRefresh.githubRepo!.repo,
-          isPrivate: sourceToRefresh.githubRepo!.isPrivate,
-          defaultBranch: details['defaultBranch'] != null
-              ? GitHubBranch(displayName: details['defaultBranch'])
-              : sourceToRefresh.githubRepo!.defaultBranch,
+          owner: baseSource.githubRepo!.owner,
+          repo: baseSource.githubRepo!.repo,
+          isPrivate: baseSource.githubRepo!.isPrivate,
+          defaultBranch: githubDetails['defaultBranch'] != null
+              ? GitHubBranch(displayName: githubDetails['defaultBranch'])
+              : baseSource.githubRepo!.defaultBranch,
           branches: _combineBranches(
-            sourceToRefresh.githubRepo!.branches,
-            (details['branches'] as List?)
+            baseSource.githubRepo!.branches,
+            (githubDetails['branches'] as List?)
                 ?.map((b) => GitHubBranch(displayName: b['displayName']))
                 .toList(),
           ),
-          repoName: details['repoName'],
-          repoId: details['repoId'],
-          isPrivateGithub: details['isPrivateGithub'],
-          description: details['description'],
-          primaryLanguage: details['primaryLanguage'],
-          license: details['license'],
-          openIssuesCount: details['openIssuesCount'],
-          isFork: details['isFork'],
-          forkParent: details['forkParent'],
+          repoName: githubDetails['repoName'],
+          repoId: githubDetails['repoId'],
+          isPrivateGithub: githubDetails['isPrivateGithub'],
+          description: githubDetails['description'],
+          primaryLanguage: githubDetails['primaryLanguage'],
+          license: githubDetails['license'],
+          openIssuesCount: githubDetails['openIssuesCount'],
+          isFork: githubDetails['isFork'],
+          forkParent: githubDetails['forkParent'],
         );
 
-        final updatedSource = Source(
-          name: sourceToRefresh.name,
-          id: sourceToRefresh.id,
+        baseSource = Source(
+          name: baseSource.name,
+          id: baseSource.id,
           githubRepo: enrichedRepo,
-          isArchived: sourceToRefresh.isArchived,
-          isReadOnly: sourceToRefresh.isReadOnly,
-          options: sourceToRefresh.options,
+          isArchived: baseSource.isArchived,
+          isReadOnly: baseSource.isReadOnly,
+          options: baseSource.options,
         );
-
-        final oldItem = _items[index];
-        final newItem = CachedItem(
-          updatedSource,
-          oldItem.metadata.copyWith(
-            lastRetrieved: DateTime.now(),
-            lastUpdated: DateTime.now(),
-          ),
-        );
-
-        _items[index] = newItem;
-
-        if (_cacheService != null && authToken != null) {
-          final allSources = _items.map((item) => item.data).toList();
-          await _cacheService!.saveSources(authToken, allSources);
-        }
-
-        notifyListeners();
       }
+
+      // Update Cache
+      final oldItem = _items[index];
+      final newItem = CachedItem(
+        baseSource,
+        oldItem.metadata.copyWith(
+          lastRetrieved: DateTime.now(),
+          lastUpdated: DateTime.now(),
+        ),
+      );
+
+      _items[index] = newItem;
+
+      if (_cacheService != null && authToken != null) {
+        final allSources = _items.map((item) => item.data).toList();
+        await _cacheService!.saveSources(authToken, allSources);
+      }
+
+      notifyListeners();
     } catch (e) {
+      _appendError(sourceToRefresh.name, 'Refresh Failed: $e');
       _error = 'Failed to refresh source ${sourceToRefresh.name}: $e';
       notifyListeners();
       rethrow;
     } finally {
       _refreshingSources.remove(sourceToRefresh.name);
+      notifyListeners();
+    }
+  }
+
+  void _appendError(String sourceName, String errorMsg) {
+    final index = _items.indexWhere((i) => i.data.name == sourceName);
+    if (index != -1) {
+      final item = _items[index];
+      final errors = List<String>.from(item.metadata.recentErrors);
+      errors.add('${DateTime.now().toIso8601String()}: $errorMsg');
+      if (errors.length > 5) errors.removeAt(0);
+
+      _items[index] = CachedItem(
+        item.data,
+        item.metadata.copyWith(recentErrors: errors),
+      );
     }
   }
 

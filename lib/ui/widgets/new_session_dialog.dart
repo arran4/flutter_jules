@@ -550,7 +550,6 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
       authToken: deps.auth.token,
       force: force,
       githubProvider: deps.githubProvider,
-      sessionProvider: deps.sessionProvider,
     );
   }
 
