@@ -4,7 +4,6 @@ import '../models.dart';
 import 'github_provider.dart';
 import 'jules_client.dart';
 import 'cache_service.dart';
-import 'session_provider.dart';
 
 class SourceProvider extends ChangeNotifier {
   List<CachedItem<Source>> _items = [];
@@ -35,7 +34,6 @@ class SourceProvider extends ChangeNotifier {
     String? authToken,
     GithubProvider? githubProvider,
     void Function(int count, String message)? onProgress,
-    SessionProvider? sessionProvider,
   }) async {
     // 1. Initial Load from Cache
     if (_cacheService != null && authToken != null) {
