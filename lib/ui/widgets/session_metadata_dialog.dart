@@ -1,4 +1,5 @@
 import 'dart:io';
+import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:url_launcher/url_launcher.dart';
@@ -9,12 +10,14 @@ class SessionMetadataDialog extends StatelessWidget {
   final Session session;
   final CacheMetadata? cacheMetadata;
   final File? cacheFile;
+  final String? rawContent;
 
   const SessionMetadataDialog({
     super.key,
     required this.session,
     this.cacheMetadata,
     this.cacheFile,
+    this.rawContent,
   });
 
   @override
@@ -31,6 +34,7 @@ class SessionMetadataDialog extends StatelessWidget {
               if (cacheFile != null) _buildLocalCacheSection(context),
               if (cacheMetadata != null) _buildCacheMetadataSection(context),
               _buildServerMetadataSection(context),
+              if (rawContent != null) _buildRawContentSection(context),
             ],
           ),
         ),
@@ -76,9 +80,12 @@ class SessionMetadataDialog extends StatelessWidget {
 
   Widget _buildServerMetadataSection(BuildContext context) {
     if (session.metadata == null || session.metadata!.isEmpty) {
-      return const Text(
-        "No server metadata available.",
-        style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+      return const Padding(
+        padding: EdgeInsets.only(bottom: 16.0),
+        child: Text(
+          "No server metadata available.",
+          style: TextStyle(fontStyle: FontStyle.italic, color: Colors.grey),
+        ),
       );
     }
 
@@ -87,6 +94,41 @@ class SessionMetadataDialog extends StatelessWidget {
       children: [
         _buildSectionHeader(context, 'Server Metadata'),
         _buildServerMetadataTable(context),
+        const SizedBox(height: 16),
+      ],
+    );
+  }
+
+  Widget _buildRawContentSection(BuildContext context) {
+    String content = rawContent!;
+    try {
+      final json = jsonDecode(content);
+      const encoder = JsonEncoder.withIndent('  ');
+      content = encoder.convert(json);
+    } catch (_) {
+      // Use raw content if not valid JSON
+    }
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        _buildSectionHeader(context, 'Raw Content'),
+        Container(
+          width: double.infinity,
+          constraints: const BoxConstraints(maxHeight: 300),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            borderRadius: BorderRadius.circular(4),
+            border: Border.all(color: Colors.grey.shade300),
+          ),
+          child: SingleChildScrollView(
+            padding: const EdgeInsets.all(8.0),
+            child: SelectableText(
+              content,
+              style: const TextStyle(fontFamily: 'monospace', fontSize: 12),
+            ),
+          ),
+        ),
       ],
     );
   }

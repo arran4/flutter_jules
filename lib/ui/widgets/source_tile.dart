@@ -135,7 +135,7 @@ class SourceTile extends StatelessWidget {
       const PopupMenuItem(value: 'stats', child: Text('Show Stats')),
       const PopupMenuItem(
         value: 'view_cache_file',
-        child: Text('View Cache File'),
+        child: Text('View Source'),
       ),
       if (bookmarks.isNotEmpty) const PopupMenuDivider(),
       ...bookmarks.map(
@@ -249,14 +249,14 @@ class SourceTile extends StatelessWidget {
     } else if (value == 'stats') {
       _showStatsDialog(context, source);
     } else if (value == 'view_cache_file') {
-      _handleViewCacheFile(context, source);
+      _handleViewSource(context, source);
     } else if (value.startsWith('bookmark_')) {
       final bookmarkId = value.substring('bookmark_'.length);
       _handleBookmark(context, bookmarkId, source.name);
     }
   }
 
-  void _handleViewCacheFile(BuildContext context, Source source) async {
+  void _handleViewSource(BuildContext context, Source source) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
     final cacheService = Provider.of<CacheService>(context, listen: false);
 
@@ -272,6 +272,11 @@ class SourceTile extends StatelessWidget {
         auth.token!,
         source.id,
       );
+      String? content;
+      if (await cacheFile.exists()) {
+        content = await cacheFile.readAsString();
+      }
+
       if (context.mounted) {
         showDialog(
           context: context,
@@ -284,6 +289,7 @@ class SourceTile extends StatelessWidget {
             ),
             cacheMetadata: item.metadata,
             cacheFile: cacheFile,
+            rawContent: content,
           ),
         );
       }
