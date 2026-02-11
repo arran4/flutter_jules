@@ -20,8 +20,18 @@ mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 
 echo "Copying build artifacts..."
+# Find executable in build directory
+EXECUTABLE=$(find "$BUILD_DIR" -maxdepth 1 -type f -executable | head -n 1)
+
+if [ -z "$EXECUTABLE" ]; then
+    echo "Error: No executable found in $BUILD_DIR"
+    exit 1
+fi
+
+echo "Found executable: $(basename "$EXECUTABLE")"
+
 # Copy executable and rename to jules_client
-cp "$BUILD_DIR/flutter_jules" "$APP_DIR/usr/bin/jules_client"
+cp "$EXECUTABLE" "$APP_DIR/usr/bin/jules_client"
 
 # Copy shared libraries to usr/lib
 # This ensures libraries like libdesktop_multi_window_plugin.so are available
