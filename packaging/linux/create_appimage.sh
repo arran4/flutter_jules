@@ -20,18 +20,26 @@ mkdir -p "$APP_DIR/usr/share/applications"
 mkdir -p "$APP_DIR/usr/share/icons/hicolor/256x256/apps"
 
 echo "Copying build artifacts..."
-# Find executable in build directory
-EXECUTABLE=$(find "$BUILD_DIR" -maxdepth 1 -type f -executable | head -n 1)
+# Find all executables in build directory
+EXECUTABLES=$(find "$BUILD_DIR" -maxdepth 1 -type f -executable)
 
-if [ -z "$EXECUTABLE" ]; then
+if [ -z "$EXECUTABLES" ]; then
     echo "Error: No executable found in $BUILD_DIR"
     exit 1
 fi
 
-echo "Found executable: $(basename "$EXECUTABLE")"
+# We'll use the first found executable as the main entry point
+MAIN_EXECUTABLE=""
 
-# Copy executable and rename to jules_client
-cp "$EXECUTABLE" "$APP_DIR/usr/bin/jules_client"
+echo "$EXECUTABLES" | while read -r EXECUTABLE; do
+    EXEC_NAME=$(basename "$EXECUTABLE")
+    echo "Found executable: $EXEC_NAME"
+    cp "$EXECUTABLE" "$APP_DIR/usr/bin/$EXEC_NAME"
+done
+
+# Set the main executable to the first one found for the desktop file
+MAIN_EXECUTABLE=$(echo "$EXECUTABLES" | head -n 1 | xargs basename)
+echo "Main executable is: $MAIN_EXECUTABLE"
 
 # Copy shared libraries to usr/lib
 # This ensures libraries like libdesktop_multi_window_plugin.so are available
@@ -55,7 +63,7 @@ cp "assets/icon/app_icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/jul
 
 echo "Updating desktop file..."
 # Update Exec and Icon fields
-sed -i 's/^Exec=.*/Exec=jules_client/' "$APP_DIR/usr/share/applications/jules_client.desktop"
+sed -i "s/^Exec=.*/Exec=$MAIN_EXECUTABLE/" "$APP_DIR/usr/share/applications/jules_client.desktop"
 sed -i 's/^Icon=.*/Icon=jules_client/' "$APP_DIR/usr/share/applications/jules_client.desktop"
 
 echo "Downloading linuxdeploy..."
@@ -71,6 +79,6 @@ echo "Generating AppImage..."
     --output appimage \
     --icon-file "assets/icon/app_icon.png" \
     --desktop-file "$APP_DIR/usr/share/applications/jules_client.desktop" \
-    --executable "$APP_DIR/usr/bin/jules_client"
+    --executable "$APP_DIR/usr/bin/$MAIN_EXECUTABLE"
 
 echo "AppImage creation complete."
