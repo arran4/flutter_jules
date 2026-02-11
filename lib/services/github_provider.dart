@@ -71,8 +71,8 @@ class GithubProvider extends ChangeNotifier {
     this._cacheService, {
     AuthService? authService,
     http.Client? client,
-  })  : _authService = authService ?? AuthService(),
-        _client = client ?? http.Client() {
+  }) : _authService = authService ?? AuthService(),
+       _client = client ?? http.Client() {
     _loadToken();
   }
 
@@ -366,10 +366,7 @@ class GithubProvider extends ChangeNotifier {
         final url = Uri.parse(
           'https://api.github.com/repos/$owner/$repo/pulls/$prNumber',
         );
-        final response = await _client.get(
-          url,
-          headers: _getHeaders(token),
-        );
+        final response = await _client.get(url, headers: _getHeaders(token));
 
         _updateRateLimits(response.headers);
 
@@ -642,10 +639,7 @@ class GithubProvider extends ChangeNotifier {
         if (token == null) throw Exception('Missing GitHub API Key');
 
         final url = Uri.parse('https://api.github.com/repos/$owner/$repo');
-        final response = await _client.get(
-          url,
-          headers: _getHeaders(token),
-        );
+        final response = await _client.get(url, headers: _getHeaders(token));
 
         _updateRateLimits(response.headers);
 
@@ -856,7 +850,7 @@ class GitHubPrResponse {
   final Map<String, dynamic> _links;
 
   GitHubPrResponse(this._data)
-      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
+    : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);
