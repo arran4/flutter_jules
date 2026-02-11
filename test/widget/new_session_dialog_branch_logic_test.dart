@@ -150,14 +150,17 @@ void main() {
     SharedPreferences.setMockInitialValues({});
   });
 
-  testWidgets('NewSessionDialog branch selection logic',
-      (WidgetTester tester) async {
+  testWidgets('NewSessionDialog branch selection logic', (
+    WidgetTester tester,
+  ) async {
     // Set screen size to avoid overflow
     tester.view.physicalSize = const Size(1600, 1200);
     tester.view.devicePixelRatio = 1.0;
 
-    final meta =
-        CacheMetadata(firstSeen: DateTime.now(), lastRetrieved: DateTime.now());
+    final meta = CacheMetadata(
+      firstSeen: DateTime.now(),
+      lastRetrieved: DateTime.now(),
+    );
 
     // 1. Setup Source with NO branches
     final sourceNoBranches = Source(
@@ -215,23 +218,28 @@ void main() {
         providers: [
           ChangeNotifierProvider<AuthProvider>.value(value: MockAuthProvider()),
           ChangeNotifierProvider<SourceProvider>.value(
-              value: mockSourceProvider),
+            value: mockSourceProvider,
+          ),
           ChangeNotifierProvider<GithubProvider>.value(
-              value: MockGithubProvider()),
+            value: MockGithubProvider(),
+          ),
           ChangeNotifierProvider<SessionProvider>.value(
-              value: MockSessionProvider()),
+            value: MockSessionProvider(),
+          ),
           ChangeNotifierProvider<SettingsProvider>.value(
-              value: mockSettingsProvider),
+            value: mockSettingsProvider,
+          ),
           ChangeNotifierProvider<MessageQueueProvider>.value(
-              value: MockMessageQueueProvider()),
+            value: MockMessageQueueProvider(),
+          ),
           ChangeNotifierProvider<PromptTemplateProvider>.value(
-              value: MockPromptTemplateProvider()),
+            value: MockPromptTemplateProvider(),
+          ),
           ChangeNotifierProvider<ShortcutRegistry>.value(
-              value: MockShortcutRegistry()),
+            value: MockShortcutRegistry(),
+          ),
         ],
-        child: const MaterialApp(
-          home: NewSessionDialog(),
-        ),
+        child: const MaterialApp(home: NewSessionDialog()),
       ),
     );
 
@@ -240,7 +248,9 @@ void main() {
 
     // Select source with NO branches (repo1)
     await tester.enterText(
-        find.widgetWithText(TextField, 'Repository'), 'repo1');
+      find.widgetWithText(TextField, 'Repository'),
+      'repo1',
+    );
     await tester.pumpAndSettle();
 
     // Tap the item in overlay
@@ -252,38 +262,53 @@ void main() {
     final controller = (tester.widget(branchField) as TextField).controller;
 
     // Expectation 1: If no default branch (and no branches), it should be empty.
-    expect(controller!.text, isEmpty,
-        reason: "Branch should be empty for source with no branches");
+    expect(
+      controller!.text,
+      isEmpty,
+      reason: "Branch should be empty for source with no branches",
+    );
 
     // Expectation 2: It should show suggestions 'main', 'master' if no branches.
     // Trigger suggestions
     await tester.tap(branchField);
     await tester.pumpAndSettle();
     expect(find.text('main'), findsOneWidget, reason: "Should suggest main");
-    expect(find.text('master'), findsOneWidget,
-        reason: "Should suggest master");
+    expect(
+      find.text('master'),
+      findsOneWidget,
+      reason: "Should suggest master",
+    );
 
     // Now select source with branches but NO default (repo2)
     await tester.enterText(
-        find.widgetWithText(TextField, 'Repository'), 'repo2');
+      find.widgetWithText(TextField, 'Repository'),
+      'repo2',
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('owner/repo2'));
     await tester.pumpAndSettle();
 
     // Expectation 3: Branch should be empty (no default branch).
-    expect(controller.text, isEmpty,
-        reason:
-            "Branch should be empty for source with branches but no default");
+    expect(
+      controller.text,
+      isEmpty,
+      reason: "Branch should be empty for source with branches but no default",
+    );
 
     // Now select source WITH default (repo3)
     await tester.enterText(
-        find.widgetWithText(TextField, 'Repository'), 'repo3');
+      find.widgetWithText(TextField, 'Repository'),
+      'repo3',
+    );
     await tester.pumpAndSettle();
     await tester.tap(find.text('owner/repo3'));
     await tester.pumpAndSettle();
 
     // Expectation 4: Branch should be 'main'
-    expect(controller.text, 'main',
-        reason: "Branch should be main for source with default branch");
+    expect(
+      controller.text,
+      'main',
+      reason: "Branch should be main for source with default branch",
+    );
   });
 }

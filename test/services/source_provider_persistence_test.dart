@@ -80,8 +80,9 @@ void main() {
       mockCacheService = MockCacheService();
 
       // Stub loadSources
-      when(mockCacheService.loadSources(any))
-          .thenAnswer((_) async => <CachedItem<Source>>[]);
+      when(
+        mockCacheService.loadSources(any),
+      ).thenAnswer((_) async => <CachedItem<Source>>[]);
 
       // Stub saveSources
       when(mockCacheService.saveSources(any, any)).thenAnswer((_) async {});
@@ -93,14 +94,10 @@ void main() {
     test('fetchSources parses and saves options', () async {
       final options = {
         'key': 'value',
-        'nested': {'foo': 'bar'}
+        'nested': {'foo': 'bar'},
       };
       final sources = <Source>[
-        Source(
-          name: 'source1',
-          id: 'id1',
-          options: options,
-        ),
+        Source(name: 'source1', id: 'id1', options: options),
       ];
       final response = ListSourcesResponse(
         sources: sources,
@@ -129,7 +126,11 @@ void main() {
     test('refreshSource updates branches and preserves options', () async {
       final options = {'key': 'preserved'};
       final oldRepo = GitHubRepo(
-          owner: 'owner', repo: 'repo', isPrivate: false, branches: []);
+        owner: 'owner',
+        repo: 'repo',
+        isPrivate: false,
+        branches: [],
+      );
       final source = Source(
         name: 'source1',
         id: 'id1',
@@ -145,13 +146,14 @@ void main() {
         sources: [source],
         nextPageToken: null,
       );
-      when(mockClient.listSources(pageToken: anyNamed('pageToken')))
-          .thenAnswer((_) async => response);
+      when(
+        mockClient.listSources(pageToken: anyNamed('pageToken')),
+      ).thenAnswer((_) async => response);
       await provider.fetchSources(mockClient, authToken: 'auth_token');
 
       // Setup refresh
       final newBranches = [
-        {'displayName': 'new-branch'}
+        {'displayName': 'new-branch'},
       ];
       final details = {
         'repoName': 'repo',
@@ -167,12 +169,17 @@ void main() {
         'forkParent': null,
       };
 
-      when(mockGithubProvider.getRepoDetails('owner', 'repo'))
-          .thenAnswer((_) async => details);
+      when(
+        mockGithubProvider.getRepoDetails('owner', 'repo'),
+      ).thenAnswer((_) async => details);
 
       // Act
-      await provider.refreshSource(mockClient, source,
-          authToken: 'auth_token', githubProvider: mockGithubProvider);
+      await provider.refreshSource(
+        mockClient,
+        source,
+        authToken: 'auth_token',
+        githubProvider: mockGithubProvider,
+      );
 
       // Verify
       final updatedSource = provider.items[0].data;
@@ -186,8 +193,9 @@ void main() {
       expect(updatedSource.options, equals(options));
 
       // Verify save called
-      verify(mockCacheService.saveSources('auth_token', any))
-          .called(greaterThan(1)); // Initial fetch + refresh
+      verify(
+        mockCacheService.saveSources('auth_token', any),
+      ).called(greaterThan(1)); // Initial fetch + refresh
     });
   });
 }

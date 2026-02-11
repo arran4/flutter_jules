@@ -198,9 +198,9 @@ class SourceMetadataDialog extends StatelessWidget {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleSmall?.copyWith(
-              fontWeight: FontWeight.bold,
-              color: Theme.of(context).primaryColor,
-            ),
+          fontWeight: FontWeight.bold,
+          color: Theme.of(context).primaryColor,
+        ),
       ),
     );
   }
@@ -297,9 +297,9 @@ class SourceMetadataDialog extends StatelessWidget {
 
   void _copyCacheFilePath(BuildContext context) {
     Clipboard.setData(ClipboardData(text: cacheFile!.path));
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Path copied')),
-    );
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(const SnackBar(content: Text('Path copied')));
   }
 
   Future<void> _openCacheFile(BuildContext context) async {
@@ -319,9 +319,9 @@ class SourceMetadataDialog extends StatelessWidget {
       }
     } catch (e) {
       if (context.mounted) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text('Error opening file: $e')),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text('Error opening file: $e')));
       }
     }
   }
