@@ -55,16 +55,16 @@ cp -r "$BUILD_DIR/data/"* "$APP_DIR/usr/bin/data/"
 
 # Copy Desktop file
 echo "Copying desktop file..."
-cp "linux/com.arran4.flutter_jules.desktop" "$APP_DIR/usr/share/applications/jules_client.desktop"
+cp "linux/com.arran4.flutter_jules.desktop" "$APP_DIR/usr/share/applications/$MAIN_EXECUTABLE.desktop"
 
 # Copy Icon
 echo "Copying icon..."
-cp "assets/icon/app_icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/jules_client.png"
+cp "assets/icon/app_icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$MAIN_EXECUTABLE.png"
 
 echo "Updating desktop file..."
 # Update Exec and Icon fields
-sed -i "s/^Exec=.*/Exec=$MAIN_EXECUTABLE/" "$APP_DIR/usr/share/applications/jules_client.desktop"
-sed -i 's/^Icon=.*/Icon=jules_client/' "$APP_DIR/usr/share/applications/jules_client.desktop"
+sed -i "s/^Exec=.*/Exec=$MAIN_EXECUTABLE/" "$APP_DIR/usr/share/applications/$MAIN_EXECUTABLE.desktop"
+sed -i "s/^Icon=.*/Icon=$MAIN_EXECUTABLE/" "$APP_DIR/usr/share/applications/$MAIN_EXECUTABLE.desktop"
 
 echo "Downloading linuxdeploy..."
 if [ ! -f "linuxdeploy-x86_64.AppImage" ]; then
@@ -78,7 +78,7 @@ echo "Generating AppImage..."
     --appdir "$APP_DIR" \
     --output appimage \
     --icon-file "assets/icon/app_icon.png" \
-    --desktop-file "$APP_DIR/usr/share/applications/jules_client.desktop" \
+    --desktop-file "$APP_DIR/usr/share/applications/$MAIN_EXECUTABLE.desktop" \
     --executable "$APP_DIR/usr/bin/$MAIN_EXECUTABLE"
 
 echo "AppImage creation complete."
