@@ -23,6 +23,7 @@ import '../widgets/bulk_action_entry_dialog.dart';
 import '../widgets/api_viewer.dart';
 import 'package:flutter_jules/ui/widgets/github_queue_pane.dart';
 import '../widgets/model_viewer.dart';
+import 'package:flutter_jules/ui/widgets/combined_data_viewer.dart';
 import '../widgets/session_metadata_dialog.dart';
 import '../widgets/popup_text.dart';
 import '../../services/message_queue_provider.dart';
@@ -2992,7 +2993,6 @@ class _SessionListScreenState extends State<SessionListScreen> {
   }
 
   Future<void> _fetchAndShowRawData(
-    BuildContext context,
     Session session,
   ) async {
     final auth = Provider.of<AuthProvider>(context, listen: false);
@@ -3012,7 +3012,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         session.id,
       );
 
-      if (context.mounted) Navigator.pop(context); // Dismiss loading
+      if (mounted) Navigator.pop(context); // Dismiss loading
 
       List<Activity>? activities;
       if (cachedDetails != null &&
@@ -3022,7 +3022,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // 2. Fetch if no cache or stale
         // Re-show loading if we popped it? Or just keep it open?
         // We popped it, so show it again if we are fetching.
-        if (context.mounted) {
+        if (mounted) {
           showDialog(
             context: context,
             barrierDismissible: false,
@@ -3031,7 +3031,8 @@ class _SessionListScreenState extends State<SessionListScreen> {
           );
         }
 
-        final fetchedActivities = await auth.client.listActivities(session.name);
+        final fetchedActivities =
+            await auth.client.listActivities(session.name);
         activities = fetchedActivities;
 
         // Update cache
@@ -3041,10 +3042,10 @@ class _SessionListScreenState extends State<SessionListScreen> {
           fetchedActivities,
         );
 
-        if (context.mounted) Navigator.pop(context); // Dismiss loading
+        if (mounted) Navigator.pop(context); // Dismiss loading
       }
 
-      if (context.mounted) {
+      if (mounted) {
         showDialog(
           context: context,
           builder: (context) =>
@@ -3052,7 +3053,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         );
       }
     } catch (e) {
-      if (context.mounted) {
+      if (mounted) {
         // Ensure loading is dismissed on error
         // We might need to track if dialog is open, but assuming standard flow:
         // If we failed during cache load (unlikely) or fetch.
@@ -3070,7 +3071,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
         // Actually, just Popping once might be enough if we track state.
         // Let's refine: Use a state variable or try/finally blocks better.
       }
-      if (context.mounted) {
+      if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('Failed to load raw data: $e')),
         );
@@ -3123,7 +3124,7 @@ class _SessionListScreenState extends State<SessionListScreen> {
           ),
           onTap: () {
             Future.delayed(Duration.zero, () {
-              if (mounted) _fetchAndShowRawData(context, session);
+              if (mounted) _fetchAndShowRawData(session);
             });
           },
         ),
