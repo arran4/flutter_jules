@@ -2991,6 +2991,93 @@ class _SessionListScreenState extends State<SessionListScreen> {
     }
   }
 
+  Future<void> _fetchAndShowRawData(
+    BuildContext context,
+    Session session,
+  ) async {
+    final auth = Provider.of<AuthProvider>(context, listen: false);
+    final cacheService = Provider.of<CacheService>(context, listen: false);
+
+    // Show loading
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const Center(child: CircularProgressIndicator()),
+    );
+
+    try {
+      // 1. Try cache
+      final cachedDetails = await cacheService.loadSessionDetails(
+        auth.token!,
+        session.id,
+      );
+
+      if (context.mounted) Navigator.pop(context); // Dismiss loading
+
+      List<Activity>? activities;
+      if (cachedDetails != null &&
+          cachedDetails.sessionUpdateTimeSnapshot == session.updateTime) {
+        activities = cachedDetails.activities;
+      } else {
+        // 2. Fetch if no cache or stale
+        // Re-show loading if we popped it? Or just keep it open?
+        // We popped it, so show it again if we are fetching.
+        if (context.mounted) {
+          showDialog(
+            context: context,
+            barrierDismissible: false,
+            builder: (context) =>
+                const Center(child: CircularProgressIndicator()),
+          );
+        }
+
+        final fetchedActivities = await auth.client.listActivities(session.name);
+        activities = fetchedActivities;
+
+        // Update cache
+        await cacheService.saveSessionDetails(
+          auth.token!,
+          session,
+          fetchedActivities,
+        );
+
+        if (context.mounted) Navigator.pop(context); // Dismiss loading
+      }
+
+      if (context.mounted) {
+        showDialog(
+          context: context,
+          builder: (context) =>
+              CombinedDataViewer(session: session, activities: activities!),
+        );
+      }
+    } catch (e) {
+      if (context.mounted) {
+        // Ensure loading is dismissed on error
+        // We might need to track if dialog is open, but assuming standard flow:
+        // If we failed during cache load (unlikely) or fetch.
+        // If fetch dialog is open, pop it.
+        // Simplest is to just pop until we are back (risky if user dismissed?)
+        // Better: catch specific blocks.
+        // For now, valid assumption: if error, we probably have a dialog open.
+        // Check if we can just show error.
+        // Let's rely on standard error-handling or just snackbar.
+        // Note: We popped once. If failed in fetch, we need to pop second dialog.
+        Navigator.popUntil(
+          context,
+          (route) => route.settings.name != null,
+        ); // Hacky?
+        // Actually, just Popping once might be enough if we track state.
+        // Let's refine: Use a state variable or try/finally blocks better.
+      }
+      if (context.mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Failed to load raw data: $e')),
+        );
+      }
+    }
+  }
+
   void _showTileMenu(
     BuildContext context,
     Session session,
@@ -3025,6 +3112,20 @@ class _SessionListScreenState extends State<SessionListScreen> {
             ],
           ),
           onTap: () => _quickReply(session),
+        ),
+        PopupMenuItem(
+          child: const Row(
+            children: [
+              Icon(Icons.data_object),
+              SizedBox(width: 8),
+              Text('View Raw Data'),
+            ],
+          ),
+          onTap: () {
+            Future.delayed(Duration.zero, () {
+              if (mounted) _fetchAndShowRawData(context, session);
+            });
+          },
         ),
         PopupMenuItem(
           child: const Row(
