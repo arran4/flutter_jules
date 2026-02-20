@@ -112,10 +112,10 @@ class TimeParser {
           start = now.subtract(Duration(days: value * 7));
           break;
         case 'month':
-          start = DateTime(now.year, now.month - value, now.day);
+          start = _subtractMonths(now, value);
           break;
         case 'year':
-          start = DateTime(now.year - value, now.month, now.day);
+          start = _subtractYears(now, value);
           break;
         default:
           return null;
@@ -141,11 +141,11 @@ class TimeParser {
       return (start: start, end: now);
     }
     if (input.contains('last month')) {
-      final start = DateTime(now.year, now.month - 1, now.day);
+      final start = _subtractMonths(now, 1);
       return (start: start, end: now);
     }
     if (input.contains('last year')) {
-      final start = DateTime(now.year - 1, now.month, now.day);
+      final start = _subtractYears(now, 1);
       return (start: start, end: now);
     }
 
@@ -208,5 +208,49 @@ class TimeParser {
       // Ignore parsing errors and try other formats
     }
     return null;
+  }
+
+  static DateTime _subtractMonths(DateTime base, int months) {
+    var year = base.year;
+    var month = base.month - months;
+    while (month <= 0) {
+      year--;
+      month += 12;
+    }
+
+    final day = base.day <= _daysInMonth(year, month)
+        ? base.day
+        : _daysInMonth(year, month);
+    return DateTime(
+      year,
+      month,
+      day,
+      base.hour,
+      base.minute,
+      base.second,
+      base.millisecond,
+      base.microsecond,
+    );
+  }
+
+  static DateTime _subtractYears(DateTime base, int years) {
+    final year = base.year - years;
+    final day = base.day <= _daysInMonth(year, base.month)
+        ? base.day
+        : _daysInMonth(year, base.month);
+    return DateTime(
+      year,
+      base.month,
+      day,
+      base.hour,
+      base.minute,
+      base.second,
+      base.millisecond,
+      base.microsecond,
+    );
+  }
+
+  static int _daysInMonth(int year, int month) {
+    return DateTime(year, month + 1, 0).day;
   }
 }

@@ -121,5 +121,21 @@ void main() {
         expect(result.day, expected.day);
       }
     });
+
+    test('should clamp day for month and year range phrases', () {
+      final marchEnd = DateTime(2024, 3, 31, 15, 20, 0);
+      final lastMonth = TimeParser.parseRange('last 1 month', now: marchEnd);
+
+      expect(lastMonth, isNotNull);
+      expect(lastMonth!.start, DateTime(2024, 2, 29, 15, 20, 0));
+      expect(lastMonth.end, marchEnd);
+
+      final leapDay = DateTime(2024, 2, 29, 8, 0, 0);
+      final lastYear = TimeParser.parseRange('last 1 year', now: leapDay);
+
+      expect(lastYear, isNotNull);
+      expect(lastYear!.start, DateTime(2023, 2, 28, 8, 0, 0));
+      expect(lastYear.end, leapDay);
+    });
   });
 }
