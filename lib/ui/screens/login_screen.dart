@@ -66,8 +66,9 @@ class _LoginScreenState extends State<LoginScreen> {
     return TextFormField(
       controller: _tokenController,
       decoration: InputDecoration(
-        labelText:
-            _selectedType == TokenType.apiKey ? 'API Key' : 'Access Token',
+        labelText: _selectedType == TokenType.apiKey
+            ? 'API Key'
+            : 'Access Token',
         border: const OutlineInputBorder(),
         hintText: _selectedType == TokenType.apiKey
             ? 'Enter your API Key'

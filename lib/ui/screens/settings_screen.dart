@@ -20,41 +20,46 @@ class _SettingsScreenState extends State<SettingsScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(title: const Text('Settings')),
-      body: Consumer4<SettingsProvider, DevModeProvider, AuthProvider,
-          GithubProvider>(
-        builder: (context, settings, devMode, auth, github, child) {
-          return ListView(
-            children: [
-              _buildSessionUpdatesSection(context, settings),
-              const Divider(),
-              _buildListUpdatesSection(context, settings),
-              const Divider(),
-              _buildRefreshActionsSection(context, settings),
-              const Divider(),
-              _buildAppearanceSection(context, settings),
-              const Divider(),
-              _buildSourceListSection(context, settings),
-              _buildKeybindingsSection(context, settings),
-              const Divider(),
-              _buildAutomaticRefreshSection(context, settings),
-              const Divider(),
-              _buildNotificationsSection(context, settings),
-              const Divider(),
-              _buildSystemTraySection(context, settings),
-              const Divider(),
-              _buildPerformanceSection(context, settings),
-              const Divider(),
-              _buildDiagnosticsSection(context),
-              const Divider(),
-              _buildDeveloperSection(context, settings, devMode),
-              const Divider(),
-              _buildAuthenticationSection(context, auth),
-              const Divider(),
-              _buildGitHubSection(context, settings, github),
-            ],
-          );
-        },
-      ),
+      body:
+          Consumer4<
+            SettingsProvider,
+            DevModeProvider,
+            AuthProvider,
+            GithubProvider
+          >(
+            builder: (context, settings, devMode, auth, github, child) {
+              return ListView(
+                children: [
+                  _buildSessionUpdatesSection(context, settings),
+                  const Divider(),
+                  _buildListUpdatesSection(context, settings),
+                  const Divider(),
+                  _buildRefreshActionsSection(context, settings),
+                  const Divider(),
+                  _buildAppearanceSection(context, settings),
+                  const Divider(),
+                  _buildSourceListSection(context, settings),
+                  _buildKeybindingsSection(context, settings),
+                  const Divider(),
+                  _buildAutomaticRefreshSection(context, settings),
+                  const Divider(),
+                  _buildNotificationsSection(context, settings),
+                  const Divider(),
+                  _buildSystemTraySection(context, settings),
+                  const Divider(),
+                  _buildPerformanceSection(context, settings),
+                  const Divider(),
+                  _buildDiagnosticsSection(context),
+                  const Divider(),
+                  _buildDeveloperSection(context, settings, devMode),
+                  const Divider(),
+                  _buildAuthenticationSection(context, auth),
+                  const Divider(),
+                  _buildGitHubSection(context, settings, github),
+                ],
+              );
+            },
+          ),
     );
   }
 
@@ -173,9 +178,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
       child: Text(
         title,
         style: Theme.of(context).textTheme.titleMedium?.copyWith(
-              color: Theme.of(context).colorScheme.primary,
-              fontWeight: FontWeight.bold,
-            ),
+          color: Theme.of(context).colorScheme.primary,
+          fontWeight: FontWeight.bold,
+        ),
       ),
     );
   }
@@ -405,15 +410,17 @@ class _SettingsScreenState extends State<SettingsScreen> {
                 TextButton(
                   onPressed: () {
                     final rule = UnreadRule(
-                      id: existingRule?.id ??
+                      id:
+                          existingRule?.id ??
                           DateTime.now().microsecondsSinceEpoch.toString(),
                       type: type,
                       action: action,
                       fromValue: fromController.text.isEmpty
                           ? null
                           : fromController.text,
-                      toValue:
-                          toController.text.isEmpty ? null : toController.text,
+                      toValue: toController.text.isEmpty
+                          ? null
+                          : toController.text,
                       enabled: existingRule?.enabled ?? true,
                     );
                     if (isEditing) {
@@ -841,9 +848,9 @@ class _SettingsScreenState extends State<SettingsScreen> {
               Text(
                 'Automatic Refresh',
                 style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                      color: Theme.of(context).colorScheme.primary,
-                      fontWeight: FontWeight.bold,
-                    ),
+                  color: Theme.of(context).colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
               IconButton(
                 icon: const Icon(Icons.add),
@@ -1079,8 +1086,8 @@ class _SettingsScreenState extends State<SettingsScreen> {
                       : null,
                   sendMessagesMode:
                       taskType == RefreshTaskType.sendPendingMessages
-                          ? sendMessagesMode
-                          : null,
+                      ? sendMessagesMode
+                      : null,
                   isEnabled: schedule?.isEnabled ?? true,
                 );
 

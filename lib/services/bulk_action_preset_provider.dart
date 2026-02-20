@@ -50,8 +50,9 @@ class BulkActionPresetProvider with ChangeNotifier {
       final jsonString = prefs.getString(_presetsKey);
       if (jsonString != null) {
         final List<dynamic> jsonList = jsonDecode(jsonString);
-        _presets =
-            jsonList.map((json) => BulkActionPreset.fromJson(json)).toList();
+        _presets = jsonList
+            .map((json) => BulkActionPreset.fromJson(json))
+            .toList();
       } else {
         _presets = List.from(_defaultPresets);
         await _savePresets();

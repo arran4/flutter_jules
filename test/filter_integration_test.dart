@@ -172,8 +172,7 @@ void main() {
       );
     });
 
-    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items',
-        () {
+    test('OR(Label(Bug), Hidden()): shows visible bugs and all hidden items', () {
       final filterTree = OrElement([
         LabelElement('Bug', 'bug'),
         LabelElement('Hidden', 'hidden'),
@@ -309,8 +308,9 @@ List<CachedItem<Session>> _applyFilter(
     final metadata = item.metadata;
 
     // Apply the FilterState logic
-    final initialState =
-        metadata.isHidden ? FilterState.implicitOut : FilterState.implicitIn;
+    final initialState = metadata.isHidden
+        ? FilterState.implicitOut
+        : FilterState.implicitIn;
 
     if (filterTree == null) {
       return initialState.isIn;

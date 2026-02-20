@@ -4,8 +4,9 @@ import 'package:flutter_jules/models.dart';
 import 'package:flutter_jules/ui/widgets/source_metadata_dialog.dart';
 
 void main() {
-  testWidgets('SourceMetadataDialog shows source details and raw content',
-      (WidgetTester tester) async {
+  testWidgets('SourceMetadataDialog shows source details and raw content', (
+    WidgetTester tester,
+  ) async {
     final source = Source(
       id: 'test_source',
       name: 'Test Source',

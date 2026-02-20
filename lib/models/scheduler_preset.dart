@@ -13,38 +13,37 @@ class SchedulerPreset {
   });
 
   static List<SchedulerPreset> get presets => [
-        const SchedulerPreset(
-          name: 'Standard',
-          description: 'Default balanced configuration for regular usage.',
-          schedulesFactory: _createStandardSchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Battery Saver',
-          description: 'Reduces refresh frequency to save power.',
-          schedulesFactory: _createBatterySaverSchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Hourly',
-          description: 'Refreshes data every hour.',
-          schedulesFactory: _createHourlySchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Daily',
-          description: 'Refreshes data only once a day.',
-          schedulesFactory: _createDailySchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Aggressive',
-          description: 'Very frequent updates for heavy usage.',
-          schedulesFactory: _createAggressiveSchedules,
-        ),
-        const SchedulerPreset(
-          name: 'Never (Manual Only)',
-          description:
-              'No automatic data refresh. Only sends pending messages.',
-          schedulesFactory: _createManualSchedules,
-        ),
-      ];
+    const SchedulerPreset(
+      name: 'Standard',
+      description: 'Default balanced configuration for regular usage.',
+      schedulesFactory: _createStandardSchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Battery Saver',
+      description: 'Reduces refresh frequency to save power.',
+      schedulesFactory: _createBatterySaverSchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Hourly',
+      description: 'Refreshes data every hour.',
+      schedulesFactory: _createHourlySchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Daily',
+      description: 'Refreshes data only once a day.',
+      schedulesFactory: _createDailySchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Aggressive',
+      description: 'Very frequent updates for heavy usage.',
+      schedulesFactory: _createAggressiveSchedules,
+    ),
+    const SchedulerPreset(
+      name: 'Never (Manual Only)',
+      description: 'No automatic data refresh. Only sends pending messages.',
+      schedulesFactory: _createManualSchedules,
+    ),
+  ];
 
   static List<RefreshSchedule> _createStandardSchedules() {
     return [
