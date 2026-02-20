@@ -6,8 +6,8 @@ class GlobalShortcutFocusManager extends StatefulWidget {
   const GlobalShortcutFocusManager({super.key, required this.child});
 
   static GlobalShortcutFocusManagerState of(BuildContext context) {
-    final state =
-        context.findAncestorStateOfType<GlobalShortcutFocusManagerState>();
+    final state = context
+        .findAncestorStateOfType<GlobalShortcutFocusManagerState>();
     if (state == null) {
       throw FlutterError(
         'GlobalShortcutFocusManager not found in context. Wrap your app in a GlobalShortcutFocusManager.',

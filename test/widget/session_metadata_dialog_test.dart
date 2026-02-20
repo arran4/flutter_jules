@@ -4,8 +4,9 @@ import 'package:flutter_jules/models.dart';
 import 'package:flutter_jules/ui/widgets/session_metadata_dialog.dart';
 
 void main() {
-  testWidgets('SessionMetadataDialog shows raw content when provided',
-      (WidgetTester tester) async {
+  testWidgets('SessionMetadataDialog shows raw content when provided', (
+    WidgetTester tester,
+  ) async {
     final session = Session(
       id: 'test_session',
       name: 'Test Session',
@@ -29,8 +30,9 @@ void main() {
     expect(find.textContaining('"key": "value"'), findsOneWidget);
   });
 
-  testWidgets('SessionMetadataDialog shows raw content as-is if invalid JSON',
-      (WidgetTester tester) async {
+  testWidgets('SessionMetadataDialog shows raw content as-is if invalid JSON', (
+    WidgetTester tester,
+  ) async {
     final session = Session(
       id: 'test_session',
       name: 'Test Session',

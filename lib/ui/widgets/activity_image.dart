@@ -228,8 +228,8 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
                     icon: const Icon(Icons.zoom_in, color: Colors.white),
                     tooltip: 'Zoom In',
                     onPressed: () {
-                      final Matrix4 matrix =
-                          _transformationController.value.clone();
+                      final Matrix4 matrix = _transformationController.value
+                          .clone();
                       // ignore: deprecated_member_use
                       matrix.scale(1.2);
                       _transformationController.value = matrix;
@@ -239,8 +239,8 @@ class _ActivityImageDialogState extends State<_ActivityImageDialog> {
                     icon: const Icon(Icons.zoom_out, color: Colors.white),
                     tooltip: 'Zoom Out',
                     onPressed: () {
-                      final Matrix4 matrix =
-                          _transformationController.value.clone();
+                      final Matrix4 matrix = _transformationController.value
+                          .clone();
                       // ignore: deprecated_member_use
                       matrix.scale(1 / 1.2);
                       _transformationController.value = matrix;

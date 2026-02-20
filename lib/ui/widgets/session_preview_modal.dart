@@ -84,7 +84,10 @@ class SessionPreviewModal extends StatelessWidget {
           ),
           if (session.sourceContext?.githubRepoContext != null) ...[
             if (session
-                .sourceContext!.githubRepoContext!.startingBranch.isNotEmpty)
+                .sourceContext!
+                .githubRepoContext!
+                .startingBranch
+                .isNotEmpty)
               ListTile(
                 title: const Text("Branch"),
                 subtitle: Text(

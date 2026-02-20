@@ -45,11 +45,12 @@ class RefreshSchedule {
       intervalInMinutes:
           (getNumberPropOrThrow(json, 'intervalInMinutes') as num).toInt(),
       isEnabled: getBooleanPropOrDefault(json, 'isEnabled', true),
-      taskType: RefreshTaskType.values[getNumberPropOrDefault(
-        json,
-        'taskType',
-        RefreshTaskType.refresh.index,
-      ).toInt()],
+      taskType:
+          RefreshTaskType.values[getNumberPropOrDefault(
+            json,
+            'taskType',
+            RefreshTaskType.refresh.index,
+          ).toInt()],
       refreshPolicy: refreshPolicyIndex != null
           ? ListRefreshPolicy.values[refreshPolicyIndex]
           : null,
