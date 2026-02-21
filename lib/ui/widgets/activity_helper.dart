@@ -64,13 +64,11 @@ class ActivityDisplayInfo {
       icon = Icons.smart_toy;
       iconColor = Colors.blue;
     } else if (activity.userMessaged != null) {
-      final isPending = activity.unmappedProps['isPending'] == true;
-      final isQueued = activity.unmappedProps['isQueued'] == true;
-      if (isPending) {
+      if (activity.isPending) {
         title = "Sending...";
         icon = Icons.hourglass_empty;
         iconColor = Colors.grey;
-      } else if (isQueued) {
+      } else if (activity.isQueued) {
         title = "Sending Failed";
         icon = Icons.cloud_off;
         iconColor = Colors.orange;

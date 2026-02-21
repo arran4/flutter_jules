@@ -351,3 +351,49 @@ class Metadata {
     return {'key': key, 'value': value};
   }
 }
+
+class SendMessageRequest {
+  final String prompt;
+
+  SendMessageRequest({required this.prompt});
+
+  factory SendMessageRequest.fromJson(Map<String, dynamic> json) {
+    return SendMessageRequest(
+      prompt: getStringPropOrThrow(json, 'prompt'),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    return {'prompt': prompt};
+  }
+}
+
+class SendMessageResponse {
+  SendMessageResponse();
+
+  factory SendMessageResponse.fromJson(Map<String, dynamic> json) {
+    return SendMessageResponse();
+  }
+
+  Map<String, dynamic> toJson() => {};
+}
+
+class ApprovePlanRequest {
+  ApprovePlanRequest();
+
+  factory ApprovePlanRequest.fromJson(Map<String, dynamic> json) {
+    return ApprovePlanRequest();
+  }
+
+  Map<String, dynamic> toJson() => {};
+}
+
+class ApprovePlanResponse {
+  ApprovePlanResponse();
+
+  factory ApprovePlanResponse.fromJson(Map<String, dynamic> json) {
+    return ApprovePlanResponse();
+  }
+
+  Map<String, dynamic> toJson() => {};
+}
