@@ -377,3 +377,32 @@ class Activity {
     return map;
   }
 }
+
+class ListActivitiesResponse {
+  final List<Activity> activities;
+  final String? nextPageToken;
+
+  ListActivitiesResponse({required this.activities, this.nextPageToken});
+
+  factory ListActivitiesResponse.fromJson(Map<String, dynamic> json) {
+    return ListActivitiesResponse(
+      activities: getObjectArrayPropOrDefaultFunction(
+        json,
+        'activities',
+        Activity.fromJson,
+        () => <Activity>[],
+      ),
+      nextPageToken: getStringPropOrDefault(json, 'nextPageToken', null),
+    );
+  }
+
+  Map<String, dynamic> toJson() {
+    final map = <String, dynamic>{
+      'activities': activities.map((e) => e.toJson()).toList(),
+    };
+    if (nextPageToken != null) {
+      map['nextPageToken'] = nextPageToken;
+    }
+    return map;
+  }
+}
