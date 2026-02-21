@@ -83,25 +83,36 @@ class VirtualActivity {
       return originalActivity!;
     }
 
+    // Local state variables
+    bool isPending = false;
+    String? pendingId;
+    bool isSent = false;
+    bool isQueued = false;
+    String? queueReason;
+    List<String>? processingErrors;
+    bool hasMismatch = false;
+
+    // We still use unmappedProps for miscellaneous metadata like 'isDraft' or 'metadata'
+    // if they don't have a dedicated field in Activity yet.
     Map<String, dynamic> unmappedProps = {};
     String description = "";
 
     switch (status) {
       case VirtualActivityStatus.sending:
         description = "Sending...";
-        unmappedProps['isPending'] = true;
-        unmappedProps['pendingId'] = originalPending?.id;
+        isPending = true;
+        pendingId = originalPending?.id;
         break;
       case VirtualActivityStatus.sent:
         description = "Sent";
-        unmappedProps['isSent'] = true; // New prop for ActivityItem
-        unmappedProps['pendingId'] = originalPending?.id;
+        isSent = true;
+        pendingId = originalPending?.id;
         break;
       case VirtualActivityStatus.failed:
         description = "Sending Failed";
-        unmappedProps['isQueued'] = true;
-        unmappedProps['queueReason'] = originalQueued?.queueReason;
-        unmappedProps['processingErrors'] = originalQueued?.processingErrors;
+        isQueued = true;
+        queueReason = originalQueued?.queueReason;
+        processingErrors = originalQueued?.processingErrors;
         unmappedProps['metadata'] = originalQueued?.metadata;
         break;
       case VirtualActivityStatus.draft:
@@ -115,7 +126,7 @@ class VirtualActivity {
 
     if (originalPending?.hasMismatch == true &&
         status != VirtualActivityStatus.sent) {
-      unmappedProps['hasMismatch'] = true;
+      hasMismatch = true;
     }
 
     return Activity(
@@ -124,6 +135,13 @@ class VirtualActivity {
       createTime: timestamp.toIso8601String(),
       userMessaged: UserMessaged(userMessage: content),
       description: description,
+      isPending: isPending,
+      pendingId: pendingId,
+      isSent: isSent,
+      isQueued: isQueued,
+      queueReason: queueReason,
+      processingErrors: processingErrors,
+      hasMismatch: hasMismatch,
       unmappedProps: unmappedProps,
     );
   }

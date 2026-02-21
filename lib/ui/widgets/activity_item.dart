@@ -159,6 +159,9 @@ class _ActivityItemState extends State<ActivityItem> {
   }
 
   Widget _buildUnknownPropertiesButton(Activity activity) {
+    // Local state fields are now part of the model, so we don't need to filter them out
+    // from unmappedProps manually if the model logic already handles them (which it does).
+    // However, if older code or legacy cache still has them in unmappedProps, filtering is safe.
     final unknownProps = Map<String, dynamic>.from(activity.unmappedProps)
       ..remove('isPending')
       ..remove('hasMismatch')
@@ -332,7 +335,10 @@ class _ActivityItemState extends State<ActivityItem> {
         activity.progressUpdated != null ||
         activity.agentMessaged != null ||
         activity.userMessaged != null ||
-        activity.unmappedProps.isNotEmpty;
+        activity.unmappedProps.isNotEmpty ||
+        activity.isPending ||
+        activity.isQueued ||
+        activity.isSent;
 
     if (isCompactArtifact && !hasOtherContent) return const SizedBox.shrink();
 
@@ -405,6 +411,168 @@ class _ActivityItemState extends State<ActivityItem> {
                   const SizedBox(height: 8),
                 ],
               ],
+            // Render local state (Pending/Queued/Sent)
+            if (activity.isPending || activity.isSent || activity.isQueued)
+              Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const SizedBox(height: 8),
+                  if (activity.isPending)
+                    Row(
+                      children: [
+                        SizedBox(
+                          width: 12,
+                          height: 12,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.grey[400],
+                          ),
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Sending...",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (activity.isSent)
+                    Row(
+                      children: [
+                        Icon(Icons.check, size: 14, color: Colors.grey[600]),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Sent",
+                          style: TextStyle(
+                            color: Colors.grey[600],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                  if (activity.isQueued) ...[
+                    Row(
+                      children: [
+                        Icon(
+                          Icons.error_outline,
+                          size: 14,
+                          color: Colors.orange[700],
+                        ),
+                        const SizedBox(width: 8),
+                        Text(
+                          "Queued / Failed to Send",
+                          style: TextStyle(
+                            color: Colors.orange[800],
+                            fontSize: 12,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                      ],
+                    ),
+                    if (activity.queueReason != null)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 22),
+                        child: Text(
+                          "Reason: ${activity.queueReason}",
+                          style: const TextStyle(
+                            color: Colors.red,
+                            fontSize: 11,
+                          ),
+                        ),
+                      ),
+                    if (activity.processingErrors != null &&
+                        activity.processingErrors!.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4, left: 22),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            if (activity.processingErrors!.isNotEmpty)
+                              Padding(
+                                padding: const EdgeInsets.only(bottom: 4),
+                                child: OutlinedButton.icon(
+                                  icon: const Icon(Icons.assignment, size: 14),
+                                  label: const Text(
+                                    "See Log",
+                                    style: TextStyle(fontSize: 12),
+                                  ),
+                                  style: OutlinedButton.styleFrom(
+                                    visualDensity: VisualDensity.compact,
+                                    padding: const EdgeInsets.symmetric(
+                                      horizontal: 8,
+                                    ),
+                                    foregroundColor: Colors.red,
+                                  ),
+                                  onPressed: () {
+                                    showDialog(
+                                      context: context,
+                                      builder:
+                                          (context) => AlertDialog(
+                                            title: const Text("Error Log"),
+                                            content: SingleChildScrollView(
+                                              child: Column(
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.start,
+                                                mainAxisSize: MainAxisSize.min,
+                                                children:
+                                                    activity.processingErrors!
+                                                        .map<Widget>((e) {
+                                                          return Padding(
+                                                            padding:
+                                                                const EdgeInsets.only(
+                                                                  bottom: 8.0,
+                                                                ),
+                                                            child:
+                                                                SelectableText(
+                                                                  "• $e",
+                                                                  style:
+                                                                      const TextStyle(
+                                                                        color:
+                                                                            Colors.red,
+                                                                        fontFamily:
+                                                                            'monospace',
+                                                                        fontSize:
+                                                                            12,
+                                                                      ),
+                                                                ),
+                                                          );
+                                                        })
+                                                        .toList(),
+                                              ),
+                                            ),
+                                            actions: [
+                                              TextButton(
+                                                onPressed:
+                                                    () =>
+                                                        Navigator.pop(context),
+                                                child: const Text("Close"),
+                                              ),
+                                            ],
+                                          ),
+                                    );
+                                  },
+                                ),
+                              ),
+                            // Show latest error inline as preview
+                            Text(
+                              "Last Error: ${activity.processingErrors!.last}",
+                              style: const TextStyle(
+                                color: Colors.red,
+                                fontSize: 11,
+                              ),
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                          ],
+                        ),
+                      ),
+                  ],
+                ],
+              ),
             if (activity.unmappedProps.isNotEmpty) ...[
               Builder(
                 builder: (context) {
@@ -415,183 +583,8 @@ class _ActivityItemState extends State<ActivityItem> {
                         ..remove('pendingId')
                         ..remove('isQueued')
                         ..remove('queueReason')
-                        ..remove('processingErrors');
-
-                  if (unknownProps.isEmpty &&
-                      (activity.unmappedProps.containsKey('isPending') ||
-                          activity.unmappedProps.containsKey('isSent') ||
-                          activity.unmappedProps.containsKey('isQueued'))) {
-                    return Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const SizedBox(height: 8),
-                        if (activity.unmappedProps['isPending'] == true)
-                          Row(
-                            children: [
-                              SizedBox(
-                                width: 12,
-                                height: 12,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.grey[400],
-                                ),
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Sending...",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        if (activity.unmappedProps['isSent'] == true)
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.check,
-                                size: 14,
-                                color: Colors.grey[600],
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Sent",
-                                style: TextStyle(
-                                  color: Colors.grey[600],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                        if (activity.unmappedProps['isQueued'] == true) ...[
-                          Row(
-                            children: [
-                              Icon(
-                                Icons.error_outline,
-                                size: 14,
-                                color: Colors.orange[700],
-                              ),
-                              const SizedBox(width: 8),
-                              Text(
-                                "Queued / Failed to Send",
-                                style: TextStyle(
-                                  color: Colors.orange[800],
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ],
-                          ),
-                          if (activity.unmappedProps['queueReason'] != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4, left: 22),
-                              child: Text(
-                                "Reason: ${activity.unmappedProps['queueReason']}",
-                                style: const TextStyle(
-                                  color: Colors.red,
-                                  fontSize: 11,
-                                ),
-                              ),
-                            ),
-                          if (activity.unmappedProps['processingErrors'] !=
-                                  null &&
-                              (activity.unmappedProps['processingErrors']
-                                      as List)
-                                  .isNotEmpty)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 4, left: 22),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: [
-                                  if ((activity
-                                              .unmappedProps['processingErrors']
-                                          as List)
-                                      .isNotEmpty)
-                                    Padding(
-                                      padding: const EdgeInsets.only(bottom: 4),
-                                      child: OutlinedButton.icon(
-                                        icon: const Icon(
-                                          Icons.assignment,
-                                          size: 14,
-                                        ),
-                                        label: const Text(
-                                          "See Log",
-                                          style: TextStyle(fontSize: 12),
-                                        ),
-                                        style: OutlinedButton.styleFrom(
-                                          visualDensity: VisualDensity.compact,
-                                          padding: const EdgeInsets.symmetric(
-                                            horizontal: 8,
-                                          ),
-                                          foregroundColor: Colors.red,
-                                        ),
-                                        onPressed: () {
-                                          showDialog(
-                                            context: context,
-                                            builder: (context) => AlertDialog(
-                                              title: const Text("Error Log"),
-                                              content: SingleChildScrollView(
-                                                child: Column(
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.start,
-                                                  mainAxisSize:
-                                                      MainAxisSize.min,
-                                                  children:
-                                                      (activity.unmappedProps['processingErrors']
-                                                              as List)
-                                                          .map<Widget>((e) {
-                                                            return Padding(
-                                                              padding:
-                                                                  const EdgeInsets.only(
-                                                                    bottom: 8.0,
-                                                                  ),
-                                                              child: SelectableText(
-                                                                "• $e",
-                                                                style: const TextStyle(
-                                                                  color: Colors
-                                                                      .red,
-                                                                  fontFamily:
-                                                                      'monospace',
-                                                                  fontSize: 12,
-                                                                ),
-                                                              ),
-                                                            );
-                                                          })
-                                                          .toList(),
-                                                ),
-                                              ),
-                                              actions: [
-                                                TextButton(
-                                                  onPressed: () =>
-                                                      Navigator.pop(context),
-                                                  child: const Text("Close"),
-                                                ),
-                                              ],
-                                            ),
-                                          );
-                                        },
-                                      ),
-                                    ),
-                                  // Show latest error inline as preview
-                                  Text(
-                                    "Last Error: ${(activity.unmappedProps['processingErrors'] as List).last}",
-                                    style: const TextStyle(
-                                      color: Colors.red,
-                                      fontSize: 11,
-                                    ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                ],
-                              ),
-                            ),
-                        ],
-                      ],
-                    );
-                  }
+                        ..remove('processingErrors')
+                        ..remove('isSent');
 
                   if (unknownProps.isEmpty) return const SizedBox.shrink();
 

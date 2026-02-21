@@ -251,6 +251,16 @@ class Activity {
   final ProgressUpdated? progressUpdated;
   final SessionCompleted? sessionCompleted;
   final SessionFailed? sessionFailed;
+
+  // Local state fields
+  final bool isPending;
+  final String? pendingId;
+  final bool isSent;
+  final bool isQueued;
+  final String? queueReason;
+  final List<String>? processingErrors;
+  final bool hasMismatch;
+
   final Map<String, dynamic> unmappedProps;
 
   Activity({
@@ -267,6 +277,13 @@ class Activity {
     this.progressUpdated,
     this.sessionCompleted,
     this.sessionFailed,
+    this.isPending = false,
+    this.pendingId,
+    this.isSent = false,
+    this.isQueued = false,
+    this.queueReason,
+    this.processingErrors,
+    this.hasMismatch = false,
     this.unmappedProps = const {},
   });
 
@@ -285,6 +302,14 @@ class Activity {
       'progressUpdated',
       'sessionCompleted',
       'sessionFailed',
+      // Local state keys
+      'isPending',
+      'pendingId',
+      'isSent',
+      'isQueued',
+      'queueReason',
+      'processingErrors',
+      'hasMismatch',
     };
 
     final unmapped = <String, dynamic>{};
@@ -348,6 +373,17 @@ class Activity {
         SessionFailed.fromJson,
         null,
       ),
+      isPending: getBooleanPropOrDefault(json, 'isPending', false),
+      pendingId: getStringPropOrDefault(json, 'pendingId', null),
+      isSent: getBooleanPropOrDefault(json, 'isSent', false),
+      isQueued: getBooleanPropOrDefault(json, 'isQueued', false),
+      queueReason: getStringPropOrDefault(json, 'queueReason', null),
+      processingErrors: getStringArrayPropOrDefault(
+        json,
+        'processingErrors',
+        null,
+      ),
+      hasMismatch: getBooleanPropOrDefault(json, 'hasMismatch', false),
       unmappedProps: unmapped,
     );
   }
@@ -374,6 +410,16 @@ class Activity {
       map['sessionCompleted'] = sessionCompleted!.toJson();
     }
     if (sessionFailed != null) map['sessionFailed'] = sessionFailed!.toJson();
+
+    // Local state
+    if (isPending) map['isPending'] = isPending;
+    if (pendingId != null) map['pendingId'] = pendingId;
+    if (isSent) map['isSent'] = isSent;
+    if (isQueued) map['isQueued'] = isQueued;
+    if (queueReason != null) map['queueReason'] = queueReason;
+    if (processingErrors != null) map['processingErrors'] = processingErrors;
+    if (hasMismatch) map['hasMismatch'] = hasMismatch;
+
     return map;
   }
 }
