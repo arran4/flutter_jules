@@ -510,49 +510,41 @@ class _ActivityItemState extends State<ActivityItem> {
                                   onPressed: () {
                                     showDialog(
                                       context: context,
-                                      builder:
-                                          (context) => AlertDialog(
-                                            title: const Text("Error Log"),
-                                            content: SingleChildScrollView(
-                                              child: Column(
-                                                crossAxisAlignment:
-                                                    CrossAxisAlignment.start,
-                                                mainAxisSize: MainAxisSize.min,
-                                                children:
-                                                    activity.processingErrors!
-                                                        .map<Widget>((e) {
-                                                          return Padding(
-                                                            padding:
-                                                                const EdgeInsets.only(
-                                                                  bottom: 8.0,
-                                                                ),
-                                                            child:
-                                                                SelectableText(
-                                                                  "• $e",
-                                                                  style:
-                                                                      const TextStyle(
-                                                                        color:
-                                                                            Colors.red,
-                                                                        fontFamily:
-                                                                            'monospace',
-                                                                        fontSize:
-                                                                            12,
-                                                                      ),
-                                                                ),
-                                                          );
-                                                        })
-                                                        .toList(),
-                                              ),
-                                            ),
-                                            actions: [
-                                              TextButton(
-                                                onPressed:
-                                                    () =>
-                                                        Navigator.pop(context),
-                                                child: const Text("Close"),
-                                              ),
-                                            ],
+                                      builder: (context) => AlertDialog(
+                                        title: const Text("Error Log"),
+                                        content: SingleChildScrollView(
+                                          child: Column(
+                                            crossAxisAlignment:
+                                                CrossAxisAlignment.start,
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: activity.processingErrors!
+                                                .map<Widget>((e) {
+                                                  return Padding(
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                          bottom: 8.0,
+                                                        ),
+                                                    child: SelectableText(
+                                                      "• $e",
+                                                      style: const TextStyle(
+                                                        color: Colors.red,
+                                                        fontFamily: 'monospace',
+                                                        fontSize: 12,
+                                                      ),
+                                                    ),
+                                                  );
+                                                })
+                                                .toList(),
                                           ),
+                                        ),
+                                        actions: [
+                                          TextButton(
+                                            onPressed: () =>
+                                                Navigator.pop(context),
+                                            child: const Text("Close"),
+                                          ),
+                                        ],
+                                      ),
                                     );
                                   },
                                 ),

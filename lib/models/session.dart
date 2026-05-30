@@ -358,9 +358,7 @@ class SendMessageRequest {
   SendMessageRequest({required this.prompt});
 
   factory SendMessageRequest.fromJson(Map<String, dynamic> json) {
-    return SendMessageRequest(
-      prompt: getStringPropOrThrow(json, 'prompt'),
-    );
+    return SendMessageRequest(prompt: getStringPropOrThrow(json, 'prompt'));
   }
 
   Map<String, dynamic> toJson() {

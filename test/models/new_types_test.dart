@@ -27,7 +27,7 @@ void main() {
             'name': 'sessions/1/activities/1',
             'id': '1',
             'createTime': '2023-01-01T00:00:00Z',
-          }
+          },
         ],
         'nextPageToken': 'token',
       };
