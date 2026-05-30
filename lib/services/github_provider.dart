@@ -71,8 +71,8 @@ class GithubProvider extends ChangeNotifier {
     this._cacheService, {
     AuthService? authService,
     http.Client? client,
-  }) : _authService = authService ?? AuthService(),
-       _client = client ?? http.Client() {
+  })  : _authService = authService ?? AuthService(),
+        _client = client ?? http.Client() {
     _loadToken();
   }
 
@@ -850,7 +850,7 @@ class GitHubPrResponse {
   final Map<String, dynamic> _links;
 
   GitHubPrResponse(this._data)
-    : _links = _data['_links'] as Map<String, dynamic>? ?? {};
+      : _links = _data['_links'] as Map<String, dynamic>? ?? {};
 
   bool get isMerged => getBooleanPropOrDefault(_data, 'merged', false);
   bool get isDraft => getBooleanPropOrDefault(_data, 'draft', false);

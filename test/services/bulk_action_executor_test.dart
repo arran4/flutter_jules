@@ -149,9 +149,8 @@ void main() {
 
     expect(sessionProvider.markAsReadCalls, 2);
 
-    final undoableLogs = executor.logs
-        .where((l) => l.undoActionType != null)
-        .toList();
+    final undoableLogs =
+        executor.logs.where((l) => l.undoActionType != null).toList();
     expect(undoableLogs.length, 2);
 
     await executor.undoAll();

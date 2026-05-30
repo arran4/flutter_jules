@@ -79,9 +79,8 @@ class ActionScriptParser {
         } else {
           final parts = line.split(RegExp(r'\s+'));
           final actionName = parts[0];
-          final message = parts.length > 1
-              ? parts.sublist(1).join(' ').trim()
-              : null;
+          final message =
+              parts.length > 1 ? parts.sublist(1).join(' ').trim() : null;
 
           final actionType = BulkActionType.values.firstWhere(
             (e) => e.name == actionName,
