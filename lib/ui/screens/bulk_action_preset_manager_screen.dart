@@ -66,6 +66,7 @@ class _BulkActionPresetManagerScreenState
               ),
               Expanded(
                 child: ReorderableListView(
+                  // ignore: deprecated_member_use
                   onReorder: (oldIndex, newIndex) {
                     provider.reorderPreset(oldIndex, newIndex);
                   },
