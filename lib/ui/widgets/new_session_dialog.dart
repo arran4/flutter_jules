@@ -715,8 +715,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     SourceGroup group,
     bool isHighlighted,
   ) {
-    return Container(
-      color: isHighlighted ? Theme.of(context).highlightColor : null,
+    return Material(
+      color:
+          isHighlighted ? Theme.of(context).highlightColor : Colors.transparent,
       child: ListTile(
         dense: true,
         leading: const Icon(Icons.group, size: 16),
@@ -733,8 +734,9 @@ class _NewSessionDialogState extends State<NewSessionDialog> {
     bool isHighlighted,
   ) {
     final isPrivate = source.githubRepo?.isPrivate ?? false;
-    return Container(
-      color: isHighlighted ? Theme.of(context).highlightColor : null,
+    return Material(
+      color:
+          isHighlighted ? Theme.of(context).highlightColor : Colors.transparent,
       child: ListTile(
         dense: true,
         leading: isPrivate ? const Icon(Icons.lock, size: 16) : null,
