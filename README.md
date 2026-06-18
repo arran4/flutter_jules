@@ -113,7 +113,7 @@ Release artifacts are generated in specific output directories. The CI pipeline 
 |----------|---------------|-----------------|
 | **Windows** | `flutter build windows` | `build/windows/x64/runner/Release` |
 | **Linux** | `flutter build linux` | `build/linux/x64/release/bundle` |
-| **macOS** | `flutter build macos` | `build/macos/Build/Products/Release/Arran's Jules Client.app` |
+| **macOS** | `flutter build macos` | `build/macos/Build/Products/Release/flutter_jules.app` |
 
 ### Code Quality & Testing
 
