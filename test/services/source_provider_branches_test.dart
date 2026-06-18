@@ -64,18 +64,15 @@ class MockGithubProvider extends Mock implements GithubProvider {
   @override
   void enqueue(GithubJob job) {
     // Execute immediately for testing purposes
-    job
-        .action()
-        .then((result) {
-          job.result = result;
-          job.status = GithubJobStatus.completed;
-          job.completer.complete();
-        })
-        .catchError((e) {
-          job.status = GithubJobStatus.failed;
-          job.error = e.toString();
-          job.completer.completeError(e);
-        });
+    job.action().then((result) {
+      job.result = result;
+      job.status = GithubJobStatus.completed;
+      job.completer.complete();
+    }).catchError((e) {
+      job.status = GithubJobStatus.failed;
+      job.error = e.toString();
+      job.completer.completeError(e);
+    });
   }
 
   @override
@@ -176,9 +173,8 @@ void main() {
 
       // Verify
       final updatedSource = provider.items[0].data;
-      final branchNames = updatedSource.githubRepo!.branches!
-          .map((b) => b.displayName)
-          .toSet();
+      final branchNames =
+          updatedSource.githubRepo!.branches!.map((b) => b.displayName).toSet();
 
       expect(branchNames, containsAll(['jules-branch', 'github-branch']));
     });
@@ -249,9 +245,8 @@ void main() {
 
       // Verify
       final updatedSource = provider.items[0].data;
-      final branchNames = updatedSource.githubRepo!.branches!
-          .map((b) => b.displayName)
-          .toSet();
+      final branchNames =
+          updatedSource.githubRepo!.branches!.map((b) => b.displayName).toSet();
 
       expect(branchNames, containsAll(['jules-branch', 'github-branch']));
     });

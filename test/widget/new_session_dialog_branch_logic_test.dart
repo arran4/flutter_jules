@@ -239,7 +239,8 @@ void main() {
             value: MockShortcutRegistry(),
           ),
         ],
-        child: const MaterialApp(home: NewSessionDialog()),
+        child: const MaterialApp(
+            home: Scaffold(body: Material(child: NewSessionDialog()))),
       ),
     );
 

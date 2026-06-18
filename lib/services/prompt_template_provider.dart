@@ -80,9 +80,8 @@ class PromptTemplateProvider extends ChangeNotifier {
     if (customJson != null) {
       try {
         final List<dynamic> decoded = jsonDecode(customJson);
-        _customTemplates = decoded
-            .map((j) => PromptTemplate.fromJson(j))
-            .toList();
+        _customTemplates =
+            decoded.map((j) => PromptTemplate.fromJson(j)).toList();
       } catch (e) {
         debugPrint('Error loading custom templates: $e');
         _customTemplates = [];
@@ -94,9 +93,8 @@ class PromptTemplateProvider extends ChangeNotifier {
     if (recentJson != null) {
       try {
         final List<dynamic> decoded = jsonDecode(recentJson);
-        _recentPrompts = decoded
-            .map((j) => PromptTemplate.fromJson(j))
-            .toList();
+        _recentPrompts =
+            decoded.map((j) => PromptTemplate.fromJson(j)).toList();
       } catch (e) {
         debugPrint('Error loading recent prompts: $e');
         _recentPrompts = [];

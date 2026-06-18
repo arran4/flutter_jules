@@ -25,7 +25,7 @@ class AdvancedSearchBar extends StatefulWidget {
   final ValueChanged<String> onSearchChanged;
 
   final List<FilterToken>
-  availableSuggestions; // All possible filters for autocomplete
+      availableSuggestions; // All possible filters for autocomplete
 
   final List<SortOption> activeSorts;
   final ValueChanged<List<SortOption>> onSortsChanged;
@@ -114,9 +114,8 @@ class AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   void _updateFormulaText() {
     final filterExpression = widget.filterTree?.toExpression() ?? '';
-    final sortExpression = widget.activeSorts
-        .map((s) => s.toExpression())
-        .join(', ');
+    final sortExpression =
+        widget.activeSorts.map((s) => s.toExpression()).join(', ');
     final fullExpression =
         '$filterExpression ${sortExpression.isNotEmpty ? 'SORT BY $sortExpression' : ''}'
             .trim();
@@ -464,27 +463,20 @@ class AdvancedSearchBarState extends State<AdvancedSearchBar> {
 
   _SuggestionGroups _groupSuggestionsByType(List<FilterToken> suggestions) {
     return _SuggestionGroups(
-      flagSuggestions: suggestions
-          .where((s) => s.type == FilterType.flag)
-          .toList(),
-      statusSuggestions: suggestions
-          .where((s) => s.type == FilterType.status)
-          .toList(),
-      sourceSuggestions: suggestions
-          .where((s) => s.type == FilterType.source)
-          .toList(),
-      prStatusSuggestions: suggestions
-          .where((s) => s.type == FilterType.prStatus)
-          .toList(),
-      ciStatusSuggestions: suggestions
-          .where((s) => s.type == FilterType.ciStatus)
-          .toList(),
-      timeSuggestions: suggestions
-          .where((s) => s.type == FilterType.time)
-          .toList(),
-      otherSuggestions: suggestions
-          .where((s) => s.type == FilterType.text)
-          .toList(),
+      flagSuggestions:
+          suggestions.where((s) => s.type == FilterType.flag).toList(),
+      statusSuggestions:
+          suggestions.where((s) => s.type == FilterType.status).toList(),
+      sourceSuggestions:
+          suggestions.where((s) => s.type == FilterType.source).toList(),
+      prStatusSuggestions:
+          suggestions.where((s) => s.type == FilterType.prStatus).toList(),
+      ciStatusSuggestions:
+          suggestions.where((s) => s.type == FilterType.ciStatus).toList(),
+      timeSuggestions:
+          suggestions.where((s) => s.type == FilterType.time).toList(),
+      otherSuggestions:
+          suggestions.where((s) => s.type == FilterType.text).toList(),
     );
   }
 
@@ -1510,18 +1502,18 @@ class _BookmarkDetails extends StatelessWidget {
 
 class PopupMenuHeader extends PopupMenuItem<FilterBookmark> {
   const PopupMenuHeader({super.key, required super.child})
-    : super(enabled: false, height: 32);
+      : super(enabled: false, height: 32);
 
   @override
   Widget? get child => MouseRegion(
-    cursor: SystemMouseCursors.basic,
-    child: DefaultTextStyle(
-      style: const TextStyle(
-        fontSize: 12,
-        fontWeight: FontWeight.bold,
-        color: Colors.grey,
-      ),
-      child: super.child!,
-    ),
-  );
+        cursor: SystemMouseCursors.basic,
+        child: DefaultTextStyle(
+          style: const TextStyle(
+            fontSize: 12,
+            fontWeight: FontWeight.bold,
+            color: Colors.grey,
+          ),
+          child: super.child!,
+        ),
+      );
 }
