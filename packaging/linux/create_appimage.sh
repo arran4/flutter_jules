@@ -73,6 +73,7 @@ if [ ! -f "linuxdeploy-x86_64.AppImage" ]; then
 fi
 
 echo "Generating AppImage..."
+export LD_LIBRARY_PATH="$APP_DIR/usr/lib:$LD_LIBRARY_PATH"
 # Use --appimage-extract-and-run in case fuse is missing/configured restrictively
 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
     --appdir "$APP_DIR" \
