@@ -49,7 +49,7 @@ on:
     # preferred heavy monthly run (quota reset strategy)
     - cron: '0 19 1 * *'
     # optional nightly lightweight checks
-    - cron: '41 2 * * *'
+    - cron: '0 19 * * *'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}

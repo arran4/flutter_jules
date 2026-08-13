@@ -27,7 +27,7 @@ class GithubExclusion {
       type: GithubExclusionType.values.firstWhere(
         (e) =>
             e.toString().split('.').last ==
-            getStringPropOrDefault(json, 'type', null),
+            getStringPropOrDefault(json, 'type', ''),
         orElse: () => GithubExclusionType.repo,
       ),
       value: getStringPropOrThrow(json, 'value'),
