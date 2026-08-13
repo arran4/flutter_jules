@@ -59,7 +59,7 @@ cp "linux/com.arran4.flutter_jules.desktop" "$APP_DIR/usr/share/applications/$MA
 
 # Copy Icon
 echo "Copying icon..."
-cp "assets/icon/app_icon.png" "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$MAIN_EXECUTABLE.png"
+convert "assets/icon/app_icon.png" -resize 256x256 "$APP_DIR/usr/share/icons/hicolor/256x256/apps/$MAIN_EXECUTABLE.png"
 
 echo "Updating desktop file..."
 # Update Exec and Icon fields
@@ -72,13 +72,17 @@ if [ ! -f "linuxdeploy-x86_64.AppImage" ]; then
     chmod +x linuxdeploy-x86_64.AppImage
 fi
 
+# Resize icon for linuxdeploy to a temporary location to ensure it's exactly 256x256 PNG
+echo "Resizing icon for linuxdeploy..."
+convert "assets/icon/app_icon.png" -resize 256x256 "/tmp/app_icon_256.png"
+
 echo "Generating AppImage..."
 export LD_LIBRARY_PATH="$APP_DIR/usr/lib:$LD_LIBRARY_PATH"
 # Use --appimage-extract-and-run in case fuse is missing/configured restrictively
 ./linuxdeploy-x86_64.AppImage --appimage-extract-and-run \
     --appdir "$APP_DIR" \
     --output appimage \
-    --icon-file "assets/icon/app_icon.png" \
+    --icon-file "/tmp/app_icon_256.png" \
     --desktop-file "$APP_DIR/usr/share/applications/$MAIN_EXECUTABLE.desktop" \
     --executable "$APP_DIR/usr/bin/$MAIN_EXECUTABLE"
 
